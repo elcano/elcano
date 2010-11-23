@@ -75,6 +75,20 @@ const int HardLeft = 0;
 const int Straight = 128;
 const int HardRight = 255;
 
+#define MICROSEC_PER_REV2_DEGREE_PER_SEC (1000000 * 360)
+#define RADIAN2DEGREE 0.0174533
+/* The motion flags are logical values.  
+   They are not the same as the values written to reverse the motor. */
+#define MOTION_STOPPED 0
+#define MOTION_FORWARD 1
+#define MOTION_REVERSE 2
+/* If it has been this many micro seconds since a tick, the wheel is stopped.
+   This is a crude method for determining if the wheel has stopped.
+   A 10 sec delay between ticks means that a 0.7 m diameter wheel has moved at most 13.6 cm.
+   A 0.43 m wheel has moved at most 8.6 cm. */
+#define WHEEL_STOPPED 10000000
+#define MIN_SAMPLE_MS 100
+
 // return values
 #define OK       0
 #define BUFFER_FULL 1
@@ -88,6 +102,34 @@ struct floatText
    byte buffer[NUMBER_BUFFER];  
 } numberIn;
 
+#define STATE_INITIAL 0
+#define STATE_D       1
+#define STATE_DR      2
+#define STATE_DRI     3
+#define STATE_DRIV    4
+#define STATE_DRIVE   5
+#define STATE_BRACKET 6
+#define STATE_S       7
+#define STATE_Sp      8
+#define STATE_Spe     9
+#define STATE_Spee    10
+#define STATE_Speed   11
+#define STATE_F       12
+#define STATE_Fr      13
+#define STATE_Fro     14
+#define STATE_Fron    15
+#define STATE_Front   16
+#define STATE_FrontS  17
+#define STATE_FrontSt 18
+#define STATE_FrontSte 19
+#define STATE_FrontStee 20
+#define STATE_FrontSteer 21
+#define STATE_CLOSE      22
+#define STATE_SPIN       23
+#define STATE_STEER      24
+#define STATE_LOST       25
+int State = STATE_INITIAL;
+ /*---------------------------------------------------------------------------------------*/ 
 void setup() 
 { 
         pinMode(RxD, INPUT);
@@ -105,37 +147,27 @@ void setup()
         pinMode(LED, OUTPUT); 
 	attachInterrupt (0, WheelRev, RISING);
 
-        numberIn.positive = true;
-        numberIn.digits = 0;
-        numberIn.decimal = 0;
-	Serial.begin(9600); 
+        initialize();
+        
+       	Serial.begin(9600); 
 
-        digitalWrite( Ack, LOW);
-        digitalWrite( EnableRecombinant, HIGH);
-        analogWrite( Recombinant, Full); 
-        analogWrite( DiskBrake, Full);
-        digitalWrite( Reverse, LOW);
-        digitalWrite( EnableThrottle, HIGH);
-        analogWrite( Throttle, 0);
-        analogWrite( Steer, Straight);
-        digitalWrite( LED, LOW);
 }	
 void loop() 
 {
-  static float CommandedSpinSpeed = 0;
-  static float CommandedSteerAngle = 0;
-  static float CurrentSpinSpeed = 0;
-  static float CurrentSteerAngle = 0;
-  unsigned long TimeSinceCmd_ms = 0;
+  static float CommandedSpinSpeed = 0;   // radians / second
+  static float CommandedSteerAngle = 0;  // radians
+  static float CurrentSteerAngle = 0;    // radians
+  unsigned long TimeSinceCmd_ms = 0;     // radians
   const unsigned long MaxSilence = 2000;  // ms
   
  // Read Gamebot command on RxD and put in CommandedSpinSpeed and CommandedSteerAngle
  // When a DRIVE {Speed x} {FrontSteer y} command is read,
  // TimeOfCmd is set to 0 and the other arguments read.
- GetSerial( &TimeOfCmd_ms, &CommandedSpinSpeed, &CommandedSteerAngle);
+   GetSerial( &TimeOfCmd_ms, &CommandedSpinSpeed, &CommandedSteerAngle);
  
- // TO DO: Use WheelRevMicros to compute CurrentSpinSpeed.
- // TO DO: Use differences in commanded and actual spin speed to control Drive, DiskBrake and Recombinant.
+  // TO DO: Use differences in commanded and actual spin speed to control Drive, DiskBrake and Recombinant.
+   ControlSpin(CommandedSpinSpeed);
+ 
  // TO DO: Read CurrentSteerAngle from SteerFeedback.
  // TO DO: Use differences in commanded and actual steer angle to control Steer.
 
@@ -146,13 +178,31 @@ void loop()
    Stop();
  } 
 } 
+
+ /*---------------------------------------------------------------------------------------*/ 
+
 void Stop()
 {
    analogWrite(Throttle, 0);
    analogWrite(Recombinant, Full); 
    analogWrite(DiskBrake, Full);
- 
 }
+
+void initialize()
+{
+        numberIn.positive = true;
+        numberIn.digits = 0;
+        numberIn.decimal = 0;
+        State = STATE_INITIAL;
+        Stop();
+        digitalWrite( Ack, LOW);
+        digitalWrite( EnableRecombinant, HIGH);
+        digitalWrite( Reverse, LOW);
+        digitalWrite( EnableThrottle, HIGH);
+        analogWrite( Steer, Straight);
+        digitalWrite( LED, LOW);
+}
+ /*---------------------------------------------------------------------------------------*/ 
 
 int getNumber(byte digit)
 {
@@ -194,33 +244,7 @@ Characters are ASCII. Wide characters are not used.
 */
 void GetSerial( unsigned long *TimeOfCmd, float *CommandedSpinSPeed, float *CommandedSteerAngle)
 {
-#define STATE_INITIAL 0
-#define STATE_D       1
-#define STATE_DR      2
-#define STATE_DRI     3
-#define STATE_DRIV    4
-#define STATE_DRIVE   5
-#define STATE_BRACKET 6
-#define STATE_S       7
-#define STATE_Sp      8
-#define STATE_Spe     9
-#define STATE_Spee    10
-#define STATE_Speed   11
-#define STATE_F       12
-#define STATE_Fr      13
-#define STATE_Fro     14
-#define STATE_Fron    15
-#define STATE_Front   16
-#define STATE_FrontS  17
-#define STATE_FrontSt 18
-#define STATE_FrontSte 19
-#define STATE_FrontStee 20
-#define STATE_FrontSteer 21
-#define STATE_CLOSE      22
-#define STATE_SPIN       23
-#define STATE_STEER      24
-#define STATE_LOST       25
-  static int State = STATE_INITIAL;
+
   static float nextSpin = 0;
   static float nextSteer = 0;
   byte nextByte;
@@ -348,6 +372,8 @@ void GetSerial( unsigned long *TimeOfCmd, float *CommandedSpinSPeed, float *Comm
      }
   }
 }
+ /*---------------------------------------------------------------------------------------*/ 
+// WheelRev is called by an interrupt.
 void WheelRev()
 {
 	static unsigned long OldTick;
@@ -358,6 +384,60 @@ void WheelRev()
 		WheelRevMicros = TickTime - OldTick;
 	else // overflow
 		WheelRevMicros = TickTime + ~OldTick;
+/* TO DO: 
+    Mount three magnets on the wheel, posiioned at 0, 60 and 180 degrees.
+    The steady speed tick interval pattern will then be in the ratio of 
+    1,2,3,1,2,3 for forward and 3,2,1,3,2,1 for reverse.
+    This lets us sense whether we are going forward or backward.
+    It also gives us tighter control.
+*/
 }
 
 
+void ControlSpin (float SpinSpeed_RadianPSecond)
+{
+/*  CurrentSpinSpeed = 2 * PI / (WheelRevMicros * 1,000,000)  (radians)
+    Degrees / sec lets us use integers over the desired range.
+    Wheel diam (m)     min speed @ 1 deg/s    high speed @ 57,300 deg/sec
+    0.05 (2 in)        0.001 kph              44 kph
+    0.70 (27 in)       0.012 kph             600 kph  
+
+    We do not have sensors that tell whether the robot is moving forward or backward.
+    Assume that it is moving in the desired direction.
+    When the desired direction changes, the robot must stop before we reverse the motor.    
+*/
+    static int motion = MOTION_STOPPED;
+    static unsigned long LastSample_ms = 0;
+    unsigned long TimeNow_ms;
+    long CurrentSpinSpeed = 0;     // degrees / sec
+    long DesiredSpinSpeed;
+    
+    TimeNow_ms = millis();
+    if (TimeNow_ms - LastSample_ms < MIN_SAMPLE_MS &&
+         TimeNow_ms < LastSample_ms) 
+         return;
+         
+    DesiredSpinSpeed = SpinSpeed_RadianPSecond * RADIAN2DEGREE;     
+    if (DesiredSpinSpeed > 0 && motion == MOTION_REVERSE ||
+        DesiredSpinSpeed < 0 && motion == MOTION_FORWARD)
+     {
+          Stop();
+          // TO DO: Extrapolate speeds for a better time to stop.
+          if (WheelRevMicros < WHEEL_STOPPED)
+            return;  // wait for robot to stop
+          motion = MOTION_STOPPED;
+     }
+     if (DesiredSpinSpeed > 0)
+     {
+           digitalWrite( Reverse, LOW);
+           motion = MOTION_FORWARD;
+     }
+     if (DesiredSpinSpeed < 0)
+     {
+           digitalWrite( Reverse, HIGH);
+           motion = MOTION_REVERSE;
+     }
+     CurrentSpinSpeed = MICROSEC_PER_REV2_DEGREE_PER_SEC / WheelRevMicros;
+     /* TO DO: Retain a history of times, accelerations, actual speeds, commanded speeds and distances.
+           Write a PID controller to move the actual speed to the commanded speed. */
+}
