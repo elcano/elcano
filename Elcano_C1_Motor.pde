@@ -9,8 +9,14 @@ This also incorporates control module C2: Steering.
   DRIVE {Speed ComandedSpinSpeed} {FrontSteer ComandedSteerAngle} 
 
   Where: 
-  {Speed ComandedSpinSpeed} 	ComandedSpinSpeed is a ‘float’ giving the spin speed for the rear wheel. The value is the absolute spin speed, in radians per second. 
-  {FrontSteer ComandedSteerAngle} 	ComandedSteerAngle is a ‘float’ that specifies the steer angle of Elcano’s front wheels. The value is the absolute steer angle, in radians. 
+  {Speed ComandedSpinSpeed} 	ComandedSpinSpeed is a ‘float’ giving the spin speed for the rear wheel. 
+  The value is the absolute spin speed, in radians per second. 
+  {FrontSteer ComandedSteerAngle} 	ComandedSteerAngle is a ‘float’ that specifies the steer angle 
+  of Elcano’s front wheels. The value is the absolute steer angle, in radians. 
+  
+  Other commands:
+  PIDmotor {Kp x} {Ki y} {Kd z}
+  PIDsteer {Kp x} {Ki y} {Kd z}
 */
 const int RxD = 0;
 
@@ -22,8 +28,9 @@ const int TxD = 1;
   The signal is used to compute ActualSpinSpeed (radians/sec). */
 const int Tachometer = 2;
 
-/* [in] Digital Signal 3: J1 pin 4  (INT1) Reset request from C3. */
-const int Reset = 3;
+/* [in] Digital Signal 3: J1 pin 4  (INT1) Halt or reset signal from console. 
+*/
+const int HaltCmd = 3;
 
 /* [out] Digital Signal 4: J1 pin 5  (D4) Traction motor forward / reverse. */
 const int Reverse = 4;
@@ -31,12 +38,18 @@ const int Reverse = 4;
 /* [out] Digital Signal 5: J1 pin 6  (D5) Actuator A1. Traction motor throttle. */
 const int Throttle = 5;
 
-/*  Digital Signal 6: J1 pin 7  (D6) Spare. */
+/*  Digital Signal 6: J1 pin 7  (D6) Tune PID. */
+const int TunePID = 6;
 
-/* [out] Digital Signal 7: J1 pin 8  (D7) Acknowledge to C3 of reset request. */
-const int Ack = 7;
+/* [out] Digital Signal 7: J1 pin 8  (D7) 
+   LOW: Select traction motor; HIGH: Select steering  
+   when TunePID is LOW, this is output; TunePID HIGH makes this an input
+*/
+const int Ack = 7;  // OBSOLETE: Acknowledge to C3 of reset request.
+const int SelectPID = 7;
 
-/* [out] Digital Signal 8: J3 pin 1 (D8) Enable Recombinant braking. */
+/* [out] Digital Signal 8: J3 pin 1 (D8) Enable Recombinant braking. 
+  Alternatively, this could be hard-wired ON */
 const int EnableRecombinant = 8;
 
 /* [out] Digital Signal 9: J3 pin 2 (D9) PWM. Actuator A2: Brake Motor. 
@@ -51,11 +64,12 @@ const int Recombinant = 10;
 const int Steer = 11;
 
 /* [out] Digital Signal 12: J3 pin 5 (D12) Enable Drive Motor. 
-  Controls motor on rear wheel.  Three wires for throttle. */
+  Alternatively, this could be hard-wired ON */
 const int EnableThrottle = 12;
 
-/* [out] Digital Signal 13: J3 pin 5 (SCK)  LED on Arduino board. Used for testing. */
-const int LED = 13;   
+/* [out] Digital Signal 13: J3 pin 5 (SCK)  LED on Arduino board. Used for testing. 
+   */
+const int LED = 13;
 
 /* [in] Analog input 0: J2 pin 1 (ADC0) ActualSteerAngle. */
 const int SteerFeedback = 0;
@@ -63,7 +77,10 @@ const int SteerFeedback = 0;
 /* [in] Analog input 1: J2 pin 2 (ADC1) MotorTemperature. */
 const int Temperature = 1;
 
-/* UNASSIGNED: Analog input 2,3,4,5 */
+/* [in] Analog input 2: J2 pin 3 (ADC2) BrakeFeedback. */
+const int BrakeFeedback = 2;
+
+/* UNASSIGNED: Analog input 3,4,5 */
 
 /* time (micro seconds) for a wheel revolution */
 volatile unsigned long WheelRevMicros = 0;
@@ -71,6 +88,7 @@ volatile unsigned long WheelRevMicros = 0;
 unsigned long TimeOfCmd_ms = 0;
 
 const int Full = 255;   // fully on for PWM signals
+const int Off = 0;
 const int HardLeft = 0;
 const int Straight = 128;
 const int HardRight = 255;
@@ -102,6 +120,20 @@ struct floatText
    byte buffer[NUMBER_BUFFER];  
 } numberIn;
 
+struct PID_Parameters
+{
+    float Kp;
+    float Ki;
+    float Kd;
+    long  desired;
+    long  actual;
+    long  time_ms;
+    long  previous_error;
+    long  integral;
+};
+struct PID_Parameters motor;
+struct PID_Parameters steer;
+
 #define STATE_INITIAL 0
 #define STATE_D       1
 #define STATE_DR      2
@@ -129,16 +161,17 @@ struct floatText
 #define STATE_STEER      24
 #define STATE_LOST       25
 int State = STATE_INITIAL;
+
  /*---------------------------------------------------------------------------------------*/ 
 void setup() 
 { 
         pinMode(RxD, INPUT);
         pinMode(TxD, OUTPUT);
         pinMode(Tachometer, INPUT);
-        pinMode(Reset, INPUT);
+        pinMode(HaltCmd, INPUT);
         pinMode(Reverse, OUTPUT);
         pinMode(Throttle, OUTPUT);
-        pinMode(Ack, OUTPUT);
+        pinMode(SelectPID, OUTPUT);
         pinMode(EnableRecombinant, OUTPUT);
         pinMode(DiskBrake, OUTPUT);
         pinMode(Recombinant, OUTPUT);
@@ -146,12 +179,77 @@ void setup()
         pinMode(EnableThrottle, OUTPUT);
         pinMode(LED, OUTPUT); 
 	attachInterrupt (0, WheelRev, RISING);
+	attachInterrupt (1, Halt, RISING);
 
         initialize();
         
        	Serial.begin(9600); 
-
 }	
+
+/*---------------------------------------------------------------------------------------*/ 
+void initialize()
+{
+        numberIn.positive = true;
+        numberIn.digits = 0;
+        numberIn.decimal = 0;
+        State = STATE_INITIAL;
+        Stop();
+        
+        motor.previous_error = 0;
+        motor.integral = 0;
+        steer.previous_error = 0;
+        steer.integral = 0;
+        motor.Kp = 0;
+        digitalWrite( SelectPID, LOW);
+        digitalWrite( EnableRecombinant, HIGH);
+        digitalWrite( Reverse, LOW);
+        digitalWrite( EnableThrottle, HIGH);
+        analogWrite( Steer, Straight);
+        digitalWrite( LED, LOW);
+}
+/*---------------------------------------------------------------------------------------*/ 
+// WheelRev is called by an interrupt.
+void WheelRev()
+{
+	static unsigned long OldTick;
+	static unsigned long TickTime;
+	OldTick = TickTime;
+	TickTime = micros();
+	if (OldTick <= TickTime)
+		WheelRevMicros = TickTime - OldTick;
+	else // overflow
+		WheelRevMicros = TickTime + ~OldTick;
+/* TO DO: 
+    Mount three magnets on the wheel, posiioned at 0, 60 and 180 degrees.
+    The steady speed tick interval pattern will then be in the ratio of 
+    1,2,3,1,2,3 for forward and 3,2,1,3,2,1 for reverse.
+    This lets us sense whether we are going forward or backward.
+    It also gives us tighter control.
+*/
+}
+/*---------------------------------------------------------------------------------------
+ Halt is called by an interrupt
+ A console reset signal does not immediately reset the C1 motor controller.
+ After receiving a halt or reset, the motor controller brings the vehicle to a stop.
+ A console reset is immediatly effective on the C3 Pilot.
+ A few seconds after C3 is initialized, it sends a reset to C1.
+ */
+void Halt()
+{
+    Stop();
+    delay (4000);
+}
+/*---------------------------------------------------------------------------------------*/ 
+// Bring the vehicle to a stop.
+// Stop may be called from an interrupt or from the loop.
+void Stop()
+{
+   analogWrite(Throttle, 0);
+   analogWrite(Recombinant, Full); 
+   analogWrite(DiskBrake, Full);
+}
+#define TEST_MODE
+/*---------------------------------------------------------------------------------------*/ 
 void loop() 
 {
   static float CommandedSpinSpeed = 0;   // radians / second
@@ -159,7 +257,25 @@ void loop()
   static float CurrentSteerAngle = 0;    // radians
   unsigned long TimeSinceCmd_ms = 0;     // radians
   const unsigned long MaxSilence = 2000;  // ms
+  int i;
   
+#ifdef TEST_MODE
+  write_all (LOW);
+  for (i = Off; i <= Full; i++)
+  {
+      ramp(i);
+  }
+  write_all (HIGH);
+  for (i = Full; i >= Off; i--)
+  {
+      ramp(i);
+  }
+  for (i = 0; i <12; i ++)
+  {
+     FlashMorse(i);
+  }
+  
+#else  // not TEST_MODE
  // Read Gamebot command on RxD and put in CommandedSpinSpeed and CommandedSteerAngle
  // When a DRIVE {Speed x} {FrontSteer y} command is read,
  // TimeOfCmd is set to 0 and the other arguments read.
@@ -177,33 +293,138 @@ void loop()
  {  // Watchdog time out.
    Stop();
  } 
+#endif  // TEST_MODE 
 } 
+#ifdef TEST_MODE
+/*---------------------------------------------------------------------------------------*/ 
+void write_all( int state)
+{
+      digitalWrite( SelectPID, state);
+      digitalWrite( EnableRecombinant, state);
+      digitalWrite( Reverse, state);
+      digitalWrite( EnableThrottle, state);
+      digitalWrite( LED, state);
+}
+/*---------------------------------------------------------------------------------------*/ 
+void ramp (int state)
+{
+   analogWrite( Steer, state);
+   analogWrite(Throttle, state);
+   analogWrite(Recombinant, state); 
+   analogWrite(DiskBrake, state);
+   delay(10); 
 
+}
+/*---------------------------------------------------------------------------------------
+Flash a number in Morse Code
+1  . ----
+2  ..---
+3  ...--
+4  ....-
+5  .....
+6  -....
+7  --...
+8  ---..
+9  ----.
+0  -----
+*/ 
+#define BASE 300
+#define DOT BASE
+#define DASH (4*BASE)
+#define BIT_SPACE (2*BASE)
+#define NUMBER_SPACE (10*BASE)
+void FlashMorse (unsigned int number)
+{
+  unsigned int quotient, remainder;
+  unsigned int i;
+  quotient = number / 10;
+  remainder = number % 10;
+  if (quotient != 0)
+    FlashMorse (quotient);
+  if (remainder <= 5)
+  {
+    for (i = 0; i < remainder; i++)
+      Flash(DOT);
+    for (; i < 5; i++)
+      Flash(DASH);
+  }
+  else
+  {
+    for (i = 5; i < remainder; i++)
+      Flash(DASH);
+    for (; i < 10; i++)
+      Flash(DOT);
+   }
+   digitalWrite( LED, LOW);
+   delay (NUMBER_SPACE);
+
+}
+void Flash(int DashDot)
+{
+  digitalWrite( LED, LOW);
+  delay (BIT_SPACE);
+  digitalWrite( LED, HIGH);
+  delay (DashDot);
+}
+#endif  // TEST_MODE 
+/*---------------------------------------------------------------------------------------*/ 
+// Adjust the throttle to hit the desired wheel speed.
+void ControlSpin (float SpinSpeed_RadianPSecond)
+{
+/*  CurrentSpinSpeed = 2 * PI / (WheelRevMicros * 1,000,000)  (radians)
+    Degrees / sec lets us use integers over the desired range.
+    Wheel diam (m)     min speed @ 1 deg/s    high speed @ 57,300 deg/sec
+    0.05 (2 in)        0.001 kph              44 kph
+    0.70 (27 in)       0.012 kph             600 kph  
+
+    We do not have sensors that tell whether the robot is moving forward or backward.
+    Assume that it is moving in the desired direction.
+    When the desired direction changes, the robot must stop before we reverse the motor.    
+*/
+    static int motion = MOTION_STOPPED;
+    static unsigned long LastSample_ms = 0;
+    unsigned long TimeNow_ms;
+    long DesiredSpinSpeed;
+    
+    TimeNow_ms = millis();
+    if (TimeNow_ms - LastSample_ms < MIN_SAMPLE_MS &&
+         TimeNow_ms < LastSample_ms) 
+         return;
+         
+    DesiredSpinSpeed = SpinSpeed_RadianPSecond * RADIAN2DEGREE;     
+    if (DesiredSpinSpeed > 0 && motion == MOTION_REVERSE ||
+        DesiredSpinSpeed < 0 && motion == MOTION_FORWARD)
+     {
+          Stop();
+          // TO DO: Extrapolate speeds for a better time to stop.
+          if (WheelRevMicros < WHEEL_STOPPED)
+            return;  // wait for robot to stop
+          motion = MOTION_STOPPED;
+     }
+     if (DesiredSpinSpeed > 0)
+     {
+           digitalWrite( Reverse, LOW);
+           motion = MOTION_FORWARD;
+     }
+     if (DesiredSpinSpeed < 0)
+     {
+           digitalWrite( Reverse, HIGH);
+           motion = MOTION_REVERSE;
+     }
+     /* TO DO: Retain a history of times, accelerations, actual speeds, commanded speeds and distances.
+           Write a PID controller to move the actual speed to the commanded speed. */
+     motor.desired = DesiredSpinSpeed;
+     motor.actual = MICROSEC_PER_REV2_DEGREE_PER_SEC / WheelRevMicros;
+     motor.time_ms = TimeNow_ms - LastSample_ms;
+     // TO DO: Output a new throttle value
+}
  /*---------------------------------------------------------------------------------------*/ 
 
-void Stop()
-{
-   analogWrite(Throttle, 0);
-   analogWrite(Recombinant, Full); 
-   analogWrite(DiskBrake, Full);
-}
+// Serial communications routines
 
-void initialize()
-{
-        numberIn.positive = true;
-        numberIn.digits = 0;
-        numberIn.decimal = 0;
-        State = STATE_INITIAL;
-        Stop();
-        digitalWrite( Ack, LOW);
-        digitalWrite( EnableRecombinant, HIGH);
-        digitalWrite( Reverse, LOW);
-        digitalWrite( EnableThrottle, HIGH);
-        analogWrite( Steer, Straight);
-        digitalWrite( LED, LOW);
-}
  /*---------------------------------------------------------------------------------------*/ 
-
+// Input is a character code, which is stored in the numberIn structure.
+// Returned value OK or  BUFFER_FULL
 int getNumber(byte digit)
 {
   int result = OK;
@@ -219,6 +440,8 @@ int getNumber(byte digit)
     numberIn.decimal = numberIn.digits;
   return result;
 }
+/*---------------------------------------------------------------------------------------*/ 
+// Convert the numberIn structure to a float and return it.
 float convert()
 {
   float result;
@@ -237,7 +460,8 @@ float convert()
    result = float(numerator) / float(divisor); 
   return result;
 }
-/* There is only one command that is sent over the serial line. It is
+/*---------------------------------------------------------------------------------------*/ 
+/* There is only one command that is received over the serial line. It is
 DRIVE {Speed x} {FrontSteer y}
 where x and y are floats. 
 Characters are ASCII. Wide characters are not used.
@@ -372,72 +596,4 @@ void GetSerial( unsigned long *TimeOfCmd, float *CommandedSpinSPeed, float *Comm
      }
   }
 }
- /*---------------------------------------------------------------------------------------*/ 
-// WheelRev is called by an interrupt.
-void WheelRev()
-{
-	static unsigned long OldTick;
-	static unsigned long TickTime;
-	OldTick = TickTime;
-	TickTime = micros();
-	if (OldTick <= TickTime)
-		WheelRevMicros = TickTime - OldTick;
-	else // overflow
-		WheelRevMicros = TickTime + ~OldTick;
-/* TO DO: 
-    Mount three magnets on the wheel, posiioned at 0, 60 and 180 degrees.
-    The steady speed tick interval pattern will then be in the ratio of 
-    1,2,3,1,2,3 for forward and 3,2,1,3,2,1 for reverse.
-    This lets us sense whether we are going forward or backward.
-    It also gives us tighter control.
-*/
-}
 
-
-void ControlSpin (float SpinSpeed_RadianPSecond)
-{
-/*  CurrentSpinSpeed = 2 * PI / (WheelRevMicros * 1,000,000)  (radians)
-    Degrees / sec lets us use integers over the desired range.
-    Wheel diam (m)     min speed @ 1 deg/s    high speed @ 57,300 deg/sec
-    0.05 (2 in)        0.001 kph              44 kph
-    0.70 (27 in)       0.012 kph             600 kph  
-
-    We do not have sensors that tell whether the robot is moving forward or backward.
-    Assume that it is moving in the desired direction.
-    When the desired direction changes, the robot must stop before we reverse the motor.    
-*/
-    static int motion = MOTION_STOPPED;
-    static unsigned long LastSample_ms = 0;
-    unsigned long TimeNow_ms;
-    long CurrentSpinSpeed = 0;     // degrees / sec
-    long DesiredSpinSpeed;
-    
-    TimeNow_ms = millis();
-    if (TimeNow_ms - LastSample_ms < MIN_SAMPLE_MS &&
-         TimeNow_ms < LastSample_ms) 
-         return;
-         
-    DesiredSpinSpeed = SpinSpeed_RadianPSecond * RADIAN2DEGREE;     
-    if (DesiredSpinSpeed > 0 && motion == MOTION_REVERSE ||
-        DesiredSpinSpeed < 0 && motion == MOTION_FORWARD)
-     {
-          Stop();
-          // TO DO: Extrapolate speeds for a better time to stop.
-          if (WheelRevMicros < WHEEL_STOPPED)
-            return;  // wait for robot to stop
-          motion = MOTION_STOPPED;
-     }
-     if (DesiredSpinSpeed > 0)
-     {
-           digitalWrite( Reverse, LOW);
-           motion = MOTION_FORWARD;
-     }
-     if (DesiredSpinSpeed < 0)
-     {
-           digitalWrite( Reverse, HIGH);
-           motion = MOTION_REVERSE;
-     }
-     CurrentSpinSpeed = MICROSEC_PER_REV2_DEGREE_PER_SEC / WheelRevMicros;
-     /* TO DO: Retain a history of times, accelerations, actual speeds, commanded speeds and distances.
-           Write a PID controller to move the actual speed to the commanded speed. */
-}
