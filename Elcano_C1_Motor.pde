@@ -258,6 +258,7 @@ void loop()
   unsigned long TimeSinceCmd_ms = 0;     // radians
   const unsigned long MaxSilence = 2000;  // ms
   int i;
+  unsigned int RevolutionsPerSecond;
   
 #ifdef TEST_MODE
   write_all (LOW);
@@ -270,10 +271,10 @@ void loop()
   {
       ramp(i);
   }
-  for (i = 0; i <12; i ++)
-  {
-     FlashMorse(i);
-  }
+  // Display speed from cyclometer
+  RevolutionsPerSecond = (unsigned int) (WheelRevMicros / 1000000 + 0.5F);
+  FlashMorse(RevolutionsPerSecond);
+
   
 #else  // not TEST_MODE
  // Read Gamebot command on RxD and put in CommandedSpinSpeed and CommandedSteerAngle
