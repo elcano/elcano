@@ -38,15 +38,18 @@ const int Reverse = 4;
 /* [out] Digital Signal 5: J1 pin 6  (D5) Actuator A1. Traction motor throttle. */
 const int Throttle = 5;
 
-/*  Digital Signal 6: J1 pin 7  (D6) Tune PID. */
+/*  Digital Signal 6: J1 pin 7  (D6) Tune PID. 
+TO DO: Specify how the PID parameters are tuned.
+*/
 const int TunePID = 6;
 
 /* [out] Digital Signal 7: J1 pin 8  (D7) 
    LOW: Select traction motor; HIGH: Select steering  
    when TunePID is LOW, this is output; TunePID HIGH makes this an input
 */
-const int Ack = 7;  // OBSOLETE: Acknowledge to C3 of reset request.
 const int SelectPID = 7;
+
+const int Ack = 7;  // OBSOLETE: Acknowledge to C3 of reset request.
 
 /* [out] Digital Signal 8: J3 pin 1 (D8) Enable Recombinant braking. 
   Alternatively, this could be hard-wired ON */
