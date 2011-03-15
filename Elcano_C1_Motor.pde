@@ -1,6 +1,23 @@
 /*
 Elcano Contol Module C1: Motor and brake control.
 This also incorporates control module C2: Steering.
+*/
+
+// #include "Serial.c"
+/* [in] Digital Signal 0: J1 pin 1 (RxD) Read Serial Data */
+const int RxD = 0;
+
+/* [out] Digital Signal 1: J1 pin 2 (TxD). Transmit Serial Data.  */
+const int TxD = 1;
+
+/* [out] Digital Signal 13: J3 pin 5 (SCK)  LED on Arduino board. Used for testing.    */
+const int LED = 13;
+
+namespace C1_Motor {
+    void setup();
+    void loop();
+}
+/*
 
 
 [in] Digital Signal 0: J1 pin 1 (RxD) Serial signal from C3 Pilot
@@ -18,16 +35,12 @@ This also incorporates control module C2: Steering.
   PIDmotor {Kp x} {Ki y} {Kd z}
   PIDsteer {Kp x} {Ki y} {Kd z}
 */
-const int RxD = 0;
-
-/* [out] Digital Signal 1: J1 pin 2 (TxD). Reserved.  */
-const int TxD = 1;
 
 /* [in] Digital Signal 2: J1 pin 3 to Atmega8 pin 4 PD2 (INT0): Input from cyclometer. 
   The signal comes from a reed switch that opens on each revolution of the wheel. 
   The signal is used to compute ActualSpinSpeed (radians/sec). */
 const int Tachometer = 2;
-
+ 
 /* [in] Digital Signal 3: J1 pin 4  (INT1) Halt or reset signal from console. 
 */
 const int HaltCmd = 3;
@@ -36,7 +49,7 @@ const int HaltCmd = 3;
 const int Reverse = 4;
 
 /* [out] Digital Signal 5: J1 pin 6  (D5) Actuator A1. Traction motor throttle. */
-const int Throttle = 5;
+const int Throttle = 11;// 5;
 
 /*  Digital Signal 6: J1 pin 7  (D6) Tune PID. 
 TO DO: Specify how the PID parameters are tuned.
@@ -57,22 +70,19 @@ const int EnableRecombinant = 8;
 
 /* [out] Digital Signal 9: J3 pin 2 (D9) PWM. Actuator A2: Brake Motor. 
   Controls disk brakes on left and right front wheels. Brakes are mechanically linked to operate in tandem. */
-const int DiskBrake = 9;
+const int DiskBrake = 11; //9;
 
 /* [out] Digital Signal 10: J3 pin 3 (D10) PWM. Recombinant braking. */
 const int Recombinant = 10;
 
 /* [out] Digital Signal 11: J3 pin 4 (D11) PWM. Actuator A3: Steering Motor. 
   Turns left or right. If no signal, wheels are locked to a straight ahead position. */
-const int Steer = 11;
+const int Steer = 5; // 11;
 
 /* [out] Digital Signal 12: J3 pin 5 (D12) Enable Drive Motor. 
   Alternatively, this could be hard-wired ON */
 const int EnableThrottle = 12;
 
-/* [out] Digital Signal 13: J3 pin 5 (SCK)  LED on Arduino board. Used for testing. 
-   */
-const int LED = 13;
 
 /* [in] Analog input 0: J2 pin 1 (ADC0) ActualSteerAngle. */
 const int SteerFeedback = 0;
@@ -92,6 +102,8 @@ unsigned long TimeOfCmd_ms = 0;
 
 const int Full = 255;   // fully on for PWM signals
 const int Off = 0;
+const int FullThrottle =  179;   // 3.5 V
+const int MinimumThrottle = 39;  // Throttle has no effect until 0.75 V
 const int HardLeft = 0;
 const int Straight = 128;
 const int HardRight = 255;
@@ -223,11 +235,7 @@ void WheelRev()
 	else // overflow
 		WheelRevMicros = TickTime + ~OldTick;
 /* TO DO: 
-    Mount three magnets on the wheel, posiioned at 0, 60 and 180 degrees.
-    The steady speed tick interval pattern will then be in the ratio of 
-    1,2,3,1,2,3 for forward and 3,2,1,3,2,1 for reverse.
-    This lets us sense whether we are going forward or backward.
-    It also gives us tighter control.
+  Replace cyclometer with inputs of Hall sensors in wheel.
 */
 }
 /*---------------------------------------------------------------------------------------
@@ -247,7 +255,7 @@ void Halt()
 // Stop may be called from an interrupt or from the loop.
 void Stop()
 {
-   analogWrite(Throttle, 0);
+   analogWrite(Throttle, Off);
    analogWrite(Recombinant, Full); 
    analogWrite(DiskBrake, Full);
 }
@@ -265,19 +273,27 @@ void loop()
   
 #ifdef TEST_MODE
   write_all (LOW);
-  for (i = Off; i <= Full; i++)
+  delay (1000);
+  for (i = MinimumThrottle; i <= MinimumThrottle+20; i++)
   {
+    /* As of 3/15/11 the following test spins Elcano's wheel.
+       However, we expect to see it on for 20 sec and off for 1 sec.
+       Instead, it is only on for 2 sec.
+       A manual throttle is also not able to keep the wheel on for an
+       extended time.
+    */
       ramp(i);
   }
   write_all (HIGH);
-  for (i = Full; i >= Off; i--)
+ // delay (1000);
+  for (i = MinimumThrottle+20; i >= MinimumThrottle; i--)
   {
       ramp(i);
   }
-  // Display speed from cyclometer
+  /* Display speed from cyclometer
   RevolutionsPerSecond = (unsigned int) (WheelRevMicros / 1000000 + 0.5F);
   FlashMorse(RevolutionsPerSecond);
-
+*/
   
 #else  // not TEST_MODE
  // Read Gamebot command on RxD and put in CommandedSpinSpeed and CommandedSteerAngle
@@ -316,7 +332,7 @@ void ramp (int state)
    analogWrite(Throttle, state);
    analogWrite(Recombinant, state); 
    analogWrite(DiskBrake, state);
-   delay(10); 
+   delay(500); 
 
 }
 /*---------------------------------------------------------------------------------------
