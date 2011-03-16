@@ -274,19 +274,27 @@ void loop()
 #ifdef TEST_MODE
   write_all (LOW);
   delay (1000);
-  for (i = MinimumThrottle; i <= MinimumThrottle+20; i++)
+  for (i = MinimumThrottle; i <= MinimumThrottle+5; i++)
   {
-    /* As of 3/15/11 the following test spins Elcano's wheel.
+    /* As of 3/15/11 the ramp test spins Elcano's wheel.
        However, we expect to see it on for 20 sec and off for 1 sec.
        Instead, it is only on for 2 sec.
        A manual throttle is also not able to keep the wheel on for an
        extended time.
+       
+       3/16/11: Elcano is drawing 20 to 25 Amp from a 36V battery.
+       It is giving 900W to a wheel capable of 500W.
+       Probable cause of motor kicking off is over-current protection
+       kicking in.
+       Scaling back the amount of throttle helps. 
+       There is little load on the test stand.
+       TO DO: Monitor speed and control throttle for desired speed.
     */
       ramp(i);
   }
   write_all (HIGH);
  // delay (1000);
-  for (i = MinimumThrottle+20; i >= MinimumThrottle; i--)
+  for (i = MinimumThrottle+5; i >= MinimumThrottle; i--)
   {
       ramp(i);
   }
