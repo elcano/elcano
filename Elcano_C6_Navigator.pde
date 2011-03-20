@@ -54,6 +54,10 @@ This is the method used to perform sensor fusion.
 */
 
 /*---------------------------------------------------------------------------------------*/ 
+#include "Serial.cpp"
+
+void initialize();
+
 #define MAX_WAYPOINTS 10
 /*   There are two coordinate systems.
      MDF and RNDF use latitude and longitude.
@@ -66,8 +70,6 @@ This is the method used to perform sensor fusion.
      aligned with the vehicle. This is usually transformed into the flat
      world coordinate system.
 */
-const int RxD = 0;
-const int TxD = 1;
 
 struct waypoint
 {
@@ -152,3 +154,10 @@ void loop()
     
   */
 }
+/* Entry point for the simulator.
+   This could be done with namespace, but the Arduino IDE does not handle preprocessor statements
+   wrapping a namespace in the standard way.
+*/
+void C6_Navigator_setup() { setup(); }
+
+void C6_Navigator_loop() { loop(); }

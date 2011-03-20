@@ -8,11 +8,8 @@ serial line. The format of the DRIVE command is documented in the C1 code.
 
 [in] Digital Signal 0: J1 pin 1 (RxD) Serial signal from C6 Navigator
 */
-const int RxD = 0;
+#include "Serial.cpp"
 
-/* [out] Digital Signal 1: J1 pin 2 (TxD). 
-DRIVE command to C1 motor controller or to simulator. */
-const int TxD = 1;
 
 const int Ack = 2;  // OBSOLETE: Acknowledge from C1 of reset.
 
@@ -41,10 +38,6 @@ const int Halt = 7;   // input from operator console.
 const int Reset_C1 = 8;  // output to C1.
 
 
-/* [out] Digital Signal 13: J3 pin 5 (SCK)  LED on Arduino board. Used for testing. 
-   */
-const int LED = 13;
-
 unsigned long TimeOfCmd_ms = 0;
 
 const int Full = 255;   // fully on for PWM signals
@@ -60,29 +53,12 @@ const int Off = 0;
 #define NUMBER_BUFFER 12
 struct floatText
 {
-   boolean positive;
+   bool positive;
    int digits;
    int decimal; 
    byte buffer[NUMBER_BUFFER];  
 } numberIn;
 
-
- /*---------------------------------------------------------------------------------------*/ 
-void setup() 
-{ 
-        pinMode(RxD, INPUT);
-        pinMode(TxD, OUTPUT);
-        pinMode(SwitchBit_0, INPUT);
-        pinMode(SwitchBit_1, INPUT);
-        pinMode(SwitchBit_2, INPUT);
-        pinMode(Halt, INPUT);
-        pinMode(E_Stop, INPUT);
-        pinMode(Reset_C1, OUTPUT);
-        pinMode(LED, OUTPUT); 
-        initialize();
-      
-       	Serial.begin(9600); 
-}	
 
 /*---------------------------------------------------------------------------------------*/ 
 void initialize()
@@ -100,6 +76,23 @@ void initialize()
            Wait until EStop is not active.
         */
 }
+/*---------------------------------------------------------------------------------------*/ 
+void setup() 
+{ 
+        pinMode(RxD, INPUT);
+        pinMode(TxD, OUTPUT);
+        pinMode(SwitchBit_0, INPUT);
+        pinMode(SwitchBit_1, INPUT);
+        pinMode(SwitchBit_2, INPUT);
+        pinMode(Halt, INPUT);
+        pinMode(E_Stop, INPUT);
+        pinMode(Reset_C1, OUTPUT);
+        pinMode(LED, OUTPUT); 
+        initialize();
+      
+       	Serial.begin(9600); 
+}	
+
 /*---------------------------------------------------------------------------------------*/ 
 void loop() 
 {
@@ -268,4 +261,7 @@ TO DO: Write GetSerial.
 void GetSerial( unsigned long *TimeOfCmd)
 {
 }
+/* Entry point for the simulator. */
+void C3_Pilot_setup() { setup(); }
 
+void C3_Pilot_loop() { loop(); }
