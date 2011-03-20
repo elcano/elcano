@@ -39,6 +39,9 @@ we could have another processor whose sole function is communication.
 */
 
 /*---------------------------------------------------------------------------------------*/ 
+#include "Serial.cpp"
+
+  
 #define MAX_WAYPOINTS 10
 /*   There are two coordinate systems.
      MDF and RNDF use latitude and longitude.
@@ -53,10 +56,6 @@ struct waypoint
 } mission[MAX_WAYPOINTS];
 int waypoints;
 
-void setup() 
-{ 
-   initialize();
-}
 /*---------------------------------------------------------------------------------------*/ 
 void initialize()
 {
@@ -122,6 +121,11 @@ void initialize()
         SendState(C6); */
 }
 /*---------------------------------------------------------------------------------------*/ 
+void setup() 
+{ 
+   initialize();
+}
+/*---------------------------------------------------------------------------------------*/ 
 void loop() 
 {
   /*
@@ -137,5 +141,14 @@ void loop()
     About once a second, write the current position and remaining mission, so that if we
     get a reset, we can start from where we left off.   
     */
-
 }
+
+/* Entry point for the simulator.
+   This could be done with namespace, but the Arduino IDE does not handle preprocessor statements
+   wrapping a namespace in the standard way.
+*/
+void C4_Planner_setup() { setup(); }
+
+void C4_Planner_loop() { loop(); }
+
+

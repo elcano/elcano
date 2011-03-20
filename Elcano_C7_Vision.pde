@@ -63,9 +63,15 @@
     is possible. The position of the returned spot can be used to measure the distance to
     the object.
 */
+#include "Serial.cpp"
+
 void setup()
 {
 }
 void loop()
 {
 }
+/* Entry point for the simulator. */
+void C7_Vision_setup() { setup(); }
+
+void C7_Vision_loop() { loop(); }

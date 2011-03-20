@@ -3,7 +3,7 @@ Elcano Contol Module C1: Motor and brake control.
 This also incorporates control module C2: Steering.
 */
 
-#include "Serial.c"
+#include "Serial.cpp"
 
 namespace C1_Motor {
     void setup();
