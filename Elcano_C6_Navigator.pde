@@ -54,9 +54,18 @@ This is the method used to perform sensor fusion.
 */
 
 /*---------------------------------------------------------------------------------------*/ 
-#include "Serial.cpp"
+#include "Common.h"
 
-void initialize();
+#ifdef SIMULATOR
+#include "..\\Elcano\\Elcano\\Elcano_simulator.h"
+#else
+#include "Serial.cpp"
+#endif
+
+namespace C6_Navigator {
+    void setup();
+    void loop();
+}
 
 #define MAX_WAYPOINTS 10
 /*   There are two coordinate systems.
@@ -71,21 +80,14 @@ void initialize();
      world coordinate system.
 */
 
-struct waypoint
-{
-    double latitude;
-    double longitude;
-    long east_mm;   // max is 2147 km
-    long north_mm;
-} mission[MAX_WAYPOINTS];
-int waypoints;
 
-void setup() 
-{ 
-    pinMode(RxD, INPUT);
-    pinMode(TxD, OUTPUT);
-    initialize();
-}
+#ifdef SIMULATOR
+namespace C6_Navigator {
+#endif
+  
+int waypoints;
+waypoint mission[MAX_WAYPOINTS];
+
 /*---------------------------------------------------------------------------------------*/ 
 void initialize()
 {
@@ -125,6 +127,14 @@ void initialize()
     
 }
 /*---------------------------------------------------------------------------------------*/ 
+
+void setup() 
+{ 
+    pinMode(RxD, INPUT);
+    pinMode(TxD, OUTPUT);
+    initialize();
+}
+/*---------------------------------------------------------------------------------------*/ 
 void loop() 
 {
   /* Perform dead reckoning from clock and previous state
@@ -154,10 +164,14 @@ void loop()
     
   */
 }
+#ifdef SIMULATOR
+} // end namespace
+#endif
+
 /* Entry point for the simulator.
    This could be done with namespace, but the Arduino IDE does not handle preprocessor statements
    wrapping a namespace in the standard way.
 */
-void C6_Navigator_setup() { setup(); }
+void C6_Navigator_setup() { C6_Navigator::setup(); }
 
-void C6_Navigator_loop() { loop(); }
+void C6_Navigator_loop() { C6_Navigator::loop(); }
