@@ -5,10 +5,6 @@ This also incorporates control module C2: Steering.
 
 #include "Serial.cpp"
 
-namespace C1_Motor {
-    void setup();
-    void loop();
-}
 /*
 
 
@@ -185,6 +181,7 @@ void setup()
         pinMode(Steer, OUTPUT);
         pinMode(EnableThrottle, OUTPUT);
         pinMode(LED, OUTPUT); 
+//      analogReference(EXTERNAL);
 	attachInterrupt (0, WheelRev, RISING);
 	attachInterrupt (1, Halt, RISING);
 

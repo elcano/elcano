@@ -8,8 +8,17 @@ serial line. The format of the DRIVE command is documented in the C1 code.
 
 [in] Digital Signal 0: J1 pin 1 (RxD) Serial signal from C6 Navigator
 */
+#ifdef SIMULATOR
+#include "..\\Elcano\\Elcano\\Elcano_simulator.h"
+#else
 #include "Serial.cpp"
+#endif
 
+namespace C3_Pilot {
+    void setup();
+    void loop();
+}
+using namespace C3_Pilot;
 
 const int Ack = 2;  // OBSOLETE: Acknowledge from C1 of reset.
 
@@ -59,6 +68,9 @@ struct floatText
    byte buffer[NUMBER_BUFFER];  
 } numberIn;
 
+#ifdef SIMULATOR
+namespace C3_Pilot {
+#endif
 
 /*---------------------------------------------------------------------------------------*/ 
 void initialize()
@@ -90,7 +102,7 @@ void setup()
         pinMode(LED, OUTPUT); 
         initialize();
       
-       	Serial.begin(9600); 
+//     	Serial.begin(9600); 
 }	
 
 /*---------------------------------------------------------------------------------------*/ 
@@ -122,6 +134,11 @@ void loop()
 */ 
 #endif  // TEST_MODE 
 } 
+
+#ifdef SIMULATOR
+} // end namespace
+#endif
+
 #ifdef TEST_MODE
 /*---------------------------------------------------------------------------------------*/ 
 void write_all( int state)
@@ -262,6 +279,6 @@ void GetSerial( unsigned long *TimeOfCmd)
 {
 }
 /* Entry point for the simulator. */
-void C3_Pilot_setup() { setup(); }
+void C3_Pilot_setup() { C3_Pilot::setup(); }
 
-void C3_Pilot_loop() { loop(); }
+void C3_Pilot_loop() { C3_Pilot::loop(); }

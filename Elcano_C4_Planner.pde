@@ -39,21 +39,42 @@ we could have another processor whose sole function is communication.
 */
 
 /*---------------------------------------------------------------------------------------*/ 
-#include "Serial.cpp"
+#include "Common.h"
+#define PI ((float) 3.1415925)
 
-  
+#ifdef SIMULATOR
+#include "..\\Elcano\\Elcano\\Elcano_simulator.h"
+#include <math.h>
+
+#else
+#include "Serial.cpp"
+#endif
+
+namespace C4_Planner {
+    void setup();
+    void loop();
+}
+using namespace C4_Planner;
+
+#ifndef NULL
+#define NULL 0 
+#endif
+
 #define MAX_WAYPOINTS 10
 /*   There are two coordinate systems.
      MDF and RNDF use latitude and longitude.
      C3 and C6 assume that the earth is flat at the scale that they deal with
 */
-struct waypoint
-{
-    double latitude;
-    double longitude;
-    long x_mm;  // x is east; max is 2147 km
-    long y_mm;  // y is true north
-} mission[MAX_WAYPOINTS];
+
+
+struct curve route[20];
+curve *path;
+/*---------------------------------------------------------------------------------------*/ 
+#ifdef SIMULATOR
+namespace C4_Planner {
+#endif
+  
+waypoint mission[MAX_WAYPOINTS];
 int waypoints;
 
 /*---------------------------------------------------------------------------------------*/ 
@@ -71,8 +92,9 @@ void initialize()
   /* If (initial position is provided)  // used when GPS is unavailable or inaccurate
      {
         ReadPosition();  // latitude and longitude
-        // The origin in the (x_mm, y_mm) coordinate system is defined to be the
+        // The origin in the (east_mm, north_mm) coordinate system is defined to be the
         // latitude and longitude at which the robot starts. 
+        // Bearing is initial robot attitude.
         SendInitialPosition(C6);  // latitude and longitude
      }
      */
@@ -92,23 +114,41 @@ void initialize()
      ReceiveState(C6); 
      mission[0] = InitialPosition; */
      
+	route[0].previous = NULL; 
+	route[0].present->east_mm = 0;
+	route[0].present->north_mm = 0;  
+	route[0].present->latitude = INVALID;
+	route[0].present->longitude = INVALID;  
+     
      /* Plan a path (using RNDF) between each waypoint. 
      Use the A* algorithm as given in
      Robin Murphy, Introduction to AI Robotics, MIT Press.
-     Steve Rabin (ed) AI Game Programming Wisdom, Charles River Media.
+     Steve Rabin (ed) AI Game Programming Wisdom, Charles River Media. */
      
-     for (i = 0; i < waypoints; i++)
+     
+/*   for (i = 0; i < waypoints; i++)
      {
        PlanPath (waypoint[i]);
      }
      PlanPath must also receive obstacle information from C5.
+     The output from PlanPath is a sequence of waypointsm where each waypoint
+     is associated with a junction in the RNDF.  We must then supplement the junction
+     points with all the intermediate non-junction points in the RNDF so that
+     the vehicle can follow curves in the road.
+     
      We now have a sequence of RNDF segments that defines the mission from
      the origin to the destination.
-     */
      
-     /* Construct a series of Hermite curves that link the origin and destination.
+     We do not need finer grain that the RNDF waypoints, since each of them is 
+     implicitly linked by a cubic curve, which defines a smoother path than
+     line segments would. To find the points in between the RNDF waypoints,
+     use the function GetPosition.
+    
+     GetPosition supplements each pair of waypoints with an Hermite curve that 
+     links them.
         Foley et al., Introduction to Computer Graphics.
         ConstructCurves();     */
+       
      /* Construct the speed profiles over these curves.
         Consider how much time we want to come up to speed, time to decelerate
         and reduced speed around turns. 
@@ -119,6 +159,92 @@ void initialize()
         to create the vehicle state.  The state information is sent on to C3 and 
         fed back to C4.
         SendState(C6); */
+}
+/*---------------------------------------------------------------------------------------*/ 
+void MakeCurve(waypoint *start, waypoint *end, int t, waypoint *newp)
+{
+	double p0, p1, p2, p3;
+	double q0, q1, q2, q3;
+	double angle;
+	double dx, dy, cos_end, sin_end;
+	p0 = (double) start->east_mm;
+	q0 = (double) start->north_mm;
+	angle = (90-start->bearing) * PI / 180;
+	p1 = cos(angle);
+	q1 = sin(angle);
+	dx = (double) end->east_mm - p0;
+	dy = (double) end->north_mm - q0;
+	angle = (90-end->bearing) * PI / 180;
+	cos_end = cos(angle);
+	sin_end = sin(angle);
+	p2 = 3*dx - (2*p1 + cos_end);
+	q2 = 3*dy - (2*q1 + sin_end);
+	p3 = -2*dx + p1 + cos_end;
+	q3 = -2*dy + q1 + sin_end;
+	newp->east_mm  = (long) (p0 + t*(p1 + t*(p2 + t*p3)));
+	newp->north_mm = (long) (q0 + t*(q1 + t*(q2 + t*q3)));
+}
+/*---------------------------------------------------------------------------------------*/ 
+void GetPosition(curve *path, int t, waypoint *newp)
+{
+	curve *start = path;
+	curve *end;
+	newp->latitude = INVALID;
+	newp->longitude = INVALID;
+	newp->east_mm = 0;
+	newp->north_mm = 0;
+	newp->bearing = INVALID;
+	if (path->present == NULL) return;
+	if (t == 0 || (t > 0 && path->next == NULL) ||
+		(t < 0 && path->previous == NULL))
+	{
+		newp->latitude =  path->present->latitude;
+		newp->longitude = path->present->longitude;
+		newp->east_mm =   path->present->east_mm;
+		newp->north_mm =  path->present->north_mm;
+		newp->bearing =   path->present->bearing;
+		return;
+	}
+	while (t++ < 1)
+	{
+		start = start->previous;
+		end =   start->previous;
+		if (end == NULL)
+		{
+			newp->latitude =  start->present->latitude;
+			newp->longitude = start->present->longitude;
+			newp->east_mm =   start->present->east_mm;
+			newp->north_mm =  start->present->north_mm;
+			newp->bearing =   start->present->bearing;
+			return;
+		}
+	}
+		while (t-- > 1)
+	{
+		start = start->next;
+		end =   start->next;
+		if (end == NULL)
+		{
+			newp->latitude =  start->present->latitude;
+			newp->longitude = start->present->longitude;
+			newp->east_mm =   start->present->east_mm;
+			newp->north_mm =  start->present->north_mm;
+			newp->bearing =   start->present->bearing;
+			return;
+		}
+	}
+	if (t < 0)
+		t = -t;
+	if (t == 1)
+	{
+		newp->latitude =  end->present->latitude;
+		newp->longitude = end->present->longitude;
+		newp->east_mm =   end->present->east_mm;
+		newp->north_mm =  end->present->north_mm;
+		newp->bearing =   end->present->bearing;
+		return;
+	}
+	MakeCurve( start->present, end->present, t, newp);
 }
 /*---------------------------------------------------------------------------------------*/ 
 void setup() 
@@ -142,13 +268,15 @@ void loop()
     get a reset, we can start from where we left off.   
     */
 }
-
+#ifdef SIMULATOR
+} // end namespace
+#endif
 /* Entry point for the simulator.
    This could be done with namespace, but the Arduino IDE does not handle preprocessor statements
    wrapping a namespace in the standard way.
 */
-void C4_Planner_setup() { setup(); }
+void C4_Planner_setup() { C4_Planner::setup(); }
 
-void C4_Planner_loop() { loop(); }
+void C4_Planner_loop() { C4_Planner::loop(); }
 
 

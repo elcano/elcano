@@ -63,7 +63,22 @@
     is possible. The position of the returned spot can be used to measure the distance to
     the object.
 */
+#include "Common.h"
+
+#ifdef SIMULATOR
+#include "..\\Elcano\\Elcano\\Elcano_simulator.h"
+#else
 #include "Serial.cpp"
+#endif
+
+namespace C7_Vision {
+    void setup();
+    void loop();
+}
+
+#ifdef SIMULATOR
+namespace C7_Vision {
+#endif
 
 void setup()
 {
@@ -71,7 +86,12 @@ void setup()
 void loop()
 {
 }
-/* Entry point for the simulator. */
-void C7_Vision_setup() { setup(); }
 
-void C7_Vision_loop() { loop(); }
+#ifdef SIMULATOR
+}  // namespace
+#endif
+
+/* Entry point for the simulator. */
+void C7_Vision_setup() { C7_Vision::setup(); }
+
+void C7_Vision_loop() { C7_Vision::loop(); }

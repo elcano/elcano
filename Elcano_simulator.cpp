@@ -21,6 +21,8 @@
 
 
 #include "Elcano_simulator.h"
+void pinMode(int a1, int a2) {} // stub
+void digitalWrite(int a1, int a2) {}
 
 /* Here we include files common to Arduino boards. 
    Each Arduino has a copy of these files.
@@ -30,6 +32,10 @@
 */
 #include "Serial.cpp"
 
+using namespace C3_Pilot;
+using namespace C4_Planner;
+using namespace C6_Navigator;
+using namespace C7_Vision;
 
 /*
 TODO: Include Arduino libraries
