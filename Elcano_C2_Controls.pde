@@ -55,12 +55,15 @@ first button push and the second push, allowing the vehicle to come to a stop.
  
 /* [in] Digital Signal 2: J1 pin 3  (INT0) Stop button. 
 The Stop signal is a momentary button push from either the console or remote.
-It's last state is latched; so it can be polled for change.
+A rising edge produces an interrupt.
 The Cruise button works the same way.
 */
 const int StopButton = 2;
-const int CruiseButton = 4;
+const int CruiseButton = 3;
 
+const int EnableThrottle = 4;
+const int EnableBrake = 5;
+const int EnableSteer = 6;
 const int StopLED = 7;
 const int CruiseLED = 8;
 
@@ -79,18 +82,19 @@ const int EStop = 12;
 
 /* Pin 13 is LED. */
 
+/* Analog Input pins 0-5 are also Digital Inputs 14-19. */
 /* [in] Analog input 0: J2 pin 1 (ADC0) . */
+/* Joystick is what the driver wants to do. */
 const int MotionJoystick = 0;
-
 /* [in] Analog input 1: J2 pin 2 (ADC1) MotorTemperature. */
 const int SteerJoystick = 1;
 
-/* Analog Input pins 0-5 are also Digital Inputs 14-19. */
-const int EnableThrottle = 17;
-const int EnableBrake = 18;
-const int EnableSteer = 19;
+/* These are what the autonomous vehicle wants to do */
+const int CruiseThrottle = 3;
+const int CruiseBrake = 4;
+const int CruiseSteer = 5;
 
-/* RESERVED: Pins 1,2,3,5,6,16 */
+/* RESERVED: Pins 1,2,16 */
 
 /* time (micro seconds) for a wheel revolution */
 volatile unsigned long WheelRevMicros = 0;
@@ -132,6 +136,9 @@ void setup()
         pinMode(TxD, OUTPUT);
         pinMode(StopButton, INPUT);
         pinMode(CruiseButton, INPUT);
+        pinMode(EnableThrottle, INPUT);
+        pinMode(EnableBrake, INPUT);
+        pinMode(EnableSteer, INPUT);
         pinMode(StopLED, OUTPUT);
         pinMode(CruiseLED, OUTPUT);
         pinMode(Throttle, OUTPUT);
@@ -142,10 +149,9 @@ void setup()
 //      analogReference(EXTERNAL);
         pinMode(MotionJoystick, INPUT);
         pinMode(SteerJoystick, INPUT);
-        pinMode(EnableThrottle, INPUT);
-        pinMode(EnableBrake, INPUT);
-        pinMode(EnableSteer, INPUT);
-
+        pinMode(CruiseThrottle, INPUT);
+        pinMode(CruiseBrake, INPUT); 
+        pinMode(CruiseSteer, INPUT);
         initialize();
         
 }	
