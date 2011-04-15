@@ -1,0 +1,43 @@
+MDF_name	Sample_MDF_Rev_1.2
+RNDF	Sample_RNDF_Rev_1.2
+format_version	1.0
+creation_date	5/18/2006
+checkpoints	
+num_checkpoints	18
+1	
+2	
+3	
+2	
+3	
+2	
+3	
+4	
+2	
+4	
+2			
+14	/*parking spot*/		
+5			
+10			
+17	/*parking spot*/		
+6			
+7			
+8			
+end_checkpoints			
+speed_limits			
+num_speed_limits	14		
+1	10	25	
+2	0	20	/*undefined minimum speed*/
+3	10	20	
+4	10	20	
+5	10	15	
+6	15	20
+7	15	20
+8	10	15
+9	10	15
+10	10	20
+11	10	10
+12	10	15
+13	10	20
+14	5	10
+end_speed_limits		
+end_file		
