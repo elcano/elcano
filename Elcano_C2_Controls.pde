@@ -52,6 +52,11 @@ first button push and the second push, allowing the vehicle to come to a stop.
 
 */
 
+/* [in] Digital Signal 0: J1 pin 1 (RxD) Read Serial Data
+The operation of the joystick may be non-linear and depend on speed.
+*/
+const int ReverseButton = 0;
+const int CruiseReverse = 1;
  
 /* [in] Digital Signal 2: J1 pin 3  (INT0) Stop button. 
 The Stop signal is a momentary button push from either the console or remote.
@@ -72,68 +77,84 @@ const int Throttle =  9;
 
 /* [out] Digital Signal 10: J3 pin 3 (D10) PWM. Actuator A2: Brake Motor. 
   Controls disk brakes on left and right front wheels. Brakes are mechanically linked to operate in tandem. */
-const int DiskBrake = 10;
+const int DiskBrake = 11;
 
 /* [out] Digital Signal 11: J3 pin 4 (D11) PWM. Actuator A3: Steering Motor. 
   Turns left or right. If no signal, wheels are locked to a straight ahead position. */
-const int Steer =  11;
+const int Steer =  10;
 
-const int EStop = 12;
+// Estop may not be needed.  Estop means we have lost 36v power.
+const int Reverse = 12;
 
 /* Pin 13 is LED. */
+const int ReverseLED = 13;
 
 /* Analog Input pins 0-5 are also Digital Inputs 14-19. */
 /* [in] Analog input 0: J2 pin 1 (ADC0) . */
 /* Joystick is what the driver wants to do. */
-const int MotionJoystick = 0;
+const int AccelerateJoystick = 0;
 /* [in] Analog input 1: J2 pin 2 (ADC1) MotorTemperature. */
 const int SteerJoystick = 1;
+const int JoystickCenter = 2;
 
 /* These are what the autonomous vehicle wants to do */
 const int CruiseThrottle = 3;
 const int CruiseBrake = 4;
 const int CruiseSteer = 5;
 
-/* RESERVED: Pins 1,2,16 */
 
-/* time (micro seconds) for a wheel revolution */
-volatile unsigned long WheelRevMicros = 0;
-
-unsigned long TimeOfCmd_ms = 0;
+volatile int Stop = TRUE;
+volatile unsigned long TimeOfStopButton_ms;
+volatile int Cruise = FALSE;
+volatile unsigned long TimeOfCruiseButton_ms;
+const int PauseTime_ms = 4000;
 
 const int Full = 255;   // fully on for PWM signals
 const int Off = 0;
 const int FullThrottle =  179;   // 3.5 V
 const int MinimumThrottle = 39;  // Throttle has no effect until 0.75 V
-const int FullBrake = 255;
-const int MinimumBrake = 0;
-const int HardLeft = 0;
-const int Straight = 128;
+const int FullBrake = 255;  
+const int MinimumBrake = 127;
+const int HardLeft = 127;
+const int Straight = 191;
 const int HardRight = 255;
+/*  Servo range is 50 mm for brake, 100 mm for steering.
+    Servo is fully retracted on a pulse width of 2 ms;
+    fully extended at 1 ms and centered at 1.5 ms.
+    There is a deadband of 8 us.
+    At 12v, servo operating speed is 56mm/s with no load or
+    35 mm/s at maximum load.
+    
+    The Arduino PWM signal is at 490 Hz or 2.04 ms.
+    0 is always off; 255 always on. One step is 7.92 us.
+    
+*/
 
-#define MICROSEC_PER_REV2_DEGREE_PER_SEC (1000000 * 360)
-#define RADIAN2DEGREE 0.0174533
-/* The motion flags are logical values.  
-   They are not the same as the values written to reverse the motor. */
-#define MOTION_STOPPED 0
-#define MOTION_FORWARD 1
-#define MOTION_REVERSE 2
-/* If it has been this many micro seconds since a tick, the wheel is stopped.
-   This is a crude method for determining if the wheel has stopped.
-   A 10 sec delay between ticks means that a 0.7 m diameter wheel has moved at most 13.6 cm.
-   A 0.43 m wheel has moved at most 8.6 cm. */
-#define WHEEL_STOPPED 10000000
-#define MIN_SAMPLE_MS 100
 
 // return values
 #define OK       0
 #define BUFFER_FULL 1
+  const int Motor = 0;
+  const int Brakes = 1;
+  const int Steering = 2;
+  const int ManualStop = 0;
+  const int CruiseStop = 1;
+  const int ManualGo = 3;
+  const int CruiseGo = 4;
+  struct _Instruments
+  {
+     int Enabled;  // whether cruise control is enabled.
+     int State;
+     int StickMoved;  // bool
+     int Joystick;   // position of stick
+     int Position;  // last commanded
+  } Instrument[3];
 
  /*---------------------------------------------------------------------------------------*/ 
-void setup() 
-{ 
-        pinMode(RxD, INPUT);
-        pinMode(TxD, OUTPUT);
+void setup()  
+{  
+        pinMode(ReverseButton, INPUT);
+        pinMode(CruiseReverse, INPUT);
         pinMode(StopButton, INPUT);
         pinMode(CruiseButton, INPUT);
         pinMode(EnableThrottle, INPUT);
@@ -144,57 +165,107 @@ void setup()
         pinMode(Throttle, OUTPUT);
         pinMode(DiskBrake, OUTPUT);
         pinMode(Steer, OUTPUT);
-        pinMode(EStop, INPUT);
-        pinMode(LED, OUTPUT); 
+        pinMode(Reverse, OUTPUT);
+        pinMode(ReverseLED, OUTPUT); 
 //      analogReference(EXTERNAL);
-        pinMode(MotionJoystick, INPUT);
+        pinMode(AccelerateJoystick, INPUT);
         pinMode(SteerJoystick, INPUT);
+        pinMode(JoystickCenter, INPUT);
         pinMode(CruiseThrottle, INPUT);
         pinMode(CruiseBrake, INPUT); 
         pinMode(CruiseSteer, INPUT);
         initialize();
+        attachInterrupt(0, StopPressed, FALLING);
+        attachInterrupt(1, CruisePressed, FALLING);
         
 }	
 
 /*---------------------------------------------------------------------------------------*/ 
 void initialize()
 {
-        Stop();
+        Halt();
         
-        digitalWrite( EnableThrottle, HIGH);
         analogWrite( Steer, Straight);
+        Instrument[Steering].Position = Straight;
+        digitalWrite( StopLED, HIGH);
+        digitalWrite( CruiseLED, LOW);
         digitalWrite( LED, LOW);
+        Instrument[Motor].State = ManualStop;
+        Instrument[Brakes].State = ManualStop;
+        Instrument[Steering].State = ManualStop;
+        Instrument[Motor].Joystick = Off;
+        Instrument[Brakes].Joystick = Off;
+        Instrument[Steering].Joystick = Straight;
+        TimeOfStopButton_ms = 0;
+        TimeOfCruiseButton_ms = 0;
 }
 /*---------------------------------------------------------------------------------------*/ 
+/*---------------------------------------------------------------------------------------
+ CruisePressed is called by an interrupt
+ */  
+void CruisePressed()
+{
+    TimeOfCruiseButton_ms = millis();
+    Cruise = TRUE;
+}
 
 /*---------------------------------------------------------------------------------------
- Halt is called by an interrupt
- A console reset signal does not immediately reset the C1 motor controller.
- After receiving a halt or reset, the motor controller brings the vehicle to a stop.
- A console reset is immediatly effective on the C3 Pilot.
- A few seconds after C3 is initialized, it sends a reset to C1.
- */
-void Halt()
+ StopPressed is called by an interrupt
+ */  
+void StopPressed()
 {
-    Stop();
-    delay (4000);
+    Halt();
+    TimeOfStopButton_ms = millis();
+    Stop = TRUE;
 }
 /*---------------------------------------------------------------------------------------*/ 
 // Bring the vehicle to a stop.
 // Stop may be called from an interrupt or from the loop.
-void Stop()
+void Halt()
 {
    analogWrite(Throttle, Off);
-   analogWrite(DiskBrake, Full);
-}
+   analogWrite(DiskBrake, FullBrake);
+   Instrument[Motor].Position = Off;
+   Instrument[Brakes].Position = FullBrake;}
 #define TEST_MODE
 /*---------------------------------------------------------------------------------------*/ 
 void loop() 
 {
   unsigned long TimeSinceCmd_ms = 0;     // radians
   const unsigned long MaxSilence = 2000;  // ms
-  int i;
+  int i, throttle;
+  unsigned int count = 0;
   
+//  Enabled[Motor] = digitalRead(EnableThrottle);
+//  Enabled[Brakes] = digitalRead(EnableBrake);
+//  Enabled[Steering] = digitalRead(EnableSteer);
+//  
+//  StateTransition(Motor);
+//  StateTransition(Brakes);
+//  StateTransition(Steering);
+//  
+//  if (Cruising[Motor] || Cruising[Brakes] || Cruising[Steering])
+//      digitalWrite(CruiseLED, HIGH);
+//  else
+//      digitalWrite(CruiseLED, LOW);
+//   if (Stopped[Motor] && Stopped[Brakes] && Stopped[Steering])
+//      digitalWrite(StopLED, HIGH);
+//  else
+//      digitalWrite(StopLED, LOW);
+//      
+//  if (Stopped[Motor]) 
+//      analogWrite(Throttle, Off);
+//  else if (Cruising[Motor])
+//  {
+//      throttle = analogRead(CruiseThrottle) / 4;
+//      analogWrite(Throttle, throttle);
+//  }
+//  else
+//  {
+//    // write Joystick
+//  }
+// 
+ 
 #ifdef TEST_MODE
 //  write_all (LOW);
 //  delay (1000);
@@ -208,9 +279,13 @@ void loop()
 //  {
 //      ramp(Throttle, i);
 //  }
+  write_all (HIGH);
+  delay (1000);
   
    write_all (LOW);
    delay (1000);
+   FlashMorse (count++);
+ 
    for (i = MinimumBrake; i <= FullBrake; i++)
   {
       ramp(DiskBrake, i);
@@ -237,11 +312,62 @@ void loop()
    
 #else  // not TEST_MODE
  
-
-  if (TimeSinceCmd_ms > MaxSilence)
- {  // Watchdog time out.
-   Stop();
- } 
+  JoystickMotion();
+  StateTransition(Motor);
+  StateTransition(Brakes);
+  StateTransition(Steering);
+  
+  if (Instrument[Motor].State == ManualGo)
+  {
+   analogWrite(Throttle, Instrument[Motor].Joystick);
+   Instrument[Motor].Position = Instrument[Motor].Joystick;
+  }
+  else if (Instrument[Motor].State == CruiseGo)
+  {
+    Instrument[Motor].Position = analogRead(CruiseThrottle) / 4;   
+    analogWrite(Throttle, Instrument[Motor].Position);
+  }
+  else
+  {
+    Instrument[Motor].Position = MinimumThrottle;   
+    analogWrite(Throttle, Instrument[Motor].Position);
+  }
+  
+  if (Instrument[Brakes].State == ManualGo)
+  {
+   analogWrite(DiskBrake, Instrument[Brakes].Joystick);
+   Instrument[Brakes].Position = Instrument[Brakes].Joystick;
+  }  
+  else if (Instrument[Brakes].State == CruiseGo)
+  {
+    Instrument[Brakes].Position = analogRead(CruiseBrake) / 4;   
+    analogWrite(DiskBrake, Instrument[Brakes].Position);
+  }
+  else
+  {
+    Instrument[Brakes].Position = FullBrake;   
+    analogWrite(DiskBrake, Instrument[Brakes].Position);
+  }
+  
+   if (Instrument[Steering].State == ManualGo)
+  {
+   analogWrite(Steer, Instrument[Steering].Joystick);
+   Instrument[Steering].Position = Instrument[Steering].Joystick;
+  }  
+  else if (Instrument[Steering].State == CruiseGo)
+  {
+    Instrument[Steering].Position = analogRead(CruiseSteer) / 4;   
+    analogWrite(Steer, Instrument[Steering].Position);
+  }
+  /* TO DO: Write Stop and Cruise LEDS.
+     Reset Stop and Cruise buttons.
+     Delay so that loop is not faster than 10 Hz.
+  */
+ 
+//  if (TimeSinceCmd_ms > MaxSilence)
+// {  // Watchdog time out.
+//   Halt();
+// } 
 #endif  // TEST_MODE 
 } 
 #ifdef TEST_MODE
@@ -256,7 +382,7 @@ void write_all( int state)
 void ramp (int channel, int state)
 {
    analogWrite( channel, state);
-   delay(1000); 
+   delay(100); 
 
 }
 /*---------------------------------------------------------------------------------------
@@ -312,4 +438,126 @@ void Flash(int DashDot)
 }
 #endif  // TEST_MODE 
 /*---------------------------------------------------------------------------------------*/ 
+void JoystickMotion()
+{
+  int stick;
+  int center;
+  const int deadBandLow = 32;  // out of 1023
+  const int deadBandHigh = 32;
+  center = analogRead(JoystickCenter);
+  int tinyDown = center - deadBandLow;
+  int tinyUp = center + deadBandHigh;
 
+    stick = analogRead(AccelerateJoystick);
+    if (stick <= tinyUp)
+    {
+      Instrument[Motor].Joystick = 0;
+      Instrument[Motor].StickMoved = FALSE;
+    }
+    else
+    {
+      Instrument[Motor].Joystick = 255 * (stick - tinyUp) / (1023 - tinyUp);
+      Instrument[Motor].StickMoved =  TRUE;
+    }
+ 
+    if (stick >= tinyDown)
+    {
+      Instrument[Brakes].Joystick = 0;
+      Instrument[Brakes].StickMoved =  FALSE;
+    }
+    else
+    {
+      Instrument[Brakes].Joystick = MinimumBrake + (FullBrake - MinimumBrake) * (-stick + tinyDown) / tinyDown;
+      Instrument[Brakes].StickMoved =  TRUE;
+    }
+
+    stick = analogRead(SteerJoystick);
+    if (stick > tinyDown && stick <= tinyUp)
+    {
+      Instrument[Steering].Joystick = Straight;
+      Instrument[Steering].StickMoved =  FALSE;
+    }
+    else if (stick > tinyUp)
+    {
+      Instrument[Steering].Joystick = Straight + (HardRight - Straight) * (stick - tinyUp) / (1023 - tinyUp);
+      Instrument[Steering].StickMoved =  TRUE;
+    }
+    else 
+    {
+      Instrument[Steering].Joystick = Straight + (Straight - HardLeft) * (-stick + tinyDown) / tinyDown;
+      Instrument[Steering].StickMoved = TRUE;
+    }
+}
+/*---------------------------------------------------------------------------------------*/ 
+void StateTransition( int system)
+{
+  unsigned long Time_ms = millis();  
+  switch(Instrument[system].State)
+  {
+    case ManualStop:
+    if (TimeOfStopButton_ms + PauseTime_ms > Time_ms)
+      break;
+      if (Instrument[system].Enabled)
+      {
+        Instrument[system].State = CruiseStop;
+        break;
+      }
+//  if (joystick motion) set state.
+    if (Instrument[system].StickMoved)
+    {
+      Instrument[system].State = ManualGo;
+    }
+    break;
+    
+    case ManualGo:
+    if (Stop)
+    {
+      Instrument[system].State = ManualStop;
+      break;
+    }
+    if (Cruise)
+    {
+      Instrument[system].State = CruiseGo;
+      break;
+      // respond to joystick
+    }
+    break;
+      
+    case CruiseStop:
+    if (TimeOfStopButton_ms + PauseTime_ms > Time_ms)
+      break;
+    if (Instrument[system].StickMoved)
+    {
+       Instrument[system].State = ManualGo;
+       break;
+    }
+    if (!Instrument[system].Enabled)
+    {
+      Instrument[system].State = ManualStop;
+      break;
+    }
+    if (Cruise)
+    {
+      Instrument[system].State = CruiseGo;
+    }
+    break;
+    
+    case CruiseGo:
+    if (Stop)
+    {
+      Instrument[system].State = CruiseStop;
+      break;
+    }
+    if (Instrument[system].StickMoved)
+    {
+      Instrument[system].State = ManualGo;
+      break;
+    }
+    if (!Instrument[system].Enabled)
+    {
+      Instrument[system].State = ManualGo;
+      break;
+    }
+    break;
+  }
+}
