@@ -108,6 +108,8 @@ volatile unsigned long TimeOfStopButton_ms;
 volatile int Cruise = FALSE;
 volatile unsigned long TimeOfCruiseButton_ms;
 const int PauseTime_ms = 4000;
+unsigned long TimeOfReverseButton_ms;
+int Forward;
 
 const int Full = 255;   // fully on for PWM signals
 const int Off = 0;
@@ -130,10 +132,6 @@ const int HardRight = 255;
     
 */
 
-
-// return values
-#define OK       0
-#define BUFFER_FULL 1
   const int Motor = 0;
   const int Brakes = 1;
   const int Steering = 2;
@@ -149,14 +147,13 @@ const int HardRight = 255;
      int Joystick;   // position of stick
      int Position;  // last commanded
   } Instrument[3];
-
  /*---------------------------------------------------------------------------------------*/ 
 void setup()  
 {  
         pinMode(ReverseButton, INPUT);
         pinMode(CruiseReverse, INPUT);
-        pinMode(StopButton, INPUT);
-        pinMode(CruiseButton, INPUT);
+        pinMode(StopButton, INPUT);  // via interrupt
+        pinMode(CruiseButton, INPUT); // via interrupt
         pinMode(EnableThrottle, INPUT);
         pinMode(EnableBrake, INPUT);
         pinMode(EnableSteer, INPUT);
@@ -167,7 +164,6 @@ void setup()
         pinMode(Steer, OUTPUT);
         pinMode(Reverse, OUTPUT);
         pinMode(ReverseLED, OUTPUT); 
-//      analogReference(EXTERNAL);
         pinMode(AccelerateJoystick, INPUT);
         pinMode(SteerJoystick, INPUT);
         pinMode(JoystickCenter, INPUT);
@@ -176,8 +172,7 @@ void setup()
         pinMode(CruiseSteer, INPUT);
         initialize();
         attachInterrupt(0, StopPressed, FALLING);
-        attachInterrupt(1, CruisePressed, FALLING);
-        
+        attachInterrupt(1, CruisePressed, FALLING);     
 }	
 
 /*---------------------------------------------------------------------------------------*/ 
@@ -198,6 +193,8 @@ void initialize()
         Instrument[Steering].Joystick = Straight;
         TimeOfStopButton_ms = 0;
         TimeOfCruiseButton_ms = 0;
+        TimeOfReverseButton_ms = 0;
+        Forward = TRUE;
 }
 /*---------------------------------------------------------------------------------------*/ 
 /*---------------------------------------------------------------------------------------
@@ -226,7 +223,9 @@ void Halt()
    analogWrite(Throttle, Off);
    analogWrite(DiskBrake, FullBrake);
    Instrument[Motor].Position = Off;
-   Instrument[Brakes].Position = FullBrake;}
+   Instrument[Brakes].Position = FullBrake;
+}
+
 #define TEST_MODE
 /*---------------------------------------------------------------------------------------*/ 
 void loop() 
@@ -235,6 +234,8 @@ void loop()
   const unsigned long MaxSilence = 2000;  // ms
   int i, throttle;
   unsigned int count = 0;
+  int TimeNow = millis();
+  int NextLoopTime_ms = TimeNow + 100;
   
 //  Enabled[Motor] = digitalRead(EnableThrottle);
 //  Enabled[Brakes] = digitalRead(EnableBrake);
@@ -313,6 +314,9 @@ void loop()
 #else  // not TEST_MODE
  
   JoystickMotion();
+  Instrument[Motor].Enabled = digitalRead(EnableThrottle);
+  Instrument[Brakes].Enabled = digitalRead(EnableBrakes);
+  Instrument[Steering].Enabled = digitalRead(EnableSteer);
   StateTransition(Motor);
   StateTransition(Brakes);
   StateTransition(Steering);
@@ -359,84 +363,29 @@ void loop()
     Instrument[Steering].Position = analogRead(CruiseSteer) / 4;   
     analogWrite(Steer, Instrument[Steering].Position);
   }
-  /* TO DO: Write Stop and Cruise LEDS.
-     Reset Stop and Cruise buttons.
-     Delay so that loop is not faster than 10 Hz.
-  */
+   if (Stop)
+     digitalWrite(StopLED, HIGH);
+   else
+     digitalWrite(StopLED, LOW);
+   if (TimeNow > TimeOfCruiseButton_ms + 400 &&
+   (Instrument[Motor].StickMoved || Instrument[Brakes].StickMoved || Instrument[Steering].StickMoved)
+       Cruise = FALSE;
+   if (!Instrument[Motor].Enabled && !Instrument[Motor].Enabled && !Instrument[Motor].Enabled)
+       Cruise = False
+   if (Cruise)
+     digitalWrite(CruiseLED, HIGH);
+   else
+     digitalWrite(CruiseLED, LOW);
+
+  checkReverse();   
+  do  //  Delay so that loop is not faster than 10 Hz.
+  {
+    TimeNow = millis();
+  } while (TimeNow < NextLoopTime_ms);
  
-//  if (TimeSinceCmd_ms > MaxSilence)
-// {  // Watchdog time out.
-//   Halt();
-// } 
+
 #endif  // TEST_MODE 
 } 
-#ifdef TEST_MODE
-/*---------------------------------------------------------------------------------------*/ 
-void write_all( int state)
-{
-      digitalWrite( StopLED, state);
-      digitalWrite( CruiseLED, state);
-      digitalWrite( LED, state);
-}
-/*---------------------------------------------------------------------------------------*/ 
-void ramp (int channel, int state)
-{
-   analogWrite( channel, state);
-   delay(100); 
-
-}
-/*---------------------------------------------------------------------------------------
-Flash a number in Morse Code
-1  . ----
-2  ..---
-3  ...--
-4  ....-
-5  .....
-6  -....
-7  --...
-8  ---..
-9  ----.
-0  -----
-*/ 
-#define BASE 300
-#define DOT BASE
-#define DASH (4*BASE)
-#define BIT_SPACE (2*BASE)
-#define NUMBER_SPACE (10*BASE)
-void FlashMorse (unsigned int number)
-{
-  unsigned int quotient, remainder;
-  unsigned int i;
-  quotient = number / 10;
-  remainder = number % 10;
-  if (quotient != 0)
-    FlashMorse (quotient);
-  if (remainder <= 5)
-  {
-    for (i = 0; i < remainder; i++)
-      Flash(DOT);
-    for (; i < 5; i++)
-      Flash(DASH);
-  }
-  else
-  {
-    for (i = 5; i < remainder; i++)
-      Flash(DASH);
-    for (; i < 10; i++)
-      Flash(DOT);
-   }
-   digitalWrite( LED, LOW);
-   delay (NUMBER_SPACE);
-
-}
-void Flash(int DashDot)
-{
-  digitalWrite( LED, LOW);
-  delay (BIT_SPACE);
-  digitalWrite( LED, HIGH);
-  delay (DashDot);
-}
-#endif  // TEST_MODE 
 /*---------------------------------------------------------------------------------------*/ 
 void JoystickMotion()
 {
@@ -448,6 +397,13 @@ void JoystickMotion()
   int tinyDown = center - deadBandLow;
   int tinyUp = center + deadBandHigh;
 
+    if (Stop && (millis() < TimeOfStopButton_ms + PauseTime_ms))
+    {
+      Instrument[Motor].StickMoved = FALSE;
+      Instrument[Brakes].StickMoved = FALSE;
+      Instrument[Steering].StickMoved = FALSE;
+      return;
+    }
     stick = analogRead(AccelerateJoystick);
     if (stick <= tinyUp)
     {
@@ -458,6 +414,7 @@ void JoystickMotion()
     {
       Instrument[Motor].Joystick = 255 * (stick - tinyUp) / (1023 - tinyUp);
       Instrument[Motor].StickMoved =  TRUE;
+      Stop = FALSE;
     }
  
     if (stick >= tinyDown)
@@ -469,6 +426,7 @@ void JoystickMotion()
     {
       Instrument[Brakes].Joystick = MinimumBrake + (FullBrake - MinimumBrake) * (-stick + tinyDown) / tinyDown;
       Instrument[Brakes].StickMoved =  TRUE;
+      Stop = FALSE;
     }
 
     stick = analogRead(SteerJoystick);
@@ -481,11 +439,13 @@ void JoystickMotion()
     {
       Instrument[Steering].Joystick = Straight + (HardRight - Straight) * (stick - tinyUp) / (1023 - tinyUp);
       Instrument[Steering].StickMoved =  TRUE;
+      Stop = FALSE;
     }
     else 
     {
       Instrument[Steering].Joystick = Straight + (Straight - HardLeft) * (-stick + tinyDown) / tinyDown;
       Instrument[Steering].StickMoved = TRUE;
+      Stop = FALSE;
     }
 }
 /*---------------------------------------------------------------------------------------*/ 
@@ -561,3 +521,100 @@ void StateTransition( int system)
     break;
   }
 }
+/*---------------------------------------------------------------------------------------*/ 
+void  checkReverse()
+{
+  unsigned long TimeNow;
+  int ReversePushed;
+  
+  if (Instrument[Motor].State == ManualStop)
+ { 
+   ReversePushed = digitalRead(ReverseButton);
+   if (ReversePushed)
+   {
+     TimeNow = millis();
+     if (TimeNow > TimeOfReverseButton_ms + 2000)
+     {
+         TimeOfReverseButton_ms = TimeNow;
+         Forward = !Forward;
+     }
+   }
+  digitalWrite(ReverseLED, !Forward);
+  digitalWrite(Reverse, !Forward);
+ }
+   if (Instrument[Motor].State == CruiseStop || Instrument[Motor].State == CruiseGo)
+   {
+     Forward = !digitalRead(CruiseReverse);
+     digitalWrite(ReverseLED, !Forward);
+     digitalWrite(Reverse, !Forward);
+   }
+}
+
+#ifdef TEST_MODE
+/*---------------------------------------------------------------------------------------*/ 
+void write_all( int state)
+{
+      digitalWrite( StopLED, state);
+      digitalWrite( CruiseLED, state);
+      digitalWrite( LED, state);
+}
+/*---------------------------------------------------------------------------------------*/ 
+void ramp (int channel, int state)
+{
+   analogWrite( channel, state);
+   delay(100); 
+
+}
+/*---------------------------------------------------------------------------------------
+Flash a number in Morse Code
+1  . ----
+2  ..---
+3  ...--
+4  ....-
+5  .....
+6  -....
+7  --...
+8  ---..
+9  ----.
+0  -----
+*/ 
+#define BASE 300
+#define DOT BASE
+#define DASH (4*BASE)
+#define BIT_SPACE (2*BASE)
+#define NUMBER_SPACE (10*BASE)
+void FlashMorse (unsigned int number)
+{
+  unsigned int quotient, remainder;
+  unsigned int i;
+  quotient = number / 10;
+  remainder = number % 10;
+  if (quotient != 0)
+    FlashMorse (quotient);
+  if (remainder <= 5)
+  {
+    for (i = 0; i < remainder; i++)
+      Flash(DOT);
+    for (; i < 5; i++)
+      Flash(DASH);
+  }
+  else
+  {
+    for (i = 5; i < remainder; i++)
+      Flash(DASH);
+    for (; i < 10; i++)
+      Flash(DOT);
+   }
+   digitalWrite( LED, LOW);
+   delay (NUMBER_SPACE);
+
+}
+void Flash(int DashDot)
+{
+  digitalWrite( LED, LOW);
+  delay (BIT_SPACE);
+  digitalWrite( LED, HIGH);
+  delay (DashDot);
+}
+#endif  // TEST_MODE 
+
