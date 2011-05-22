@@ -69,25 +69,23 @@ const int CruiseButton = 3;
 const int EnableThrottle = 4;
 const int EnableBrake = 5;
 const int EnableSteer = 6;
-const int StopLED = 7;
-const int CruiseLED = 8;
+const int Reverse = 7;
 
-/* [out] Digital Signal 9: J1 pin 2  (D9) Actuator A1. Traction motor throttle. */
-const int Throttle =  9;
-
-/* [out] Digital Signal 10: J3 pin 3 (D10) PWM. Actuator A2: Brake Motor. 
-  Controls disk brakes on left and right front wheels. Brakes are mechanically linked to operate in tandem. */
-const int DiskBrake = 11;
-
-/* [out] Digital Signal 11: J3 pin 4 (D11) PWM. Actuator A3: Steering Motor. 
+// J3
+const int CruiseLED = 8;  // J3:1
+/* [out] Digital Signal 9: (D9) Actuator A1. Traction motor throttle. */
+const int Throttle =  9;  // J3:2
+/* [out] Digital Signal 10: (D10) PWM. Actuator A3: Steering Motor. 
   Turns left or right. If no signal, wheels are locked to a straight ahead position. */
-const int Steer =  10;
-
-// Estop may not be needed.  Estop means we have lost 36v power.
-const int Reverse = 12;
-
+const int Steer =  10;  // J3:3
+/* [out] Digital Signal 11: (D11) PWM. Actuator A2: Brake Motor. 
+  Controls disk brakes on left and right front wheels. Brakes are mechanically linked to operate in tandem. */
+const int DiskBrake = 11; // J3:4
+const int StopLED = 12;  // J3:5
 /* Pin 13 is LED. */
-const int ReverseLED = 13;
+const int ReverseLED = 13;  // J3:6
+// Ground  J3:7
+// 5 V     J3:8
 
 /* Analog Input pins 0-5 are also Digital Inputs 14-19. */
 /* [in] Analog input 0: J2 pin 1 (ADC0) . */
@@ -118,7 +116,9 @@ const int MinimumThrottle = 39;  // Throttle has no effect until 0.75 V
 const int FullBrake = 255;  
 const int MinimumBrake = 127;
 const int HardLeft = 127;
+const int HalfLeft = 159;
 const int Straight = 191;
+const int HalfRight = 223;
 const int HardRight = 255;
 /*  Servo range is 50 mm for brake, 100 mm for steering.
     Servo is fully retracted on a pulse width of 2 ms;
@@ -226,48 +226,15 @@ void Halt()
    Instrument[Brakes].Position = FullBrake;
 }
 
-#define TEST_MODE
 /*---------------------------------------------------------------------------------------*/ 
-void loop() 
+void testRamp()
 {
-  unsigned long TimeSinceCmd_ms = 0;     // radians
-  const unsigned long MaxSilence = 2000;  // ms
-  int i, throttle;
-  unsigned int count = 0;
-  int TimeNow = millis();
-  int NextLoopTime_ms = TimeNow + 100;
+  // test passed for brakes and steering 5/21/11.
+  // Computer commanded braking, steering and throttle works!
   
-//  Enabled[Motor] = digitalRead(EnableThrottle);
-//  Enabled[Brakes] = digitalRead(EnableBrake);
-//  Enabled[Steering] = digitalRead(EnableSteer);
-//  
-//  StateTransition(Motor);
-//  StateTransition(Brakes);
-//  StateTransition(Steering);
-//  
-//  if (Cruising[Motor] || Cruising[Brakes] || Cruising[Steering])
-//      digitalWrite(CruiseLED, HIGH);
-//  else
-//      digitalWrite(CruiseLED, LOW);
-//   if (Stopped[Motor] && Stopped[Brakes] && Stopped[Steering])
-//      digitalWrite(StopLED, HIGH);
-//  else
-//      digitalWrite(StopLED, LOW);
-//      
-//  if (Stopped[Motor]) 
-//      analogWrite(Throttle, Off);
-//  else if (Cruising[Motor])
-//  {
-//      throttle = analogRead(CruiseThrottle) / 4;
-//      analogWrite(Throttle, throttle);
-//  }
-//  else
-//  {
-//    // write Joystick
-//  }
-// 
- 
-#ifdef TEST_MODE
+    int i, throttle;
+    unsigned int count = 0;
+
 //  write_all (LOW);
 //  delay (1000);
 //  for (i = MinimumThrottle; i <= MinimumThrottle+5; i++)
@@ -287,7 +254,7 @@ void loop()
    delay (1000);
    FlashMorse (count++);
  
-   for (i = MinimumBrake; i <= FullBrake; i++)
+  for (i = MinimumBrake; i <= FullBrake; i++)
   {
       ramp(DiskBrake, i);
   }
@@ -298,24 +265,97 @@ void loop()
       ramp(DiskBrake, i);
   }
   
-//   write_all (LOW);
-//   delay (1000);
-//   for (i = HardLeft; i <= HardRight; i++)
-//   {
-//      ramp(Steer, i);
-//   }
-//    write_all (HIGH);
-//  delay (1000);
-//  for (i = HardRight; i >= HardLeft; i--)
-//  {
-//      ramp(Steer, i);
-//  }
+   write_all (LOW);
+   delay (1000);
+   for (i = Straight; i <= HardRight; i++)
+   {
+      ramp(Steer, i);
+   }
+    write_all (HIGH);
+  delay (1000);
+  for (i = HardRight; i >= Straight; i--)
+  {
+      ramp(Steer, i);
+  }
+   write_all (LOW);
+   
+  for (i = MinimumBrake; i <= FullBrake; i++)
+  {
+      ramp(DiskBrake, i);
+  }
+  write_all (HIGH);
+  delay (1000);
+  for (i = FullBrake; i >= MinimumBrake; i--)
+  {
+      ramp(DiskBrake, i);
+  }
+
+   delay (1000);
+   for (i = Straight; i <= HardLeft; i++)
+   {
+      ramp(Steer, i);
+   }
+    write_all (HIGH);
+    
+    
+  delay (1000);
+  for (i = HardLeft; i >= Straight; i--)
+  {
+      ramp(Steer, i);
+  }
+}
+#define TEST_MODE
+/*---------------------------------------------------------------------------------------*/ 
+void testSwitches()
+{
+  // test failed 5/2/11.  Panel LEDs do not light.
+  int SwThrottle, SwBrake, SwSteer;
+  SwThrottle = digitalRead(EnableThrottle);
+  SwBrake = digitalRead(EnableBrake);
+  SwSteer = digitalRead(EnableSteer);
+  digitalWrite( StopLED, SwBrake);
+  digitalWrite( CruiseLED, SwThrottle);
+  digitalWrite( LED, SwSteer);
+}
+/*---------------------------------------------------------------------------------------*/ 
+// testQuick: fast operation of brakes and steering to measure peak power demand
+void testQuick()
+{
+  int i, steer, brake;
+  for (i = 0; i < 5; i++)
+  {
+     steer = Straight + i * (HalfRight - Straight)/4;
+     analogWrite( Steer, steer);
+     brake = MinimumBrake + i * (FullBrake - MinimumBrake)/4;
+     analogWrite( DiskBrake, brake);
+   }
+  for (i = 5; i >= 0; i--)
+  {
+     steer = Straight + i * (HalfRight - Straight)/4;
+     analogWrite( Steer, steer);
+     brake = MinimumBrake + i * (FullBrake - MinimumBrake)/4;
+     analogWrite( DiskBrake, brake);
+   }
+
+}
+/*---------------------------------------------------------------------------------------*/ 
+void loop() 
+{
+  unsigned long TimeSinceCmd_ms = 0;     // radians
+  const unsigned long MaxSilence = 2000;  // ms
+  int TimeNow = millis();
+  int NextLoopTime_ms = TimeNow + 100;
+  
+#ifdef TEST_MODE
+//  testSwitches();
+//  testRamp();
+    testQuick();
    
 #else  // not TEST_MODE
  
   JoystickMotion();
   Instrument[Motor].Enabled = digitalRead(EnableThrottle);
-  Instrument[Brakes].Enabled = digitalRead(EnableBrakes);
+  Instrument[Brakes].Enabled = digitalRead(EnableBrake);
   Instrument[Steering].Enabled = digitalRead(EnableSteer);
   StateTransition(Motor);
   StateTransition(Brakes);
