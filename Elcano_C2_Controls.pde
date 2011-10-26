@@ -1,15 +1,26 @@
 /*
-Elcano Contol Module C@: Instrument panel controls and LEDs.
+Elcano Contol Module C2: Instrument panel controls and LEDs.
 */
+#define MEGA
+#define TEST_MODE
+#ifndef TRUE
+#define TRUE 1
+#define FALSE 0
+#endif
 
-#include "Serial.cpp"
+// #include "Serial.cpp"
+#ifdef MEGA
+#include "IO_Mega.h"
+#else
+#include "IO_2009.h"
+#endif
 
 /*
 
 There are four principle states. "Enable" is considered a generic state that encompasses the
 three switches for Throttle, Brake and Steer. The four main states have additional substates
 corresponding to the state of these three systems. The system can simultaneaous be in mixed states,
-e.g. Cruise Go on Throttle and Brakes and Manual Go on Steering.
+e.g. "Cruise Go" on Throttle and Brakes and "Manual Go" on Steering.
 When Cruise is enabled on a system, "Joystick Motion" means major motion in that axis:
 Left to right for Steer, Forward for Throttle, Reverse for Brake. Minor joystick motions will
 not take an enabled system into manual mode, but major motion will.
@@ -19,8 +30,8 @@ MS: Manual Stop State:  Stop LED On, Cruise LED Off,
   Joystick is centered.
   Enable Off.
 
-CS: Cruise Stop State:  Stop LED On, Cruise LED Off,
-  Throttle Off, Brakes Off,  Steer responds to joystick but not to computer.
+CS: Cruise Stop State:  Stop LED On, Cruise LED On,
+  Throttle Off, Brakes Off,  Steer responds to computer.
   Joystick is centered.
   Enable On.
   
@@ -46,59 +57,16 @@ Stop button
 E-stop
   MS -> MS; CS -> CS; MG -> MS; CG -> CS. E-stop also removes power to the traction motor.
 If the E-stop button has been pushed, transition to MG or CG is blocked until
-power is restored. Restoring power is done by releasing the physical E-stop button or pressing 
-the remote E-stop button a second time. There is a dead zone of several seconds between the
+power is restored. Restoring power is done by turning the key or pressing 
+the remote E-stop button (RC4) a second time. There is a dead zone of several seconds between the
 first button push and the second push, allowing the vehicle to come to a stop.
 
-*/
+States:  */
+  const int ManualStop = 0;
+  const int CruiseStop = 1;
+  const int ManualGo = 3;
+  const int CruiseGo = 4;
 
-/* [in] Digital Signal 0: J1 pin 1 (RxD) Read Serial Data
-The operation of the joystick may be non-linear and depend on speed.
-*/
-const int ReverseButton = 0;
-const int CruiseReverse = 1;
- 
-/* [in] Digital Signal 2: J1 pin 3  (INT0) Stop button. 
-The Stop signal is a momentary button push from either the console or remote.
-A rising edge produces an interrupt.
-The Cruise button works the same way.
-*/
-const int StopButton = 2;
-const int CruiseButton = 3;
-
-const int EnableThrottle = 4;
-const int EnableBrake = 5;
-const int EnableSteer = 6;
-const int Reverse = 7;
-
-// J3
-const int CruiseLED = 8;  // J3:1
-/* [out] Digital Signal 9: (D9) Actuator A1. Traction motor throttle. */
-const int Throttle =  9;  // J3:2
-/* [out] Digital Signal 10: (D10) PWM. Actuator A3: Steering Motor. 
-  Turns left or right. If no signal, wheels are locked to a straight ahead position. */
-const int Steer =  10;  // J3:3
-/* [out] Digital Signal 11: (D11) PWM. Actuator A2: Brake Motor. 
-  Controls disk brakes on left and right front wheels. Brakes are mechanically linked to operate in tandem. */
-const int DiskBrake = 11; // J3:4
-const int StopLED = 12;  // J3:5
-/* Pin 13 is LED. */
-const int ReverseLED = 13;  // J3:6
-// Ground  J3:7
-// 5 V     J3:8
-
-/* Analog Input pins 0-5 are also Digital Inputs 14-19. */
-/* [in] Analog input 0: J2 pin 1 (ADC0) . */
-/* Joystick is what the driver wants to do. */
-const int AccelerateJoystick = 0;
-/* [in] Analog input 1: J2 pin 2 (ADC1) MotorTemperature. */
-const int SteerJoystick = 1;
-const int JoystickCenter = 2;
-
-/* These are what the autonomous vehicle wants to do */
-const int CruiseThrottle = 3;
-const int CruiseBrake = 4;
-const int CruiseSteer = 5;
 
 
 volatile int Stop = TRUE;
@@ -135,10 +103,6 @@ const int HardRight = 255;
   const int Motor = 0;
   const int Brakes = 1;
   const int Steering = 2;
-  const int ManualStop = 0;
-  const int CruiseStop = 1;
-  const int ManualGo = 3;
-  const int CruiseGo = 4;
   struct _Instruments
   {
      int Enabled;  // whether cruise control is enabled.
@@ -146,6 +110,11 @@ const int HardRight = 255;
      int StickMoved;  // bool
      int Joystick;   // position of stick
      int Position;  // last commanded
+     int QuiescentCurrent;  // Nominally 120 counts
+     int CurrentDraw;  // In counts, with 1 Amp = 12 counts
+     int CurrentLimit;  // In counts
+     // One count from analog input is about 5mV from ACS758lcb050U
+     // The ACS758 has sensitivity of 60 mA/V
   } Instrument[3];
  /*---------------------------------------------------------------------------------------*/ 
 void setup()  
@@ -170,31 +139,64 @@ void setup()
         pinMode(CruiseThrottle, INPUT);
         pinMode(CruiseBrake, INPUT); 
         pinMode(CruiseSteer, INPUT);
+#ifdef MEGA
+        pinMode(Current36V, INPUT);
+        pinMode(CurrentBrake, INPUT);
+        pinMode(CurrentSteer, INPUT);
+        pinMode(LED1, OUTPUT);
+        pinMode(LED3, OUTPUT);
+        pinMode(LED4, OUTPUT);
+        pinMode(LED5, OUTPUT);
+        pinMode(LED6, OUTPUT);
+        pinMode(LED7, OUTPUT);
+        pinMode(LED8, OUTPUT);  
+        initialize();
+        attachInterrupt(0, EStopPressed, FALLING);
+        attachInterrupt(2, StopPressed, RISING);
+        attachInterrupt(3, CruisePressed, RISING);     
+        attachInterrupt(4, StopRC2Pressed, RISING);
+        attachInterrupt(5, CruiseRC1Pressed, RISING);     
+#else
         initialize();
         attachInterrupt(0, StopPressed, FALLING);
         attachInterrupt(1, CruisePressed, FALLING);     
+#endif
 }	
 
 /*---------------------------------------------------------------------------------------*/ 
 void initialize()
 {
         Halt();
-        
+       // assume that vehicle always stops with brakes on and wheels straight.
+       // Otherwise, there is a possibility of blowing a fuse if servos try to
+       // get to this state too quickly.       
         analogWrite( Steer, Straight);
         Instrument[Steering].Position = Straight;
         digitalWrite( StopLED, HIGH);
         digitalWrite( CruiseLED, LOW);
-        digitalWrite( LED, LOW);
         Instrument[Motor].State = ManualStop;
         Instrument[Brakes].State = ManualStop;
         Instrument[Steering].State = ManualStop;
         Instrument[Motor].Joystick = Off;
         Instrument[Brakes].Joystick = Off;
         Instrument[Steering].Joystick = Straight;
+        Instrument[Motor].CurrentLimit = 230;  // about 20A
+        Instrument[Brakes].CurrentLimit = 55;  // about 5A
+        Instrument[Steering].CurrentLimit = 55;
         TimeOfStopButton_ms = 0;
         TimeOfCruiseButton_ms = 0;
         TimeOfReverseButton_ms = 0;
         Forward = TRUE;
+        // Wait for everything to settle down
+        delay(2000);  // 2 second
+        // Read quiesent state of current sensors.
+        Instrument[Brakes].CurrentDraw = 
+        Instrument[Brakes].QuiescentCurrent = analogRead(CurrentBrake);
+        Instrument[Steering].CurrentDraw = 
+        Instrument[Steering].QuiescentCurrent = analogRead(CurrentSteer);
+        Instrument[Motor].CurrentDraw = 
+        Instrument[Motor].QuiescentCurrent = analogRead(Current36V);
+
 }
 /*---------------------------------------------------------------------------------------*/ 
 /*---------------------------------------------------------------------------------------
@@ -205,11 +207,27 @@ void CruisePressed()
     TimeOfCruiseButton_ms = millis();
     Cruise = TRUE;
 }
-
+void CruiseRC1Pressed()
+{
+    TimeOfCruiseButton_ms = millis();
+    Cruise = TRUE;
+}
 /*---------------------------------------------------------------------------------------
  StopPressed is called by an interrupt
  */  
 void StopPressed()
+{
+    Halt();
+    TimeOfStopButton_ms = millis();
+    Stop = TRUE;
+}
+void StopRC2Pressed()
+{
+    Halt();
+    TimeOfStopButton_ms = millis();
+    Stop = TRUE;
+}
+void EStopPressed()
 {
     Halt();
     TimeOfStopButton_ms = millis();
@@ -224,120 +242,9 @@ void Halt()
    analogWrite(DiskBrake, FullBrake);
    Instrument[Motor].Position = Off;
    Instrument[Brakes].Position = FullBrake;
+   digitalWrite(StopLED, HIGH);
 }
 
-/*---------------------------------------------------------------------------------------*/ 
-void testRamp()
-{
-  // test passed for brakes and steering 5/21/11.
-  // Computer commanded braking, steering and throttle works!
-  
-    int i, throttle;
-    unsigned int count = 0;
-
-//  write_all (LOW);
-//  delay (1000);
-//  for (i = MinimumThrottle; i <= MinimumThrottle+5; i++)
-//  {
-//      ramp(Throttle, i);
-//  }
-//  write_all (HIGH);
-//  delay (1000);
-//  for (i = MinimumThrottle+5; i >= MinimumThrottle; i--)
-//  {
-//      ramp(Throttle, i);
-//  }
-  write_all (HIGH);
-  delay (1000);
-  
-   write_all (LOW);
-   delay (1000);
-   FlashMorse (count++);
- 
-  for (i = MinimumBrake; i <= FullBrake; i++)
-  {
-      ramp(DiskBrake, i);
-  }
-  write_all (HIGH);
-  delay (1000);
-  for (i = FullBrake; i >= MinimumBrake; i--)
-  {
-      ramp(DiskBrake, i);
-  }
-  
-   write_all (LOW);
-   delay (1000);
-   for (i = Straight; i <= HardRight; i++)
-   {
-      ramp(Steer, i);
-   }
-    write_all (HIGH);
-  delay (1000);
-  for (i = HardRight; i >= Straight; i--)
-  {
-      ramp(Steer, i);
-  }
-   write_all (LOW);
-   
-  for (i = MinimumBrake; i <= FullBrake; i++)
-  {
-      ramp(DiskBrake, i);
-  }
-  write_all (HIGH);
-  delay (1000);
-  for (i = FullBrake; i >= MinimumBrake; i--)
-  {
-      ramp(DiskBrake, i);
-  }
-
-   delay (1000);
-   for (i = Straight; i <= HardLeft; i++)
-   {
-      ramp(Steer, i);
-   }
-    write_all (HIGH);
-    
-    
-  delay (1000);
-  for (i = HardLeft; i >= Straight; i--)
-  {
-      ramp(Steer, i);
-  }
-}
-#define TEST_MODE
-/*---------------------------------------------------------------------------------------*/ 
-void testSwitches()
-{
-  // test failed 5/2/11.  Panel LEDs do not light.
-  int SwThrottle, SwBrake, SwSteer;
-  SwThrottle = digitalRead(EnableThrottle);
-  SwBrake = digitalRead(EnableBrake);
-  SwSteer = digitalRead(EnableSteer);
-  digitalWrite( StopLED, SwBrake);
-  digitalWrite( CruiseLED, SwThrottle);
-  digitalWrite( LED, SwSteer);
-}
-/*---------------------------------------------------------------------------------------*/ 
-// testQuick: fast operation of brakes and steering to measure peak power demand
-void testQuick()
-{
-  int i, steer, brake;
-  for (i = 0; i < 5; i++)
-  {
-     steer = Straight + i * (HalfRight - Straight)/4;
-     analogWrite( Steer, steer);
-     brake = MinimumBrake + i * (FullBrake - MinimumBrake)/4;
-     analogWrite( DiskBrake, brake);
-   }
-  for (i = 5; i >= 0; i--)
-  {
-     steer = Straight + i * (HalfRight - Straight)/4;
-     analogWrite( Steer, steer);
-     brake = MinimumBrake + i * (FullBrake - MinimumBrake)/4;
-     analogWrite( DiskBrake, brake);
-   }
-
-}
 /*---------------------------------------------------------------------------------------*/ 
 void loop() 
 {
@@ -590,13 +497,132 @@ void  checkReverse()
    }
 }
 
+
+/*********************************************************** 
+                        TEST ROUTINES
+ ***********************************************************/
+ 
+
 #ifdef TEST_MODE
+
+/*---------------------------------------------------------------------------------------*/ 
+void testRamp()
+{
+  // test passed for brakes and steering 5/21/11.
+  // Computer commanded braking, steering and throttle works!
+  
+    int i, throttle;
+    unsigned int count = 0;
+
+//  write_all (LOW);
+//  delay (1000);
+//  for (i = MinimumThrottle; i <= MinimumThrottle+5; i++)
+//  {
+//      ramp(Throttle, i);
+//  }
+//  write_all (HIGH);
+//  delay (1000);
+//  for (i = MinimumThrottle+5; i >= MinimumThrottle; i--)
+//  {
+//      ramp(Throttle, i);
+//  }
+  write_all (HIGH);
+  delay (1000);
+  
+   write_all (LOW);
+   delay (1000);
+   FlashMorse (count++);
+ 
+  for (i = MinimumBrake; i <= FullBrake; i++)
+  {
+      ramp(DiskBrake, i);
+  }
+  write_all (HIGH);
+  delay (1000);
+  for (i = FullBrake; i >= MinimumBrake; i--)
+  {
+      ramp(DiskBrake, i);
+  }
+  
+   write_all (LOW);
+   delay (1000);
+   for (i = Straight; i <= HardRight; i++)
+   {
+      ramp(Steer, i);
+   }
+    write_all (HIGH);
+  delay (1000);
+  for (i = HardRight; i >= Straight; i--)
+  {
+      ramp(Steer, i);
+  }
+   write_all (LOW);
+   
+  for (i = MinimumBrake; i <= FullBrake; i++)
+  {
+      ramp(DiskBrake, i);
+  }
+  write_all (HIGH);
+  delay (1000);
+  for (i = FullBrake; i >= MinimumBrake; i--)
+  {
+      ramp(DiskBrake, i);
+  }
+
+   delay (1000);
+   for (i = Straight; i <= HardLeft; i++)
+   {
+      ramp(Steer, i);
+   }
+    write_all (HIGH);
+    
+    
+  delay (1000);
+  for (i = HardLeft; i >= Straight; i--)
+  {
+      ramp(Steer, i);
+  }
+}
+/*---------------------------------------------------------------------------------------*/ 
+void testSwitches()
+{
+  // test failed 5/2/11.  Panel LEDs do not light.
+  int SwThrottle, SwBrake, SwSteer;
+  SwThrottle = digitalRead(EnableThrottle);
+  SwBrake = digitalRead(EnableBrake);
+  SwSteer = digitalRead(EnableSteer);
+  digitalWrite( StopLED, SwBrake);
+  digitalWrite( CruiseLED, SwThrottle);
+  digitalWrite( ReverseLED, SwSteer);
+}
+/*---------------------------------------------------------------------------------------*/ 
+// testQuick: fast operation of brakes and steering to measure peak power demand
+void testQuick()
+{
+  int i, steer, brake;
+  for (i = 0; i < 5; i++)
+  {
+     steer = Straight + i * (HalfRight - Straight)/4;
+     analogWrite( Steer, steer);
+     brake = MinimumBrake + i * (FullBrake - MinimumBrake)/4;
+     analogWrite( DiskBrake, brake);
+   }
+  for (i = 5; i >= 0; i--)
+  {
+     steer = Straight + i * (HalfRight - Straight)/4;
+     analogWrite( Steer, steer);
+     brake = MinimumBrake + i * (FullBrake - MinimumBrake)/4;
+     analogWrite( DiskBrake, brake);
+   }
+
+}
+
 /*---------------------------------------------------------------------------------------*/ 
 void write_all( int state)
 {
       digitalWrite( StopLED, state);
       digitalWrite( CruiseLED, state);
-      digitalWrite( LED, state);
+      digitalWrite( ReverseLED, state);
 }
 /*---------------------------------------------------------------------------------------*/ 
 void ramp (int channel, int state)
@@ -645,15 +671,15 @@ void FlashMorse (unsigned int number)
     for (; i < 10; i++)
       Flash(DOT);
    }
-   digitalWrite( LED, LOW);
+   digitalWrite( ReverseLED, LOW);
    delay (NUMBER_SPACE);
 
 }
 void Flash(int DashDot)
 {
-  digitalWrite( LED, LOW);
+  digitalWrite( ReverseLED, LOW);
   delay (BIT_SPACE);
-  digitalWrite( LED, HIGH);
+  digitalWrite( ReverseLED, HIGH);
   delay (DashDot);
 }
 #endif  // TEST_MODE 
