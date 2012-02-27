@@ -3,10 +3,10 @@
 <HEAD>
 	<META HTTP-EQUIV="CONTENT-TYPE" CONTENT="text/html; charset=windows-1252">
 	<TITLE></TITLE>
-	<META NAME="GENERATOR" CONTENT="OpenOffice.org 3.2  (Win32)">
+	<META NAME="GENERATOR" CONTENT="LibreOffice 3.4  (Win32)">
 	<META NAME="CREATED" CONTENT="0;0">
+	<META NAME="CHANGED" CONTENT="20120226;18455250">
 	<META NAME="CHANGEDBY" CONTENT="Tyler Folsom">
-	<META NAME="CHANGED" CONTENT="20110221;11152000">
 	<META NAME="CHANGEDBY" CONTENT="Tyler Folsom">
 	<META NAME="CHANGEDBY" CONTENT="Tyler Folsom">
 	<STYLE TYPE="text/css">
@@ -44,7 +44,7 @@ chassis is a Catrike Dash (<A HREF="http://www.catrike.com/catrike_dash.html">ht
 with mast, pedals, seat, chain, derailleur, etc removed. The rear
 wheel has been replaced by a Pedalgreen 16&rdquo; wheel with hub
 motor. (<A HREF="http://pedalgreen.net/">http://pedalgreen.net/</A> )
-We  use Li-ion batteries. The vehicle meets Robo-Magellan size and
+We use Li-ion batteries. The vehicle meets Robo-Magellan size and
 weight limits.</FONT></P>
 <H2 CLASS="western">Computer Hardware</H2>
 <P><FONT SIZE=2>Computation is performed on micro-controllers
@@ -109,10 +109,14 @@ and passed to C6 (Navigator). If it is user input, it is read by C6
 Implementation may combine one or more modules on the same
 micro-controller. There is no operating system, file system or disks.
 Modules may communicate with a host computer for software download.</P>
-<P>C1: Motor and Steering Controller.<BR>Outputs: to A1 (Drive
-motor), A2 (Brake motor), A3 (Steering motor), S6 (Commanded
-steering) and S5 (Commanded speeds).<BR>Input: Gamebot command from
-C3 (Pilot).</P>
+<P>C1: Motor and Steering Controller.<BR>Outputs: to C2 (computer
+Drive, computer Brake, computer Steering; S6 (Commanded steering) and
+S5 (Commanded speeds).<BR>Input: Gamebot command from C3 (Pilot).</P>
+<P>C2: Controls<BR>Inputs: from C1: computer Drive, Brake and
+Steer<BR>from Joystick: driver Drive, Brake ans Steer; switches tell
+whether of not to use cruise control.</P>
+<P>Outputs: to A1 (Drive motor), A2 (Brake motor), A3 (Steering
+motor),</P>
 <P>C3: Pilot.<BR>Output: to C1, C6: Gamebot commands.<BR>Input from
 C6: Current position, orientation, speed and acceleration.<BR>Input
 from C4 via C6: Desired route as Bezier or Hermite cubic curve
