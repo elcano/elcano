@@ -19,8 +19,8 @@ const int TxD = 1;      // external output
 // D3 is not used.  This is a spare interrupt.
 // D4 is a spare PWM
 // D3 and 4 are avoided since some code may want to use them as red and green LEDs.
-/*  Actuator A1. Traction motor throttle. */
-const int Throttle =  5;  // external PWM output
+/*  Actuator A1. Traction motor (aka Throttle). */
+const int TractionMotor =  5;  // external PWM output
 /* Actuator A3: Steering Motor. 
   Turns left or right. Default is wheels locked to a straight ahead position. */
 const int Steer =  6;    // external PWM output
@@ -31,8 +31,8 @@ const int DiskBrake = 7;  // external PWM output
 // D8-13 Connector ----------------------
 // The shield does not provide a socket for D8-13
 // D8 and D9 are not used.
-const int SDchipSelect = 10;
-
+const int chipSelect = 10;  // for SD data logging shield from Adafruit.
+const int LED = 13;
 
 // D14 - 21 Connector -------------------------------------
 const int RxD2 = 14;      // reserved external input
@@ -67,9 +67,9 @@ const int LED8 = 37;      // external output
 #define redLEDpin 35
 #define greenLEDpin 37
 
-const int EnableThrottle = 22;  // panel input
+const int EnableMotor = 26;  // panel input TCF 2/25/12
 const int EnableBrake = 24;     // panel input
-const int EnableSteer = 26;     // panel input
+const int EnableSteer = 22;     // panel input TCF 2/25/12
 const int CruiseLED = 28;       // panel output
 const int StopLED = 30;         // panel output 
 const int ReverseLED = 32;      // panel output
