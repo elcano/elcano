@@ -40,14 +40,14 @@
  Quiescent current calculation works on brake and steer; motor current seems high.
  Steering servo works. Steering limits have been set and linkage reattached.
  Wrote routines to ease back on servo requests when too much current is drawn.
- 
+ Phsically put everything back together.
+ Test all systems on test stand.
+
  To Do:
  Joystick Center is not read properly. See 2.38V at joystick for center; that voltage does not make it
  to analog input pin 8; continuity problem? Problem bypassed by setting a wide deadband.
- Phsically put everything back together.
  Motor gives jerky response at low speeds; need to smooth it out.
  Brake pusher rod sometimes slips off lever.
- Test all systems on test stand.
  Do a road test.
  Shoot a video and post it.
  */
@@ -101,12 +101,19 @@ const int STEER = 1;
 const int BRAKE = 2;
 /* Steering servo can handle 44 counts per second;
    Brake servo is good for 88 counts per second.
-   BigChange is based on being updated every 500 mSec.
 */
-const int BigChange = 20;  // counts per step
-const int MaxBrakeChange = 40; // counts per step
-const int MotorFull = 179;   // fully on for PWM signals
-const int MotorMin  = 69;
+const int MaxBrakeSlew = 88;  // counts / sec
+const int MaxSteerSlew = 44;  // counts / sec
+const int LoopPeriod = 100;  // msec
+/* The mechanical throttle outputs a voltage between 0.84V (32 counts)
+   and 3.55 V (181 counts).
+   The motor does not respond until about 1.30 V (66 counts)
+*/
+const int MaxMotorChange = (70*LoopPeriod)/1000;  // counts per step for motor
+const int MaxBrakeChange = (MaxBrakeSlew*LoopPeriod)/1000; // counts per step
+const int MaxSteerChange = (MaxSteerSlew*LoopPeriod)/1000;
+const int MotorFull = 186;   // fully on for PWM signals
+const int MotorMin  = 66;
 const int MotorOff = 0;
 const int FullThrottle =  179;   // 3.5 V
 const int MinimumThrottle = 39;  // Throttle has no effect until 0.75 V
@@ -245,19 +252,23 @@ void SetThrottle(int throttle) // -512 to 511
      TargetMotor = MotorOff;
      TargetBrake = BrakeOff + (throttle + 84) / 3;
   }
-  else if (throttle < 84)
+  else if (throttle < 45)
   {  // deadband
      TargetMotor = MotorOff;
+     TargetBrake = BrakeOff;
+  }
+  else if (throttle < 111)
+  {  // deadband
+     TargetMotor = throttle-45;
      TargetBrake = BrakeOff;
   }
   else 
   {
     TargetBrake = BrakeOff;
-    TargetMotor = MotorMin + (throttle - 84) / 2;
+    TargetMotor = MotorMin + (throttle - 111) / 3;
   }
   ChangeBrake = TargetBrake - Servos[BRAKE].OutputValue;
-  ChangeMotor = TargetMotor - Servos[MOTOR].OutputValue;
-  if (Servos[BRAKE].mAmp > 4700)
+  /* if (Servos[BRAKE].mAmp > 4700)
   { // ease back to keep from blowing fuse
       ChangeBrake = (ChangeBrake > 0)? -2: 2;
   }
@@ -265,7 +276,8 @@ void SetThrottle(int throttle) // -512 to 511
   {
       ChangeBrake = (ChangeBrake>0)? 2: -2;
   }
-  else if (ChangeBrake > MaxBrakeChange)
+  else */
+  if (ChangeBrake > MaxBrakeChange)
   {
       ChangeBrake = MaxBrakeChange;
   }
@@ -273,13 +285,17 @@ void SetThrottle(int throttle) // -512 to 511
   {
       ChangeBrake = -MaxBrakeChange;
   }
-  if (ChangeMotor > BigChange)
+  ChangeMotor = TargetMotor - Servos[MOTOR].OutputValue;
+  int EffectiveMotorChange = ChangeMotor > 0?
+      min(TargetMotor, MotorFull) - max(MotorMin, Servos[MOTOR].OutputValue):
+      min(Servos[MOTOR].OutputValue, MotorFull) - max(MotorMin, TargetMotor);
+  if (EffectiveMotorChange > MaxMotorChange)
   {
-      ChangeMotor = BigChange;
+      ChangeMotor = MaxMotorChange;
   }
-  else if (ChangeMotor < -BigChange)
+  else if (EffectiveMotorChange < -MaxMotorChange)
   {
-      ChangeMotor = -BigChange;
+      ChangeMotor = -MaxMotorChange;
   }
   Servos[BRAKE].OutputValue += ChangeBrake;
   Servos[BRAKE].OutputValue = max(BrakeOn /*128 */, Servos[BRAKE].OutputValue);
@@ -315,7 +331,7 @@ void SetSteer(int steer)
       TargetSteer = HalfRight /* 159 */ - (steer - 468);
   }
   Change = TargetSteer - Servos[STEER].OutputValue;
-  if (Servos[STEER].mAmp > 4700)
+/*  if (Servos[STEER].mAmp > 4700)
   { // ease back to keep from blowing fuse
       if (Servos[STEER].OutputValue < HalfRight)
         Change = 2;
@@ -328,13 +344,14 @@ void SetSteer(int steer)
   {
       Change = (Change>0)? 2: -2;
   }
-  else if (Change > BigChange)
+  else */
+  if (Change > MaxSteerChange)
   {
-      Change = BigChange;
+      Change = MaxSteerChange;
   }
-  else if (Change < -BigChange)
+  else if (Change < -MaxSteerChange)
   {
-      Change = -BigChange;
+      Change = -MaxSteerChange;
   }
   Servos[STEER].OutputValue += Change;
   Servos[STEER].OutputValue = max(HardRight /*128 */, Servos[STEER].OutputValue);
@@ -385,9 +402,8 @@ void formDataString()
 
 void loop()
 {
-  const unsigned long pause = 500; // msec
   unsigned long time = millis();
-  unsigned long endTime = time + pause;
+  unsigned long endTime = time + LoopPeriod;
 
 // Read joy stick and 3 switches; Send stick to enabled servos.
   int  n;
