@@ -7,18 +7,19 @@
 #define TOLERANCE (1.0e-5)
 #define ARDUINO 1
 #define MAX_MATRIX_SIZE 36
+#define REAL double
 
 void Show(char* x);
-void Show(float x);
+void Show(REAL x);
 
 class matrix
 {
  // implements basic operations of a matrix class
 private:
 #ifdef ARDUINO
-        float value[MAX_MATRIX_SIZE];
+        REAL value[MAX_MATRIX_SIZE];
 #else
-	float* value;
+	REAL* value;
 #endif
 	int rows;  // dimx in Python
 	int columns; // dimy
@@ -26,13 +27,13 @@ private:
 	matrix __add__(matrix& other);
 	matrix __sub__(matrix& other);
 	matrix __mul__(matrix& other);
-	bool   equal(matrix& other, float tolerance=TOLERANCE);
-	float* operator[](int i);
-	float element(int i, int k);
+	bool   equal(matrix& other, REAL tolerance=TOLERANCE);
+	REAL* operator[](int i);
+	REAL element(int i, int k);
 public:
 	matrix(int Rows, int Columns); // zero constructor
 	matrix(int dim); // identity constructor
-	matrix(int Rows, int Columns, float* values); // contruct from list of values
+	matrix(int Rows, int Columns, REAL* values); // contruct from list of values
 //	matrix(matrix& value); // constructor from a matrix
 	~matrix()
 	{
@@ -51,8 +52,8 @@ public:
 	bool   operator==(matrix& other);
 	bool   operator!=(matrix& other);
 	matrix transpose();
-	bool  symmetric(float tolerance=TOLERANCE);
-	matrix Cholesky(float ztol=TOLERANCE);
+	bool  symmetric(REAL tolerance=TOLERANCE);
+	matrix Cholesky(REAL ztol=TOLERANCE);
 	matrix CholeskyInverse();
 };
 
