@@ -21,7 +21,7 @@ matrix::matrix(int dim) // identity constructor
 {
 	rows = columns = dim<1? 1: dim;
 #ifndef ARDUINO
-	value = new float[rows*columns];
+	value = new REAL[rows*columns];
 #endif
 	for (int i = 0; i < rows*columns; i++)
 	{
@@ -34,7 +34,7 @@ matrix::matrix(int Rows, int Columns) // zero constructor
 	columns = Columns<1? 1: Columns;
 	rows = Rows<1? 1: Rows;
 #ifndef ARDUINO
-	value = new float[columns*rows];
+	value = new REAL[columns*rows];
 #endif
 	for (int i = 0; i < columns*rows; i++)
 	   value[i] = 0;
@@ -44,19 +44,19 @@ matrix::matrix(int Rows, int Columns) // zero constructor
 {
    rows = Value.rows;
    columns = Value.columns;
-   value = new float[rows*columns];
+   value = new REAL[rows*columns];
    for (int i = 0; i < rows*columns; i++)
    {
 	   value[i] = Value.value[i];
    }
 	error = 0;
 } */
-matrix::matrix(int Rows, int Columns, float* values) // contruct from list of values
+matrix::matrix(int Rows, int Columns, REAL* values) // contruct from list of values
 {
 	columns = Columns<1? 1: Columns;
 	rows = Rows<1? 1: Rows;
 #ifndef ARDUINO
-	value = new float[columns*rows];
+	value = new REAL[columns*rows];
 #endif
 	for (int i = 0; i < columns*rows; i++)
 	{
@@ -128,11 +128,11 @@ matrix matrix::operator*(matrix& right)
 {
 	return __mul__(right);
 }
-float matrix::element(int i, int j)
+REAL matrix::element(int i, int j)
 {
 	return value[i*columns+j];
 }
-float* matrix::operator[](int i)
+REAL* matrix::operator[](int i)
 {
 	return &value[i*rows];
 }
@@ -197,7 +197,7 @@ void matrix::operator=(matrix& right)
 		value[i] = right.value[i];
 	return;
 }
-bool matrix::equal(matrix& other, float tolerance)	
+bool matrix::equal(matrix& other, REAL tolerance)	
 {
 	if (rows != other.rows || columns != other.columns)
 		return false;
@@ -214,7 +214,7 @@ bool matrix::operator!=(matrix& right)
 {
 	return !equal(right);
 }
-bool matrix::symmetric(float tolerance)
+bool matrix::symmetric(REAL tolerance)
 {
 	if (columns != rows)
 		return false;
@@ -226,11 +226,11 @@ bool matrix::symmetric(float tolerance)
 }
   
     // Thanks to Ernesto P. Adorio for use of Cholesky and CholeskyInverse functions
-matrix matrix::Cholesky(float ztol)
+matrix matrix::Cholesky(REAL ztol)
 {
     // Computes the upper triangular Cholesky factorization of
     // a positive definite matrix.
-	float S, d;
+	REAL S, d;
 	int i, j, k;
 	matrix res(rows, rows);
 	if (!symmetric())
@@ -279,9 +279,9 @@ matrix matrix::CholeskyInverse()
     // Computes inverse of matrix given its Cholesky upper Triangular
     // decomposition of matrix.
 	int i, j, k;
-	float tjj;
-	float S = 0;
-	float Sum = 0;
+	REAL tjj;
+	REAL S = 0;
+	REAL Sum = 0;
 	matrix res(rows, rows);
     
     // Backward step for inverse.
