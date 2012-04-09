@@ -9,7 +9,6 @@
 
 // global variables
 char buffer[BUFFSIZ];        // string buffer for the sentence
-String dataString = String("                                                  ");
 void Filter(REAL* x, REAL* P, REAL* measure, REAL deltaT);
 
 // sGPS_file contains UTC of first valid GPS
@@ -54,25 +53,34 @@ uint32_t parsedecimal(char *str)
   return d;
 }
 //---------------------------------------------------------
-void readline(void) 
+// return true if a line was read; false if not
+bool readline(void) 
 {
+  // buffer can hold 128 bytes; if not enough there yet, try later.
+  const int MinimumMessage = 30;
   char c;
   char buffidx;                // an indexer into the buffer
   
-  buffidx = 0; // start at begninning
+  buffidx = 0; // start at begining
+  if (Serial3.available() < MinimumMessage)
+    return false;
   while (1) 
   {
       c=Serial3.read();
       if (c == -1)
         continue;
+      Serial.print(c);
       if (c == '\n')
         continue;
       if ((buffidx == BUFFSIZ-1) || (c == '\r')) 
       {
         buffer[buffidx] = 0;
-        return;
+        Serial.print("/nReturn");
+        return true;
       }
       buffer[buffidx++]= c;
+      Serial.print(buffidx, DEC);
+      Serial.print("\n");
   }
 }
 char* waypoint::formDataString()
@@ -80,11 +88,25 @@ char* waypoint::formDataString()
   // now log the information
   // make a string for assembling the data to log:
   char dataString[BUFFSIZ];
-  sprintf(dataString, "%.6f,%.6f,%d,%d,%d,%d,%d\n", 
+  sprintf(dataString, "%.6lf,%.6lf,%ld,%ld,%ld,%ld,%ld\n", 
   latitude, longitude, east_mm, north_mm, sigmaE_mm, sigmaN_mm, time_ms);  
 
   return dataString;
 }
+void waypoint::operator=(waypoint& right)
+{
+  latitude =   right.latitude;
+  longitude =  right.longitude;
+  east_mm =    right.east_mm;
+  north_mm =   right.north_mm;
+  sigmaE_mm =  right.sigmaE_mm;
+  sigmaN_mm =  right.sigmaN_mm;
+  time_ms =    right.time_ms;  
+  bearing  =   right.bearing;
+  speed_mmPs = right.speed_mmPs;
+  return;
+}
+
 /*---------------------------------------------------------------------------------------*/ 
 void waypoint::fuse(waypoint GPS_reading, int deltaT_ms)
 {
@@ -165,35 +187,35 @@ void waypoint::GetLatLon(char* parseptr)
   
 }
 //---------------------------------------------------------- 
-// Aquire a GPS signal and fill in the waypoint data.
+// Aquire a GPS GPRMC signal and fill in the waypoint data.
 // return 1 if valid, zero if not.
 // wait up to max_wait milliseconds to get a valid signal.
-bool waypoint::AcquireGPS(long max_wait_ms)
+bool waypoint::AcquireGPRMC(unsigned long max_wait_ms)
 {
   uint8_t groundspeed, trackangle;
-  char status;
+  char status ='V'; // V = data invalid
   char *parseptr;              // a character pointer for parsing
   // value of millis() for GPS data
   unsigned long AcquisitionTime_ms;
-
   char* pTime;
   char* pDate;
-//  long tmp;
-  status = 'V';
+  unsigned long TimeOut = millis() + max_wait_ms;
+// $GPRMC,161229.487,A,3723.2475,N,12158.3416,W,0.13,309.62,120598,,*10
   sigmaE_mm = 10000;
   sigmaN_mm = 10000;
-  while (status != 'A')
+  Serial.println("looking");
+  while (status != 'A') // A = data valid
   {
-    readline();
-    // http://users.erols.com/dlwilson/gpshdop.htm uses the model
-    // error = sqrt( (3.04*HDOP)^2 + (3.57)^2)
-    // see http://en.wikipedia.org/wiki/Error_analysis_for_the_Global_Positioning_System
-    // get Horizontal Dillution of Precision (HDOP).
-    if (strncmp(buffer, "$GPGGA",6) == 0) 
-    {
-      AcquisitionTime_ms = millis();
-      parseptr = buffer+7;
+    if (!readline())
+    {  // nothing to read; how long have we waited?
+      if (millis() > TimeOut)
+      {
+         Serial.println("Timed out");
+         return false;
+      }
     }
+    Serial.println("Read line");
+    Serial.println(buffer);
     // check if $GPRMC (global positioning fixed data)
     if (strncmp(buffer, "$GPRMC",6) == 0) 
     {  
@@ -228,4 +250,73 @@ bool waypoint::AcquireGPS(long max_wait_ms)
   }
   return false;
 }
+//---------------------------------------------------------- 
+// Aquire a GPS $GPGGA signal and fill in the waypoint data.
+// return 1 if valid, zero if not.
+// wait up to max_wait milliseconds to get a valid signal.
+bool waypoint::AcquireGPGGA(unsigned long max_wait_ms)
+{
+  uint8_t satelites_used, hdop;
+  REAL HDOP, error_m, error_mm;
+  char FixIndicator = '0';
+  char *parseptr;              // a character pointer for parsing
+  // value of millis() for GPS data
+  unsigned long AcquisitionTime_ms;
+
+  char* pTime;
+  unsigned long TimeOut = millis() + max_wait_ms;
+  sigmaE_mm = 10000;
+  sigmaN_mm = 10000;
+  // $GPGGA,161229.487,3723.2475,N,12158.3416,W,1,07,1.0,9.0,M,,,,0000*18
+  while (FixIndicator == '0')
+  {
+    if (!readline())
+    {  // nothing to read; how long have we waited?
+      if (millis() > TimeOut)
+         return false;
+    }    
+    if (strncmp(buffer, "$GPGGA",6) == 0) 
+    {
+      AcquisitionTime_ms = millis();
+      pTime =
+      parseptr = buffer+7;
+      parseptr = strchr(parseptr, ',') + 1;
+   
+      // grab latitude & long data
+      GetLatLon(parseptr);
+      parseptr = strchr(parseptr, ',') + 1;
+      FixIndicator = parseptr[0];  // A = data valid; V = data not valid
+      if (FixIndicator == '0')
+          continue;
+      parseptr += 2;      
+       // satelites used
+      parseptr = strchr(parseptr, ',')+1;
+      satelites_used = parsedecimal(parseptr);  
+      // HDOP
+      parseptr = strchr(parseptr, ',')+1;
+      hdop = parsedecimal(parseptr); 
+      hdop *= 10;
+      parseptr = strchr(parseptr, '.')+1;
+      hdop += parsedecimal(parseptr);
+      // http://users.erols.com/dlwilson/gpshdop.htm uses the model
+      // error = sqrt( (3.04*HDOP)^2 + (3.57)^2)
+      // see http://en.wikipedia.org/wiki/Error_analysis_for_the_Global_Positioning_System
+      // get Horizontal Dillution of Precision (HDOP).
+      HDOP = (REAL) hdop / 10.;
+      error_m = sqrt((3.04*HDOP)*(3.04*HDOP) + 3.57*3.57);
+      error_mm = 1000 * error_m;
+      sigmaE_mm = sigmaN_mm = error_mm;
+     
+      if (offset_ms == 0)
+      {
+          SetTime(pTime, "1205xx");
+          offset_ms = AcquisitionTime_ms;
+      }      
+      time_ms = AcquisitionTime_ms;
+    }
+    return true;
+  }
+  return false;
+}
+
 
