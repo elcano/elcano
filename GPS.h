@@ -35,11 +35,13 @@ class waypoint
     long speed_mmPs; // vehicle speed in mm per second.
     void Compute_mm();
     void Compute_LatLon();
-    bool AcquireGPS(long max_wait_ms);
+    bool AcquireGPRMC(unsigned long max_wait_ms);
+    bool AcquireGPGGA(unsigned long max_wait_ms);
     void fuse(waypoint reading, int deltaT_ms);
     void SetTime(char *pTime, char * pDate);
     void GetLatLon(char* parseptr);
     char* formDataString();
+    void   operator=(waypoint& other);
 };
 
 struct curve

@@ -94,6 +94,9 @@ namespace C6_Navigator {
     void setup();
     void loop();
 }
+// Set the GPSRATE to the baud rate of the GPS module. Most are 4800
+// but some are 38400 or other. Check the datasheet!
+#define GPSRATE 4800
 
 #define MAX_WAYPOINTS 10
 /*   There are two coordinate systems.
@@ -148,12 +151,33 @@ bool checksum(char* msg)
 /*---------------------------------------------------------------------------------------*/ 
 void initialize()
 {
+  char* GPSString;
   char* disable = "$PSRF103,i,00,00,01*xxxxxx";
   char* querryGGA = "$PSRF103,00,01,00,01*25";
   bool GPS_available = false;
   /* Wait until initial position is known. */
   mission[0].latitude = 100; // beyond the north pole.
-  GPS_available = mission[0].AcquireGPS(70000);
+  Serial.print("Acquiring GPS RMC...");
+  GPS_available = mission[0].AcquireGPRMC(70000);
+  if (GPS_available)
+  {
+    estimated_position = mission[0];
+    Serial.println("OK");
+  }
+  else
+  {
+    estimated_position.latitude = 47.62130;  // set by hand here
+    estimated_position.longitude = -122.35090;
+    estimated_position.Compute_mm();
+    estimated_position.sigmaE_mm = 1.0E5; // 10 m standard deviation
+    estimated_position.sigmaN_mm = 1.0E5;
+    estimated_position.time_ms = millis();
+    Serial.println("Failed");
+  }
+  estimated_position.speed_mmPs = 0;
+  estimated_position.bearing = 0;  // to be taken from path or set by hand
+  GPSString = estimated_position.formDataString();
+  Serial.println(GPSString);
     /*
     if (InitialPositionProvidedFromC4)
       ReadInitialPosition(C4); // put latitude and longitude in mission[0]
@@ -167,7 +191,7 @@ void initialize()
   // SendState(C4);
     mission[1].latitude = 100; // beyond the north pole.
     // Wait to get path from C4
-    while (mission[1].latitude > 90)
+//    while (mission[1].latitude > 90)
     {
     /* If (message from C4)
     {
@@ -185,7 +209,7 @@ void initialize()
     }
     Serial3.println(querryGGA);
     */
-    GPS_available = GPS_reading.AcquireGPS(300);
+//    GPS_available = GPS_reading.AcquireGPGGA(300);
     // ready to roll
     // Fuse all position estimates.
     // Send vehicle state to C3 and C4.
@@ -197,8 +221,14 @@ void setup()
 { 
     pinMode(Rx0, INPUT);
     pinMode(Tx0, OUTPUT);
+    pinMode(GPS_POWER, OUTPUT);
+    Serial.begin(9600);
+    Serial3.begin(GPSRATE);   
+    // prints title with ending line break 
+    Serial.println("GPS parser");  
+    digitalWrite(GPS_POWER, LOW);         // pull low to turn on!
     initialize();
-    Serial.print("Initializing throttle SD card...");
+    Serial.print("Initializing GPS SD card...");
     // make sure that the default chip select pin is set to
     // output, even if you don't use it:
     pinMode(chipSelect, OUTPUT);
@@ -231,7 +261,9 @@ void loop()
     REAL deltaT_ms;
     unsigned long time = millis();
     unsigned long endTime = time + LoopPeriod;
-    bool GPS_available = GPS_reading.AcquireGPS(300);
+    bool GPS_available = GPS_reading.AcquireGPGGA(300);
+    char* dataString;
+    char* GPSString;
 
   /* Perform dead reckoning from clock and previous state
     Read compass.
@@ -254,11 +286,13 @@ void loop()
     }
     // Fuse all position estimates with a Kalman Filter */
     deltaT_ms = LoopPeriod + (time - GPS_reading.time_ms);
-    estimated_position.fuse(GPS_reading, deltaT_ms);
+//    estimated_position.fuse(GPS_reading, deltaT_ms);
  
     // Send vehicle state to C3 and C4.
     
-    char* dataString = GPS_reading.formDataString();
+    GPSString = GPS_reading.formDataString();
+    dataString = estimated_position.formDataString();
+//    char* dataStin
 
     // open the file. note that only one file can be open at a time,
     // so you have to close this one before opening another.
