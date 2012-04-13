@@ -1,11 +1,8 @@
 #include "Arduino.h"
 #include "GPS.h"
 #define REAL double
-// Use pin 4 to control power to the GPS
-#define powerpin 4
 // Set the GPSRATE to the baud rate of the GPS module. Most are 4800
 // but some are 38400 or other. Check the datasheet!
-#define GPSRATE 4800
 
 // global variables
 char buffer[BUFFSIZ];        // string buffer for the sentence
@@ -18,6 +15,7 @@ void Filter(REAL* x, REAL* P, REAL* measure, REAL deltaT);
 // unsigned long millis() is time since program started running
 // offset_ms is value of millis() at start_time
 unsigned long offset_ms = 0;
+double CosLatitude;
 
 /* There are more accurate ways to compute distance between two latitude and longitude points.
    We use a simple approximation, since we are interesed in a flat projection over a small area.
@@ -25,17 +23,27 @@ unsigned long offset_ms = 0;
 */
 void waypoint::Compute_mm()
 {
-    double temp;
-    temp = (longitude - LONGITUDE_ORIGIN) * TO_RADIANS * cos(LATITUDE_ORIGIN*TO_RADIANS);
-    temp *= EARTH_RADIUS_MM;
-    east_mm = temp;
-    north_mm = (latitude - LATITUDE_ORIGIN) * TO_RADIANS * EARTH_RADIUS_MM;
-    north_mm = temp;
+    // compute relative to origin, since Arduino double is limited to 6 digits.
+    long diff;
+    double relative;
+    diff = longitude - LONGITUDE_ORIGIN;
+    relative = ((double) diff)/1000000. * TO_RADIANS * CosLatitude;
+    relative *= EARTH_RADIUS_MM;
+    east_mm = relative;
+    diff = latitude - LATITUDE_ORIGIN;
+    relative = ((double) diff)/1000000. * TO_RADIANS * EARTH_RADIUS_MM;
+    north_mm = relative;
 }
 void waypoint::Compute_LatLon()
 {
-    longitude = east_mm / (EARTH_RADIUS_MM * TO_RADIANS * cos(LATITUDE_ORIGIN*TO_RADIANS)) + LONGITUDE_ORIGIN;
-    latitude = (north_mm / (EARTH_RADIUS_MM * TO_RADIANS)) + LATITUDE_ORIGIN; 
+    long diff;
+    double relative;
+    relative = ((double)east_mm) * (1000000 / (EARTH_RADIUS_MM * TO_RADIANS * CosLatitude));  
+    diff = relative;
+    longitude = diff + LONGITUDE_ORIGIN;
+    relative = ((double)north_mm) * (1000000 / (EARTH_RADIUS_MM * TO_RADIANS));  
+    diff = relative;
+    latitude = diff +  LATITUDE_ORIGIN;
 }
 //---------------------------------------------------------
 uint32_t parsedecimal(char *str) 
@@ -62,25 +70,25 @@ bool readline(void)
   char buffidx;                // an indexer into the buffer
   
   buffidx = 0; // start at begining
-  if (Serial3.available() < MinimumMessage)
-    return false;
+//  if (Serial3.available() < MinimumMessage)
+//    return false;
   while (1) 
   {
       c=Serial3.read();
       if (c == -1)
         continue;
-      Serial.print(c);
+ //     Serial.print(c);
       if (c == '\n')
         continue;
       if ((buffidx == BUFFSIZ-1) || (c == '\r')) 
       {
         buffer[buffidx] = 0;
-        Serial.print("/nReturn");
+ //       Serial.print("/nReturn");
         return true;
       }
       buffer[buffidx++]= c;
-      Serial.print(buffidx, DEC);
-      Serial.print("\n");
+//      Serial.print(buffidx, DEC);
+  //    Serial.print("\n");
   }
 }
 char* waypoint::formDataString()
@@ -88,7 +96,7 @@ char* waypoint::formDataString()
   // now log the information
   // make a string for assembling the data to log:
   char dataString[BUFFSIZ];
-  sprintf(dataString, "%.6lf,%.6lf,%ld,%ld,%ld,%ld,%ld\n", 
+  sprintf(dataString, "%ld,%ld,%ld,%ld, %ld,%ld,%ld\n", 
   latitude, longitude, east_mm, north_mm, sigmaE_mm, sigmaN_mm, time_ms);  
 
   return dataString;
@@ -134,12 +142,11 @@ void waypoint::fuse(waypoint GPS_reading, int deltaT_ms)
     uncertainty[10] = sigmaE_mm * sigmaE_mm;
     uncertainty[5] = 
     uncertainty[15] = sigmaN_mm * sigmaN_mm;
-//  Following statement produces unspecified "Error compiling" on Arduino.
     Filter(State, uncertainty, measurements, deltaT_s);
 
 }
 //---------------------------------------------------------- 
-void waypoint::GetLatLon(char* parseptr)
+char* waypoint::GetLatLon(char* parseptr)
 {
     uint32_t latitd, longitd;
     char latdir, longdir;
@@ -172,19 +179,24 @@ void waypoint::GetLatLon(char* parseptr)
 // latitude is ddmmmmmm 
     degree = latitd/1000000;
     fraction = (latitd%1000000)*100/60;
-    latitude = ((REAL)fraction)/1000000.;
-    latitude += degree;
+    latitude = fraction + degree * 1000000;
     if (latdir == 'S')
        latitude = -latitude;
    
     degree = longitd/1000000;
     fraction = (longitd%1000000)*100/60;
-    longitude = ((REAL)fraction)/1000000.;
-    longitude += degree;
+    longitude = fraction + degree * 1000000;
     if (longdir == 'W')
        longitude = -longitude;
     Compute_mm();
-  
+    Serial.print("\tLat: ");
+    Serial.print(latitd/1000000, DEC); Serial.print(".");
+    Serial.print((latitd%1000000)*100/60, DEC); Serial.print(',');
+    Serial.print("\tLong: ");
+    Serial.print(longitd/1000000, DEC); Serial.print(".");
+    Serial.print((longitd%1000000)*10/6, DEC); Serial.print('\n');
+ 
+    return parseptr;
 }
 //---------------------------------------------------------- 
 // Aquire a GPS GPRMC signal and fill in the waypoint data.
@@ -204,6 +216,7 @@ bool waypoint::AcquireGPRMC(unsigned long max_wait_ms)
   sigmaE_mm = 10000;
   sigmaN_mm = 10000;
   Serial.println("looking");
+  CosLatitude = cos(((double) LATITUDE_ORIGIN)/1000000. * TO_RADIANS);
   while (status != 'A') // A = data valid
   {
     if (!readline())
@@ -214,7 +227,7 @@ bool waypoint::AcquireGPRMC(unsigned long max_wait_ms)
          return false;
       }
     }
-    Serial.println("Read line");
+//    Serial.println("Read line");
     Serial.println(buffer);
     // check if $GPRMC (global positioning fixed data)
     if (strncmp(buffer, "$GPRMC",6) == 0) 
@@ -229,9 +242,10 @@ bool waypoint::AcquireGPRMC(unsigned long max_wait_ms)
           continue;
       parseptr += 2;      
       // grab latitude & long data
-      GetLatLon(parseptr);
+      parseptr = GetLatLon(parseptr);
       // groundspeed
       parseptr = strchr(parseptr, ',')+1;
+//      Serial.println(parseptr);
       groundspeed = parsedecimal(parseptr);  
       // track angle
       parseptr = strchr(parseptr, ',')+1;
@@ -239,6 +253,12 @@ bool waypoint::AcquireGPRMC(unsigned long max_wait_ms)
       // date
       parseptr = strchr(parseptr, ',')+1;
       pDate = parseptr;
+ /*   Serial.print("\tGroundspeed: ");
+      Serial.print(groundspeed, DEC); Serial.print(",");
+      Serial.print("\tHeading: ");
+      Serial.print(trackangle, DEC); Serial.print(",");
+      Serial.print("\tDate: ");
+      Serial.println(pDate); */
       if (offset_ms == 0)
       {
           SetTime(pTime, pDate);
@@ -246,8 +266,9 @@ bool waypoint::AcquireGPRMC(unsigned long max_wait_ms)
       }      
       time_ms = AcquisitionTime_ms;
     }
-    return true;
   }
+  if (status == 'A')
+    return true;
   return false;
 }
 //---------------------------------------------------------- 
@@ -283,7 +304,7 @@ bool waypoint::AcquireGPGGA(unsigned long max_wait_ms)
       parseptr = strchr(parseptr, ',') + 1;
    
       // grab latitude & long data
-      GetLatLon(parseptr);
+      parseptr = GetLatLon(parseptr);
       parseptr = strchr(parseptr, ',') + 1;
       FixIndicator = parseptr[0];  // A = data valid; V = data not valid
       if (FixIndicator == '0')
@@ -314,9 +335,10 @@ bool waypoint::AcquireGPGGA(unsigned long max_wait_ms)
       }      
       time_ms = AcquisitionTime_ms;
     }
-    return true;
   }
-  return false;
+  if (FixIndicator == '0')
+    return false;
+  return true;
 }
 
 

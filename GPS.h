@@ -2,8 +2,10 @@
 
 // value if latitude, longitude or bearing is missing.
 #define INVALID 1000
-#define LATITUDE_ORIGIN  47.62130
-#define LONGITUDE_ORIGIN -122.35090
+// latitude and longitude are multiplied by 1,000,000.
+// (47.621300, -122.350900) is Seattle Center House.
+#define LATITUDE_ORIGIN   47621300
+#define LONGITUDE_ORIGIN -122350900
 #define EARTH_RADIUS_MM 6371000000.
 #define PIf ((float) 3.1415926)
 #define PId 3.14159265358979
@@ -11,13 +13,18 @@
 // The buffer size that will hold a GPS sentence. They tend to be 80 characters long
 // so 90 is plenty.
 #define BUFFSIZ 90 // plenty big
+#define GPSRATE 4800
+
 
 class waypoint
 // used either for a waypoint or a measured navigational fix
 {
   public:
-    double latitude;
-    double longitude;
+    // Since the Arduino supports only 6 digits of precision in float/double,
+    // all latitudes and longitudes are recorded as integers.
+    // The (east_mm and north_mm) position carries more precision.
+    long latitude;   //  DDFFFFFF; 6 digits after virtual decimal point
+    long longitude;  // DDDFFFFFF
     long east_mm;  // x is east; max is 2147 km
     long north_mm;  // y is true north
     long sigmaE_mm; // standard deviation of estimate of east_mm.
@@ -33,13 +40,14 @@ class waypoint
   */
     int bearing;  // degrees. 0 = North; 90 = East.
     long speed_mmPs; // vehicle speed in mm per second.
+    
     void Compute_mm();
     void Compute_LatLon();
     bool AcquireGPRMC(unsigned long max_wait_ms);
     bool AcquireGPGGA(unsigned long max_wait_ms);
     void fuse(waypoint reading, int deltaT_ms);
     void SetTime(char *pTime, char * pDate);
-    void GetLatLon(char* parseptr);
+    char* GetLatLon(char* parseptr);
     char* formDataString();
     void   operator=(waypoint& other);
 };
