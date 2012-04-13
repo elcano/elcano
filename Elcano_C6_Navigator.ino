@@ -151,12 +151,15 @@ bool checksum(char* msg)
 /*---------------------------------------------------------------------------------------*/ 
 void initialize()
 {
+  pinMode(GPS_POWER, OUTPUT);
   char* GPSString;
   char* disable = "$PSRF103,i,00,00,01*xxxxxx";
   char* querryGGA = "$PSRF103,00,01,00,01*25";
   bool GPS_available = false;
   /* Wait until initial position is known. */
   mission[0].latitude = 100; // beyond the north pole.
+  Serial3.begin(GPSRATE);   
+  digitalWrite(GPS_POWER, LOW);         // pull low to turn on!
   Serial.print("Acquiring GPS RMC...");
   GPS_available = mission[0].AcquireGPRMC(70000);
   if (GPS_available)
@@ -311,7 +314,7 @@ void loop()
     }  
     // if the file isn't open, pop up an error:
     else {
-      Serial.println("error opening file");
+//      Serial.println("error opening file");
     } 
   // delay, but don't count time in loop
   while (time < endTime)
