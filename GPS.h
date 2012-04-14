@@ -10,9 +10,9 @@
 #define PIf ((float) 3.1415926)
 #define PId 3.14159265358979
 #define TO_RADIANS (PId/180.)
-// The buffer size that will hold a GPS sentence. They tend to be 80 characters long
-// so 90 is plenty.
-#define BUFFSIZ 90 // plenty big
+// The buffer size that will hold a GPS sentence. They tend to be 80 characters long.
+// Got weird results with 90; OK with 120.
+#define BUFFSIZ 120
 #define GPSRATE 4800
 
 

@@ -115,9 +115,10 @@ namespace C6_Navigator {
 #ifdef SIMULATOR
 namespace C6_Navigator {
 #endif
+// limited to 8+3 characters
+#define FILE_NAME "GPS_Log.csv"
 File dataFile;
-//String dataString = String("                                                  ");
-char GPSfile[BUFFSIZ] = "GPS_yymmdd_hhmmss.CSV"; 
+char GPSfile[BUFFSIZ] = "GPS_yymmdd_hhmmss.csv"; 
 String formDataString();
  
 int waypoints;
@@ -164,8 +165,10 @@ void initialize()
   GPS_available = mission[0].AcquireGPRMC(70000);
   if (GPS_available)
   {
+    GPSString = mission[0].formDataString();
+    Serial.print(GPSString);
     estimated_position = mission[0];
-    Serial.println("OK");
+//    Serial.println("OK");
   }
   else
   {
@@ -245,6 +248,13 @@ void setup()
       return;
     }
     Serial.println("card initialized.\n");
+    dataFile = SD.open(FILE_NAME, FILE_WRITE);
+    // if the file is available, write date and time to it:
+    if (dataFile) 
+    {
+        dataFile.println(GPSfile);
+        dataFile.close();
+    }  
 
 }
 /*---------------------------------------------------------------------------------------*/ 
@@ -264,11 +274,12 @@ void loop()
     REAL deltaT_ms;
     unsigned long time = millis();
     unsigned long endTime = time + LoopPeriod;
-    bool GPS_available = GPS_reading.AcquireGPGGA(300);
-    char* dataString;
-    char* GPSString;
+    char* pData;
+    char* pGPS;
 
-  /* Perform dead reckoning from clock and previous state
+    bool GPS_available = GPS_reading.AcquireGPGGA(300);
+
+    /* Perform dead reckoning from clock and previous state
     Read compass.
     ReadINU.
     Set attitude.
@@ -293,28 +304,39 @@ void loop()
  
     // Send vehicle state to C3 and C4.
     
-    GPSString = GPS_reading.formDataString();
-    dataString = estimated_position.formDataString();
-//    char* dataStin
 
     // open the file. note that only one file can be open at a time,
     // so you have to close this one before opening another.
-    dataFile = SD.open(GPSfile, FILE_WRITE);
+    dataFile = SD.open(FILE_NAME, FILE_WRITE);
   
     // if the file is available, write to it:
-    if (dataFile) 
+    if (GPS_available && dataFile) 
     {
-        dataFile.println(dataString);
+        pGPS = GPS_reading.formDataString();
+        dataFile.println(pGPS);
+  //    pData = estimated_position.formDataString();
+//      dataFile.print(pData);
         dataFile.close();
         if (true)
         {
           // print to the serial port too:
-          Serial.println(dataString);
+          Serial.println(pGPS);
+/*        Serial.print(GPS_reading.latitude, DEC); Serial.print(",");
+          Serial.print(GPS_reading.longitude, DEC); Serial.print(",");
+          Serial.print(GPS_reading.east_mm, DEC); Serial.print(",");
+          Serial.print(GPS_reading.north_mm, DEC); Serial.print(",");
+          Serial.print(GPS_reading.sigmaE_mm, DEC); Serial.print(",");
+          Serial.print(GPS_reading.sigmaN_mm, DEC); Serial.print(",");
+          Serial.println(GPS_reading.time_ms, DEC); */
         }
     }  
     // if the file isn't open, pop up an error:
-    else {
-//      Serial.println("error opening file");
+    else 
+    {
+      if (!GPS_available)
+        Serial.print("GPS not available");
+      else
+        Serial.println("error opening file");
     } 
   // delay, but don't count time in loop
   while (time < endTime)
