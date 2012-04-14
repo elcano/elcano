@@ -6,6 +6,7 @@
 
 // global variables
 char buffer[BUFFSIZ];        // string buffer for the sentence
+char dataString[BUFFSIZ];
 void Filter(REAL* x, REAL* P, REAL* measure, REAL deltaT);
 
 // sGPS_file contains UTC of first valid GPS
@@ -95,10 +96,13 @@ char* waypoint::formDataString()
 {
   // now log the information
   // make a string for assembling the data to log:
-  char dataString[BUFFSIZ];
-  sprintf(dataString, "%ld,%ld,%ld,%ld, %ld,%ld,%ld\n", 
+ 
+//  for (int i = 0; i < BUFFSIZ-1; i++)
+//    dataString[i] = ' ';
+//  dataString[BUFFSIZ-1] = 0;
+  sprintf(dataString, "%ld,%ld,%ld,%ld,%ld,%ld,%ld,",
   latitude, longitude, east_mm, north_mm, sigmaE_mm, sigmaN_mm, time_ms);  
-
+ 
   return dataString;
 }
 void waypoint::operator=(waypoint& right)
@@ -189,12 +193,12 @@ char* waypoint::GetLatLon(char* parseptr)
     if (longdir == 'W')
        longitude = -longitude;
     Compute_mm();
-    Serial.print("\tLat: ");
+/*  Serial.print("\tLat: ");
     Serial.print(latitd/1000000, DEC); Serial.print(".");
     Serial.print((latitd%1000000)*100/60, DEC); Serial.print(',');
     Serial.print("\tLong: ");
     Serial.print(longitd/1000000, DEC); Serial.print(".");
-    Serial.print((longitd%1000000)*10/6, DEC); Serial.print('\n');
+    Serial.print((longitd%1000000)*10/6, DEC); Serial.print('\n'); */
  
     return parseptr;
 }
