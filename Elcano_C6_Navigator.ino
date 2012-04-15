@@ -116,9 +116,9 @@ namespace C6_Navigator {
 namespace C6_Navigator {
 #endif
 // limited to 8+3 characters
-#define FILE_NAME "GPS_Log.csv"
+#define FILE_NAME "GPSLog.csv"
 File dataFile;
-char GPSfile[BUFFSIZ] = "GPS_yymmdd_hhmmss.csv"; 
+char GPSfile[BUFFSIZ] = "mmddhhmm.csv"; 
 String formDataString();
  
 int waypoints;
@@ -248,7 +248,7 @@ void setup()
       return;
     }
     Serial.println("card initialized.\n");
-    dataFile = SD.open(FILE_NAME, FILE_WRITE);
+    dataFile = SD.open(GPSfile, FILE_WRITE);
     // if the file is available, write date and time to it:
     if (dataFile) 
     {
@@ -260,11 +260,14 @@ void setup()
 /*---------------------------------------------------------------------------------------*/ 
 void waypoint::SetTime(char *pTime, char * pDate)
 {
-//     GPSfile = "GPS_yymmdd_hhmmss.CSV"; 
-     strncpy(GPSfile+4,  pDate+4, 2);     
-     strncpy(GPSfile+6,  pDate+2, 2);     
-     strncpy(GPSfile+8,  pDate, 2);     
-     strncpy(GPSfile+11, pTime,6);
+//     was: GPSfile = "GPS_yymmdd_hhmmss.CSV"; 
+//     now: GPSfile = "mmddhhmm.CSV";
+//   strncpy(GPSfile+4,  pDate+4, 2);  // year   
+     strncpy(GPSfile,  pDate+2, 2);  // month   
+     strncpy(GPSfile+2,  pDate, 2);    // day    
+     strncpy(GPSfile+4, pTime,2);     // GMT hour
+     strncpy(GPSfile+6, pTime+2,2);     // minute
+//   strncpy(GPSfile+11, pTime+4,2);     // second
      Serial.println(GPSfile);
 }
 
@@ -307,7 +310,7 @@ void loop()
 
     // open the file. note that only one file can be open at a time,
     // so you have to close this one before opening another.
-    dataFile = SD.open(FILE_NAME, FILE_WRITE);
+    dataFile = SD.open(GPSfile, FILE_WRITE);
   
     // if the file is available, write to it:
     if (GPS_available && dataFile) 
