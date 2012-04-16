@@ -1,3 +1,4 @@
+
 #include "Arduino.h"
 #include "GPS.h"
 #define REAL double
@@ -219,7 +220,7 @@ bool waypoint::AcquireGPRMC(unsigned long max_wait_ms)
 // $GPRMC,161229.487,A,3723.2475,N,12158.3416,W,0.13,309.62,120598,,*10
   sigmaE_mm = 10000;
   sigmaN_mm = 10000;
-  Serial.println("looking");
+//  Serial.println("looking");
   CosLatitude = cos(((double) LATITUDE_ORIGIN)/1000000. * TO_RADIANS);
   while (status != 'A') // A = data valid
   {

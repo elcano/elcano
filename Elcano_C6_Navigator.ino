@@ -80,6 +80,7 @@ Serial lines:
 #include "C6_IO.h"
 #include "Matrix.h"  
 #include <SD.h>
+
 // On the Ethernet Shield, CS is pin 4. Note that even if it's not
 // used as the CS pin, the hardware CS pin (10 on most Arduino boards,
 // 53 on the Mega) must be left as an output or the SD library
@@ -150,6 +151,7 @@ bool checksum(char* msg)
     return false;
 }
 /*---------------------------------------------------------------------------------------*/ 
+
 void initialize()
 {
   pinMode(GPS_POWER, OUTPUT);
@@ -161,7 +163,7 @@ void initialize()
   mission[0].latitude = 100; // beyond the north pole.
   Serial3.begin(GPSRATE);   
   digitalWrite(GPS_POWER, LOW);         // pull low to turn on!
-  Serial.print("Acquiring GPS RMC...");
+//  Serial.print("Acquiring GPS RMC...");
   GPS_available = mission[0].AcquireGPRMC(70000);
   if (GPS_available)
   {
@@ -178,13 +180,13 @@ void initialize()
     estimated_position.sigmaE_mm = 1.0E5; // 10 m standard deviation
     estimated_position.sigmaN_mm = 1.0E5;
     estimated_position.time_ms = millis();
-    Serial.println("Failed");
+//    Serial.println("Failed");
   }
   estimated_position.speed_mmPs = 0;
   estimated_position.bearing = 0;  // to be taken from path or set by hand
-  GPSString = estimated_position.formDataString();
+  GPSString = estimated_position.formDataString();  
   Serial.println(GPSString);
-    /*
+/*
     if (InitialPositionProvidedFromC4)
       ReadInitialPosition(C4); // put latitude and longitude in mission[0]
     */
@@ -225,34 +227,42 @@ void initialize()
 
 void setup() 
 { 
+    char* Header = "Latitude,Longitude,East_mm,North_mm,SigmaE_mm,SigmaN,mm,Time_ms,";
     pinMode(Rx0, INPUT);
     pinMode(Tx0, OUTPUT);
     pinMode(GPS_POWER, OUTPUT);
+    Serial3.begin(GPSRATE);    
     Serial.begin(9600);
-    Serial3.begin(GPSRATE);   
     // prints title with ending line break 
     Serial.println("GPS parser");  
     digitalWrite(GPS_POWER, LOW);         // pull low to turn on!
     initialize();
-    Serial.print("Initializing GPS SD card...");
+//    Serial.print("Initializing GPS SD card...");
     // make sure that the default chip select pin is set to
     // output, even if you don't use it:
     pinMode(chipSelect, OUTPUT);
     pinMode(53, OUTPUT);  // Unused CS on Mega
+    pinMode(GPS_RED_LED, OUTPUT);
+    pinMode(GPS_GREEN_LED, OUTPUT);
+    digitalWrite(GPS_GREEN_LED, LOW);
     
     // see if the card is present and can be initialized:
     if (!SD.begin(chipSelect)) 
     {
       Serial.println("Card failed, or not present");
+      digitalWrite(GPS_RED_LED, HIGH);
       // don't do anything more:
       return;
     }
     Serial.println("card initialized.\n");
+    digitalWrite(GPS_RED_LED, LOW);
     dataFile = SD.open(GPSfile, FILE_WRITE);
     // if the file is available, write date and time to it:
     if (dataFile) 
     {
         dataFile.println(GPSfile);
+        dataFile.print(Header);
+        dataFile.println(Header);
         dataFile.close();
     }  
 
@@ -315,13 +325,13 @@ void loop()
     // if the file is available, write to it:
     if (GPS_available && dataFile) 
     {
+        digitalWrite(GPS_GREEN_LED, HIGH);
+        digitalWrite(GPS_RED_LED, LOW);
         pGPS = GPS_reading.formDataString();
         dataFile.println(pGPS);
   //    pData = estimated_position.formDataString();
 //      dataFile.print(pData);
         dataFile.close();
-        if (true)
-        {
           // print to the serial port too:
           Serial.println(pGPS);
 /*        Serial.print(GPS_reading.latitude, DEC); Serial.print(",");
@@ -331,15 +341,20 @@ void loop()
           Serial.print(GPS_reading.sigmaE_mm, DEC); Serial.print(",");
           Serial.print(GPS_reading.sigmaN_mm, DEC); Serial.print(",");
           Serial.println(GPS_reading.time_ms, DEC); */
-        }
     }  
     // if the file isn't open, pop up an error:
     else 
     {
       if (!GPS_available)
+      {
+        digitalWrite(GPS_GREEN_LED, LOW);
         Serial.print("GPS not available");
+      }
       else
+      {
+        digitalWrite(GPS_RED_LED, HIGH);
         Serial.println("error opening file");
+      }
     } 
   // delay, but don't count time in loop
   while (time < endTime)

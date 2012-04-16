@@ -10,12 +10,17 @@
 #define Rx0  0
 // D1 is serial monitor out
 #define Tx0  1
+
 // pulse from GPS once per second; used to sysnc to GPS time
+// Define as 2 if use interrupt
+// If no interrupt is needed, defining as 7 allows using a jumper connector
 #define GPS_PPS 2
 // click once per wheel revolution
 #define CYCLOMETER 3
 #define GPS_POWER  4
-#define SPEED_PIN  5
+#define GPS_GREEN_LED 5
+#define GPS_RED_LED 6
+#define SPEED_PIN  9
 // D10 to D13 are for SD card on shield
 const int chipSelect = 10;  // for SD data logging shield from Adafruit.
 /** MOSI - pin 11
