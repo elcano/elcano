@@ -16,7 +16,9 @@
 // If no interrupt is needed, defining as 7 allows using a jumper connector
 #define GPS_PPS 2
 // click once per wheel revolution
-#define CYCLOMETER 3
+// This signal can be pin 3 on a base Arduino.
+// When using a Mega, pin 21 offers easier wiring.
+#define CYCLOMETER 21
 #define GPS_POWER  4
 #define GPS_GREEN_LED 5
 #define GPS_RED_LED 6
@@ -37,3 +39,10 @@ const int LED = 13;
 // Serial 1 for digital compass and inertial measurement unit
 #define INU_TX  18
 #define INU_DX  19
+// pin 21 is CYCLOMETER
+
+// Analog inputs
+const int Front = 0;
+const int Right = 1;
+const int Left = 2;
+

@@ -98,11 +98,12 @@ char* waypoint::formDataString()
   // now log the information
   // make a string for assembling the data to log:
  
-//  for (int i = 0; i < BUFFSIZ-1; i++)
-//    dataString[i] = ' ';
-//  dataString[BUFFSIZ-1] = 0;
-  sprintf(dataString, "%ld,%ld,%ld,%ld,%ld,%ld,%ld,",
-  latitude, longitude, east_mm, north_mm, sigmaE_mm, sigmaN_mm, time_ms);  
+  sprintf(dataString, 
+  "%ld.%0.6ld,%ld.%0.6ld, %ld.%0.3ld,%ld.%0.3ld, %ld.%0.3ld,%ld.%0.3ld,%ld.%0.3ld,",
+  latitude/MEG, latitude%MEG, longitude/MEG, longitude%MEG,
+  east_mm/1000, east_mm%1000, north_mm/1000, north_mm%1000, 
+  sigmaE_mm/1000, sigmaE_mm%1000, sigmaN_mm/1000, sigmaN_mm%1000, 
+  time_ms/1000, time_ms%1000);  
  
   return dataString;
 }
