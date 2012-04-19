@@ -1,6 +1,8 @@
 /*
 Elcano Module C6: Navigator.
-Copy the following files to an Elcano_C6_Navigator directory:
+  Includes C5 Obstacle detection.
+  
+Copy the following software files to an Elcano_C6_Navigator directory:
   Elcano_C6_Navigator.ino; add new tabs with the following names and copy contents
   C6_IO.h
   GPS.cpp
@@ -8,36 +10,46 @@ Copy the following files to an Elcano_C6_Navigator directory:
   KalmanFilter.cpp
   Matrix.cpp
   Matrix.h
+  
+Documentation:
+  NavigationSystem (TO DO: Write document, based on these comments).
+  Wiring_C6Mega.xls
+  Navigation sheet of Elcano_BOM  (TO DO: Reorganize Elcano BOM).
 
 The Navigator has the job of making the best estimate of current vehicle
 position, attitude, velocity and acceleration.
 
 It uses a variety of sensors, some of which may not be present or reliable.
 
-Near future: S1: Hall Odometer.  This unit was originally on C1 and gives
-wheel spin speed feedback.
+Yes: S1: Hall Odometer.  This unit gives wheel spin speed feedback. 
+TO DO: Connect hardware and integrate into Kalman Filter
 
 Future: Visual Odometry from S4 (Smart camera) as passed though C7 (Visual Data
-Management).
+Management). Visual Odometry could also come from an optical mouse.
 
 Future: S3: Digital Compass
 
 Future: S9: Inertial Navigation Unit.
 
-Future: Lateral deviation from lane from C7.
-
-Future: Intended path from C4.
-
-Future: Commanded course from C3.
-
 Yes, from KF: Dead reckoning based on prior state estimate.
+TO DO: Integrate Kalman Filter with GPS and Odometry.
 
-Future: Distance and bearing to landmarks whose latitude and longitude are recorded
-on the RNDF didgital map.
+Yes: Distance and bearing to landmarks / obstacles.
 
 Yes: S7: GPS.  GPS should not the primary navigation sensor and the robot should be 
 able to operate indoors, in tunnels or other areas where GPS is not available
 or accurate.
+
+Sensed navigation information is passed to C3/C4, which use prexisting or SLAM 
+digital maps, intended path to refine the estimated position.
+C3/C4 may use a particle filter. 
+C3/C4 may also receive lateral lane deviation from a camera (C7).
+
+The odometry sensor is one dimensional and gives the position along the 
+intended path. Lane deviation is also one dimensional and gives position
+normal to the intended path. Odometry, lane following and a digital map
+should be sufficient for localization.  An odometer will drift. This drift 
+can be nulled out by landmark recognition or GPS.
 
 An alternative to the Kalman Filter (KF) is fuzzy numbers.
 The position estimate from most sensors is a pair of fuzzy numbers.
@@ -46,25 +58,19 @@ A fuzzy number can be thought of as a triangle whose center point
 is the crisp position and whose limits are the tolerances to which
 the position is known.
 
-The odometry sensor is one dimensional and gives the position along the 
-intended path. Lane deviation is also one dimensional and gives position
-normal to the intended path. Odometry, lane following and a digital map
-should be sufficient for localization.  An odometer will drift. This drift 
-can be nulled out by landmark recognition or GPS.
-
 GPS provides a pyramid aligned north-south and east-west, in contrast to
 odometry / lane deviation, which is a pyramid oriented in the direction of 
 vehicle motion. The intersection of two fuzzy sets is their minimum.
 By taking the minima of all position estimate pyramids, we get a surface
-describing the possible positions of the vehicle. Crispifying the surface
-gives the estimated vehicle position. 
-The fuzzy method may be used to perform sensor fusion.
+describing the possible positions of the vehicle, whichcan be used by a 
+particle filter.
 
 Serial lines:
 0: Monitor
 1: INU
 2: Tx: Estimated state; 
-      $ESTIM,<east_mm>,<north_mm>,<speed_mmPs>,<bearing>,<time_ms>*CKSUM
+      $ESTIM,<east_mm>,<north_mm>,<speed_mmPs>,<bearing>,<time_ms><positionStndDev_mm>*CKSUM
+      $OBSTCL,<number>,<obstacle1_range_mm>,<obstacle1_bearing>, ...*CKSUM
    Rx: Desired course
       $EXPECT,<east_mm>,<north_mm>,<speed_mmPs>,<bearing>,<time_ms>*CKSUM
       // at leat 18 characters
@@ -120,14 +126,55 @@ namespace C6_Navigator {
 #define FILE_NAME "GPSLog.csv"
 File dataFile;
 char GPSfile[BUFFSIZ] = "mmddhhmm.csv"; 
-String formDataString();
- 
+//String formDataString();
+char ObstacleString[BUFFSIZ];
+
+#define WHEEL_DIAMETER_MM 397
+/* time (micro seconds) for a wheel revolution */
+volatile long Odometer_mm = 0;
+volatile long SpeedCyclometer_mmPs;
+// Speed in degrees per second is independent of wheel size.
+volatile long SpeedCyclometer_degPs;
+
 int waypoints;
 waypoint mission[MAX_WAYPOINTS];
 waypoint GPS_reading;
 waypoint estimated_position;
 const int LoopPeriod = 100;  // msec
+//---------------------------------------------------------------------------
+char* obstacleDetect()
+{
+// Calibration shows that readings are 5 cm low.
+#define OFFSET 5
+    int LeftRange =  analogRead(Left) + OFFSET;
+    int Range =      analogRead(Front) + OFFSET;
+    int RightRange = analogRead(Right) + OFFSET;
 
+  sprintf(ObstacleString, 
+  "%d.%0.2d,%d.%0.2d,%d.%0.2d,",
+  LeftRange/100, LeftRange%100, Range/100, Range%100, RightRange/100, RightRange%100);
+ 
+  return ObstacleString;
+}
+/*---------------------------------------------------------------------------------------*/ 
+// WheelRev is called by an interrupt.
+void WheelRev()
+{
+    static unsigned long OldTick = 0;
+    unsigned long TickTime;
+    unsigned long WheelRevMicros;
+    TickTime = micros();
+    if (OldTick == TickTime)
+        return;
+    if (OldTick <= TickTime)
+      	WheelRevMicros = TickTime - OldTick;
+    else // overflow
+      	WheelRevMicros = TickTime + ~OldTick;
+    SpeedCyclometer_degPs = (360 * MEG) / WheelRevMicros;
+    SpeedCyclometer_mmPs  = (WHEEL_DIAMETER_MM * MEG * PI) / WheelRevMicros;
+    Odometer_mm += WHEEL_DIAMETER_MM * PI;
+    OldTick = TickTime;
+}
 /*---------------------------------------------------------------------------------------*/ 
 bool checksum(char* msg)
 // Assume that message starts with $ and ends with *
@@ -227,7 +274,9 @@ void initialize()
 
 void setup() 
 { 
-    char* Header = "Latitude,Longitude,East_mm,North_mm,SigmaE_mm,SigmaN,mm,Time_ms,";
+    char* RawKF = "Raw GPS data,,,,,,Kalman Filtered data";
+    char* Header = "Latitude,Longitude,East_m,North_m,SigmaE_m,SigmaN_m,Time_s,";
+    char* ObstHeader ="Left,Front,Right";
     pinMode(Rx0, INPUT);
     pinMode(Tx0, OUTPUT);
     pinMode(GPS_POWER, OUTPUT);
@@ -261,10 +310,15 @@ void setup()
     if (dataFile) 
     {
         dataFile.println(GPSfile);
+        dataFile.println(RawKF);
         dataFile.print(Header);
-        dataFile.println(Header);
+        dataFile.print(Header);
+        dataFile.println(ObstHeader);
         dataFile.close();
     }  
+    
+    pinMode(CYCLOMETER, INPUT);
+    attachInterrupt (5, WheelRev, RISING);
 
 }
 /*---------------------------------------------------------------------------------------*/ 
@@ -289,6 +343,7 @@ void loop()
     unsigned long endTime = time + LoopPeriod;
     char* pData;
     char* pGPS;
+    char* pObstacles;
 
     bool GPS_available = GPS_reading.AcquireGPGGA(300);
 
@@ -328,12 +383,17 @@ void loop()
         digitalWrite(GPS_GREEN_LED, HIGH);
         digitalWrite(GPS_RED_LED, LOW);
         pGPS = GPS_reading.formDataString();
-        dataFile.println(pGPS);
+        dataFile.print(pGPS);
   //    pData = estimated_position.formDataString();
-//      dataFile.print(pData);
+        pData = pGPS;
+        dataFile.print(pData);
+        pObstacles = obstacleDetect();
+        dataFile.println(pObstacles);
         dataFile.close();
           // print to the serial port too:
-          Serial.println(pGPS);
+          Serial.print(pGPS);
+          Serial.print(pData);
+          Serial.println(pObstacles);
 /*        Serial.print(GPS_reading.latitude, DEC); Serial.print(",");
           Serial.print(GPS_reading.longitude, DEC); Serial.print(",");
           Serial.print(GPS_reading.east_mm, DEC); Serial.print(",");
