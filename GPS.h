@@ -14,6 +14,7 @@
 // Got weird results with 90; OK with 120.
 #define BUFFSIZ 120
 #define GPSRATE 4800
+#define MEG 1000000
 
 
 class waypoint
