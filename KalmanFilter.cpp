@@ -16,7 +16,7 @@ Matrix x state: longs for position_mm_east, position_mm_north,
   velocity_mm_s_east, velocity_mm_s_north
 */
 
-void Filter(REAL* State, // e.g  x, y position; x, y velocity
+void Filter(REAL* State, // e.g  x, y position, x, y velocity
             REAL* uncertainty,   // P uncertainty covariance
             REAL* measurements, // Z: measured x and y position in mm
             REAL deltaT_s)  // time from measurement to prediction in seconds
@@ -27,16 +27,17 @@ void Filter(REAL* State, // e.g  x, y position; x, y velocity
                                    0,  0,  0,        1};
       // position' = 1*position + 1*velocity
       // velocity' = 1*velocity
-      REAL initial_measurement[] = {1.F, 1.F, 0, 0};
+      REAL initial_measurement[] = {1.F, 0, 0, 0,
+                                     0, 1., 0, 0};
       // only position is measurable; not velocity
-      matrix x = matrix(4,1,State); // 4x1 initial state (location and velocity)
+      matrix x = matrix(4,1,State); // initial state (location and velocity)
       matrix P = matrix(4,4, uncertainty); // 4x4 initial uncertainty
       matrix meas = matrix(2,1,measurements);
 
 	matrix u = matrix( 4, 1); // 4x1 external motion; set to 0.
 	matrix F = matrix(4,4,initial_next_state); // 2x2 next state function
-	matrix H = matrix(1,4,initial_measurement); //1x2  measurement function
-	matrix R = matrix(1); // 1x1 measurement uncertainty
+	matrix H = matrix(2,4,initial_measurement); //1x2  measurement function
+	matrix R = matrix(2); // 1x1 measurement uncertainty
 	matrix I = matrix(4); // 4x4 identity matrix
  //
 	{      

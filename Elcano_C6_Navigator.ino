@@ -293,7 +293,8 @@ void setup()
     pinMode(53, OUTPUT);  // Unused CS on Mega
     pinMode(GPS_RED_LED, OUTPUT);
     pinMode(GPS_GREEN_LED, OUTPUT);
-    digitalWrite(GPS_GREEN_LED, LOW);
+    digitalWrite(GPS_GREEN_LED, LOW); 
+    digitalWrite(GPS_RED_LED, LOW);
     
     // see if the card is present and can be initialized:
     if (!SD.begin(chipSelect)) 
@@ -304,7 +305,7 @@ void setup()
       return;
     }
     Serial.println("card initialized.\n");
-    digitalWrite(GPS_RED_LED, LOW);
+//    digitalWrite(GPS_RED_LED, LOW);
     dataFile = SD.open(GPSfile, FILE_WRITE);
     // if the file is available, write date and time to it:
     if (dataFile) 
@@ -368,7 +369,7 @@ void loop()
     }
     // Fuse all position estimates with a Kalman Filter */
     deltaT_ms = LoopPeriod + (time - GPS_reading.time_ms);
-//    estimated_position.fuse(GPS_reading, deltaT_ms);
+    estimated_position.fuse(GPS_reading, deltaT_ms);
  
     // Send vehicle state to C3 and C4.
     
@@ -384,8 +385,8 @@ void loop()
         digitalWrite(GPS_RED_LED, LOW);
         pGPS = GPS_reading.formDataString();
         dataFile.print(pGPS);
-  //    pData = estimated_position.formDataString();
-        pData = pGPS;
+        pData = estimated_position.formDataString();
+  //    pData = pGPS;
         dataFile.print(pData);
         pObstacles = obstacleDetect();
         dataFile.println(pObstacles);
@@ -429,12 +430,12 @@ void loop()
 #else
 void Show(char* x)
 {
-  Serial.print(x);
+//  Serial.print(x);
 }
 void Show(REAL x)
 {
-  Serial.print(x);
-  Serial.print(", ");
+//  Serial.print(x);
+//  Serial.print(", ");
 }
 #endif
 

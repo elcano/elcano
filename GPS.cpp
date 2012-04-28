@@ -97,10 +97,12 @@ char* waypoint::formDataString()
 {
   // now log the information
   // make a string for assembling the data to log:
- 
+  long latFraction, lonFraction;
+  latFraction = latitude  >= 0? latitude%MEG  : (-latitude)%MEG;
+  lonFraction = longitude >= 0? longitude%MEG : (-longitude)%MEG;
   sprintf(dataString, 
   "%ld.%0.6ld,%ld.%0.6ld, %ld.%0.3ld,%ld.%0.3ld, %ld.%0.3ld,%ld.%0.3ld,%ld.%0.3ld,",
-  latitude/MEG, latitude%MEG, longitude/MEG, longitude%MEG,
+  latitude/MEG, latFraction, longitude/MEG, lonFraction,
   east_mm/1000, east_mm%1000, north_mm/1000, north_mm%1000, 
   sigmaE_mm/1000, sigmaE_mm%1000, sigmaN_mm/1000, sigmaN_mm%1000, 
   time_ms/1000, time_ms%1000);  
@@ -126,10 +128,10 @@ void waypoint::fuse(waypoint GPS_reading, int deltaT_ms)
 {
     // Assume uncertainty standard deviation is 10 meters.
     // The numbers below are variance in mm.
-    REAL uncertainty[] = {1.0E10, 0, 0, 0,
-                          0, 1.0E10, 0, 0,
-                          0, 0, 1.0E10, 0,
-                          0, 0, 0, 1.0E10};
+    REAL uncertainty[] = {1.0E10, 0,  0,   0,
+                          0, 1.0E10,  0,   0,
+                          0,      0,  1.0E10, 0,
+                          0,      0,     0, 1.0E10};
     REAL State[4];
 
     REAL deltaT_s = deltaT_ms / (1000.0);
