@@ -55,5 +55,6 @@ public:
 	bool  symmetric(REAL tolerance=TOLERANCE);
 	matrix Cholesky(REAL ztol=TOLERANCE);
 	matrix CholeskyInverse();
+        void values(REAL* dest);
 };
 
