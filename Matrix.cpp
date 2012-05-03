@@ -64,6 +64,13 @@ matrix::matrix(int Rows, int Columns, REAL* values) // contruct from list of val
 	}
 	error = 0;
 }
+void matrix::values(REAL* dest)
+{
+	for (int i = 0; i < columns*rows; i++)
+	{
+	   dest[i] = value[i];
+	}
+}
 void matrix::show()
 {
 	int i;
@@ -308,18 +315,28 @@ matrix matrix::CholeskyInverse()
  
 matrix matrix::inverse()
 {
-	// Cholesky method only works for square, symmetric, positive definite matrices.
+    if (rows == 1 && columns == 1)  // common for KF
+    {
+        REAL reciprocal = value[0];
+        matrix single = matrix(1,1,&reciprocal);
+        if (reciprocal == 0)
+            single.error = 4;  // not positive definite
+        else
+            single.value[0] = 1/reciprocal;
+        return single;
+    }
+// Cholesky method only works for square, symmetric, positive definite matrices.
 //	show();  // matrix to be inverted
-	matrix aux = Cholesky();
+    matrix aux = Cholesky();
 // Sometimes a problem with MSVC: Correct computation of triangular matrix,
 // but returned matrix is garbage. (?)  TCF March/6/2012
 //	aux.show();  // Triangular matrix
-	if (aux.error)
-	{
-		return aux;
-	}
-	else
-		return aux.CholeskyInverse();
+   if (aux.error)
+   {
+      return aux;
+   }
+   else
+      return aux.CholeskyInverse();
 }
 matrix matrix::operator/(matrix& right)
 {

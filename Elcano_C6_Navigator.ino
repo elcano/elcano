@@ -126,8 +126,12 @@ namespace C6_Navigator {
 #define FILE_NAME "GPSLog.csv"
 File dataFile;
 char GPSfile[BUFFSIZ] = "mmddhhmm.csv"; 
-//String formDataString();
 char ObstacleString[BUFFSIZ];
+char StartTime[BUFFSIZ] = "yy,mm,dd,hh,mm,ss,xxx";
+const char TimeHeader[] = "year,month,day,hour,minute,second,msec";
+const char* RawKF = "Raw GPS data,,,,,,Kalman Filtered data";
+const char* Header = "Latitude,Longitude,East_m,North_m,SigmaE_m,SigmaN_m,Time_s,";
+const char* ObstHeader ="Left,Front,Right,Busy";
 
 #define WHEEL_DIAMETER_MM 397
 /* time (micro seconds) for a wheel revolution */
@@ -136,11 +140,10 @@ volatile long SpeedCyclometer_mmPs;
 // Speed in degrees per second is independent of wheel size.
 volatile long SpeedCyclometer_degPs;
 
-int waypoints;
-waypoint mission[MAX_WAYPOINTS];
+// waypoint mission[MAX_WAYPOINTS];
 waypoint GPS_reading;
 waypoint estimated_position;
-const int LoopPeriod = 100;  // msec
+const unsigned long LoopPeriod = 100;  // msec
 //---------------------------------------------------------------------------
 char* obstacleDetect()
 {
@@ -206,17 +209,20 @@ void initialize()
   char* disable = "$PSRF103,i,00,00,01*xxxxxx";
   char* querryGGA = "$PSRF103,00,01,00,01*25";
   bool GPS_available = false;
-  /* Wait until initial position is known. */
-  mission[0].latitude = 100; // beyond the north pole.
   Serial3.begin(GPSRATE);   
   digitalWrite(GPS_POWER, LOW);         // pull low to turn on!
 //  Serial.print("Acquiring GPS RMC...");
-  GPS_available = mission[0].AcquireGPRMC(70000);
+  GPS_available = estimated_position.AcquireGPRMC(70000);
+  Serial.println(TimeHeader);
+  Serial.println(StartTime);
+  Serial.println(RawKF);
+  Serial.print(Header);
+  Serial.print(Header);
+  Serial.println(ObstHeader);
   if (GPS_available)
   {
-    GPSString = mission[0].formDataString();
-    Serial.print(GPSString);
-    estimated_position = mission[0];
+    estimated_position.sigmaE_mm = 1.0E4; // 10 m standard deviation
+    estimated_position.sigmaN_mm = 1.0E4;
 //    Serial.println("OK");
   }
   else
@@ -224,27 +230,23 @@ void initialize()
     estimated_position.latitude = 47.62130;  // set by hand here
     estimated_position.longitude = -122.35090;
     estimated_position.Compute_mm();
-    estimated_position.sigmaE_mm = 1.0E5; // 10 m standard deviation
+    estimated_position.sigmaE_mm = 1.0E5; // 100 m standard deviation
     estimated_position.sigmaN_mm = 1.0E5;
     estimated_position.time_ms = millis();
 //    Serial.println("Failed");
   }
+  // Set velocity and acceleration to zero.
   estimated_position.speed_mmPs = 0;
+  // Set attitude.
   estimated_position.bearing = 0;  // to be taken from path or set by hand
+  GPS_reading = estimated_position;
   GPSString = estimated_position.formDataString();  
   Serial.println(GPSString);
-/*
-    if (InitialPositionProvidedFromC4)
-      ReadInitialPosition(C4); // put latitude and longitude in mission[0]
-    */
   // Set Odometer to 0.
   // Set lateral deviation to 0.
   // Read compass.
   // ReadINU.
-  // Set attitude.
-  // Set velocity and acceleration to zero.
   // SendState(C4);
-    mission[1].latitude = 100; // beyond the north pole.
     // Wait to get path from C4
 //    while (mission[1].latitude > 90)
     {
@@ -274,9 +276,6 @@ void initialize()
 
 void setup() 
 { 
-    char* RawKF = "Raw GPS data,,,,,,Kalman Filtered data";
-    char* Header = "Latitude,Longitude,East_m,North_m,SigmaE_m,SigmaN_m,Time_s,";
-    char* ObstHeader ="Left,Front,Right";
     pinMode(Rx0, INPUT);
     pinMode(Tx0, OUTPUT);
     pinMode(GPS_POWER, OUTPUT);
@@ -285,8 +284,6 @@ void setup()
     // prints title with ending line break 
     Serial.println("GPS parser");  
     digitalWrite(GPS_POWER, LOW);         // pull low to turn on!
-    initialize();
-//    Serial.print("Initializing GPS SD card...");
     // make sure that the default chip select pin is set to
     // output, even if you don't use it:
     pinMode(chipSelect, OUTPUT);
@@ -295,29 +292,32 @@ void setup()
     pinMode(GPS_GREEN_LED, OUTPUT);
     digitalWrite(GPS_GREEN_LED, LOW); 
     digitalWrite(GPS_RED_LED, LOW);
+
+    initialize();
+//    Serial.print("Initializing GPS SD card...");
     
     // see if the card is present and can be initialized:
     if (!SD.begin(chipSelect)) 
     {
       Serial.println("Card failed, or not present");
       digitalWrite(GPS_RED_LED, HIGH);
-      // don't do anything more:
-      return;
     }
-    Serial.println("card initialized.\n");
-//    digitalWrite(GPS_RED_LED, LOW);
-    dataFile = SD.open(GPSfile, FILE_WRITE);
-    // if the file is available, write date and time to it:
-    if (dataFile) 
+    else
     {
-        dataFile.println(GPSfile);
-        dataFile.println(RawKF);
-        dataFile.print(Header);
-        dataFile.print(Header);
-        dataFile.println(ObstHeader);
-        dataFile.close();
-    }  
-    
+      Serial.println("card initialized.\n");
+      dataFile = SD.open(GPSfile, FILE_WRITE);
+      // if the file is available, write date and time to it:
+      if (dataFile) 
+      {
+          dataFile.println(TimeHeader);
+          dataFile.println(StartTime);
+          dataFile.println(RawKF);
+          dataFile.print(Header);
+          dataFile.print(Header);
+          dataFile.println(ObstHeader);
+          dataFile.close();
+      }  
+    }
     pinMode(CYCLOMETER, INPUT);
     attachInterrupt (5, WheelRev, RISING);
 
@@ -325,23 +325,31 @@ void setup()
 /*---------------------------------------------------------------------------------------*/ 
 void waypoint::SetTime(char *pTime, char * pDate)
 {
-//     was: GPSfile = "GPS_yymmdd_hhmmss.CSV"; 
-//     now: GPSfile = "mmddhhmm.CSV";
-//   strncpy(GPSfile+4,  pDate+4, 2);  // year   
-     strncpy(GPSfile,  pDate+2, 2);  // month   
-     strncpy(GPSfile+2,  pDate, 2);    // day    
+//    GPSfile = "mmddhhmm.CSV";
+     strncpy(GPSfile,   pDate+2, 2);  // month   
+     strncpy(GPSfile+2, pDate, 2);    // day    
      strncpy(GPSfile+4, pTime,2);     // GMT hour
-     strncpy(GPSfile+6, pTime+2,2);     // minute
-//   strncpy(GPSfile+11, pTime+4,2);     // second
-     Serial.println(GPSfile);
+     strncpy(GPSfile+6, pTime+2,2);   // minute
+     Serial.println(GPSfile); 
+    
+     strncpy(StartTime,     pDate+4, 2);  // year   
+     strncpy(StartTime+3,   pDate+2, 2);  // month   
+     strncpy(StartTime+6,   pDate, 2);    // day    
+     strncpy(StartTime+9,   pTime,2);     // GMT hour
+     strncpy(StartTime+12,  pTime+2,2);   // minute
+     strncpy(StartTime+15,  pTime+4,2);   // second
+     strncpy(StartTime+18,  pTime+7,3);   // millisecond
+     
 }
 
 /*---------------------------------------------------------------------------------------*/ 
 void loop() 
 {
-    REAL deltaT_ms;
+    unsigned long deltaT_ms;
     unsigned long time = millis();
     unsigned long endTime = time + LoopPeriod;
+    unsigned long work_time = time;
+    int PerCentBusy;
     char* pData;
     char* pGPS;
     char* pObstacles;
@@ -368,55 +376,63 @@ void loop()
       ReadLandmarks(C4); 
     }
     // Fuse all position estimates with a Kalman Filter */
-    deltaT_ms = LoopPeriod + (time - GPS_reading.time_ms);
+    deltaT_ms = GPS_reading.time_ms - estimated_position.time_ms;
     estimated_position.fuse(GPS_reading, deltaT_ms);
- 
-    // Send vehicle state to C3 and C4.
-    
+    estimated_position.time_ms = GPS_reading.time_ms;
+/*  Serial.print("time, gps, dt_ms = "); 
+    Serial.print(time, DEC); Serial.print(", ");
+    Serial.print(GPS_reading.time_ms, DEC); Serial.print(", ");
+    Serial.println(deltaT_ms, DEC);
+*/ 
+    // Send vehicle state to C3 and C4.   
 
     // open the file. note that only one file can be open at a time,
     // so you have to close this one before opening another.
     dataFile = SD.open(GPSfile, FILE_WRITE);
   
     // if the file is available, write to it:
-    if (GPS_available && dataFile) 
+    if (GPS_available) 
     {
         digitalWrite(GPS_GREEN_LED, HIGH);
-        digitalWrite(GPS_RED_LED, LOW);
         pGPS = GPS_reading.formDataString();
-        dataFile.print(pGPS);
+        if (dataFile) dataFile.print(pGPS);
+        // print to the serial port too:
+        Serial.print(pGPS);
         pData = estimated_position.formDataString();
-  //    pData = pGPS;
-        dataFile.print(pData);
+        if (dataFile) dataFile.print(pData);
+        Serial.print(pData);
         pObstacles = obstacleDetect();
-        dataFile.println(pObstacles);
-        dataFile.close();
-          // print to the serial port too:
-          Serial.print(pGPS);
-          Serial.print(pData);
-          Serial.println(pObstacles);
-/*        Serial.print(GPS_reading.latitude, DEC); Serial.print(",");
-          Serial.print(GPS_reading.longitude, DEC); Serial.print(",");
-          Serial.print(GPS_reading.east_mm, DEC); Serial.print(",");
-          Serial.print(GPS_reading.north_mm, DEC); Serial.print(",");
-          Serial.print(GPS_reading.sigmaE_mm, DEC); Serial.print(",");
-          Serial.print(GPS_reading.sigmaN_mm, DEC); Serial.print(",");
-          Serial.println(GPS_reading.time_ms, DEC); */
+        if (dataFile) 
+        {
+          dataFile.print(pObstacles);
+        }
+        Serial.print(pObstacles);
     }  
-    // if the file isn't open, pop up an error:
     else 
     {
-      if (!GPS_available)
-      {
         digitalWrite(GPS_GREEN_LED, LOW);
         Serial.print("GPS not available");
-      }
-      else
-      {
+    }
+    
+    work_time = millis() - time;
+    PerCentBusy = (100 * work_time) / LoopPeriod; 
+    if (dataFile) 
+    {
+      dataFile.println(PerCentBusy);
+    }
+    Serial.println(PerCentBusy);
+    // if the file didn't open, pop up an error:
+    if (dataFile)
+    {
+        digitalWrite(GPS_RED_LED, LOW);
+        dataFile.close();
+    }
+    else
+    {
         digitalWrite(GPS_RED_LED, HIGH);
-        Serial.println("error opening file");
-      }
-    } 
+ //     Serial.println("error opening file");
+    }
+  
   // delay, but don't count time in loop
   while (time < endTime)
   {
@@ -435,7 +451,7 @@ void Show(char* x)
 void Show(REAL x)
 {
 //  Serial.print(x);
-//  Serial.print(", ");
+//   Serial.print(", ");
 }
 #endif
 

@@ -8,7 +8,7 @@
 // global variables
 char buffer[BUFFSIZ];        // string buffer for the sentence
 char dataString[BUFFSIZ];
-void Filter(REAL* x, REAL* P, REAL* measure, REAL deltaT);
+void Filter(REAL* x, REAL* P, REAL* measure, REAL deltaT, REAL* variance);
 
 // sGPS_file contains UTC of first valid GPS
 // first valid GPS acquisition typically takes 42 seconds.
@@ -94,16 +94,20 @@ bool readline(void)
   }
 }
 char* waypoint::formDataString()
+// function uses a global dataString buffer; thus a second call to formDataString
+// may overwrite results from the previous call.
 {
   // now log the information
   // make a string for assembling the data to log:
-  long latFraction, lonFraction;
+  long latFraction, lonFraction, eastFraction, northFraction;
   latFraction = latitude  >= 0? latitude%MEG  : (-latitude)%MEG;
   lonFraction = longitude >= 0? longitude%MEG : (-longitude)%MEG;
+  eastFraction = east_mm  >= 0? east_mm%1000  : (-east_mm)%1000;
+  northFraction = north_mm>= 0? north_mm%1000 : (-north_mm)%1000;
   sprintf(dataString, 
-  "%ld.%0.6ld,%ld.%0.6ld, %ld.%0.3ld,%ld.%0.3ld, %ld.%0.3ld,%ld.%0.3ld,%ld.%0.3ld,",
+  "%ld.%0.6ld,%ld.%0.6ld,%ld.%0.3ld,%ld.%0.3ld,%ld.%0.3ld,%ld.%0.3ld,%ld.%0.3ld,",
   latitude/MEG, latFraction, longitude/MEG, lonFraction,
-  east_mm/1000, east_mm%1000, north_mm/1000, north_mm%1000, 
+  east_mm/1000, eastFraction, north_mm/1000, northFraction, 
   sigmaE_mm/1000, sigmaE_mm%1000, sigmaN_mm/1000, sigmaN_mm%1000, 
   time_ms/1000, time_ms%1000);  
  
@@ -127,31 +131,49 @@ void waypoint::operator=(waypoint& right)
 void waypoint::fuse(waypoint GPS_reading, int deltaT_ms)
 {
     // Assume uncertainty standard deviation is 10 meters.
-    // The numbers below are variance in mm.
-    REAL uncertainty[] = {1.0E10, 0,  0,   0,
-                          0, 1.0E10,  0,   0,
-                          0,      0,  1.0E10, 0,
-                          0,      0,     0, 1.0E10};
-    REAL State[4];
+    // The numbers below are variances in m.
+    // speed standard deviation is in m/sec; 
+    // assuming no time error it is same as position standard deviation
+    static REAL uncertainty[] = {100., 0,   0,   0,
+                          0,   100., 0,   0,
+                          0,    0,  100., 0,
+                          0,    0,   0,  100.};
+    static REAL State[4] = {5000000, 0, 0, 0};
+    REAL variance[] = {100., 0,
+                         0, 100.};
 
-    REAL deltaT_s = deltaT_ms / (1000.0);
+    REAL deltaT_s = ((REAL) deltaT_ms) / 1000.0;
     REAL measurements[2];
     REAL speedX, speedY;
+    if (State[0] > 2500000)
+    {  // first time
+      State[0] = GPS_reading.east_mm / 1000.;
+      State[1] = GPS_reading.north_mm /1000.;
+    }
     REAL angle = (90.-bearing)*PI/180.;
-    speedX = speed_mmPs * cos(angle);
-    speedY = speed_mmPs * sin(angle);
-    measurements[0] = GPS_reading.east_mm + speedX * deltaT_s;
-    measurements[1] = GPS_reading.north_mm + speedY *deltaT_s;
-    State[0] = east_mm;
-    State[1] = north_mm;
-    State[2] = speedX;
-    State[3] = speedY;
-    uncertainty[0] = 
-    uncertainty[10] = sigmaE_mm * sigmaE_mm;
-    uncertainty[5] = 
-    uncertainty[15] = sigmaN_mm * sigmaN_mm;
-    Filter(State, uncertainty, measurements, deltaT_s);
-
+    speedX = (speed_mmPs * cos(angle)) / 1000.;
+    speedY = (speed_mmPs * sin(angle)) / 1000.;
+    measurements[0] = GPS_reading.east_mm / 1000. + speedX * deltaT_s;
+    measurements[1] = GPS_reading.north_mm / 1000. + speedY *deltaT_s;
+    
+    REAL GPS_sigma = ((REAL) GPS_reading.sigmaE_mm) / 1000.;
+    variance[0] = variance[3] = GPS_sigma * GPS_sigma;
+    
+    Filter(State, uncertainty, measurements, deltaT_s, variance);
+    
+    east_mm = State[0] * 1000;
+    north_mm = State[1] * 1000;
+    speedX = State[2] * 1000;
+    speedY = State[3] * 1000;
+    sigmaE_mm = sqrt(uncertainty[0]) * 1000;
+    sigmaN_mm = sqrt(uncertainty[5]) * 1000;
+    Compute_LatLon();
+    speed_mmPs = sqrt(speedX*speedX + speedY*speedY);
+    if (speed_mmPs > 100 || speed_mmPs < -100) 
+    {
+      angle = asin(speedY/speed_mmPs);
+      bearing = 90. - 180./PI*angle;
+    }
 }
 //---------------------------------------------------------- 
 char* waypoint::GetLatLon(char* parseptr)
@@ -306,6 +328,7 @@ bool waypoint::AcquireGPGGA(unsigned long max_wait_ms)
     }    
     if (strncmp(buffer, "$GPGGA",6) == 0) 
     {
+//    Serial.println(buffer);
       AcquisitionTime_ms = millis();
       pTime =
       parseptr = buffer+7;
