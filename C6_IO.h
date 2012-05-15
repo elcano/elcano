@@ -38,7 +38,7 @@ const int LED = 13;
 #define C4_RX   17
 // Serial 1 for digital compass and inertial measurement unit
 #define INU_TX  18
-#define INU_DX  19
+#define INU_RX  19
 // pin 21 is CYCLOMETER
 
 // Analog inputs
