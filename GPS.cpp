@@ -64,7 +64,7 @@ uint32_t parsedecimal(char *str)
 }
 //---------------------------------------------------------
 // return true if a line was read; false if not
-bool readline(void) 
+bool readline(int channel) 
 {
   // buffer can hold 128 bytes; if not enough there yet, try later.
   const int MinimumMessage = 30;
@@ -76,8 +76,22 @@ bool readline(void)
 //    return false;
   while (1) 
   {
-      c=Serial3.read();
-      if (c == -1)
+      switch(channel)
+      {
+      case 1:
+         c=Serial1.read();
+         break;
+       case 2:
+         c=Serial2.read();
+         break;
+      case 3:
+         c=Serial3.read();
+         break;
+      default:
+         c=Serial.read();
+         break;
+      }
+     if (c == -1)
         continue;
  //     Serial.print(c);
       if (c == '\n')
@@ -249,7 +263,7 @@ bool waypoint::AcquireGPRMC(unsigned long max_wait_ms)
   CosLatitude = cos(((double) LATITUDE_ORIGIN)/1000000. * TO_RADIANS);
   while (status != 'A') // A = data valid
   {
-    if (!readline())
+    if (!readline(3))
     {  // nothing to read; how long have we waited?
       if (millis() > TimeOut)
       {
@@ -321,11 +335,12 @@ bool waypoint::AcquireGPGGA(unsigned long max_wait_ms)
   // $GPGGA,161229.487,3723.2475,N,12158.3416,W,1,07,1.0,9.0,M,,,,0000*18
   while (FixIndicator == '0')
   {
-    if (!readline())
+    if (!readline(3))
     {  // nothing to read; how long have we waited?
       if (millis() > TimeOut)
          return false;
     }    
+//    Serial.println(buffer);
     if (strncmp(buffer, "$GPGGA",6) == 0) 
     {
 //    Serial.println(buffer);
@@ -371,5 +386,7 @@ bool waypoint::AcquireGPGGA(unsigned long max_wait_ms)
     return false;
   return true;
 }
-
+void instrument::Read(waypoint GPS)
+{
+}
 
