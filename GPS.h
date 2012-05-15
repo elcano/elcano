@@ -13,11 +13,11 @@
 // The buffer size that will hold a GPS sentence. They tend to be 80 characters long.
 // Got weird results with 90; OK with 120.
 #define BUFFSIZ 120
-#define GPSRATE 4800
+//#define GPSRATE 4800
 #define MEG 1000000
 
 
-class waypoint
+class waypoint // best estimate of position and state
 // used either for a waypoint or a measured navigational fix
 {
   public:
@@ -53,6 +53,35 @@ class waypoint
     void   operator=(waypoint& other);
 };
 
+class instrument // measurements
+{
+  public:
+    // Since the Arduino supports only 6 digits of precision in float/double,
+    // all latitudes and longitudes are recorded as integers.
+    // The (east_mm and north_mm) position carries more precision.
+    long latitude;   //  DDFFFFFF; 6 digits after virtual decimal point
+    long longitude;  // DDDFFFFFF
+    long sigmaGPS_mm; // standard deviation of estimate of world position from GPS
+    float angle; // radians. Defines rotation of world coordinate system into vehicle coordinates.
+    // angle is a function of both bearing and yaw.
+    float speedForward_mPs;
+    float speedRight_mPs;
+    float accelerationForward_mPs2;
+    float accelerationRight_mPs2;
+    float yaw_deg;
+    float roll_deg;
+    float pitch_deg;
+    
+    void Read(waypoint GPS);
+};
+class controls // Vehicle commands
+{
+  int steer_servo; // value of analog output from C2
+  int motor_servo; // 0 to 4095
+  int brake_servo;
+  int stick_steer; // command input from joystick or pilot computer
+  int stick_go;    // acceleration or deceleration. 0 to 4095
+};
 struct curve
 {
   curve    *previous;
@@ -78,4 +107,4 @@ struct junction
   // When a curve reached a juntion, Curve.next == NULL
 };
 
-
+bool readline(int channel);
