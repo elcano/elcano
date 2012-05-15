@@ -69,10 +69,10 @@ Serial lines:
 0: Monitor
 1: INU
 2: Tx: Estimated state; 
-      $ESTIM,<east_mm>,<north_mm>,<speed_mmPs>,<bearing>,<time_ms><positionStndDev_mm>*CKSUM
-      $OBSTCL,<number>,<obstacle1_range_mm>,<obstacle1_bearing>, ...*CKSUM
+      $C6EST,<east_mm>,<north_mm>,<speed_mmPs>,<bearing>,<time_ms><positionStndDev_mm>*CKSUM
+      $C6OBS,<number>,<obstacle1_range_mm>,<obstacle1_bearing>, ...*CKSUM
    Rx: Desired course
-      $EXPECT,<east_mm>,<north_mm>,<speed_mmPs>,<bearing>,<time_ms>*CKSUM
+      $C4XPC,<east_mm>,<north_mm>,<speed_mmPs>,<bearing>,<time_ms>*CKSUM
       // at leat 18 characters
 3: GPS
   Rx: $GPRMC,...  typically 68 characters
@@ -143,6 +143,7 @@ volatile long SpeedCyclometer_degPs;
 // waypoint mission[MAX_WAYPOINTS];
 waypoint GPS_reading;
 waypoint estimated_position;
+instrument IMU;
 const unsigned long LoopPeriod = 100;  // msec
 //---------------------------------------------------------------------------
 char* obstacleDetect()
@@ -206,12 +207,24 @@ void initialize()
 {
   pinMode(GPS_POWER, OUTPUT);
   char* GPSString;
-  char* disable = "$PSRF103,i,00,00,01*xxxxxx";
+  char* protocol =  "$PSRF100,1,4800,8,1,0*0E"; // NMEA
+  char* disable =   "$PSRF103,02,00,00,01*26\r\n";
   char* querryGGA = "$PSRF103,00,01,00,01*25";
   bool GPS_available = false;
   Serial3.begin(GPSRATE);   
   digitalWrite(GPS_POWER, LOW);         // pull low to turn on!
+  Serial.flush();
+  Serial3.flush();
+  delay(5000);
+  // prints title with ending line break 
+  Serial.println(" GPS parser");  
 //  Serial.print("Acquiring GPS RMC...");
+  checksum(protocol);
+  Serial3.println(protocol);
+  disable[10] = '2';
+  checksum(disable);
+  Serial3.println(disable);   // no GSA
+
   GPS_available = estimated_position.AcquireGPRMC(70000);
   Serial.println(TimeHeader);
   Serial.println(StartTime);
@@ -278,11 +291,15 @@ void setup()
 { 
     pinMode(Rx0, INPUT);
     pinMode(Tx0, OUTPUT);
+    pinMode(GPS_RX, INPUT);
+    pinMode(GPS_TX, OUTPUT);
+    pinMode(C4_RX, INPUT);
+    pinMode(C4_TX, OUTPUT);
+    pinMode(INU_RX, INPUT);
+    pinMode(INU_TX, OUTPUT);
     pinMode(GPS_POWER, OUTPUT);
-    Serial3.begin(GPSRATE);    
+    Serial3.begin(GPSRATE); // GPS   
     Serial.begin(9600);
-    // prints title with ending line break 
-    Serial.println("GPS parser");  
     digitalWrite(GPS_POWER, LOW);         // pull low to turn on!
     // make sure that the default chip select pin is set to
     // output, even if you don't use it:
@@ -360,17 +377,19 @@ void loop()
     Read compass.
     ReadINU.
     Set attitude.
-    Read Hall Odometer;
-    Read Optical Odometer;
+    Read Hall Odometer;  */
+//   IMU.Read(GPS_reading);   
+ 
+/*  Read Optical Odometer;
     Read lane deviation;  
     If (message from C4)
-    {
-      ReadState(C4);  // get new route and speed
-    }
+    { */
+//      readline(2);  // C4 Path planner on serial 2 get new route and speed
+ /*   }
     If (message from C3)
-    {
-      ReadDrive(C3);  // get commanded wheel spin and steering
-    }
+    { */
+//      readline(2);  // get C3 Pilot commanded wheel spin and steering
+/*    }
     if (landmarks availabe)
     {  // get the position based on bearing and angle to a known location.
       ReadLandmarks(C4); 
@@ -401,6 +420,7 @@ void loop()
         pData = estimated_position.formDataString();
         if (dataFile) dataFile.print(pData);
         Serial.print(pData);
+        Serial3.print(pData);  // send data to C4 path planner
         pObstacles = obstacleDetect();
         if (dataFile) 
         {
