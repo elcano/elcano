@@ -24,12 +24,18 @@ data from C6 Navigator
 #include "Common.h"
 
 #define MAX_PATH 10
-waypoint current_position;
-waypoint mission[MAX_MISSION];
-waypoint path[MAX_PATH];
-char Navigation[BUFFSIZ];
-char Plan[BUFFSIZ];
-void DataReady();
+waypoint current_position;  // best estimate of where the robot is.
+waypoint mission[MAX_MISSION]; // list of all goal locations
+waypoint path[MAX_PATH];       // suggested path for reaching goal; may be a circular buffer
+int firstPathSegment=0;   // first index of path[]
+int lastPathSegment=0;    // last index of path[]
+int activePathSegment=0;  // path[activePathSegment] is closest to current_position.
+int trackError_mm=0;  // perpendicular distance to intended path segment
+int steerError_deg=0; // departure from intended bearing; positive = right
+int speedError_mmPs=0;  // difference from intended speed; positive = too fast
+char Navigation[BUFFSIZ];  // Holds a serial message giving the current location
+char Plan[BUFFSIZ];    // Holds a serial message giving a segment of the path plan  
+void DataReady();    // called by an interrupt when there is serial data to read
 extern bool DataAvailable;
 
 // unsigned long millis() is time since program started running
@@ -72,11 +78,17 @@ void initialize()
           break;
       }
   //  Read waypoints of first segment from C4 on serial line
+     firstPathSegment = 0;
+     activePathSegment = 0;
+     lastPathSegment = MAX_PATH - 1;
      for (i = 0; i < MAX_PATH; i++)
       {
         while (!path[i].readPointString(Plan, 1000, 0) );
         if (path[i].index & END)
+        {
+          lastPathSegment = i;
           break;
+        }
       }
   //  Read waypoint of intitial position from C6 on serial line
       while (!current_position.readPointString(Navigation, 1000, 0) );  
@@ -100,10 +112,134 @@ void setup()
 
 
 /*---------------------------------------------------------------------------------------*/ 
+// return value is trackError_mm from this segment
+int distance(int i,   // index into path[]
+    int* pathCompletion)  // per cent of segment that has been completed
+{
+  float startX, startY, endX, endY;
+  float meX, meY, m;
+  float x, y;  // intersection of path segment and perpendicular to path thru robot position.
+  int dist_mm;   // track error
+  float Dist_mm;
+  startX = path[i].east_mm;
+  startY = path[i].north_mm;
+  if (path[i].index & END)
+  {  // extrapolate 30 meters
+    endX = startX + path[i].Evector_x1000 * 30;
+    endY = startY + path[i].Nvector_x1000 * 30;
+  }
+  else
+  {
+    endX =path[(i+1)%MAX_PATH].east_mm;
+    endY =path[(i+1)%MAX_PATH].north_mm;    
+  }
+  
+  if (abs(startX-endX) < 10 * abs(startY-endY))
+  {  // path is North-South
+    *pathCompletion = 100 * (current_position.north_mm - startY) / (endY-startY);
+    dist_mm = current_position.east_mm;
+  }
+  else if (10 * abs(startX-endX) > abs(startY-endY))
+  {  // path is East-West
+    *pathCompletion = 100 * (current_position.east_mm - startX) / (endX-startX);
+    dist_mm = current_position.north_mm;
+  }
+  else
+  {
+    meX = current_position.east_mm;
+    meY = current_position.north_mm;
+    m = (endY - startY) / (endX - startX);  // slope of path
+    // path is y = m*(x-startX)+startY
+    // perpendicular to path is y = (-1/m)*(x-meX)+meY
+    // intersection is x = (meX + m*m*startX+m*(meY-startY))/(m*m-1)
+    //                 y = meX*(m*m+2)+m*m*startX+m*(meY-startY)/(m*m-1) + meY
+    x = (meX + m*m*startX+m*(meY-startY))/(m*m-1);
+    y = m*(x-startX)+startY; 
+    Dist_mm = sqrt((meX-x)*(meX-x) + (meY-y)*(meY-y));
+    dist_mm = Dist_mm;
+    if (abs(m) <=1)
+    {  // more change in east-west
+        *pathCompletion = 100 * (x - startX) / (endX-startX);
+    }
+    else
+    {  // more change north-south
+        *pathCompletion = 100 * (y - startY) / (endY-startY);
+    }  
+  }
+  // Check if we are going the wrong way
+  // Dot product is 1 if perfect; -1 if going backwards
+  if (current_position.Evector_x1000 * path[i].Evector_x1000 +
+      current_position.Nvector_x1000 * path[i].Nvector_x1000 < 0)
+    {  // going backwards;  would need to turn around
+      dist_mm += TURNING_RADIUS_mm * 2 * PI;
+    }
+}
+/*---------------------------------------------------------------------------------------*/ 
 // Given the current_position and path, find the nearest segment of the path and the 
 // relative position in that segment. Compute the desired vector and the actual vector.
 void WhereAmI()
 {
+  int dist_mm = MAX_DISTANCE;
+  int closest_mm = MAX_DISTANCE;
+  int position_mm = 0;
+  int i;
+  int PerCentDone, done;
+  int desiredSpeed_mmPs;
+  activePathSegment = firstPathSegment;
+  done = 0;
+  if (firstPathSegment <= lastPathSegment)
+  {
+    for( i = firstPathSegment; i <= lastPathSegment; i++)
+    {
+      dist_mm = distance(i,&PerCentDone);
+      if (dist_mm < closest_mm)
+      {
+        closest_mm = dist_mm;
+        activePathSegment = i;
+        done = PerCentDone;
+      }
+    }
+  }
+  else
+  {
+    for (i = firstPathSegment; i < MAX_PATH; i++)
+    {
+      dist_mm = distance(i,&PerCentDone);
+      if (dist_mm < closest_mm)
+      {
+        closest_mm = dist_mm;
+        activePathSegment = i;
+        done = PerCentDone;
+      }
+    }
+    for (i = 0; i < lastPathSegment; i++)
+    {
+      dist_mm = distance(i,&PerCentDone);
+      if (dist_mm < closest_mm)
+      {
+        closest_mm = dist_mm;
+        activePathSegment = i;
+        done = PerCentDone;
+      }
+    }
+  }
+  // compute errors in track, steer and speed
+   trackError_mm = closest_mm;
+   if (activePathSegment == lastPathSegment)
+   {
+      desiredSpeed_mmPs = path[activePathSegment].speed_mmPs;
+   }
+   else
+   {
+     int pathPerCent = min(100, PerCentDone);
+     pathPerCent = max(0,   PerCentDone);
+     desiredSpeed_mmPs = path[activePathSegment].speed_mmPs + pathPerCent * 
+     (path[(activePathSegment+1)%MAX_PATH].speed_mmPs - path[activePathSegment].speed_mmPs);
+   }
+   speedError_mmPs = current_position.speed_mmPs - desiredSpeed_mmPs;
+   int dotProduct_xMEG = current_position.Evector_x1000 * path[activePathSegment].Evector_x1000 +
+      current_position.Nvector_x1000 * path[activePathSegment].Nvector_x1000;
+// TO DO: Compute steering error
 }
 
 /*---------------------------------------------------------------------------------------*/ 
@@ -154,54 +290,38 @@ void loop()
        } 
    }
  }
-    
-    
+     WhereAmI(); 
+// TO DO: Use PID controller to find proper speed and steering  
+
+//  Send joystick signals to C2    
     int Speed = SetSpeed();
  //   int Turn  = DesiredHeading();
-/* TO DO:
-   
-// Read path and speed profile for next motions.
 
-  Compute course
-  Send joystick signals to C2
-
-*/ 
 }
 /*---------------------------------------------------------------------------------------*/ 
 /* The format of the command received over the serial line from C6 Navigator is 
-  $POINT,<east_m>,<north_m>,<sigma_m>,<time_s>,<speed_mPs>,<bearing>,POSITION*CKSUM
-The Pilot is provided with a few curve segments and speed profiles that define how
+  $POINT,<east_m>,<north_m>,<sigma_m>,<time_s>,<speed_mPs>,<Vx>,<Vy>,POSITION*CKSUM
+The Pilot is provided with a few straight segments and speed profiles that define how
 the vehicle travels over the next few meters.
 
-Segments must include a few parameters:
+Segments in the path planner include a few parameters:
 Four points specifying a cubic spline as an Hermite curve [Foley et al, Introduction to Computer Graphics]. 
   - Start point.
   - Start velocity.
   - End point.
   - End velocity.
 These points by themselves specify a family of curves. Specifying the parameter t 
-for the speed at which the curve is traversed makes the curve unique. This value
-is also provided to the Pilot over the serial line.
+for the speed at which the curve is traversed makes the curve unique. The Pilot 
+deals with staight segments, which are sent by the path planner over the serial line. 
+These segments include the desired speed at the start of each segment.
+The pilot receives the current vehicle position and velocity.
 
 The points are defined on a coordinate system in meters with the X axis east and the 
 Y axis true north.
 
-The four points and t parameter specify a unique path.  They do not specify the speed at 
-which the vehicle moves over the path. Vehicle speed is given by a sequence of ordered
-pairs consisting of distance traveled on the path in meters and the requested speed at
-that point in meters / second.  The first item in this sequence would be zero position and the
-the current speed of the vehicle. This item may or may not be explicitly included. 
-The distances travelled on the curve are cummulative and the last one should be equal
-to the arc length of the curve.
-
-The pilot must also receive the current vehicle position, attitude, velocity and acceleration.
 
 Characters are ASCII. Wide characters are not used.
 
-TO DO: Define the structure used for curve segment and motion profile.
-TO DO: Write GetSerial.
 */
-void GetSerial( unsigned long *TimeOfCmd)
-{
-}
+
 

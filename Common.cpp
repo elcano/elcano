@@ -174,7 +174,7 @@ void waypoint::Compute_LatLon()
 //---------------------------------------------------------
 /*
    Estimated state (index=-1)  or Waypoint, or list of next waypoints on route (index > 0); 
-      $POINT,<east_m>,<north_m>,<sigma_m>,<time_s>,<speed_mPs>,<bearing>,<index>*CKSUM
+      $POINT,<east_m>,<north_m>,<sigma_m>,<time_s>,<speed_mPs>,<Evector_x1000>,<Nvector_x1000>,<index>*CKSUM
       // at leat 18 characters
 */
 
@@ -189,10 +189,10 @@ char* waypoint::formPointString()
   northFraction = north_mm >= 0? north_mm%1000   : (-north_mm)%1000;
   speedFraction = speed_mmPs>=0? speed_mmPs%1000 : (-speed_mmPs)%1000;
   sprintf(dataString, 
-  "%ld.%0.3ld,%ld.%0.3ld,%ld.%0.3ld,%ld.%0.3ld,%ld.%0.3ld,%d,%d",
+  "%ld.%0.3ld,%ld.%0.3ld,%ld.%0.3ld,%ld.%0.3ld,%ld.%0.3ld,%d,%d,%d",
   east_mm/1000, eastFraction, north_mm/1000, northFraction, 
   sigma_mm/1000, sigma_mm%1000, time_ms/1000, time_ms%1000,
-  speed_mmPs/1000, speed_mmPs%1000, bearing, index);  
+  speed_mmPs/1000, speed_mmPs%1000, Evector_x1000, Nvector_x1000, index);  
  
   return dataString;
 }
@@ -204,14 +204,15 @@ bool waypoint::readPointString(char *buffer, unsigned long max_wait_ms, int chan
   {
     if (readline(channel) && strncmp(buffer, "$POINT",6) == 0) 
     {
-     //  $POINT,<east_m>,<north_m>,<sigma_m>,<time_s>,<speed_mPs>,<bearing>,<index>*CKSUM
+     //  $POINT,<east_m>,<north_m>,<sigma_m>,<time_s>,<speed_mPs>,<Evector_x1000>,<Nvector_x1000>,<index>*CKSUM
      parsePtr = buffer+7;
      east_mm =  ReadDecimal(parsePtr);
      north_mm = ReadDecimal(parsePtr);
      sigma_mm = ReadDecimal(parsePtr);
      time_ms  = ReadDecimal(parsePtr);
      speed_mmPs=ReadDecimal(parsePtr);
-     bearing =  ReadDecimal(parsePtr);
+     Evector_x1000 =  ReadDecimal(parsePtr);
+     Nvector_x1000 =  ReadDecimal(parsePtr);
      index    = ReadDecimal(parsePtr);
      return true;
     }
@@ -226,7 +227,8 @@ void waypoint::operator=(waypoint& right)
   north_mm =   right.north_mm;
   sigma_mm =   right.sigma_mm;
   time_ms =    right.time_ms;  
-  bearing  =   right.bearing;
+  Evector_x1000  =   right.Evector_x1000;
+  Nvector_x1000  =   right.Nvector_x1000;
   speed_mmPs = right.speed_mmPs;
   index    =   right.index;
   return;
