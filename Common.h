@@ -19,6 +19,10 @@
 #define POSITION -1
 // A bit flag for index that indicates this waypoint is the last in a sequence.
 #define END 0x04000
+#define MAX_DISTANCE 0x7fffffff
+
+#define WHEEL_BASE_mm 800
+#define TURNING_RADIUS_mm 4000
 
 
 class waypoint // best estimate of position and state
@@ -42,7 +46,9 @@ class waypoint // best estimate of position and state
   On the Arduino, a float is the same as a double, giving 6 to 7 decimal digits.
   This means that mm resolution only applies within 1 km of the origin.
   */
-    int bearing;  // degrees. 0 = North; 90 = East.
+  int Evector_x1000;   // 1000 * unit vector pointing east
+  int Nvector_x1000;   // 1000 * unit vector pointing north
+//    int bearing;  // degrees. 0 = North; 90 = East.
     long speed_mmPs; // vehicle speed in mm per second.
     int index;       // used for passing a sequence of waypoints over serial line.
     
