@@ -15,14 +15,25 @@
 #define MAX_MISSION 6
 // value if latitude, longitude or bearing is missing.
 #define INVALID 10000000
+#define MEG 1000000
 // setting of index to indicate a navigation fix
 #define POSITION -1
 // A bit flag for index that indicates this waypoint is the last in a sequence.
 #define END 0x04000
 #define MAX_DISTANCE 0x7fffffff
 
-#define WHEEL_BASE_mm 800
-#define TURNING_RADIUS_mm 4000
+#define WHEEL_BASE_mm         800
+#define TURNING_RADIUS_mm    4000
+#define MAX_ACCEL_mmPs2      2000
+#define STANDARD_ACCEL_mmPs2 1000
+// but we send a number from 0 to 255
+#define STANDARD_ACCEL       55
+#define MAX_ACCEL            110
+#define HALF_BRAKE           127
+#define FULL_BRAKE           255
+#define WALK_SPEED_mmPs      1000
+// 10 mph = 4.44 m/s
+#define MAX_SPEED_mmPs       4444
 
 
 class waypoint // best estimate of position and state

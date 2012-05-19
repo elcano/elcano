@@ -31,6 +31,8 @@
 
 // Analog inputs
 #define SPEED_IN     0
+// DIRECTION is written as 0 to 255 with 0 East and 64 North
+// The analog values read are 4 times as much
 #define DIRECTION_IN 1
 #define FRONT        3
 

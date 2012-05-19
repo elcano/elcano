@@ -31,8 +31,11 @@ int firstPathSegment=0;   // first index of path[]
 int lastPathSegment=0;    // last index of path[]
 int activePathSegment=0;  // path[activePathSegment] is closest to current_position.
 int trackError_mm=0;  // perpendicular distance to intended path segment
-int steerError_deg=0; // departure from intended bearing; positive = right
-int speedError_mmPs=0;  // difference from intended speed; positive = too fast
+//int steerError_deg=0; // departure from intended bearing; positive = right
+int desiredSpeed_mmPs=0;  // Speed suggested by the path planner
+int LeftRange_mm =  7500;
+int Range_mm =      7500;
+int RightRange_mm = 7500;
 char Navigation[BUFFSIZ];  // Holds a serial message giving the current location
 char Plan[BUFFSIZ];    // Holds a serial message giving a segment of the path plan  
 void DataReady();    // called by an interrupt when there is serial data to read
@@ -184,7 +187,6 @@ void WhereAmI()
   int position_mm = 0;
   int i;
   int PerCentDone, done;
-  int desiredSpeed_mmPs;
   activePathSegment = firstPathSegment;
   done = 0;
   if (firstPathSegment <= lastPathSegment)
@@ -236,32 +238,76 @@ void WhereAmI()
      desiredSpeed_mmPs = path[activePathSegment].speed_mmPs + pathPerCent * 
      (path[(activePathSegment+1)%MAX_PATH].speed_mmPs - path[activePathSegment].speed_mmPs);
    }
-   speedError_mmPs = current_position.speed_mmPs - desiredSpeed_mmPs;
-   int dotProduct_xMEG = current_position.Evector_x1000 * path[activePathSegment].Evector_x1000 +
-      current_position.Nvector_x1000 * path[activePathSegment].Nvector_x1000;
-// TO DO: Compute steering error
+//   float dotProductM = current_position.Evector_x1000 * path[activePathSegment].Evector_x1000 +
+//    current_position.Nvector_x1000 * path[activePathSegment].Nvector_x1000;
+//   steerError_deg = acos(dotProductM/MEG);
 }
 
 /*---------------------------------------------------------------------------------------*/ 
 int SetSpeed()
 {
-    int Speed = analogRead(SPEED_IN);
+    int Speed = analogRead(SPEED_IN) * MAX_SPEED_mmPs / 4095;
+    static int CommandedThrottle = 0;
+    static int CommandedBrake = 0;
     int go = digitalRead(MOVE_OK); // Read Stop/Go signal from C2
-    if (go == LOW)
+    if (go == LOW || desiredSpeed_mmPs == 0)
     {
-      analogWrite(BRAKE_CMD, 255);  // full brake
-      analogWrite(THROTTLE_CMD, 0);
-      Speed = 0;
-      return Speed;
+      CommandedThrottle = 0;
+      CommandedBrake = 255;   // full brake
     }
 
-  //  Read sonar obstacle detectors
-    int LeftRange =  analogRead(LEFT) + OFFSET;
-    int Range =      analogRead(FRONT) + OFFSET;
-    int RightRange = analogRead(RIGHT) + OFFSET;
+    /*
+    TO DO;
+    Slow down depending how close to obstacle.
+    */
+    if (desiredSpeed_mmPs - Speed > 250)
+    {
+      CommandedThrottle = STANDARD_ACCEL;
+      CommandedBrake = 0;  
+    }
+    else if (Speed - desiredSpeed_mmPs > 250)
+    {
+      CommandedThrottle = 0;
+      CommandedBrake = (Speed - desiredSpeed_mmPs > 1500)? FULL_BRAKE: HALF_BRAKE;  
+    }
     
+    analogWrite(BRAKE_CMD, CommandedBrake); 
+    analogWrite(THROTTLE_CMD, CommandedThrottle);
     return Speed;
  
+}
+/*---------------------------------------------------------------------------------------*/ 
+int SetSteering()
+{
+    static int CommandedSteer = 0;
+    int Steer = analogRead(DIRECTION_IN) / 4;  // Units are circle/256
+    float DesiredSteer;
+    if (path[activePathSegment].Nvector_x1000 >= 0)
+    {
+      DesiredSteer = acos((float)path[activePathSegment].Evector_x1000 / 1000.) *128. / PI;
+    }
+    else
+    {
+      DesiredSteer = 256. - acos((float)path[activePathSegment].Evector_x1000 / 1000.) *128. / PI;
+    }
+    /*
+    TO DO;
+    If obstacle ahead, but side is clear, move to side.
+    Prefer to pass with object on left, since cone toucher is on that side.
+    Make a more sophisticated choice of steering angle.
+    */
+    if (DesiredSteer - Steer > 2)
+    {  // turn right
+      CommandedSteer = 223;
+    }
+    else if (Steer - DesiredSteer > 2)
+    {  // turn left
+      CommandedSteer = 159;
+    }
+    
+    analogWrite(STEER_CMD, CommandedSteer);
+    return Steer;
+
 }
 /*---------------------------------------------------------------------------------------*/ 
 void loop() 
@@ -291,11 +337,14 @@ void loop()
    }
  }
      WhereAmI(); 
-// TO DO: Use PID controller to find proper speed and steering  
-
+  //  Read sonar obstacle detectors
+    LeftRange_mm =  10 *(analogRead(LEFT) + OFFSET);
+    Range_mm =      10 *(analogRead(FRONT) + OFFSET);
+    RightRange_mm = 10 *(analogRead(RIGHT) + OFFSET);
+// Use fuzzy controller to find proper speed and steering
 //  Send joystick signals to C2    
     int Speed = SetSpeed();
- //   int Turn  = DesiredHeading();
+    int Turn  = SetSteering();
 
 }
 /*---------------------------------------------------------------------------------------*/ 
