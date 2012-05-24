@@ -67,22 +67,44 @@ extern bool DataAvailable;
     Exit is the route from Path[last]-> location to Destination.
 */
 struct curve Links[20];
-struct junction Nodes[20];
-struct waypoint Origin, Start;
+struct junction Nodes[16] = {
+  -140828,  221434, &Nodes[3],  &Nodes[1],  NULL,       NULL,      0, 0, 0, 0,  // 0
+  -140986,   88800, &Nodes[0],  &Nodes[2],  &Nodes[5],  NULL,      0, 0, 0, 0,  // 1
+  -144313,  -42065, &Nodes[1],  &Nodes[6],  NULL,       NULL,      0, 0, 0, 0,  // 2
+  -78568,   222090, &Nodes[0],  &Nodes[4],  NULL,       NULL,      0, 0, 0, 0,  // 3
+  -38276,   222290, &Nodes[3],  &Nodes[5],  NULL,       NULL,      0, 0, 0, 0,  // 4
+  -39558,    87844, &Nodes[1],  &Nodes[4],  &Nodes[8],  &Nodes[6], 0, 0, 0, 0,  // 5
+  -46528,   -41631, &Nodes[2],  &Nodes[5],  &Nodes[7],  &Nodes[9], 0, 0, 0, 0,  // 6
+  -45764,  -135413, &Nodes[6],  &Nodes[10], NULL,       NULL,      0, 0, 0, 0,  // 7
+  51834,     87232, &Nodes[5],  &Nodes[9],  &Nodes[14], NULL,      0, 0, 0, 0,  // 8
+  53041,    -41220, &Nodes[6],  &Nodes[8],  &Nodes[10], &Nodes[13],0, 0, 0, 0,  // 9
+  53438,   -133901, &Nodes[7],  &Nodes[9],  &Nodes[11], NULL,      0, 0, 0, 0,  // 10
+  108750,  -134590, &Nodes[10], &Nodes[12], NULL,       NULL,      0, 0, 0, 0,  // 11
+  130021,  -143108, &Nodes[11], NULL,       NULL,       NULL,      0, 0, 0, 0,  // 12
+  182559,   -41031, &Nodes[9],  NULL,       NULL,       NULL,      0, 0, 0, 0,  // 13
+  177598,    86098, &Nodes[8],  &Nodes[15], NULL,       NULL,      0, 0, 0, 0,  // 14
+  170313,    69008, &Nodes[14], NULL,       NULL,       NULL,      0, 0, 0, 0   // 15
+};
+class waypoint Origin, Start;
 struct curve Route, Exit;
 struct junction *Path[20];
-struct waypoint Destination;
-struct waypoint MDF[6];
+class waypoint Destination;
 
-/*---------------------------------------------------------------------------------------*/ 
+// EDIT for route
+// CONES includes start and stop
+#define CONES 5
+long goal_lat[CONES] = {  47621881,   47621825,   47623144,   47620616,   47621881};
+long goal_lon[CONES] = {-122349894, -122352120, -122351987, -122351087, -122349894};
+
   
-waypoint mission[MAX_WAYPOINTS];
+waypoint mission[MAX_WAYPOINTS];  // aka MDF
 int waypoints;
 
 /*---------------------------------------------------------------------------------------*/ 
 void initialize()
 {
-  Origin.bearing = INVALID; 
+  Origin.Evector_x1000 = INVALID; 
+  Origin.Nvector_x1000 = INVALID; 
   Origin.east_mm = 0;
   Origin.north_mm = 0;  
   Origin.latitude = INVALID;
@@ -110,7 +132,7 @@ void initialize()
         ReadPosition();  // latitude and longitude
         // The origin in the (east_mm, north_mm) coordinate system is defined to be the
         // latitude and longitude at which the robot starts. 
-        // Bearing is initial robot attitude.
+        // (Evector, Nvector) is initial robot attitude.
         SendInitialPosition(C6);  // latitude and longitude
      }
      */
@@ -177,7 +199,7 @@ void initialize()
    Instead we can use t to find a sequence of points connecting start and End.
    If the straight line distance between any of these intermediate points is too large,
    subdivide with an intermediate value of t.
-*/
+
 void MakeCurve(waypoint *start, waypoint *End, float t, waypoint *newp)
 {
 	double p0, p1, p2, p3;
@@ -186,14 +208,14 @@ void MakeCurve(waypoint *start, waypoint *End, float t, waypoint *newp)
 	double dx, dy, cos_end, sin_end;
 	p0 = (double) start->east_mm;
 	q0 = (double) start->north_mm;
-	angle = (90-start->bearing) * PI / 180;
-	p1 = cos(angle);
-	q1 = sin(angle);
+//	angle = (90-start->bearing) * PI / 180;
+	p1 = (double)(start->Evector_x1000) / 1000.;
+	q1 = (double)(start->Nvector_x1000) / 1000.;
 	dx = (double) End->east_mm - p0;
 	dy = (double) End->north_mm - q0;
-	angle = (90-End->bearing) * PI / 180;
-	cos_end = cos(angle);
-	sin_end = sin(angle);
+//	angle = (90-End->bearing) * PI / 180;
+	cos_end = (double)(End->Evector_x1000) / 1000.;
+	sin_end = (double)(End->Nvector_x1000) / 1000.;
 	p2 = 3*dx - (2*p1 + cos_end);
 	q2 = 3*dy - (2*q1 + sin_end);
 	p3 = -2*dx + p1 + cos_end;
@@ -201,10 +223,11 @@ void MakeCurve(waypoint *start, waypoint *End, float t, waypoint *newp)
 	newp->east_mm  = (long) (p0 + t*(p1 + t*(p2 + t*p3)));
 	newp->north_mm = (long) (q0 + t*(q1 + t*(q2 + t*q3)));
 }
+*/
 /*---------------------------------------------------------------------------------------*/ 
 /*  GetPosition is a more general interface to MakeCurve.
     Here t can be any value. The integral part counts the segments that make up the curve.
-*/
+
 void GetPosition(curve *path, float t, waypoint *newp)
 {
 	curve *start = path;
@@ -213,17 +236,14 @@ void GetPosition(curve *path, float t, waypoint *newp)
 	newp->longitude = INVALID;
 	newp->east_mm = 0;
 	newp->north_mm = 0;
-	newp->bearing = INVALID;
+	newp->Evector_x1000 = INVALID;
+	newp->Nvector_x1000 = INVALID;
 	if (path->present == NULL) return;
 	if (t == 0 || (t > 0 && path->next == NULL) ||
 		(t < 0 && path->previous == NULL))
 	{
-		newp->latitude =  path->present->latitude;
-		newp->longitude = path->present->longitude;
-		newp->east_mm =   path->present->east_mm;
-		newp->north_mm =  path->present->north_mm;
-		newp->bearing =   path->present->bearing;
-		return;
+              newp = path->present;
+	      return;
 	}
 	while (t++ < 1)
 	{
@@ -231,11 +251,7 @@ void GetPosition(curve *path, float t, waypoint *newp)
 		End =   start->previous;
 		if (End == NULL)
 		{
-			newp->latitude =  start->present->latitude;
-			newp->longitude = start->present->longitude;
-			newp->east_mm =   start->present->east_mm;
-			newp->north_mm =  start->present->north_mm;
-			newp->bearing =   start->present->bearing;
+			newp =  start->present;
 			return;
 		}
 	}
@@ -245,11 +261,7 @@ void GetPosition(curve *path, float t, waypoint *newp)
 		End =   start->next;
 		if (End == NULL)
 		{
-			newp->latitude =  start->present->latitude;
-			newp->longitude = start->present->longitude;
-			newp->east_mm =   start->present->east_mm;
-			newp->north_mm =  start->present->north_mm;
-			newp->bearing =   start->present->bearing;
+			newp =  start->present;
 			return;
 		}
 	}
@@ -257,15 +269,12 @@ void GetPosition(curve *path, float t, waypoint *newp)
 		t = -t;
 	if (t == 1)
 	{
-		newp->latitude =  End->present->latitude;
-		newp->longitude = End->present->longitude;
-		newp->east_mm =   End->present->east_mm;
-		newp->north_mm =  End->present->north_mm;
-		newp->bearing =   End->present->bearing;
+		newp =  End->present;
 		return;
 	}
 	MakeCurve( start->present, End->present, t, newp);
 }
+*/
 /*---------------------------------------------------------------------------------------*/ 
 void setup() 
 { 
