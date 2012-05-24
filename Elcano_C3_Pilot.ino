@@ -24,6 +24,12 @@ data from C6 Navigator
 #include "Common.h"
 
 #define MAX_PATH 10
+#define SMALL_TRACK_ERROR_mm   1200
+#define MEDIUM_TRACK_ERROR_mm  2700
+#define SMALL_STEER_ERROR_deg     2
+#define MEDIUM_STEER_ERROR_deg    6
+#define STEER_FACTOR              3
+
 waypoint current_position;  // best estimate of where the robot is.
 waypoint mission[MAX_MISSION]; // list of all goal locations
 waypoint path[MAX_PATH];       // suggested path for reaching goal; may be a circular buffer
@@ -116,6 +122,7 @@ void setup()
 
 /*---------------------------------------------------------------------------------------*/ 
 // return value is trackError_mm from this segment
+// trackError is positive if left of centerline and negative if right.
 int distance(int i,   // index into path[]
     int* pathCompletion)  // per cent of segment that has been completed
 {
@@ -139,13 +146,15 @@ int distance(int i,   // index into path[]
   
   if (abs(startX-endX) < 10 * abs(startY-endY))
   {  // path is North-South
-    *pathCompletion = 100 * (current_position.north_mm - startY) / (endY-startY);
-    dist_mm = current_position.east_mm;
+    *pathCompletion = 100 * abs(current_position.north_mm - startY) / (endY-startY);
+    dist_mm = current_position.north_mm - startY >= 0? 
+        current_position.east_mm - startX : startX - current_position.east_mm;
   }
   else if (10 * abs(startX-endX) > abs(startY-endY))
   {  // path is East-West
-    *pathCompletion = 100 * (current_position.east_mm - startX) / (endX-startX);
-    dist_mm = current_position.north_mm;
+    *pathCompletion = 100 * abs(current_position.east_mm - startX) / (endX-startX);
+    dist_mm = current_position.east_mm - startX >= 0?
+        current_position.north_mm - startY : startX - current_position.north_mm;
   }
   else
   {
@@ -167,14 +176,18 @@ int distance(int i,   // index into path[]
     else
     {  // more change north-south
         *pathCompletion = 100 * (y - startY) / (endY-startY);
-    }  
+    }
+    // unit vector of perpendicular is (path[i].Nvector, path[i].Evector)
+    // dot product of normal vector with (meX-startX, meY-startY) determines sign of track error.
+    if (path[i].Nvector_x1000 * (meX-startX) + path[i].Evector_x1000 * (meY-startY) < 0)
+        dist_mm = -dist_mm;
   }
   // Check if we are going the wrong way
   // Dot product is 1 if perfect; -1 if going backwards
   if (current_position.Evector_x1000 * path[i].Evector_x1000 +
       current_position.Nvector_x1000 * path[i].Nvector_x1000 < 0)
     {  // going backwards;  would need to turn around
-      dist_mm += TURNING_RADIUS_mm * 2 * PI;
+      dist_mm += dist_mm >= 0 ? TURNING_RADIUS_mm * 2 * PI: -TURNING_RADIUS_mm * 2 * PI;
     }
 }
 /*---------------------------------------------------------------------------------------*/ 
@@ -194,7 +207,7 @@ void WhereAmI()
     for( i = firstPathSegment; i <= lastPathSegment; i++)
     {
       dist_mm = distance(i,&PerCentDone);
-      if (dist_mm < closest_mm)
+      if (abs(dist_mm) < abs(closest_mm))
       {
         closest_mm = dist_mm;
         activePathSegment = i;
@@ -207,7 +220,7 @@ void WhereAmI()
     for (i = firstPathSegment; i < MAX_PATH; i++)
     {
       dist_mm = distance(i,&PerCentDone);
-      if (dist_mm < closest_mm)
+      if (abs(dist_mm) < abs(closest_mm))
       {
         closest_mm = dist_mm;
         activePathSegment = i;
@@ -217,13 +230,19 @@ void WhereAmI()
     for (i = 0; i < lastPathSegment; i++)
     {
       dist_mm = distance(i,&PerCentDone);
-      if (dist_mm < closest_mm)
+      if (abs(dist_mm) < abs(closest_mm))
       {
         closest_mm = dist_mm;
         activePathSegment = i;
         done = PerCentDone;
       }
     }
+  }
+  if (done >= 100 && activePathSegment != lastPathSegment)
+  {  // have passed end of segment; use the next one
+    if (++activePathSegment>= MAX_PATH)
+        activePathSegment = 0;
+    closest_mm = distance(activePathSegment, &done);
   }
   // compute errors in track, steer and speed
    trackError_mm = closest_mm;
@@ -233,8 +252,8 @@ void WhereAmI()
    }
    else
    {
-     int pathPerCent = min(100, PerCentDone);
-     pathPerCent = max(0,   PerCentDone);
+     int pathPerCent = min(100, done);
+     pathPerCent = max(0,   done);
      desiredSpeed_mmPs = path[activePathSegment].speed_mmPs + pathPerCent * 
      (path[(activePathSegment+1)%MAX_PATH].speed_mmPs - path[activePathSegment].speed_mmPs);
    }
@@ -280,6 +299,7 @@ int SetSpeed()
 int SetSteering()
 {
     static int CommandedSteer = 0;
+    int Steer_error_deg = 0;
     int Steer = analogRead(DIRECTION_IN) / 4;  // Units are circle/256
     float DesiredSteer;
     if (path[activePathSegment].Nvector_x1000 >= 0)
@@ -290,12 +310,22 @@ int SetSteering()
     {
       DesiredSteer = 256. - acos((float)path[activePathSegment].Evector_x1000 / 1000.) *128. / PI;
     }
+    Steer_error_deg = ((Steer - DesiredSteer) * 256) /360;
     /*
     TO DO;
     If obstacle ahead, but side is clear, move to side.
     Prefer to pass with object on left, since cone toucher is on that side.
     Make a more sophisticated choice of steering angle.
     */
+    
+    if ((abs(Steer_error_deg) < SMALL_STEER_ERROR_deg && abs(trackError_mm) < SMALL_TRACK_ERROR_mm) ||
+        (abs(trackError_mm) < MEDIUM_TRACK_ERROR_mm && Steer_error_deg * trackError_mm < 0))
+        ; // maintain course
+    else 
+   {  // make correction
+       CommandedSteer -= Steer_error_deg / STEER_FACTOR;
+   } 
+/*   else
     if (DesiredSteer - Steer > 2)
     {  // turn right
       CommandedSteer = 223;
@@ -304,9 +334,9 @@ int SetSteering()
     {  // turn left
       CommandedSteer = 159;
     }
-    
+  */  
     analogWrite(STEER_CMD, CommandedSteer);
-    return Steer;
+    return CommandedSteer;  // a value to output to the steer control
 
 }
 /*---------------------------------------------------------------------------------------*/ 
