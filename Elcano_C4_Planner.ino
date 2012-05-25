@@ -41,13 +41,17 @@ we could have another processor whose sole function is communication.
 /*---------------------------------------------------------------------------------------*/ 
 #include "Common.h"
 #include "IO.h"
+
+
 #define PI ((float) 3.1415925)
 #ifndef NULL
 #define NULL 0 
 #endif
+#define START  -1
+#define EMPTY  -2
+
 void DataReady();
 extern bool DataAvailable;
-
 
 /*---------------------------------------------------------------------------------------*/ 
 // EDIT for route
@@ -80,40 +84,47 @@ long goal_lon[CONES] = {-122349894, -122352120, -122351987, -122351087, -1223498
 
 /*  Nodes and Links define the road network.
     The path for the robot is an array of pointers to Nodes.
-    Nodes and Links come from the RNDF (Route Network Definition File).
-    MDF (Mission Definition File) is given.
-    Origin is the initial position of the robot and (0,0) on the mm coordinate system. 
+    LATITUDE_ORIGIN and LONGITUDE_ORIGIN define  (0,0) on the mm coordinate system. 
     Start is the position of the robot as it begins a new leg of the journey.  
-    Destination is next position in MDF.
+    Destination is the next goal position in mission.
     Path joins Start and Destination. Finding it is the major task 
     of this Path Planner module.
+    The Distance numbers are initially multipliers giving path roughness.
+    They are replaced by their product with the actual distance.
     Route is a finer scale list of waypoints from present or recent position.
     Exit is the route from Path[last]-> location to Destination.
 */
 #define MAP_POINTS 16
 struct curve Links[20];
 struct junction Nodes[MAP_POINTS] = {
-  -140828,  221434, 3 ,   1 ,  END,  END,  0, 0, 0, 0,  // 0
-  -140986,   88800, 0 ,   2 ,   5 ,  END,  0, 0, 0, 0,  // 1
-  -144313,  -42065, 1 ,   6 ,  END,  END,  0, 0, 0, 0,  // 2
-  -78568,   222090, 0 ,   4 ,  END,  END,  0, 0, 0, 0,  // 3
-  -38276,   222290, 3 ,   5 ,  END,  END,  0, 0, 0, 0,  // 4
-  -39558,    87844, 1 ,   4 ,   8 ,   6 ,  0, 0, 0, 0,  // 5
-  -46528,   -41631, 2 ,   5 ,   7 ,   9 ,  0, 0, 0, 0,  // 6
-  -45764,  -135413, 6 ,   10,  END,  END,  0, 0, 0, 0,  // 7
-  51834,     87232, 5 ,   9 ,   14,  END,  0, 0, 0, 0,  // 8
-  53041,    -41220, 6 ,   8 ,   10,  13 ,  0, 0, 0, 0,  // 9
-  53438,   -133901, 7 ,   9 ,   11,  END,  0, 0, 0, 0,  // 10
-  108750,  -134590, 10 , 12 ,  END,  END,  0, 0, 0, 0,  // 11
-  130021,  -143108, 11 , END,  END,  END,  0, 0, 0, 0,  // 12
-  182559,   -41031, 9 ,  END,  END,  END,  0, 0, 0, 0,  // 13
-  177598,    86098, 8 ,   15,  END,  END,  0, 0, 0, 0,  // 14
-  170313,    69008, 14 , END,  END,  END,  0, 0, 0, 0   // 15
+  -140828,  221434, 3 ,   1 ,  END,  END,  1, 1, 1, 1,  // 0
+  -140986,   88800, 0 ,   2 ,   5 ,  END,  1, 1, 1, 1,  // 1
+  -144313,  -42065, 1 ,   6 ,  END,  END,  1, 1, 1, 1,  // 2
+  -78568,   222090, 0 ,   4 ,  END,  END,  1, 1, 1, 1,  // 3
+  -38276,   222290, 3 ,   5 ,  END,  END,  1, 1, 1, 1,  // 4
+  -39558,    87844, 1 ,   4 ,   8 ,   6 ,  1, 1, 1, 1,  // 5
+  -46528,   -41631, 2 ,   5 ,   7 ,   9 ,  1, 1, 1, 1,  // 6
+  -45764,  -135413, 6 ,   10,  END,  END,  1, 1, 1, 1,  // 7
+  51834,     87232, 5 ,   9 ,   14,  END,  1, 1, 1, 1,  // 8
+  53041,    -41220, 6 ,   8 ,   10,  13 ,  1, 1, 1, 1,  // 9
+  53438,   -133901, 7 ,   9 ,   11,  END,  1, 1, 1, 1,  // 10
+  108750,  -134590, 10 , 12 ,  END,  END,  1, 1, 1, 1,  // 11
+  130021,  -143108, 11 , END,  END,  END,  1, 1, 1, 1,  // 12
+  182559,   -41031, 9 ,  END,  END,  END,  1, 1, 1, 1,  // 13
+  177598,    86098, 8 ,   15,  END,  END,  1, 1, 1, 1,  // 14
+  170313,    69008, 14 , END,  END,  END,  1, 1, 1, 1   // 15
 };
+struct AStar
+{
+    int ParentID;
+    int CostFromStart;
+    int CostToGoal;
+    int TotalCost;
+} Open[MAP_POINTS];
+
 class waypoint Origin, Start;
-struct curve Route, Exit;
-waypoint Path[MAX_WAYPOINTS];
-//struct junction *Path[20];
+waypoint Path[MAX_WAYPOINTS];  // course route to goal
+waypoint FinePath[MAX_WAYPOINTS];  // a low level part of path that smoothes the corners.
   
 waypoint mission[CONES];  // aka MDF
 int waypoints = CONES;
@@ -133,7 +144,8 @@ void ConstructNetwork(junction *Map, int MapPoints)
         deltaX -= Map[Map[i].destination[j]].east_mm;
         deltaY = Map[i].north_mm;
         deltaY -= Map[Map[i].destination[j]].north_mm;
-        Map[i].Distance[j] = sqrt(deltaX*deltaX + deltaY*deltaY);
+        // Distance[] is initially a roughness scale.
+        Map[i].Distance[j] *= sqrt(deltaX*deltaX + deltaY*deltaY);
       }
   }
 }
@@ -147,6 +159,10 @@ void GetGoals(waypoint *Waypoint, int Goals)
     mission[i].latitude  = goal_lat[i];
     mission[i].longitude = goal_lon[i];
     mission[i].Compute_mm();
+ /*   Serial.print(mission[i].latitude);   Serial.print(",");
+    Serial.print(mission[i].longitude);   Serial.print(",");
+    Serial.print(mission[i].east_mm);   Serial.print(",");
+    Serial.println(mission[i].north_mm);   */
     mission[i].speed_mmPs = DESIRED_SPEED_mmPs;
     mission[i].index = 1 | GOAL;
     mission[i].sigma_mm = 1000;
@@ -172,27 +188,51 @@ void GetGoals(waypoint *Waypoint, int Goals)
     }
   }
 }
-/*---------------------------------------------------------------------------------------*/ 
-void SendMission()
-{
-  char *dataString;
-  for( int i = 0; i < CONES; i++)
-  {
-    dataString = mission[i].formPointString();
-    checksum(dataString);
-    Serial.println(dataString);
-  }
-}
 /*---------------------------------------------------------------------------------------*/
-int distance(int i, int *j,  // index into Nodes[]
-    int* pathCompletion)  // per cent of segment that has been completed
+// Find the distance from (east_mm, north_mm) to a road segment Nodes[i].distance[j]
+// return distance in mm, and per cent of completion from i to j.
+
+// Compare this routine to distance() in C3 Pilot
+int distance(int i, int *k,  // index into Nodes[]
+     int east_mm, int north_mm,
+    int* perCent)  // per cent of segment that has been completed
 {
-  return 0;
+  float deltaX, deltaY, dist_mm;
+  int j, Eunit_x1000, Nunit_x1000;
+  int closest_mm = MAX_DISTANCE; 
+  int Road_distance;
+  int pathCompletion;
+  
+  *perCent = 0;
+  *k = 0;
+  closest_mm = MAX_DISTANCE;
+  for (j=0; j < 4; j++)
+  {   // Don't make computations twice.
+      if (Nodes[i].destination[j] == END || Nodes[i].destination[j] < i) continue;    
+      // compute road unit vectors from i to j
+      int Eunit_x1000 = (Nodes[j].east_mm -  Nodes[i].east_mm)  * 1000 / Nodes[i].Distance[j];
+      int Nunit_x1000 = (Nodes[j].north_mm - Nodes[i].north_mm) * 1000 / Nodes[i].Distance[j];
+      // normal vector is (Nunit, -Eunit)
+      deltaX = east_mm  - Nodes[i].east_mm;
+      deltaY = north_mm - Nodes[i].north_mm;
+      dist_mm = sqrt(deltaX*deltaX + deltaY*deltaY);
+      pathCompletion = Nunit_x1000 * dist_mm / 10; 
+      // sign of return value gives which side of road it is on.
+      Road_distance = (-Eunit_x1000 * dist_mm) / 1000;
+      if (abs(Road_distance) < abs(closest_mm) &&
+          pathCompletion >= 0 && pathCompletion <= 100)
+      {
+          closest_mm = Road_distance;
+          *k = j;
+          *perCent = pathCompletion;
+      }
+  }
+  return closest_mm;
 }
 /*---------------------------------------------------------------------------------------*/
 
-void FindClosestRoad(waypoint *location, 
-            waypoint *road )  // information returned
+void FindClosestRoad(waypoint *start, 
+                    waypoint *road)  // information returned
 {
   long closest_mm = MAX_DISTANCE;
   long dist;
@@ -202,27 +242,27 @@ void FindClosestRoad(waypoint *location,
   // find closest road.
   for (i = 0; i < MAP_POINTS; i++)
   {
-    dist = distance(i, &j, &perCent);
-    if (dist < closest_mm && perCent >= 0 && perCent <= 100)
+    dist = distance(i, &j, start->east_mm, start->north_mm, &perCent);
+    if (dist < closest_mm)
     {
       close_index = i;
       closest_mm = dist;
       done = perCent;
+      road->index = i;
+      road->sigma_mm = Nodes[i].destination[j];
     }
   }
   if (closest_mm < MAX_DISTANCE)
   {
-    i = road->index = close_index;
-    road->sigma_mm = Nodes[close_index].destination[j];
-    j = road->sigma_mm;
-    road->east_mm = Nodes[i].east_mm + done *(Nodes[j].east_mm - Nodes[i].east_mm) / 100;
+    Serial.println(done);
+    road->east_mm =  Nodes[i].east_mm  + done *(Nodes[j].east_mm  - Nodes[i].east_mm) / 100;
     road->north_mm = Nodes[i].north_mm + done *(Nodes[j].north_mm - Nodes[i].north_mm) / 100;
   }
   else
   { // find closest node
      for (i = 0; i < MAP_POINTS; i++)
     {
-      dist = location->distance_mm(Nodes[i].east_mm, Nodes[i].north_mm);
+      dist = start->distance_mm(Nodes[i].east_mm, Nodes[i].north_mm);
       if (dist < closest_mm)
       {
         close_index = i;
@@ -235,141 +275,195 @@ void FindClosestRoad(waypoint *location,
   }
 }
 /*---------------------------------------------------------------------------------------*/
-// origin and destination are on the road network given in Nodes.
-// origin is in Path[1].
+// start and destination are on the road network given in Nodes.
+// start is in Path[1].
 // Place other junction waypoints into Path.
 // Returned value is next index into Path.
-// origin->index identifies the closest node.
+// start->index identifies the closest node.
 // sigma_mm holds the index to the other node.
-#define ORIGIN -1
-class AStar
+// A* is traditionally done with pushing and popping node from an Open and Closed list.
+// Since we have a small number of nodes, we instead reserve a slot on Open and Closed
+// for each node. 
+
+int BuildPath (int j, waypoint* start, waypoint* destination)
 {
- public: 
-    int id;
-    int ParentID;
-    int CostFromStart;
-    int CostToGoal;
-};
-int FindPath(waypoint *origin, waypoint *destination)
+   // Done; we have reached the node that leads to goal turn-off
+   // Construct path backward to start.
+  int last = 0;
+  int route[MAP_POINTS];
+  int i, k, node;
+  long dist_mm;
+
+   k = MAP_POINTS-1;
+   route[k--] = j;
+   while(Open[j].ParentID != START)
+   {
+      j = route[k--] = Open[j].ParentID;
+   }
+   Path[last] = start;
+   for ( ; k < MAP_POINTS; last++)
+   {
+     node = route[k++];
+     Path[++last].east_mm = Nodes[node].east_mm;
+     Path[last].north_mm  = Nodes[node].north_mm;
+     for (j = 0; j < 4; j++)
+     {
+       if (Nodes[node].destination[j] == route[k])
+       {
+         dist_mm = Nodes[node].Distance[j];
+       }
+     }
+     Path[last-1].Evector_x1000 = (Path[last].east_mm - Path[last-1].east_mm) * 1000 / dist_mm;
+     Path[last-1].Nvector_x1000 = (Path[last].north_mm - Path[last-1].north_mm) * 1000 / dist_mm;
+  }
+  Path[last] = destination;
+  for (k = 0; k < last; k++)
+  {
+     Path[last].sigma_mm = 10;  // map should be good to a cm.
+     Path[last].index = last;
+     Path[last].speed_mmPs = DESIRED_SPEED_mmPs;
+     Path[last].Compute_LatLon();  // this is never used
+  }
+  Path[last-1].index |= END;
+  return last;
+}  // end of BuildPath
+/*---------------------------------------------------------------------------------------*/
+
+int FindPath(waypoint *start, waypoint *destination)
 {
 
-  int last = 2;
-  int route[MAP_POINTS];
-  AStar Open[MAP_POINTS];
-  AStar Closed[MAP_POINTS];
-  int OpenIndex = 0;
-  int ClosedIndex = 1;
+  int ClosedCost[MAP_POINTS];
+//  int OpenIndex = 0;
+//  int ClosedIndex = 1;
   int i, j, k;
-  int NewCost;
+  int NewCost, NewStartCost, NewCostToGoal;
+  int NewIndex;
+  int BestCost, BestID;
   bool Processed = false;
-//  Location_mm loc_mm;
-  Open[0].CostFromStart = 0;
-  Open[0].CostToGoal = origin->distance_mm(destination);
-  Open[0].ParentID = 0;
-  Open[0].id = ORIGIN;  // the origin
-  while (OpenIndex >= 0)
-  {  // TO DO; pop lowest cost node from Open
-     i = Open[OpenIndex].id;
-     if (i == destination->index ||
-         i == destination->sigma_mm)
-        {  // TO DO: Maybe done; we have reached the node that leads to goal turn-off
-           // if really done, construct path backward to origin.
-          return last;
+  
+  for (i = 0; i < MAP_POINTS; i++)
+  { // mark all nodes as empty
+    Open[i].TotalCost = ClosedCost[i] = MAX_DISTANCE;
+  }
+
+   // get successor nodes of start
+   i = start->index;
+   Open[i].CostFromStart = start->distance_mm(Nodes[i].east_mm, Nodes[i].north_mm);
+   Open[i].CostToGoal = destination->distance_mm(Nodes[i].east_mm, Nodes[i].north_mm);
+   Open[i].TotalCost = Open[i].CostFromStart + Open[i].CostToGoal;
+   Open[i].ParentID = START;
+   i = start->sigma_mm;
+   Open[i].CostFromStart = start->distance_mm(Nodes[i].east_mm, Nodes[i].north_mm);
+   Open[i].CostToGoal = destination->distance_mm(Nodes[i].east_mm, Nodes[i].north_mm);
+   Open[i].TotalCost = Open[i].CostFromStart + Open[i].CostToGoal;
+   Open[i].ParentID = START;  
+  
+  BestCost = 0;
+  while (BestCost < MAX_DISTANCE)
+  { 
+     BestCost = MAX_DISTANCE;
+     // pop lowest cost node from Open; i.e. find index of lowest cost item
+     for (i = 0; i < MAP_POINTS; i++)
+     {
+        if (Open[i].TotalCost < BestCost)
+        {
+          BestID = i;
+          BestCost = Open[i].TotalCost;
         }
-    if (i == ORIGIN)
-    {  // get successor nodes of origin
-       OpenIndex++;
-       Open[OpenIndex].id = origin->index;
-       Open[OpenIndex].CostFromStart = origin->distance_mm
-         (Nodes[Open[OpenIndex].id].east_mm,Nodes[Open[OpenIndex].id].north_mm);
-       Open[OpenIndex].CostToGoal = destination->distance_mm
-         (Nodes[Open[OpenIndex].id].east_mm,Nodes[Open[OpenIndex].id].north_mm);
-       Open[OpenIndex].ParentID = ORIGIN;
-       OpenIndex++;
-       Open[OpenIndex].id = origin->sigma_mm;
-       Open[OpenIndex].CostFromStart = origin->distance_mm
-         (Nodes[Open[OpenIndex].id].east_mm,Nodes[Open[OpenIndex].id].north_mm);
-       Open[OpenIndex].CostToGoal = destination->distance_mm
-         (Nodes[Open[OpenIndex].id].east_mm,Nodes[Open[OpenIndex].id].north_mm);
-       Open[OpenIndex].ParentID = ORIGIN;
-    }
-    else
-    {  // get successor nodes from map
-      for (j = 0; j < 4; j++)
-      {
-        NewCost = Open[i].CostFromStart + Nodes[i].Distance[j];
-      }
-      // check if this node is already on Open or Closed.
-      Processed = false;
-      for (k = OpenIndex; k > 0; k--)
-      {
-          if (Open[k].id == Nodes[i].destination[i])
-          {
-            Processed = true;
-            break;
-          }                   
      }
-     if (Processed && Open[k].CostFromStart <= NewCost) 
-         continue;
-      for (k = ClosedIndex; k >= 0; k--)
-      {
-          if (Closed[k].id == Nodes[i].destination[i])
-          {
-            Processed = true;
-            break;
-          }      
-      }
-     if (Processed && Closed[k].CostFromStart <= NewCost) 
-         continue;
-    // store the new or improved information
-       OpenIndex++;
-       Open[OpenIndex].id = Nodes[i].destination[j];
-       Open[OpenIndex].CostFromStart = origin->distance_mm
-         (Nodes[Open[OpenIndex].id].east_mm, Nodes[Open[OpenIndex].id].north_mm);
-       Open[OpenIndex].CostToGoal = destination->distance_mm
-         (Nodes[Open[OpenIndex].id].east_mm, Nodes[Open[OpenIndex].id].north_mm);
-       Open[OpenIndex].ParentID = i;
-    // TO DO; if new node is in closed, remove new node from closed
-    // if new node is in open, adjust information
-    // else, add new node to open.
-    // } end Node not a goal
-    // if node is not a goal, push it onto Closed.
-    }  // end of succeessor from map.
+     Open[BestID].TotalCost = MAX_DISTANCE;  // Remove node from "stack".    
+     if (BestID == destination->index || BestID == destination->sigma_mm)
+        {  // Done; we have reached the node that leads to goal turn-off
+           // Construct path backward to start.
+           return BuildPath(BestID, start, destination);
+        }
+    // get successor nodes from map
+    i = BestID;
+    for (j = 0; j < 4; j++)
+    {
+        NewIndex = Nodes[i].destination[j];  
+        if (NewIndex == END)
+            continue;  // no successor in this slot
+        NewStartCost =  Open[i].CostFromStart + Nodes[i].Distance[j]; 
+        NewCostToGoal = destination->distance_mm
+         (Nodes[NewIndex].east_mm, Nodes[NewIndex].north_mm);
+        NewCost = NewStartCost + NewCostToGoal;
+        // check if this node is already on Open or Closed.
+        if (NewCost >= ClosedCost[NewIndex]) 
+            continue;  // Have already looked at this node
+        else if (ClosedCost[NewIndex] != MAX_DISTANCE)
+        {  // looked at this node before, but at a higher cost
+            ClosedCost[NewIndex] = MAX_DISTANCE;  // remove node from Closed
+        }
+        if (NewCost >= Open[NewIndex].TotalCost)
+            continue;   // This node is a less efficient way of getting to a node on the list.
+        // Push successor node onto stack.
+        Open[NewIndex].CostFromStart = NewStartCost;
+        Open[NewIndex].CostToGoal = NewCostToGoal;
+        Open[NewIndex].TotalCost = NewCost;
+        Open[NewIndex].ParentID = i;
+    }  // end of successor nodes
+    // Push node onto Closed
+    ClosedCost[BestID] =  BestCost; 
   }   // end of while Open is not empty
   
   return 0;  // failure
 }
 /*---------------------------------------------------------------------------------------*/
-// Low level path is a straight line from origin to detination.
+// Low level path is a straight line from start to detination.
 // PathPlan makes an intermediate level path that uses as many roads as possible.
- void PlanPath (waypoint *origin, waypoint *destination)
+ void PlanPath (waypoint *start, waypoint *destination)
  {
    waypoint roadOrigin, roadDestination;
-   Path[0] = origin;
+   Path[0] = start;
    Path[0] = 0;
 
-   FindClosestRoad( origin, &roadOrigin );
+   SendPath( start, 1);
+   SendPath( destination, 1);
+
+   FindClosestRoad( start, &roadOrigin );
    FindClosestRoad( destination, &roadDestination ); 
-   if  (abs(origin->east_mm  - roadOrigin.east_mm)
-      + abs(origin->north_mm - roadOrigin.north_mm)
+   SendPath( &roadOrigin, 1);
+   SendPath( &roadDestination, 1);
+   if  (abs(start->east_mm  - roadOrigin.east_mm)
+      + abs(start->north_mm - roadOrigin.north_mm)
       + abs(destination->east_mm  - roadDestination.east_mm)
       + abs(destination->north_mm - roadDestination.north_mm) >=
-        abs(origin->east_mm  - destination->east_mm)
-      + abs(origin->north_mm - destination->north_mm))
+        abs(start->east_mm  - destination->east_mm)
+      + abs(start->north_mm - destination->north_mm))
       {  // don't use roads; go direct
         Path[1] = destination;
         Path[1].index = 1 | END;
+        Serial.println("Direct route");
+        SendPath(Path, 2);
+        Serial.println(" ");
       }
       else
       {  // use A* with the road network
         Path[1] = roadOrigin;
         Path[1].index = 1;
+        Serial.println("Use A*");
+        SendPath(Path, 2);
+        Serial.println(" ");
         int last = FindPath(&roadOrigin, &roadDestination);
         Path[last] = destination;
         Path[last].index = last | END;
       }
  }
-/*---------------------------------------------------------------------------------------*/ 
+/*---------------------------------------------------------------------------------------*/
+// Transmit the path to C3 Pilot over a serial line.
+void SendPath(waypoint *course, int count)
+{
+  char *dataString;
+  for( int i = 0; i < count; i++)
+  {
+    dataString = course[i].formPointString();
+    checksum(dataString);
+    Serial.println(dataString);
+    if (course[i].index & END)
+        break;
+  }
+}
 /*---------------------------------------------------------------------------------------*/ 
 void initialize()
 {
@@ -397,30 +491,29 @@ void initialize()
        GetGoals(mission, CONES);
        
        // Send mission to C3.
-       SendMission();
+       SendPath(mission, CONES);
      
-     /* Plan a Path (using RNDF) between each Node. 
+     /* Plan a Path (using map) between each Node. 
      Use the A* algorithm as given in
-     Robin Murphy, Introduction to AI Robotics, MIT Press.
-     Steve Rabin (ed) AI Game Programming Wisdom, Charles River Media. */
-     
+     Bryan Stout "The Basics of A* for Path Planning" in
+     Mark DeLoura (ed) Game Programming Gems, Charles River Media, 2000. */
      
       PlanPath (&mission[0], &mission[1]);
      
      /*
-     PlanPath must also receive obstacle information from C5.
+     PlanPath does not look at obstacles; The Pilot (C3) does that.  As the vehicle 
+     position diverges from expectations due to obstacles, C4 keeps updating the plan.
      The output from PlanPath is a sequence of waypoints Path[] where each waypoint
-     is associated with a junction in the RNDF.  We must then supplement the junction
+     is associated with a junction.  We must then supplement the junction
      points with all the intermediate non-junction points in the RNDF so that
      the vehicle can follow curves in the road. The first section of this is Route.
      
-     We now have a sequence of RNDF segments that defines the mission from
+     We now have a sequence of segments that defines the mission from
      the origin to the destination.
      
-     We do not need finer grain that the Route waypoints from the RNDF, since each of them is 
-     implicitly linked by a cubic curve, which defines a smoother path than
-     line segments would. To find the points in between the RNDF waypoints,
-     use the function GetPosition. */
+     We will need finer grain that the Route waypoints from the map. */
+     
+     SendPath(Path, MAX_WAYPOINTS);
     
      /* Read vehicle position, attitude and velocity.
      ReceiveState(C6); 
@@ -443,93 +536,6 @@ void initialize()
         fed back to C4.
         SendState(C6); */
 }
-/*---------------------------------------------------------------------------------------*/ 
-/* Given a pair of waypoints and a parameter t, MakeCurve finds an intermediate waypoint
-   on a smooth Hermite curve connecting them.
-   0 < t < 1.
-   Unfortunately, t is non linear.
-   What we would really like is to know the distance from start to End along the curve,
-   so that we could find a waypoint corresponding to a fraction of that distance.
-   The distance along a Hermite (equivalently Bezier) curve cannot be found in closed form.
-   Instead we can use t to find a sequence of points connecting start and End.
-   If the straight line distance between any of these intermediate points is too large,
-   subdivide with an intermediate value of t.
-
-void MakeCurve(waypoint *start, waypoint *End, float t, waypoint *newp)
-{
-	double p0, p1, p2, p3;
-	double q0, q1, q2, q3;
-	double angle;
-	double dx, dy, cos_end, sin_end;
-	p0 = (double) start->east_mm;
-	q0 = (double) start->north_mm;
-//	angle = (90-start->bearing) * PI / 180;
-	p1 = (double)(start->Evector_x1000) / 1000.;
-	q1 = (double)(start->Nvector_x1000) / 1000.;
-	dx = (double) End->east_mm - p0;
-	dy = (double) End->north_mm - q0;
-//	angle = (90-End->bearing) * PI / 180;
-	cos_end = (double)(End->Evector_x1000) / 1000.;
-	sin_end = (double)(End->Nvector_x1000) / 1000.;
-	p2 = 3*dx - (2*p1 + cos_end);
-	q2 = 3*dy - (2*q1 + sin_end);
-	p3 = -2*dx + p1 + cos_end;
-	q3 = -2*dy + q1 + sin_end;
-	newp->east_mm  = (long) (p0 + t*(p1 + t*(p2 + t*p3)));
-	newp->north_mm = (long) (q0 + t*(q1 + t*(q2 + t*q3)));
-}
-*/
-/*---------------------------------------------------------------------------------------*/ 
-/*  GetPosition is a more general interface to MakeCurve.
-    Here t can be any value. The integral part counts the segments that make up the curve.
-
-void GetPosition(curve *path, float t, waypoint *newp)
-{
-	curve *start = path;
-	curve *End;
-	newp->latitude = INVALID;
-	newp->longitude = INVALID;
-	newp->east_mm = 0;
-	newp->north_mm = 0;
-	newp->Evector_x1000 = INVALID;
-	newp->Nvector_x1000 = INVALID;
-	if (path->present == NULL) return;
-	if (t == 0 || (t > 0 && path->next == NULL) ||
-		(t < 0 && path->previous == NULL))
-	{
-              newp = path->present;
-	      return;
-	}
-	while (t++ < 1)
-	{
-		start = start->previous;
-		End =   start->previous;
-		if (End == NULL)
-		{
-			newp =  start->present;
-			return;
-		}
-	}
-		while (t-- > 1)
-	{
-		start = start->next;
-		End =   start->next;
-		if (End == NULL)
-		{
-			newp =  start->present;
-			return;
-		}
-	}
-	if (t < 0)
-		t = -t;
-	if (t == 1)
-	{
-		newp =  End->present;
-		return;
-	}
-	MakeCurve( start->present, End->present, t, newp);
-}
-*/
 /*---------------------------------------------------------------------------------------*/ 
 void setup() 
 { 
