@@ -141,8 +141,6 @@ bool readline(int channel)
   }
 }
 
-double CosLatitude;
-
 /* There are more accurate ways to compute distance between two latitude and longitude points.
    We use a simple approximation, since we are interesed in a flat projection over a small area.
    Curvature of the earth is not significant.
@@ -153,7 +151,7 @@ void waypoint::Compute_mm()
     long diff;
     double relative;
     diff = longitude - LONGITUDE_ORIGIN;
-    relative = ((double) diff)/1000000. * TO_RADIANS * CosLatitude;
+    relative = ((double) diff)/1000000. * TO_RADIANS * COS_LAT;
     relative *= EARTH_RADIUS_MM;
     east_mm = relative;
     diff = latitude - LATITUDE_ORIGIN;
@@ -164,7 +162,7 @@ void waypoint::Compute_LatLon()
 {
     long diff;
     double relative;
-    relative = ((double)east_mm) * (1000000 / (EARTH_RADIUS_MM * TO_RADIANS * CosLatitude));  
+    relative = ((double)east_mm) * (1000000 / (EARTH_RADIUS_MM * TO_RADIANS * COS_LAT));  
     diff = relative;
     longitude = diff + LONGITUDE_ORIGIN;
     relative = ((double)north_mm) * (1000000 / (EARTH_RADIUS_MM * TO_RADIANS));  
@@ -189,7 +187,7 @@ char* waypoint::formPointString()
   northFraction = north_mm >= 0? north_mm%1000   : (-north_mm)%1000;
   speedFraction = speed_mmPs>=0? speed_mmPs%1000 : (-speed_mmPs)%1000;
   sprintf(dataString, 
-  "$POINT,%ld.%0.3ld,%ld.%0.3ld,%ld.%0.3ld,%ld.%0.3ld,%ld.%0.3ld,%d,%d,%d*",
+  "$POINT,%ld.%0.3ld,%ld.%0.3ld,%ld.%0.3ld,%ld.%0.3ld,%ld.%0.3ld,%d,%d,%d*\r\n",
   east_mm/1000, eastFraction, north_mm/1000, northFraction, 
   sigma_mm/1000, sigma_mm%1000, time_ms/1000, time_ms%1000,
   speed_mmPs/1000, speed_mmPs%1000, Evector_x1000, Nvector_x1000, index);  

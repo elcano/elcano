@@ -14,6 +14,7 @@
 #define PId 3.14159265358979
 #define PI ((float) 3.1415925)
 #define TO_RADIANS (PId/180.)
+#define COS_LAT (cos(((double) LATITUDE_ORIGIN)/1000000. * TO_RADIANS))
 // The buffer size that will hold a GPS sentence. They tend to be 80 characters long.
 // Got weird results with 90; OK with 120.
 #define BUFFSIZ 120
@@ -24,7 +25,7 @@
 // A bit flag for index that indicates this waypoint is the last in a sequence.
 #define END  0x04000
 // index bit map showing that waypoint is a goal
-#define GOAL 0x08000 
+#define GOAL 0x02000 
 #define MAX_DISTANCE 0x7fffffff
 // value if latitude, longitude or bearing is missing.
 #define INVALID MAX_DISTANCE
