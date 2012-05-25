@@ -22,7 +22,7 @@ bool checksum(char* msg)
          msg[i+1] = msb>9? 'A'+msb-10 : '0'+msb;
          int lsb = (sum&0x0F);
          msg[i+2] = lsb>9? 'A'+lsb-10 : '0'+lsb;
-         msg[i+3] = '\n';
+ //      msg[i+3] = '\n';  // rely on Serial.println()
          return true;
       }
       sum ^= msg[i];
@@ -189,7 +189,7 @@ char* waypoint::formPointString()
   northFraction = north_mm >= 0? north_mm%1000   : (-north_mm)%1000;
   speedFraction = speed_mmPs>=0? speed_mmPs%1000 : (-speed_mmPs)%1000;
   sprintf(dataString, 
-  "%ld.%0.3ld,%ld.%0.3ld,%ld.%0.3ld,%ld.%0.3ld,%ld.%0.3ld,%d,%d,%d",
+  "$POINT,%ld.%0.3ld,%ld.%0.3ld,%ld.%0.3ld,%ld.%0.3ld,%ld.%0.3ld,%d,%d,%d*",
   east_mm/1000, eastFraction, north_mm/1000, northFraction, 
   sigma_mm/1000, sigma_mm%1000, time_ms/1000, time_ms%1000,
   speed_mmPs/1000, speed_mmPs%1000, Evector_x1000, Nvector_x1000, index);  
@@ -232,5 +232,33 @@ void waypoint::operator=(waypoint& right)
   speed_mmPs = right.speed_mmPs;
   index    =   right.index;
   return;
+}
+void waypoint::operator=(waypoint* right)
+{
+  latitude =   right->latitude;
+  longitude =  right->longitude;
+  east_mm =    right->east_mm;
+  north_mm =   right->north_mm;
+  sigma_mm =   right->sigma_mm;
+  time_ms =    right->time_ms;  
+  Evector_x1000  =   right->Evector_x1000;
+  Nvector_x1000  =   right->Nvector_x1000;
+  speed_mmPs = right->speed_mmPs;
+  index    =   right->index;
+  return;
+}
+long  waypoint::distance_mm(waypoint *other)
+{
+  double deltaX, deltaY;
+  deltaX = east_mm - other->east_mm;
+  deltaY = north_mm - other->north_mm;
+  return sqrt(deltaX*deltaX + deltaY*deltaY);
+}
+long  waypoint::distance_mm(long east_mm, long north_mm)
+{
+  double deltaX, deltaY;
+  deltaX = east_mm - east_mm;
+  deltaY = north_mm - north_mm;
+  return sqrt(deltaX*deltaX + deltaY*deltaY);
 }
 

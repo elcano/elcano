@@ -1,4 +1,9 @@
 // Common.h - header included for all Elcano modules
+#ifndef MEGA
+#define Serial1 Serial
+#define Serial2 Serial
+#define Serial3 Serial
+#endif
 
 // latitude and longitude are multiplied by 1,000,000.
 // (47.621300, -122.350900) is Seattle Center House.
@@ -13,14 +18,16 @@
 // Got weird results with 90; OK with 120.
 #define BUFFSIZ 120
 #define MAX_MISSION 6
-// value if latitude, longitude or bearing is missing.
-#define INVALID 10000000
 #define MEG 1000000
 // setting of index to indicate a navigation fix
 #define POSITION -1
 // A bit flag for index that indicates this waypoint is the last in a sequence.
-#define END 0x04000
+#define END  0x04000
+// index bit map showing that waypoint is a goal
+#define GOAL 0x08000 
 #define MAX_DISTANCE 0x7fffffff
+// value if latitude, longitude or bearing is missing.
+#define INVALID MAX_DISTANCE
 
 #define WHEEL_BASE_mm         800
 #define TURNING_RADIUS_mm    4000
@@ -35,6 +42,7 @@
 // 10 mph = 4.44 m/s
 #define MAX_SPEED_mmPs       4444
 
+bool checksum(char* msg);
 
 class waypoint // best estimate of position and state
 // used either for a waypoint or a measured navigational fix
@@ -73,6 +81,9 @@ class waypoint // best estimate of position and state
     char* formPointString();
     bool readPointString(char *buffer, unsigned long max_wait_ms, int channel);
     void   operator=(waypoint& other);
+    void   operator=(waypoint* other);
+    long  distance_mm(waypoint *other);
+    long  distance_mm(long east_mm, long north_mm);
 };
 
 struct curve
@@ -83,16 +94,20 @@ struct curve
   curve    *next;
 };
 
+struct Location_mm
+{
+  long x, y;
+};
 struct junction
 {
-  waypoint *location;  // bearing is set to INVALID
-  junction *destination[4];  
+  long east_mm, north_mm;
+  int destination[4];  
   // Where there are < 4 destinations, some pointers are NULL
   // If there are more than 4 destinations, one of the destinations has same location and
   // zero Distance.
   int Distance[4];  // mm
-  int Speed[4];     // mm / s
-  curve *route[4];  // intermediate waypoints between location and Destination.
+//  int Speed[4];     // mm / s
+//  curve *route[4];  // intermediate waypoints between location and Destination.
   // location != route[n]->present
   // The vehicle does not pass though location if it is turning.  
   // The vehicle travels from (the last waypoint of the curve leading into the junction)
