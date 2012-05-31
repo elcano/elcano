@@ -1,4 +1,6 @@
 // Common.h - header included for all Elcano modules
+#define MEGA 
+
 #ifndef MEGA
 #define Serial1 Serial
 #define Serial2 Serial
@@ -88,6 +90,14 @@ class waypoint // best estimate of position and state
     long  distance_mm(waypoint *other);
     void  vectors(waypoint *other);
     long  distance_mm(long east_mm, long north_mm);
+#ifdef MEGA
+// The following waypoint methods exist only on the C6 Navigator module.    
+    void fuse(waypoint GPS_reading, int deltaT_ms);
+    char* GetLatLon(char* parseptr);
+    bool AcquireGPRMC(unsigned long max_wait_ms);
+    bool AcquireGPGGA(unsigned long max_wait_ms);
+    void SetTime(char *pTime, char * pDate);
+#endif
 };
 
 struct curve

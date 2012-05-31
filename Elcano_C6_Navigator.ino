@@ -4,9 +4,9 @@ Elcano Module C6: Navigator.
   
 Copy the following software files to an Elcano_C6_Navigator directory:
   Elcano_C6_Navigator.ino; add new tabs with the following names and copy contents
-  C6_IO.h
-  GPS.cpp
-  GPS.h
+  IO.h
+  Common.cpp
+  Common.h
   KalmanFilter.cpp
   Matrix.cpp
   Matrix.h
@@ -82,8 +82,9 @@ Serial lines:
 */
 
 /*---------------------------------------------------------------------------------------*/ 
-#include "GPS.h"
-#include "C6_IO.h"
+
+#include "Common.h"
+#include "IO.h"
 #include "Matrix.h"  
 #include <SD.h>
 
@@ -143,16 +144,16 @@ volatile long SpeedCyclometer_degPs;
 // waypoint mission[MAX_WAYPOINTS];
 waypoint GPS_reading;
 waypoint estimated_position;
-instrument IMU;
+//instrument IMU;
 const unsigned long LoopPeriod = 100;  // msec
 //---------------------------------------------------------------------------
 char* obstacleDetect()
 {
 // Calibration shows that readings are 5 cm low.
 #define OFFSET 5
-    int LeftRange =  analogRead(Left) + OFFSET;
-    int Range =      analogRead(Front) + OFFSET;
-    int RightRange = analogRead(Right) + OFFSET;
+    int LeftRange =  analogRead(LEFT) + OFFSET;
+    int Range =      analogRead(FRONT) + OFFSET;
+    int RightRange = analogRead(RIGHT) + OFFSET;
 
   sprintf(ObstacleString, 
   "%d.%0.2d,%d.%0.2d,%d.%0.2d,",
@@ -178,28 +179,6 @@ void WheelRev()
     SpeedCyclometer_mmPs  = (WHEEL_DIAMETER_MM * MEG * PI) / WheelRevMicros;
     Odometer_mm += WHEEL_DIAMETER_MM * PI;
     OldTick = TickTime;
-}
-/*---------------------------------------------------------------------------------------*/ 
-bool checksum(char* msg)
-// Assume that message starts with $ and ends with *
-{
-    int sum = 0;
-    if(msg[0] != '$')
-      return false;
-    for (int i = 1; i < BUFFSIZ-4; i++)
-    {
-      if(msg[i] == '*')
-      {
-         int msb = (sum>>4);
-         msg[i+1] = msb>9? 'A'+msb-10 : '0'+msb;
-         int lsb = (sum&0x0F);
-         msg[i+2] = lsb>9? 'A'+lsb-10 : '0'+lsb;
-         msg[i+3] = '\n';
-         return true;
-      }
-      sum ^= msg[i];
-    }
-    return false;
 }
 /*---------------------------------------------------------------------------------------*/ 
 
@@ -234,8 +213,7 @@ void initialize()
   Serial.println(ObstHeader);
   if (GPS_available)
   {
-    estimated_position.sigmaE_mm = 1.0E4; // 10 m standard deviation
-    estimated_position.sigmaN_mm = 1.0E4;
+    estimated_position.sigma_mm = 1.0E4; // 10 m standard deviation
 //    Serial.println("OK");
   }
   else
@@ -243,17 +221,17 @@ void initialize()
     estimated_position.latitude = 47.62130;  // set by hand here
     estimated_position.longitude = -122.35090;
     estimated_position.Compute_mm();
-    estimated_position.sigmaE_mm = 1.0E5; // 100 m standard deviation
-    estimated_position.sigmaN_mm = 1.0E5;
+    estimated_position.sigma_mm = 1.0E5; // 100 m standard deviation
     estimated_position.time_ms = millis();
 //    Serial.println("Failed");
   }
   // Set velocity and acceleration to zero.
   estimated_position.speed_mmPs = 0;
   // Set attitude.
-  estimated_position.bearing = 0;  // to be taken from path or set by hand
+  estimated_position.Evector_x1000 = 1000;  // to be taken from path or set by hand
+  estimated_position.Nvector_x1000 = 0;
   GPS_reading = estimated_position;
-  GPSString = estimated_position.formDataString();  
+  GPSString = estimated_position.formPointString();  
   Serial.println(GPSString);
   // Set Odometer to 0.
   // Set lateral deviation to 0.
@@ -413,11 +391,11 @@ void loop()
     if (GPS_available) 
     {
         digitalWrite(GPS_GREEN_LED, HIGH);
-        pGPS = GPS_reading.formDataString();
+        pGPS = GPS_reading.formPointString();
         if (dataFile) dataFile.print(pGPS);
         // print to the serial port too:
         Serial.print(pGPS);
-        pData = estimated_position.formDataString();
+        pData = estimated_position.formPointString();
         if (dataFile) dataFile.print(pData);
         Serial.print(pData);
         Serial3.print(pData);  // send data to C4 path planner
@@ -471,7 +449,7 @@ void Show(char* x)
 void Show(REAL x)
 {
 //  Serial.print(x);
-//   Serial.print(", ");
+//  Serial.print(", ");
 }
 #endif
 
