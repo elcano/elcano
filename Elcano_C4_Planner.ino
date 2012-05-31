@@ -117,9 +117,9 @@ struct junction Nodes[MAP_POINTS] = {
 struct AStar
 {
     int ParentID;
-    int CostFromStart;
-    int CostToGoal;
-    int TotalCost;
+    long CostFromStart;
+    long CostToGoal;
+    long TotalCost;
 } Open[MAP_POINTS];
 
 class waypoint Origin, Start;
@@ -134,16 +134,18 @@ int waypoints = CONES;
 void ConstructNetwork(junction *Map, int MapPoints)
 {
   double deltaX, deltaY;
+  int jj;
   for (int i = 0; i < MapPoints; i++)
   {
       if( Map[i].east_mm == INVALID)  continue;
       for (int j = 0;  j< 4; j++)
       {
-        if (Map[i].destination[j] == END) continue;
+        jj = Map[i].destination[j];
+        if (jj == END) continue;
         deltaX = Map[i].east_mm;
-        deltaX -= Map[Map[i].destination[j]].east_mm;
+        deltaX -= Map[jj].east_mm;
         deltaY = Map[i].north_mm;
-        deltaY -= Map[Map[i].destination[j]].north_mm;
+        deltaY -= Map[jj].north_mm;
         // Distance[] is initially a roughness scale.
         Map[i].Distance[j] *= sqrt(deltaX*deltaX + deltaY*deltaY);
       }
@@ -191,40 +193,67 @@ void GetGoals(waypoint *Waypoint, int Goals)
 /*---------------------------------------------------------------------------------------*/
 // Find the distance from (east_mm, north_mm) to a road segment Nodes[i].distance[j]
 // return distance in mm, and per cent of completion from i to j.
+// distance is negative if (east_mm, north_mm) lies to the left of the road
+// when road direction is from i to j
 
 // Compare this routine to distance() in C3 Pilot
-int distance(int i, int *k,  // index into Nodes[]
-     int east_mm, int north_mm,
+long distance(int i, int *k,  // index into Nodes[]
+     long east_mm, long north_mm,
     int* perCent)  // per cent of segment that has been completed
 {
   float deltaX, deltaY, dist_mm;
-  int j, Eunit_x1000, Nunit_x1000;
-  int closest_mm = MAX_DISTANCE; 
-  int Road_distance;
-  int pathCompletion;
+  int j, jj;
+  long Eunit_x1000, Nunit_x1000;
+  long closest_mm = MAX_DISTANCE; 
+  long Road_distance, RoadDX_mm, RoadDY_mm;
+//  int pathCompletion;
+  long pc;
   
   *perCent = 0;
   *k = 0;
   closest_mm = MAX_DISTANCE;
   for (j=0; j < 4; j++)
   {   // Don't make computations twice.
-      if (Nodes[i].destination[j] == END || Nodes[i].destination[j] < i) continue;    
+      jj = Nodes[i].destination[j];
+      if (jj == END || jj < i) continue;    
       // compute road unit vectors from i to j
-      int Eunit_x1000 = (Nodes[j].east_mm -  Nodes[i].east_mm)  * 1000 / Nodes[i].Distance[j];
-      int Nunit_x1000 = (Nodes[j].north_mm - Nodes[i].north_mm) * 1000 / Nodes[i].Distance[j];
+      RoadDX_mm = -Nodes[i].east_mm + Nodes[jj].east_mm;
+      int Eunit_x1000 = RoadDX_mm  * 1000 / Nodes[i].Distance[j];
+      RoadDY_mm = -Nodes[i].north_mm + Nodes[jj].north_mm;
+      int Nunit_x1000 = RoadDY_mm * 1000 / Nodes[i].Distance[j];
+//      if (abs(RoadDX_mm) >= abs(RoadDY_mm))
+//      {
+//          pathCompletion = 100 * (east_mm - Nodes[i].east_mm) / RoadDX_mm;
+//      }
+//      else
+//      {
+//          pathCompletion = 100 * (north_mm - Nodes[i].north_mm) / RoadDY_mm;
+//      }
       // normal vector is (Nunit, -Eunit)
-      deltaX = east_mm  - Nodes[i].east_mm;
-      deltaY = north_mm - Nodes[i].north_mm;
-      dist_mm = sqrt(deltaX*deltaX + deltaY*deltaY);
-      pathCompletion = Nunit_x1000 * dist_mm / 10; 
+      deltaX = -Nodes[i].east_mm + east_mm ;
+      deltaY = -Nodes[i].north_mm + north_mm;
       // sign of return value gives which side of road it is on.
-      Road_distance = (-Eunit_x1000 * dist_mm) / 1000;
+      Road_distance = (-deltaY * Eunit_x1000 + deltaX * Nunit_x1000) / 1000;
+      pc =             (deltaX * Eunit_x1000 + deltaY * Nunit_x1000) / (Nodes[i].Distance[j] * 10);
+  /*    
+      Serial.print("(");   Serial.print(east_mm);  Serial.print(", ");
+      Serial.print(north_mm);  Serial.print(") ");
+      Serial.print("(");   Serial.print(Nodes[i].east_mm);  Serial.print(", ");
+      Serial.print(Nodes[i].north_mm);  Serial.print(") ");
+      Serial.print("(");   Serial.print(Nodes[jj].east_mm);  Serial.print(", ");
+      Serial.print(Nodes[jj].north_mm);  Serial.print(") ");
+      Serial.print(Nodes[i].Distance[j]); Serial.print("(");   Serial.print(Eunit_x1000);  Serial.print(", ");
+      Serial.print(Nunit_x1000);  Serial.print(") ");
+      Serial.print("(");   Serial.print(Road_distance);  Serial.print(", ");
+//      Serial.print(pathCompletion);   Serial.print(", "); 
+      Serial.print(pc); Serial.println(") ");
+ */
       if (abs(Road_distance) < abs(closest_mm) &&
-          pathCompletion >= 0 && pathCompletion <= 100)
+          pc >= 0 && pc <= 100)
       {
           closest_mm = Road_distance;
-          *k = j;
-          *perCent = pathCompletion;
+          *k = jj;
+          *perCent = pc;
       }
   }
   return closest_mm;
@@ -237,27 +266,38 @@ void FindClosestRoad(waypoint *start,
   long closest_mm = MAX_DISTANCE;
   long dist;
   int close_index;
-  int perCent, done;
+  int perCent;
+  long done = 2000;
   int i, j;
   // find closest road.
   for (i = 0; i < MAP_POINTS; i++)
   {
     dist = distance(i, &j, start->east_mm, start->north_mm, &perCent);
-    if (dist < closest_mm)
+    if (abs(dist) < abs(closest_mm))
     {
-      close_index = i;
+      close_index = j;
       closest_mm = dist;
       done = perCent;
       road->index = i;
-      road->sigma_mm = Nodes[i].destination[j];
+      road->sigma_mm = j;
     }
   }
   if (closest_mm < MAX_DISTANCE)
   {
-    Serial.println(done);
-    road->east_mm =  Nodes[i].east_mm  + done *(Nodes[j].east_mm  - Nodes[i].east_mm) / 100;
-    road->north_mm = Nodes[i].north_mm + done *(Nodes[j].north_mm - Nodes[i].north_mm) / 100;
-  }
+//    Serial.println(done);
+    i = road->index;
+    j = close_index;
+    road->east_mm =  Nodes[i].east_mm  + 
+      done *(Nodes[j].east_mm  - Nodes[i].east_mm) / 100;
+    road->north_mm = Nodes[i].north_mm + 
+      done *(Nodes[j].north_mm - Nodes[i].north_mm) / 100;
+ /*   Serial.print("(");   Serial.print(Nodes[i].east_mm);  Serial.print(", ");
+      Serial.print(Nodes[i].north_mm);  Serial.print(") ");
+      Serial.print("(");   Serial.print(Nodes[j].east_mm);  Serial.print(", ");
+      Serial.print(Nodes[j].north_mm);  Serial.print(") ");
+      Serial.print("(");   Serial.print(road->east_mm);  Serial.print(", ");
+      Serial.print(road->north_mm);  Serial.print(") "); Serial.println(j); */
+ }
   else
   { // find closest node
      for (i = 0; i < MAP_POINTS; i++)
@@ -273,6 +313,10 @@ void FindClosestRoad(waypoint *start,
     road->east_mm =  Nodes[close_index].east_mm;
     road->north_mm = Nodes[close_index].north_mm;
   }
+  road->Evector_x1000 = 1000;
+  road->Nvector_x1000 = 0;
+  road->time_ms = 0;
+  road->speed_mmPs = DESIRED_SPEED_mmPs;
 }
 /*---------------------------------------------------------------------------------------*/
 // start and destination are on the road network given in Nodes.
@@ -289,42 +333,43 @@ int BuildPath (int j, waypoint* start, waypoint* destination)
 {
    // Done; we have reached the node that leads to goal turn-off
    // Construct path backward to start.
-  int last = 0;
+  int last = 1;
   int route[MAP_POINTS];
   int i, k, node;
   long dist_mm;
 
    k = MAP_POINTS-1;
-   route[k--] = j;
+   route[k] = j;
+//   Serial.println(k);
    while(Open[j].ParentID != START)
    {
-      j = route[k--] = Open[j].ParentID;
+      j = route[--k] = Open[j].ParentID;
+ //     Serial.println(k);
    }
    Path[last] = start;
-   for ( ; k < MAP_POINTS; last++)
+   for ( ; k < MAP_POINTS; k++)
    {
-     node = route[k++];
+     node = route[k];
      Path[++last].east_mm = Nodes[node].east_mm;
      Path[last].north_mm  = Nodes[node].north_mm;
-     for (j = 0; j < 4; j++)
-     {
-       if (Nodes[node].destination[j] == route[k])
-       {
-         dist_mm = Nodes[node].Distance[j];
-       }
-     }
-     Path[last-1].Evector_x1000 = (Path[last].east_mm - Path[last-1].east_mm) * 1000 / dist_mm;
-     Path[last-1].Nvector_x1000 = (Path[last].north_mm - Path[last-1].north_mm) * 1000 / dist_mm;
+ //    Serial.print(last); Serial.print(", "); 
+ //    Serial.print(Path[last].east_mm); Serial.print(", ");
+ //    Serial.println(Path[last].north_mm); 
   }
-  Path[last] = destination;
-  for (k = 0; k < last; k++)
+  Path[++last] = destination;
+  for (k = 0; k <= last; k++)
   {
-     Path[last].sigma_mm = 10;  // map should be good to a cm.
-     Path[last].index = last;
-     Path[last].speed_mmPs = DESIRED_SPEED_mmPs;
-     Path[last].Compute_LatLon();  // this is never used
+     if(k > 0) Path[k].sigma_mm = 10;  // map should be good to a cm.
+     Path[k].index = k;
+     Path[k].speed_mmPs = DESIRED_SPEED_mmPs;
+     Path[k].Compute_LatLon();  // this is never used
   }
-  Path[last-1].index |= END;
+  last++;
+  for (j = 0; j < last-1; j++)
+  {
+      Path[j].vectors(&Path[j+1]);
+  }
+
   return last;
 }  // end of BuildPath
 /*---------------------------------------------------------------------------------------*/
@@ -332,18 +377,19 @@ int BuildPath (int j, waypoint* start, waypoint* destination)
 int FindPath(waypoint *start, waypoint *destination)
 {
 
-  int ClosedCost[MAP_POINTS];
+  long ClosedCost[MAP_POINTS];
 //  int OpenIndex = 0;
 //  int ClosedIndex = 1;
-  int i, j, k;
-  int NewCost, NewStartCost, NewCostToGoal;
-  int NewIndex;
-  int BestCost, BestID;
+  int  i, j, k;
+  long NewCost, NewStartCost, NewCostToGoal;
+  long NewIndex;
+  long BestCost, BestID;
   bool Processed = false;
   
   for (i = 0; i < MAP_POINTS; i++)
   { // mark all nodes as empty
-    Open[i].TotalCost = ClosedCost[i] = MAX_DISTANCE;
+    Open[i].TotalCost = MAX_DISTANCE;
+    ClosedCost[i] = MAX_DISTANCE;
   }
 
    // get successor nodes of start
@@ -352,33 +398,52 @@ int FindPath(waypoint *start, waypoint *destination)
    Open[i].CostToGoal = destination->distance_mm(Nodes[i].east_mm, Nodes[i].north_mm);
    Open[i].TotalCost = Open[i].CostFromStart + Open[i].CostToGoal;
    Open[i].ParentID = START;
+//   SendPath(start, 1);
+//   SendPath(destination, 1);
+//   Serial.println(i);
    i = start->sigma_mm;
    Open[i].CostFromStart = start->distance_mm(Nodes[i].east_mm, Nodes[i].north_mm);
    Open[i].CostToGoal = destination->distance_mm(Nodes[i].east_mm, Nodes[i].north_mm);
    Open[i].TotalCost = Open[i].CostFromStart + Open[i].CostToGoal;
    Open[i].ParentID = START;  
-  
+//   Serial.println(i);
+//   Serial.println("Start A*");
+//  Serial.flush();
   BestCost = 0;
   while (BestCost < MAX_DISTANCE)
   { 
      BestCost = MAX_DISTANCE;
+     BestID = -1;
+//     Serial.println(BestCost);
      // pop lowest cost node from Open; i.e. find index of lowest cost item
      for (i = 0; i < MAP_POINTS; i++)
      {
+//       Serial.print(i); Serial.print(", "); Serial.print(Open[i].TotalCost); 
+//       Serial.print(", "); Serial.println(ClosedCost[i]);
         if (Open[i].TotalCost < BestCost)
         {
           BestID = i;
           BestCost = Open[i].TotalCost;
-        }
+//     Serial.print("Best: "); Serial.print(i); Serial.print(", "); Serial.println(BestCost);
+       }
+     }
+     if (BestID < 0)
+     {
+//       Serial.println("No path found.");
+//       Serial.flush();
+       return INVALID;
      }
      Open[BestID].TotalCost = MAX_DISTANCE;  // Remove node from "stack".    
      if (BestID == destination->index || BestID == destination->sigma_mm)
         {  // Done; we have reached the node that leads to goal turn-off
            // Construct path backward to start.
-           return BuildPath(BestID, start, destination);
+//          Serial.println("Found a path.");
+//          Serial.flush();
+          return BuildPath(BestID, start, destination);
         }
     // get successor nodes from map
     i = BestID;
+//    Serial.print(i); Serial.print(", "); Serial.println(BestCost);
     for (j = 0; j < 4; j++)
     {
         NewIndex = Nodes[i].destination[j];  
@@ -412,19 +477,22 @@ int FindPath(waypoint *start, waypoint *destination)
 /*---------------------------------------------------------------------------------------*/
 // Low level path is a straight line from start to detination.
 // PathPlan makes an intermediate level path that uses as many roads as possible.
- void PlanPath (waypoint *start, waypoint *destination)
+ int PlanPath (waypoint *start, waypoint *destination)
  {
    waypoint roadOrigin, roadDestination;
+   int last = 0;
    Path[0] = start;
-   Path[0] = 0;
+   Path[0].index = 0;
 
-   SendPath( start, 1);
-   SendPath( destination, 1);
+//   SendPath( start, 1);
+//   SendPath( destination, 1);
 
    FindClosestRoad( start, &roadOrigin );
    FindClosestRoad( destination, &roadDestination ); 
-   SendPath( &roadOrigin, 1);
-   SendPath( &roadDestination, 1);
+//   SendPath( start, 1);
+//   SendPath( destination, 1);
+//   SendPath( &roadOrigin, 1);
+//   SendPath( &roadDestination, 1);
    if  (abs(start->east_mm  - roadOrigin.east_mm)
       + abs(start->north_mm - roadOrigin.north_mm)
       + abs(destination->east_mm  - roadDestination.east_mm)
@@ -432,23 +500,24 @@ int FindPath(waypoint *start, waypoint *destination)
         abs(start->east_mm  - destination->east_mm)
       + abs(start->north_mm - destination->north_mm))
       {  // don't use roads; go direct
-        Path[1] = destination;
-        Path[1].index = 1 | END;
-        Serial.println("Direct route");
-        SendPath(Path, 2);
-        Serial.println(" ");
+        last = 1;
+//        Serial.println("Direct route");
       }
       else
       {  // use A* with the road network
         Path[1] = roadOrigin;
         Path[1].index = 1;
-        Serial.println("Use A*");
-        SendPath(Path, 2);
-        Serial.println(" ");
-        int last = FindPath(&roadOrigin, &roadDestination);
-        Path[last] = destination;
-        Path[last].index = last | END;
+//        Serial.println("Use A*");
+//        SendPath(Path, 2);
+        last = FindPath(&roadOrigin, &roadDestination);
+//        Serial.print("A* finds last =  "); Serial.println(last);
       }
+    Path[last] = destination;
+    Path[last-1].vectors(&Path[last]);
+    Path[last].Evector_x1000 = Path[last-1].Evector_x1000;
+    Path[last].Nvector_x1000 = Path[last-1].Nvector_x1000;
+    Path[last].index = last | END;
+    return last;
  }
 /*---------------------------------------------------------------------------------------*/
 // Transmit the path to C3 Pilot over a serial line.
@@ -467,6 +536,7 @@ void SendPath(waypoint *course, int count)
 /*---------------------------------------------------------------------------------------*/ 
 void initialize()
 {
+  int last; 
   Origin.Evector_x1000 = INVALID; 
   Origin.Nvector_x1000 = INVALID; 
   Origin.east_mm = 0;
@@ -492,13 +562,14 @@ void initialize()
        
        // Send mission to C3.
        SendPath(mission, CONES);
-     
+      Serial.println();     
      /* Plan a Path (using map) between each Node. 
      Use the A* algorithm as given in
      Bryan Stout "The Basics of A* for Path Planning" in
      Mark DeLoura (ed) Game Programming Gems, Charles River Media, 2000. */
      
-      PlanPath (&mission[0], &mission[1]);
+      last = PlanPath (&mission[0], &mission[1]);
+      Path[last].index |= GOAL;
      
      /*
      PlanPath does not look at obstacles; The Pilot (C3) does that.  As the vehicle 
@@ -514,6 +585,7 @@ void initialize()
      We will need finer grain that the Route waypoints from the map. */
      
      SendPath(Path, MAX_WAYPOINTS);
+      Serial.println();     
     
      /* Read vehicle position, attitude and velocity.
      ReceiveState(C6); 
@@ -543,6 +615,9 @@ void setup()
         pinMode(Tx0, OUTPUT);
         pinMode(LED, OUTPUT); 
      	Serial.begin(9600); 
+        Serial.flush();
+        Serial.println();
+        Serial.println();
         pinMode(DATA_READY, INPUT);
         DataAvailable = false;
         attachInterrupt(0, DataReady, FALLING);
@@ -565,6 +640,8 @@ void loop()
     About once a second, write the current position and remaining mission, so that if we
     get a reset, we can start from where we left off.   
     */
+ //   Serial.println("Loop");
+    delay(10000);
 }
 
 

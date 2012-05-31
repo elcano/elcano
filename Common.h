@@ -26,7 +26,7 @@
 #define END  0x04000
 // index bit map showing that waypoint is a goal
 #define GOAL 0x02000 
-#define MAX_DISTANCE 0x7fffffff
+#define MAX_DISTANCE 0x3ffffff
 // value if latitude, longitude or bearing is missing.
 #define INVALID MAX_DISTANCE
 
@@ -84,6 +84,7 @@ class waypoint // best estimate of position and state
     void   operator=(waypoint& other);
     void   operator=(waypoint* other);
     long  distance_mm(waypoint *other);
+    void  vectors(waypoint *other);
     long  distance_mm(long east_mm, long north_mm);
 };
 
@@ -106,7 +107,7 @@ struct junction
   // Where there are < 4 destinations, some pointers are NULL
   // If there are more than 4 destinations, one of the destinations has same location and
   // zero Distance.
-  int Distance[4];  // mm
+  long Distance[4];  // mm
 //  int Speed[4];     // mm / s
 //  curve *route[4];  // intermediate waypoints between location and Destination.
   // location != route[n]->present
