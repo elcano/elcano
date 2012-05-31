@@ -44,6 +44,8 @@
 #define MAX_SPEED_mmPs       4444
 
 bool checksum(char* msg);
+bool readline(int channel);
+void writeline(int channel);
 
 class waypoint // best estimate of position and state
 // used either for a waypoint or a measured navigational fix
@@ -80,7 +82,7 @@ class waypoint // best estimate of position and state
 //    void SetTime(char *pTime, char * pDate);
 //    char* GetLatLon(char* parseptr);
     char* formPointString();
-    bool readPointString(char *buffer, unsigned long max_wait_ms, int channel);
+    bool readPointString(unsigned long max_wait_ms, int channel);
     void   operator=(waypoint& other);
     void   operator=(waypoint* other);
     long  distance_mm(waypoint *other);

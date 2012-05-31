@@ -627,6 +627,8 @@ void setup()
 /*---------------------------------------------------------------------------------------*/ 
 void loop() 
 {
+  static int Goal = 1;
+  int last;
   /*
     Maintain a list of waypoints from current position to destination.
     Eliminate any waypoints that have already been visited.
@@ -641,7 +643,35 @@ void loop()
     get a reset, we can start from where we left off.   
     */
  //   Serial.println("Loop");
-    delay(10000);
+    if (DataAvailable)
+    {
+        // read vehicle position from C6
+        readline(0);
+        // send data to C3
+        writeline(0);
+        digitalWrite(C4_DATA_SENT, HIGH);  // transition interrupts the processor
+        delay(1);
+        digitalWrite(C4_DATA_SENT, LOW);
+        Start.readPointString(1000, 0);  
+        last = PlanPath (&Start, &mission[Goal]);
+        Path[last].index |= GOAL;
+        // TO DO: Make a fine path, providing proper curve path
+        if (last < MAX_WAYPOINTS/2 && Goal < CONES)
+        {
+          last = PlanPath (&Start, &mission[++Goal]);
+          Path[last].index |= GOAL;
+        }
+        SendPath(Path, MAX_WAYPOINTS);
+        Serial.println();     
+    }
+    else
+    {  // delay for 1 sec, waiting for data
+        long end_time = millis() + 1000;
+        while (millis() < end_time)
+        {
+            if (DataAvailable) break;
+        }
+    }
 }
 
 

@@ -86,6 +86,26 @@ void DataReady()  // called from an interrupt
   DataAvailable = true;
 }
 //---------------------------------------------------------
+void writeline(int channel)
+{
+      switch(channel)
+      {
+      case 1:
+         Serial1.println(buffer);
+         break;
+       case 2:
+         Serial2.println(buffer);
+         break;
+      case 3:
+         Serial3.println(buffer);
+         break;
+      default:
+         Serial.println(buffer);
+         break;
+      }
+
+}
+//---------------------------------------------------------
 // return true if a line was read; false if not
 bool readline(int channel) 
 {
@@ -113,15 +133,15 @@ bool readline(int channel)
          c=Serial1.read();
          break;
        case 2:
-         Available = Serial1.available();     
+         Available = Serial2.available();     
          c=Serial2.read();
          break;
       case 3:
-         Available = Serial1.available();     
+         Available = Serial3.available();     
          c=Serial3.read();
          break;
       default:
-         Available = Serial1.available();     
+         Available = Serial.available();     
          c=Serial.read();
          break;
       }
@@ -194,7 +214,7 @@ char* waypoint::formPointString()
  
   return dataString;
 }
-bool waypoint::readPointString(char *buffer, unsigned long max_wait_ms, int channel)
+bool waypoint::readPointString(unsigned long max_wait_ms, int channel)
 {
   char* parsePtr;
   unsigned long end_time = millis() + max_wait_ms;

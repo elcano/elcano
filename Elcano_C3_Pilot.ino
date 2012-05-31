@@ -82,7 +82,7 @@ void initialize()
   //  Read waypoints of mission from C4 on serial line
      for (i = 0; i < MAX_MISSION; i++)
       {
-        while (!mission[i].readPointString(Plan, 1000, 0) );
+        while (!mission[i].readPointString(1000, 0) );
         if (mission[i].index & END)
           break;
       }
@@ -92,7 +92,7 @@ void initialize()
      lastPathSegment = MAX_PATH - 1;
      for (i = 0; i < MAX_PATH; i++)
       {
-        while (!path[i].readPointString(Plan, 1000, 0) );
+        while (!path[i].readPointString(1000, 0) );
         if (path[i].index & END)
         {
           lastPathSegment = i;
@@ -100,7 +100,7 @@ void initialize()
         }
       }
   //  Read waypoint of intitial position from C6 on serial line
-      while (!current_position.readPointString(Navigation, 1000, 0) );  
+      while (!current_position.readPointString(1000, 0) );  
   //  Synchonize time.
       offset_ms = current_position.time_ms;
 
@@ -275,11 +275,18 @@ int SetSpeed()
       CommandedBrake = 255;   // full brake
     }
 
-    /*
-    TO DO;
-    Slow down depending how close to obstacle.
-    */
-    if (desiredSpeed_mmPs - Speed > 250)
+    /*    Slow down depending how close to obstacle. */
+    if (Range_mm < 1250)
+    {
+         CommandedThrottle = 0;
+         CommandedBrake =  FULL_BRAKE;  
+    }
+    else if (Range_mm < 2500)
+    {
+         CommandedThrottle = 0;
+         CommandedBrake =  HALF_BRAKE;  
+    }
+    else if (desiredSpeed_mmPs - Speed > 250 && Range_mm > 4000)
     {
       CommandedThrottle = STANDARD_ACCEL;
       CommandedBrake = 0;  
@@ -317,8 +324,19 @@ int SetSteering()
     Prefer to pass with object on left, since cone toucher is on that side.
     Make a more sophisticated choice of steering angle.
     */
-    
-    if ((abs(Steer_error_deg) < SMALL_STEER_ERROR_deg && abs(trackError_mm) < SMALL_TRACK_ERROR_mm) ||
+    if (Range_mm < 5000 &&
+       (LeftRange_mm - Range_mm > 500 || RightRange_mm - Range_mm > 500))
+    {  // Decide whether to go left or right
+       if (LeftRange_mm - RightRange_mm > 1500)
+       {// go left
+           CommandedSteer -= MEDIUM_STEER_ERROR_deg / STEER_FACTOR;
+       }
+       else
+       { // go right
+           CommandedSteer += MEDIUM_STEER_ERROR_deg / STEER_FACTOR;
+      }
+    }  
+    else if ((abs(Steer_error_deg) < SMALL_STEER_ERROR_deg && abs(trackError_mm) < SMALL_TRACK_ERROR_mm) ||
         (abs(trackError_mm) < MEDIUM_TRACK_ERROR_mm && Steer_error_deg * trackError_mm < 0))
         ; // maintain course
     else 
@@ -348,7 +366,8 @@ void loop()
   
  if (DataAvailable)
  {
-   location.readPointString(Navigation, 50, 0);
+   DataAvailable = false;
+   location.readPointString(50, 0);
    if (location.index == POSITION)
    {  //   Read waypoint of current position from C6 on serial line
      current_position = location;
