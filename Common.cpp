@@ -252,11 +252,20 @@ long  waypoint::distance_mm(waypoint *other)
   deltaY = north_mm - other->north_mm;
   return sqrt(deltaX*deltaX + deltaY*deltaY);
 }
-long  waypoint::distance_mm(long east_mm, long north_mm)
+void  waypoint::vectors(waypoint *other)
+{
+  double deltaX, deltaY, dist;
+  deltaX = -east_mm + other->east_mm;
+  deltaY = -north_mm + other->north_mm;
+  dist = sqrt(deltaX*deltaX + deltaY*deltaY);
+  Evector_x1000 = (deltaX * 1000.) / dist;
+  Nvector_x1000 = (deltaY * 1000.) / dist;
+}
+long  waypoint::distance_mm(long East_mm, long North_mm)
 {
   double deltaX, deltaY;
-  deltaX = east_mm - east_mm;
-  deltaY = north_mm - north_mm;
+  deltaX = East_mm - east_mm;
+  deltaY = North_mm - north_mm;
   return sqrt(deltaX*deltaX + deltaY*deltaY);
 }
 
