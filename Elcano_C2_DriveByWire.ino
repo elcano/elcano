@@ -3,6 +3,8 @@ Elcano Contol Module C2: Instrument panel controls and LEDs.
 This routine handles simple drive-by-wire, as well as handing control over to the
 computer based on the state of the enable switches.
 */
+#define TEST
+
 #define MEGA
 #define TEST_MODE
 #ifndef TRUE
@@ -175,9 +177,9 @@ void initialize()
         Instrument[Steering].Position = Straight;
         digitalWrite( StopLED, HIGH);
         digitalWrite( CruiseLED, LOW);
-        Instrument[Motor].State = ManualStop;
-        Instrument[Brakes].State = ManualStop;
-        Instrument[Steering].State = ManualStop;
+        Instrument[Motor].State = CruiseStop;
+        Instrument[Brakes].State = CruiseStop;
+        Instrument[Steering].State = CruiseStop;
         Instrument[Motor].Joystick = Off;
         Instrument[Brakes].Joystick = Off;
         Instrument[Steering].Joystick = Straight;
@@ -257,7 +259,8 @@ void loop()
 #ifdef TEST_MODE
 //  testSwitches();
 //  testRamp();
-    testQuick();
+//    testQuick();
+    RampTest();
    
 #else  // not TEST_MODE
  
@@ -337,11 +340,11 @@ void loop()
 /*---------------------------------------------------------------------------------------*/ 
 void JoystickMotion()
 {
-  int stick;
+  int stick;  // 0-1023
   int center;
   const int deadBandLow = 32;  // out of 1023
   const int deadBandHigh = 32;
-  center = analogRead(JoystickCenter);
+  center = 511; // analogRead(JoystickCenter);
   int tinyDown = center - deadBandLow;
   int tinyUp = center + deadBandHigh;
 
@@ -352,15 +355,16 @@ void JoystickMotion()
       Instrument[Steering].StickMoved = FALSE;
       return;
     }
-    stick = analogRead(AccelerateJoystick);
-    if (stick <= tinyUp)
+    stick = 511; // analogRead(AccelerateJoystick);
+    if (stick <= tinyUp)  // 543
     {
       Instrument[Motor].Joystick = 0;
       Instrument[Motor].StickMoved = FALSE;
     }
     else
     {
-      Instrument[Motor].Joystick = 255 * (stick - tinyUp) / (1023 - tinyUp);
+      Instrument[Motor].Joystick = MinimumThrottle + (FullThrottle - MinimumThrottle)
+       * (stick - tinyUp) / (1023 - tinyUp);
       Instrument[Motor].StickMoved =  TRUE;
       Stop = FALSE;
     }
@@ -372,12 +376,13 @@ void JoystickMotion()
     }
     else
     {
-      Instrument[Brakes].Joystick = MinimumBrake + (FullBrake - MinimumBrake) * (-stick + tinyDown) / tinyDown;
+      Instrument[Brakes].Joystick = MinimumBrake + (FullBrake - MinimumBrake) 
+       * (-stick + tinyDown) / tinyDown;
       Instrument[Brakes].StickMoved =  TRUE;
       Stop = FALSE;
     }
 
-    stick = analogRead(SteerJoystick);
+    stick = 511; // 1023 - analogRead(SteerJoystick);
     if (stick > tinyDown && stick <= tinyUp)
     {
       Instrument[Steering].Joystick = Straight;
@@ -404,12 +409,13 @@ void StateTransition( int system)
   {
     case ManualStop:
     if (TimeOfStopButton_ms + PauseTime_ms > Time_ms)
+      break;  // Pause time is big enough to let vehicle come to stop
+      // if user pushed the stop button, let it stop before we do the next thing.
+    if (Instrument[system].Enabled )
+    {  // Under cruise control
+      Instrument[system].State = CruiseStop;
       break;
-      if (Instrument[system].Enabled)
-      {
-        Instrument[system].State = CruiseStop;
-        break;
-      }
+    }
 //  if (joystick motion) set state.
     if (Instrument[system].StickMoved)
     {
@@ -505,6 +511,87 @@ void  checkReverse()
  
 
 #ifdef TEST_MODE
+/*   Front Panel
+
+        On/Off            Stop              Cruise
+ 
+                ---------Enable-----------        
+        Motor            Brake              Steer
+        
+          ----------------LED -------------------
+          1      3      4        Reverse    Stop
+          5      6      7          8        Cruise
+          
+For diagnostics, display an amalog input based on switches.
+
+  Motor  Brake  Steer  Octal  Signal       
+    0      0      0      0    AccelerateJoystick - JoystickCenter
+    0      0      1      1    Steer
+    0      1      0      2    DiskBrake
+    0      1      1      3    Current36V
+    1      0      0      4    Throttle
+    1      0      1      5    CurrentBrake
+    1      1      0      6    CurrentSteer
+    1      1      1      7    SteerJoystick
+*/
+ void diagnostic()
+ {
+   int value;
+   int Pin_in = (digitalRead(EnableSteer) << 2);
+   Pin_in +=    (digitalRead(EnableBrake) << 1);
+   Pin_in +=     digitalRead(EnableThrottle);
+    switch (Pin_in)
+   {
+   case 0:
+   default:
+      value = analogRead(AccelerateJoystick);
+      value -= analogRead(JoystickCenter);
+      value = value >> 2;
+      break;
+   case 1:
+      value = Instrument[Steering].Position;
+      break;
+   case 2:
+      value = Instrument[Brakes].Position;
+      break;
+   case 3:
+      value = (analogRead(Current36V) >> 2);
+      break;
+   case 4:
+      value = Instrument[Motor].Position;
+      break;
+   case 5:
+      value = (analogRead(CurrentBrake) >> 2);
+      break;
+   case 6:
+      value = (analogRead(CurrentSteer) >> 2);
+      break;
+   case 7:
+      value = analogRead(SteerJoystick) >> 2;
+      break;
+   }
+   Display (value);
+ }
+ void Display (int n)
+ {
+    int Bit;
+    Bit = (n & 0x01)? HIGH: LOW;
+    digitalWrite(LED8, Bit);   
+    Bit = (n & 0x02)? HIGH: LOW;
+    digitalWrite(LED7, Bit);   
+    Bit = (n & 0x04)? HIGH: LOW;
+    digitalWrite(LED6, Bit);   
+    Bit = (n & 0x08)? HIGH: LOW;
+    digitalWrite(LED5, Bit);   
+    Bit = (n & 0x10)? HIGH: LOW;
+    digitalWrite(ReverseLED, Bit);   
+    Bit = (n & 0x20)? HIGH: LOW;
+    digitalWrite(LED4, Bit);   
+    Bit = (n & 0x40)? HIGH: LOW;
+    digitalWrite(LED3, Bit);   
+    Bit = (n & 0x080)? HIGH: LOW;
+    digitalWrite(LED1, Bit);   
+ }
 
 /*---------------------------------------------------------------------------------------*/ 
 void testRamp()
@@ -632,6 +719,51 @@ void ramp (int channel, int state)
    delay(100); 
 
 }
+void RampTest()
+{
+  int i;
+  for (i = 96; i < 150; i += 4)
+  {
+     if( digitalRead(EnableThrottle) == HIGH)
+         analogWrite(Throttle, i);
+     if( digitalRead(EnableBrake) == HIGH)
+         analogWrite(DiskBrake, i); 
+     if( digitalRead(EnableSteer) == HIGH)
+         analogWrite(Steer, i);
+    diagnostic();
+    Serial.println(i);
+    if (i & 1)
+    {
+      digitalWrite(LED, HIGH);
+    }
+    else
+    {
+      digitalWrite(LED, LOW);
+    }
+    delay (1000);
+  }
+  for (i = 150; i > 96; i -= 4)
+  {
+     if( digitalRead(EnableThrottle) == HIGH)
+         analogWrite(Throttle, i);
+     if( digitalRead(EnableBrake) == HIGH)
+         analogWrite(DiskBrake, i); 
+     if( digitalRead(EnableSteer) == HIGH)
+         analogWrite(Steer, i);
+    diagnostic();
+    Serial.println(i);
+    if (i & 1)
+    {
+      digitalWrite(LED, HIGH);
+    }
+    else
+    {
+      digitalWrite(LED, LOW);
+    }
+    delay (1000);
+  }
+}
+
 /*---------------------------------------------------------------------------------------
 Flash a number in Morse Code
 1  . ----
