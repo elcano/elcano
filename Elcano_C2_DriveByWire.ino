@@ -126,12 +126,12 @@ void setup()
         pinMode(CruiseReverse, INPUT);
         pinMode(StopButton, INPUT);  // via interrupt
         pinMode(CruiseButton, INPUT); // via interrupt
-        pinMode(EnableThrottle, INPUT);
+        pinMode(EnableMotor, INPUT);
         pinMode(EnableBrake, INPUT);
         pinMode(EnableSteer, INPUT);
         pinMode(StopLED, OUTPUT);
         pinMode(CruiseLED, OUTPUT);
-        pinMode(Throttle, OUTPUT);
+        pinMode(TractionMotor, OUTPUT);
         pinMode(DiskBrake, OUTPUT);
         pinMode(Steer, OUTPUT);
         pinMode(Reverse, OUTPUT);
@@ -169,14 +169,16 @@ void setup()
 /*---------------------------------------------------------------------------------------*/ 
 void initialize()
 {
+        Display (0xFF);  // LED test
+        digitalWrite( StopLED, HIGH);
+        digitalWrite( CruiseLED, HIGH);
+        
         Halt();
        // assume that vehicle always stops with brakes on and wheels straight.
        // Otherwise, there is a possibility of blowing a fuse if servos try to
        // get to this state too quickly.       
         analogWrite( Steer, Straight);
         Instrument[Steering].Position = Straight;
-        digitalWrite( StopLED, HIGH);
-        digitalWrite( CruiseLED, LOW);
         Instrument[Motor].State = CruiseStop;
         Instrument[Brakes].State = CruiseStop;
         Instrument[Steering].State = CruiseStop;
@@ -199,6 +201,10 @@ void initialize()
         Instrument[Steering].QuiescentCurrent = analogRead(CurrentSteer);
         Instrument[Motor].CurrentDraw = 
         Instrument[Motor].QuiescentCurrent = analogRead(Current36V);
+        Display (0);
+        digitalWrite( StopLED, LOW);
+        digitalWrite( CruiseLED, LOW);
+        
 
 }
 /*---------------------------------------------------------------------------------------*/ 
@@ -241,7 +247,7 @@ void EStopPressed()
 // Stop may be called from an interrupt or from the loop.
 void Halt()
 {
-   analogWrite(Throttle, Off);
+   analogWrite(TractionMotor, Off);
    analogWrite(DiskBrake, FullBrake);
    Instrument[Motor].Position = Off;
    Instrument[Brakes].Position = FullBrake;
@@ -265,7 +271,7 @@ void loop()
 #else  // not TEST_MODE
  
   JoystickMotion();
-  Instrument[Motor].Enabled = digitalRead(EnableThrottle);
+  Instrument[Motor].Enabled = digitalRead(EnableMotor);
   Instrument[Brakes].Enabled = digitalRead(EnableBrake);
   Instrument[Steering].Enabled = digitalRead(EnableSteer);
   StateTransition(Motor);
@@ -274,18 +280,18 @@ void loop()
   
   if (Instrument[Motor].State == ManualGo)
   {
-   analogWrite(Throttle, Instrument[Motor].Joystick);
+   analogWrite(TractionMotor, Instrument[Motor].Joystick);
    Instrument[Motor].Position = Instrument[Motor].Joystick;
   }
   else if (Instrument[Motor].State == CruiseGo)
   {
     Instrument[Motor].Position = analogRead(CruiseThrottle) / 4;   
-    analogWrite(Throttle, Instrument[Motor].Position);
+    analogWrite(TractionMotor, Instrument[Motor].Position);
   }
   else
   {
     Instrument[Motor].Position = MinimumThrottle;   
-    analogWrite(Throttle, Instrument[Motor].Position);
+    analogWrite(TractionMotor, Instrument[Motor].Position);
   }
   
   if (Instrument[Brakes].State == ManualGo)
@@ -529,7 +535,7 @@ For diagnostics, display an amalog input based on switches.
     0      0      1      1    Steer
     0      1      0      2    DiskBrake
     0      1      1      3    Current36V
-    1      0      0      4    Throttle
+    1      0      0      4    TractionMotor
     1      0      1      5    CurrentBrake
     1      1      0      6    CurrentSteer
     1      1      1      7    SteerJoystick
@@ -539,7 +545,7 @@ For diagnostics, display an amalog input based on switches.
    int value;
    int Pin_in = (digitalRead(EnableSteer) << 2);
    Pin_in +=    (digitalRead(EnableBrake) << 1);
-   Pin_in +=     digitalRead(EnableThrottle);
+   Pin_in +=     digitalRead(EnableMotor);
     switch (Pin_in)
    {
    case 0:
@@ -572,6 +578,20 @@ For diagnostics, display an amalog input based on switches.
    }
    Display (value);
  }
+ /*-------------------------------------------------------*/
+void CruiseDiagnostic()
+ {
+   int value = 0;
+   if (digitalRead(EnableMotor) == HIGH)
+      value = analogRead(CruiseThrottle);
+   else if (digitalRead(EnableBrake) == HIGH)
+       value = analogRead(CruiseBrake);
+   else if (digitalRead(EnableSteer) == HIGH)
+      value = analogRead(CruiseSteer);
+   value = value >> 2;
+   Display (value);
+ }
+ /*-------------------------------------------------------*/
  void Display (int n)
  {
     int Bit;
@@ -606,13 +626,13 @@ void testRamp()
 //  delay (1000);
 //  for (i = MinimumThrottle; i <= MinimumThrottle+5; i++)
 //  {
-//      ramp(Throttle, i);
+//      ramp(TractionMotor, i);
 //  }
 //  write_all (HIGH);
 //  delay (1000);
 //  for (i = MinimumThrottle+5; i >= MinimumThrottle; i--)
 //  {
-//      ramp(Throttle, i);
+//      ramp(TractionMotor, i);
 //  }
   write_all (HIGH);
   delay (1000);
@@ -676,7 +696,7 @@ void testSwitches()
 {
   // test failed 5/2/11.  Panel LEDs do not light.
   int SwThrottle, SwBrake, SwSteer;
-  SwThrottle = digitalRead(EnableThrottle);
+  SwThrottle = digitalRead(EnableMotor);
   SwBrake = digitalRead(EnableBrake);
   SwSteer = digitalRead(EnableSteer);
   digitalWrite( StopLED, SwBrake);
@@ -721,16 +741,19 @@ void ramp (int channel, int state)
 }
 void RampTest()
 {
+  const int i_min = 0;
+  const int i_max = 252;
+  const int i_step = 4;
   int i;
-  for (i = 96; i < 150; i += 4)
+  for (i = i_min; i <= i_max; i += i_step)
   {
-     if( digitalRead(EnableThrottle) == HIGH)
-         analogWrite(Throttle, i);
+     if( digitalRead(EnableMotor) == HIGH)
+         analogWrite(TractionMotor, i);
      if( digitalRead(EnableBrake) == HIGH)
          analogWrite(DiskBrake, i); 
      if( digitalRead(EnableSteer) == HIGH)
          analogWrite(Steer, i);
-    diagnostic();
+    Display(i);
     Serial.println(i);
     if (i & 1)
     {
@@ -742,15 +765,15 @@ void RampTest()
     }
     delay (1000);
   }
-  for (i = 150; i > 96; i -= 4)
+  for (i = i_max; i >= i_min; i -=i_step)
   {
-     if( digitalRead(EnableThrottle) == HIGH)
-         analogWrite(Throttle, i);
+     if( digitalRead(EnableMotor) == HIGH)
+         analogWrite(TractionMotor, i);
      if( digitalRead(EnableBrake) == HIGH)
          analogWrite(DiskBrake, i); 
      if( digitalRead(EnableSteer) == HIGH)
          analogWrite(Steer, i);
-    diagnostic();
+    Display(i);
     Serial.println(i);
     if (i & 1)
     {
