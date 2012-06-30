@@ -31,7 +31,7 @@ const int DiskBrake = 7;  // external PWM output
 // D8-13 Connector ----------------------
 // The shield does not provide a socket for D8-13
 // D8 and D9 are not used.
-const int chipSelect = 10;  // for SD data logging shield from Adafruit.
+//const int chipSelect = 10;  // for SD data logging shield from Adafruit.
 /** MOSI - pin 11
  ** MISO - pin 12
  ** CLK  - pin 13 */
@@ -96,9 +96,9 @@ const int JoystickCenter = 9;      // external input
 const int AccelerateJoystick = 11;  // external input
 
 /* These are what the autonomous vehicle wants to do */
-const int Speed = 10;           // external input
+const int BrakeFeedback = 10;           // external input
 const int CruiseThrottle = 15;  // external input
 const int CruiseBrake = 14;     // external input
 const int CruiseSteer = 13;     // external input
-const int SpeedLimit = 12;      // external input
+const int SteerFeedBack = 12;      // external input
 
