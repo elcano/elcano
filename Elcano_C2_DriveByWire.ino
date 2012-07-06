@@ -3,10 +3,11 @@ Elcano Contol Module C2: Instrument panel controls and LEDs.
 This routine handles simple drive-by-wire, as well as handing control over to the
 computer based on the state of the enable switches.
 */
-#define TEST
+
 
 #define MEGA
-#define TEST_MODE
+#define STEP_SIZE_ms 5
+// #define TEST_MODE
 #ifndef TRUE
 #define TRUE 1
 #define FALSE 0
@@ -18,6 +19,7 @@ computer based on the state of the enable switches.
 #include "IO_2009.h"
 #endif
 
+void Display (int n);
 /*
 
 There are four principle states. "Enable" is considered a generic state that encompasses the
@@ -106,18 +108,59 @@ const int HardRight = 255;
   const int Motor = 0;
   const int Brakes = 1;
   const int Steering = 2;
-  struct _Instruments
+  class _Instruments
   {
+    public:
      int Enabled;  // whether cruise control is enabled.
      int State;
      int StickMoved;  // bool
      int Joystick;   // position of stick
-     int Position;  // last commanded
+     int LastCommand;  // last commanded
+     int Feedback;   // actual position
+     int EnablePin;
+     int SignalPin;
+     int FeedbackPin;
+     int CurrentPin;
+     int CloseEnough;  // in counts; Try for 0-4095
+     int Stuck;        // max number of time steps for not getting to position
+     int StepSize;     // controls how quickly the servo moves. 2"/sec servo max
      int QuiescentCurrent;  // Nominally 120 counts
      int CurrentDraw;  // In counts, with 1 Amp = 12 counts
      int CurrentLimit;  // In counts
      // One count from analog input is about 5mV from ACS758lcb050U
      // The ACS758 has sensitivity of 60 mA/V
+     int move(int desired_position)
+     {
+         int Position = desired_position;
+         Feedback = analogRead(FeedbackPin);
+         if (desired_position < 0)
+           desired_position = 0;
+         if (desired_position > 4095)
+           desired_position = 4095;
+         if ((desired_position - Feedback) > StepSize)
+           Position = max (4095, Feedback + StepSize);
+         if ((desired_position - Feedback) < StepSize)
+           Position = min(0, Feedback - StepSize);
+         analogWrite(SignalPin, Position);
+        return Position;
+     }
+     void home(int desired_position)
+     {
+       int feedback_after, Position;
+       int no_move_count = 0;
+       do
+       {
+         Position = move (desired_position);
+         delay(STEP_SIZE_ms);
+         feedback_after = analogRead(FeedbackPin);
+         if (abs(feedback_after - Feedback) <= CloseEnough)
+           no_move_count++;
+         else
+           no_move_count = 0;
+         if (no_move_count > Stuck)
+           return;
+       } while ((abs(desired_position - Feedback) > CloseEnough));
+     }
   } Instrument[3];
  /*---------------------------------------------------------------------------------------*/ 
 void setup()  
@@ -153,6 +196,7 @@ void setup()
         pinMode(LED6, OUTPUT);
         pinMode(LED7, OUTPUT);
         pinMode(LED8, OUTPUT);  
+        Serial.begin(9600);
         initialize();
         attachInterrupt(0, CruiseRC1Pressed, RISING);     
         attachInterrupt(1, StopRC2Pressed, RISING);
@@ -174,11 +218,46 @@ void initialize()
         digitalWrite( CruiseLED, HIGH);
         
         Halt();
+        
+        Instrument[Motor].EnablePin = EnableMotor;
+        Instrument[Motor].SignalPin = TractionMotor;
+        Instrument[Motor].FeedbackPin = FeedbackMotor;
+        Instrument[Motor].CurrentPin = Current36V;
+        Instrument[Motor].StepSize = 20; // max from range of 4095.
+        Instrument[Motor].CloseEnough = 1000;  // no feedback
+        Instrument[Motor].Stuck = 3;
+        
+        Instrument[Steering].EnablePin = EnableSteer;
+        Instrument[Steering].SignalPin = Steer;
+        Instrument[Steering].FeedbackPin = FeedbackSteer;
+        Instrument[Steering].CurrentPin = CurrentSteer;
+        Instrument[Steering].StepSize = 20;
+        Instrument[Motor].CloseEnough = 1;
+        Instrument[Motor].Stuck = 3;
+        
+        Instrument[Brakes].EnablePin = EnableBrake;
+        Instrument[Brakes].SignalPin = DiskBrake;
+        Instrument[Brakes].FeedbackPin = FeedbackBrake;
+        Instrument[Brakes].CurrentPin = CurrentBrake;
+        Instrument[Brakes].StepSize = 20;
+        Instrument[Motor].CloseEnough = 1;
+        Instrument[Motor].Stuck = 3;
+      
+        Instrument[Motor].Feedback = 
+          analogRead(Instrument[Motor].FeedbackPin);
+         Instrument[Steering].Feedback = 
+          analogRead(Instrument[Steering].FeedbackPin);
+         Instrument[Brakes].Feedback = 
+          analogRead(Instrument[Brakes].FeedbackPin);
+ //       Instrument[Motor].CommandedPosition
+ //       Instrument[Steering].CommandedPosition
+ //       Instrument[Brakes].CommandedPosition
+ 
        // assume that vehicle always stops with brakes on and wheels straight.
        // Otherwise, there is a possibility of blowing a fuse if servos try to
-       // get to this state too quickly.       
-        analogWrite( Steer, Straight);
-        Instrument[Steering].Position = Straight;
+       // get to this state too quickly.
+        Instrument[Steering].LastCommand = Straight;
+        Instrument[Steering].home(Straight);  
         Instrument[Motor].State = CruiseStop;
         Instrument[Brakes].State = CruiseStop;
         Instrument[Steering].State = CruiseStop;
@@ -208,6 +287,7 @@ void initialize()
 
 }
 /*---------------------------------------------------------------------------------------*/ 
+
 /*---------------------------------------------------------------------------------------
  CruisePressed is called by an interrupt
  */  
@@ -247,10 +327,11 @@ void EStopPressed()
 // Stop may be called from an interrupt or from the loop.
 void Halt()
 {
-   analogWrite(TractionMotor, Off);
-   analogWrite(DiskBrake, FullBrake);
-   Instrument[Motor].Position = Off;
-   Instrument[Brakes].Position = FullBrake;
+   Instrument[Motor].LastCommand = Off;
+   Instrument[Brakes].LastCommand = FullBrake;
+   // TODO: make motor off and brakes on simultaneous.
+   Instrument[Motor].home(Off);  
+   Instrument[Brakes].home(FullBrake);  
    digitalWrite(StopLED, HIGH);
 }
 
@@ -259,9 +340,12 @@ void loop()
 {
   unsigned long TimeSinceCmd_ms = 0;     // radians
   const unsigned long MaxSilence = 2000;  // ms
-  int TimeNow = millis();
-  int NextLoopTime_ms = TimeNow + 100;
+  unsigned long TimeNow = millis();
+  unsigned long NextLoopTime_ms = TimeNow + STEP_SIZE_ms;
+  static unsigned long EndTime = 0;
+  static unsigned long OutsideTime;
   
+  OutsideTime = EndTime - TimeNow;
 #ifdef TEST_MODE
 //  testSwitches();
 //  testRamp();
@@ -280,68 +364,75 @@ void loop()
   
   if (Instrument[Motor].State == ManualGo)
   {
-   analogWrite(TractionMotor, Instrument[Motor].Joystick);
-   Instrument[Motor].Position = Instrument[Motor].Joystick;
+   Instrument[Motor].LastCommand = Instrument[Motor].Joystick;
   }
   else if (Instrument[Motor].State == CruiseGo)
   {
-    Instrument[Motor].Position = analogRead(CruiseThrottle) / 4;   
-    analogWrite(TractionMotor, Instrument[Motor].Position);
+    Instrument[Motor].LastCommand = analogRead(CruiseThrottle) / 4;   
   }
   else
   {
-    Instrument[Motor].Position = MinimumThrottle;   
-    analogWrite(TractionMotor, Instrument[Motor].Position);
+    Instrument[Motor].LastCommand = MinimumThrottle;   
   }
+   Instrument[Motor].move(Instrument[Motor].LastCommand);
   
   if (Instrument[Brakes].State == ManualGo)
   {
-   analogWrite(DiskBrake, Instrument[Brakes].Joystick);
-   Instrument[Brakes].Position = Instrument[Brakes].Joystick;
+   Instrument[Brakes].LastCommand = Instrument[Brakes].Joystick;
   }  
   else if (Instrument[Brakes].State == CruiseGo)
   {
-    Instrument[Brakes].Position = analogRead(CruiseBrake) / 4;   
-    analogWrite(DiskBrake, Instrument[Brakes].Position);
+    Instrument[Brakes].LastCommand = analogRead(CruiseBrake) / 4;   
   }
   else
   {
-    Instrument[Brakes].Position = FullBrake;   
-    analogWrite(DiskBrake, Instrument[Brakes].Position);
+    Instrument[Brakes].LastCommand = FullBrake;   
   }
+   Instrument[DiskBrake].move(Instrument[DiskBrake].LastCommand);
   
    if (Instrument[Steering].State == ManualGo)
   {
-   analogWrite(Steer, Instrument[Steering].Joystick);
-   Instrument[Steering].Position = Instrument[Steering].Joystick;
+   Instrument[Steering].LastCommand = Instrument[Steering].Joystick;
   }  
   else if (Instrument[Steering].State == CruiseGo)
   {
-    Instrument[Steering].Position = analogRead(CruiseSteer) / 4;   
-    analogWrite(Steer, Instrument[Steering].Position);
+    Instrument[Steering].LastCommand = analogRead(CruiseSteer) / 4;   
   }
+  Instrument[Steering].move(Instrument[Steering].LastCommand);
+
    if (Stop)
      digitalWrite(StopLED, HIGH);
    else
      digitalWrite(StopLED, LOW);
    if (TimeNow > TimeOfCruiseButton_ms + 400 &&
-   (Instrument[Motor].StickMoved || Instrument[Brakes].StickMoved || Instrument[Steering].StickMoved)
+   (Instrument[Motor].StickMoved || Instrument[Brakes].StickMoved || Instrument[Steering].StickMoved))
        Cruise = FALSE;
    if (!Instrument[Motor].Enabled && !Instrument[Motor].Enabled && !Instrument[Motor].Enabled)
-       Cruise = False
+       Cruise = FALSE;
    if (Cruise)
      digitalWrite(CruiseLED, HIGH);
    else
      digitalWrite(CruiseLED, LOW);
 
-  checkReverse();   
+  checkReverse();  
+#endif  // TEST_MODE 
+ // TODO: Check out loop speed;
+ // make loop faster
+ // limit servo motion during loop to step size 
+  unsigned long fred = millis();  
+  Serial.print(fred - TimeNow);
+  Serial.print(",");
   do  //  Delay so that loop is not faster than 10 Hz.
   {
-    TimeNow = millis();
-  } while (TimeNow < NextLoopTime_ms);
+    EndTime = millis();
+  } while (EndTime < NextLoopTime_ms);
+  Serial.print(EndTime - fred);
+  Serial.print(",");
+  Serial.print(NextLoopTime_ms);
+  Serial.print(",");
+  Serial.println(OutsideTime);
  
 
-#endif  // TEST_MODE 
 } 
 /*---------------------------------------------------------------------------------------*/ 
 void JoystickMotion()
@@ -555,16 +646,16 @@ For diagnostics, display an amalog input based on switches.
       value = value >> 2;
       break;
    case 1:
-      value = Instrument[Steering].Position;
+      value = Instrument[Steering].LastCommand;
       break;
    case 2:
-      value = Instrument[Brakes].Position;
+      value = Instrument[Brakes].LastCommand;
       break;
    case 3:
       value = (analogRead(Current36V) >> 2);
       break;
    case 4:
-      value = Instrument[Motor].Position;
+      value = Instrument[Motor].LastCommand;
       break;
    case 5:
       value = (analogRead(CurrentBrake) >> 2);
@@ -592,6 +683,7 @@ void CruiseDiagnostic()
    Display (value);
  }
  /*-------------------------------------------------------*/
+ #endif  // TESTMODE
  void Display (int n)
  {
     int Bit;
@@ -614,6 +706,7 @@ void CruiseDiagnostic()
  }
 
 /*---------------------------------------------------------------------------------------*/ 
+#ifdef TEST_MODE
 void testRamp()
 {
   // test passed for brakes and steering 5/21/11.
