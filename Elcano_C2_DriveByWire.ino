@@ -388,7 +388,7 @@ void loop()
   {
     Instrument[Brakes].LastCommand = FullBrake;   
   }
-   Instrument[DiskBrake].move(Instrument[DiskBrake].LastCommand);
+   Instrument[Brakes].move(Instrument[Brakes].LastCommand);
   
    if (Instrument[Steering].State == ManualGo)
   {
@@ -834,49 +834,18 @@ void ramp (int channel, int state)
 }
 void RampTest()
 {
-  const int i_min = 0;
-  const int i_max = 252;
-  const int i_step = 4;
-  int i;
-  for (i = i_min; i <= i_max; i += i_step)
+  int Position[3];
+
+  while ( true) // i < i_max; i += i_step)
   {
-     if( digitalRead(EnableMotor) == HIGH)
-         analogWrite(TractionMotor, i);
-     if( digitalRead(EnableBrake) == HIGH)
-         analogWrite(DiskBrake, i); 
-     if( digitalRead(EnableSteer) == HIGH)
-         analogWrite(Steer, i);
-    Display(i);
-    Serial.println(i);
-    if (i & 1)
+    for (int i = 0; i< 3 i++);
     {
-      digitalWrite(LED, HIGH);
+       if( digitalRead(Instrument[i].EnablePin) == HIGH)
+       {
+           if (abs(Instrument[i].move(Position[i]) - Position[i]) < Instrument[i].CloseEnough)
+             Position[i] = Position[i]? 0: 4095;
+       }
     }
-    else
-    {
-      digitalWrite(LED, LOW);
-    }
-    delay (1000);
-  }
-  for (i = i_max; i >= i_min; i -=i_step)
-  {
-     if( digitalRead(EnableMotor) == HIGH)
-         analogWrite(TractionMotor, i);
-     if( digitalRead(EnableBrake) == HIGH)
-         analogWrite(DiskBrake, i); 
-     if( digitalRead(EnableSteer) == HIGH)
-         analogWrite(Steer, i);
-    Display(i);
-    Serial.println(i);
-    if (i & 1)
-    {
-      digitalWrite(LED, HIGH);
-    }
-    else
-    {
-      digitalWrite(LED, LOW);
-    }
-    delay (1000);
   }
 }
 
