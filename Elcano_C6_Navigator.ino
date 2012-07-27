@@ -1,11 +1,14 @@
+#include <Common.h>
+#include <IO.h>
+#include <Matrix.h>
+
 /*
 Elcano Module C6: Navigator.
   Includes C5 Obstacle detection.
   
-Copy the following software files to an Elcano_C6_Navigator directory:
-  Elcano_C6_Navigator.ino; add new tabs with the following names and copy contents
-  IO.h
-  Common.cpp
+  Create a library containing the following files, then import the library
+  C6_IO.h
+  Commom.cpp
   Common.h
   KalmanFilter.cpp
   Matrix.cpp
@@ -83,9 +86,6 @@ Serial lines:
 
 /*---------------------------------------------------------------------------------------*/ 
 
-#include "Common.h"
-#include "IO.h"
-#include "Matrix.h"  
 #include <SD.h>
 
 // On the Ethernet Shield, CS is pin 4. Note that even if it's not

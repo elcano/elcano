@@ -1,3 +1,6 @@
+#include <Common.h>
+#include <IO.h>
+
 /*  
 Elcano Module C4: Path Planner.
 
@@ -39,8 +42,6 @@ we could have another processor whose sole function is communication.
 */
 
 /*---------------------------------------------------------------------------------------*/ 
-#include "Common.h"
-#include "IO.h"
 
 
 #define PI ((float) 3.1415925)
