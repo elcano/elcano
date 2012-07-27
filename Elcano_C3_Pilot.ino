@@ -1,3 +1,7 @@
+#include <Common.h>
+#include <IO.h>
+#include <Matrix.h>
+
 /*
 // Elcano Contol Module C3: Pilot.
 
@@ -19,9 +23,6 @@ serial line. The format of the DRIVE command is documented in the C1 code.
 [in] Digital Signal 0: J1 pin 1 (RxD) Serial signal from C4 Path planner, which passes on
 data from C6 Navigator
 */
-
-#include "IO.h"
-#include "Common.h"
 
 #define MAX_PATH 10
 #define SMALL_TRACK_ERROR_mm   1200
@@ -49,7 +50,7 @@ extern bool DataAvailable;
 
 // unsigned long millis() is time since program started running
 // offset_ms is value of millis() at start_time
-unsigned long offset_ms;
+// unsigned long offset_ms;
 /*
 2: Tx: Estimated state; 
       $ESTIM,<east_mm>,<north_mm>,<speed_mmPs>,<bearing>,<time_ms>*CKSUM
@@ -102,7 +103,7 @@ void initialize()
   //  Read waypoint of intitial position from C6 on serial line
       while (!current_position.readPointString(1000, 0) );  
   //  Synchonize time.
-      offset_ms = current_position.time_ms;
+  //     offset_ms = current_position.time_ms;
 
 }
 /*---------------------------------------------------------------------------------------*/ 
