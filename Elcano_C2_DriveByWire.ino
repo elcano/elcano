@@ -7,7 +7,7 @@ computer based on the state of the enable switches.
 
 #define MEGA
 #define STEP_SIZE_ms 5
-// #define TEST_MODE
+#define TEST_MODE
 #ifndef TRUE
 #define TRUE 1
 #define FALSE 0
@@ -346,6 +346,9 @@ void loop()
   static unsigned long OutsideTime;
   
   OutsideTime = EndTime - TimeNow;
+  Instrument[Motor].Enabled = digitalRead(EnableMotor);
+  Instrument[Brakes].Enabled = digitalRead(EnableBrake);
+  Instrument[Steering].Enabled = digitalRead(EnableSteer);
 #ifdef TEST_MODE
 //  testSwitches();
 //  testRamp();
@@ -355,9 +358,6 @@ void loop()
 #else  // not TEST_MODE
  
   JoystickMotion();
-  Instrument[Motor].Enabled = digitalRead(EnableMotor);
-  Instrument[Brakes].Enabled = digitalRead(EnableBrake);
-  Instrument[Steering].Enabled = digitalRead(EnableSteer);
   StateTransition(Motor);
   StateTransition(Brakes);
   StateTransition(Steering);
@@ -834,19 +834,19 @@ void ramp (int channel, int state)
 }
 void RampTest()
 {
-  int Position[3];
-
-  while ( true) // i < i_max; i += i_step)
-  {
-    for (int i = 0; i< 3 i++);
+  static int Position[] ={ 0, 0, 0};
+    for (int i = 0; i< 3; i++)
     {
        if( digitalRead(Instrument[i].EnablePin) == HIGH)
        {
            if (abs(Instrument[i].move(Position[i]) - Position[i]) < Instrument[i].CloseEnough)
              Position[i] = Position[i]? 0: 4095;
+          Serial.print(i); Serial.print(", ");
+          Serial.print(Position[i]); Serial.print(", ");
+          
        }
     }
-  }
+ 
 }
 
 /*---------------------------------------------------------------------------------------
