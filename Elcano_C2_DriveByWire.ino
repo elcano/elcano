@@ -93,16 +93,30 @@ const int HalfLeft = 159;
 const int Straight = 191;
 const int HalfRight = 223;
 const int HardRight = 255;
-/*  Servo range is 50 mm for brake, 100 mm for steering.
-    Servo is fully retracted on a pulse width of 2 ms;
+/*  Elcano Servo range is 50 mm for brake, 100 mm for steering.
+
+    Elcano servo has a hardware controller that moves to a
+    particular position based on a PWM signal from Arduino.
+    Wikispeed servo is the same, except that controller box has
+    buttons for extend, retract, or moving to three preset positions.
+    
+    Elcano servo is fully retracted on a pulse width of 2 ms;
     fully extended at 1 ms and centered at 1.5 ms.
     There is a deadband of 8 us.
     At 12v, servo operating speed is 56mm/s with no load or
     35 mm/s at maximum load.
-    
     The Arduino PWM signal is at 490 Hz or 2.04 ms.
     0 is always off; 255 always on. One step is 7.92 us.
     
+    Either servo has five wires, with observed bahavior of:
+    White: 0V
+    Yellow: 5V
+    Blue: 0-5V depending on position of servo.
+    Black: 12V while servo extends; 0V at rest or retracting.
+    Red:   12V while retracting; 0V at rest or extending.
+    The reading on the Blue line has hysteresis when Elcano sends a PWM signal; 
+    there appear to be different (PWM, position) pairs when retracting or extending.
+    Motor speed is probably controlled by the current on the red or black line.   
 */
 
   const int Motor = 0;
@@ -116,12 +130,14 @@ const int HardRight = 255;
      int StickMoved;  // bool
      int Joystick;   // position of stick
      int LastCommand;  // last commanded
+     int MinPosition;
+     int MaxPosition;
      int Feedback;   // actual position
      int EnablePin;
      int SignalPin;
      int FeedbackPin;
      int CurrentPin;
-     int CloseEnough;  // in counts; Try for 0-4095
+     int CloseEnough;  // in counts; Try for 0-1023
      int Stuck;        // max number of time steps for not getting to position
      int StepSize;     // controls how quickly the servo moves. 2"/sec servo max
      int QuiescentCurrent;  // Nominally 120 counts
@@ -131,25 +147,34 @@ const int HardRight = 255;
      // The ACS758 has sensitivity of 60 mA/V
      int move(int desired_position)
      {
-         int Position = desired_position;
-         Feedback = analogRead(FeedbackPin);
-         if (desired_position < 0)
-           desired_position = 0;
-         if (desired_position > 4095)
-           desired_position = 4095;
-         if ((desired_position - Feedback) > StepSize)
-           Position = max (4095, Feedback + StepSize);
-         if ((desired_position - Feedback) < StepSize)
-           Position = min(0, Feedback - StepSize);
-         analogWrite(SignalPin, Position);
+         int Position = desired_position;    // 0 to 1023
+         Feedback = analogRead(FeedbackPin);  // 0 to 1023
+         if (desired_position > Feedback)
+         {
+            Position = min(desired_position, Feedback + StepSize);
+            Position = min (Position, 1023);
+         }
+         else
+         {
+            Position = max(desired_position,  Feedback - StepSize);
+            Position = max(0, Position);
+         }
+         int PWMPosition = 127 + Position/8;
+         analogWrite(SignalPin, PWMPosition);  // 0 to 255
+         Serial.print(desired_position); Serial.print(", ");
+         Serial.print(Feedback); Serial.print(", ");
+         Serial.print(Position); Serial.print(", ");
+         Serial.println(PWMPosition);
         return Position;
      }
      void home(int desired_position)
      {
+       return;
        int feedback_after, Position;
        int no_move_count = 0;
        do
        {
+         Serial.print("Home ");
          Position = move (desired_position);
          delay(STEP_SIZE_ms);
          feedback_after = analogRead(FeedbackPin);
@@ -223,25 +248,32 @@ void initialize()
         Instrument[Motor].SignalPin = TractionMotor;
         Instrument[Motor].FeedbackPin = FeedbackMotor;
         Instrument[Motor].CurrentPin = Current36V;
-        Instrument[Motor].StepSize = 20; // max from range of 4095.
+        Instrument[Motor].StepSize = 20; // max from range of 1023.
         Instrument[Motor].CloseEnough = 1000;  // no feedback
         Instrument[Motor].Stuck = 3;
+        Instrument[Motor].MinPosition = 85;  // anolog read range is 0 to 1023
+        Instrument[Motor].MaxPosition = 800;
+        
         
         Instrument[Steering].EnablePin = EnableSteer;
         Instrument[Steering].SignalPin = Steer;
         Instrument[Steering].FeedbackPin = FeedbackSteer;
         Instrument[Steering].CurrentPin = CurrentSteer;
         Instrument[Steering].StepSize = 20;
-        Instrument[Motor].CloseEnough = 1;
-        Instrument[Motor].Stuck = 3;
+        Instrument[Steering].CloseEnough = 1;
+        Instrument[Steering].Stuck = 3;
+        Instrument[Steering].MinPosition = 85;  // anolog read range is 0 to 1023
+        Instrument[Steering].MaxPosition = 800;
         
         Instrument[Brakes].EnablePin = EnableBrake;
         Instrument[Brakes].SignalPin = DiskBrake;
         Instrument[Brakes].FeedbackPin = FeedbackBrake;
         Instrument[Brakes].CurrentPin = CurrentBrake;
-        Instrument[Brakes].StepSize = 20;
-        Instrument[Motor].CloseEnough = 1;
-        Instrument[Motor].Stuck = 3;
+        Instrument[Brakes].StepSize = 50;
+        Instrument[Brakes].CloseEnough = 1;
+        Instrument[Brakes].Stuck = 3;
+        Instrument[Brakes].MinPosition = 85;  // anolog read range is 0 to 1023
+        Instrument[Brakes].MaxPosition = 800;
       
         Instrument[Motor].Feedback = 
           analogRead(Instrument[Motor].FeedbackPin);
@@ -420,17 +452,17 @@ void loop()
  // make loop faster
  // limit servo motion during loop to step size 
   unsigned long fred = millis();  
-  Serial.print(fred - TimeNow);
-  Serial.print(",");
+//  Serial.print(fred - TimeNow);
+//  Serial.print(",");
   do  //  Delay so that loop is not faster than 10 Hz.
   {
     EndTime = millis();
   } while (EndTime < NextLoopTime_ms);
-  Serial.print(EndTime - fred);
-  Serial.print(",");
-  Serial.print(NextLoopTime_ms);
-  Serial.print(",");
-  Serial.println(OutsideTime);
+//  Serial.print(EndTime - fred);
+//  Serial.print(",");
+//  Serial.print(NextLoopTime_ms);
+//  Serial.print(",");
+//  Serial.println(OutsideTime);
  
 
 } 
@@ -835,16 +867,28 @@ void ramp (int channel, int state)
 void RampTest()
 {
   static int Position[] ={ 0, 0, 0};
-    for (int i = 0; i< 3; i++)
+  const int i = Brakes;
+    for (int j = 80; j <800; j += 20) /*Instrument[i].MinPosition; j<= Instrument[i].MaxPosition;
+    j += Instrument[i].StepSize) */
     {
-       if( digitalRead(Instrument[i].EnablePin) == HIGH)
-       {
-           if (abs(Instrument[i].move(Position[i]) - Position[i]) < Instrument[i].CloseEnough)
-             Position[i] = Position[i]? 0: 4095;
-          Serial.print(i); Serial.print(", ");
-          Serial.print(Position[i]); Serial.print(", ");
-          
-       }
+        Serial.print("Move up ");
+        Instrument[i].move(j);
+      
+//       if( digitalRead(Instrument[i].EnablePin) == HIGH)
+//       {
+//           if (abs(Instrument[i].move(Position[i]) - Position[i]) < Instrument[i].CloseEnough)
+//           {
+//             if (Position[i] = Position[i]? 0: 1023;
+//           }
+//       }
+        delay(500);
+    }
+    for (int j = Instrument[i].MaxPosition; j>= Instrument[i].MinPosition;
+    j -= 20)
+    {
+         Serial.print("Move down ");
+        Instrument[i].move(j);
+        delay(500);
     }
  
 }
