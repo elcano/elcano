@@ -385,7 +385,8 @@ void loop()
 //  testSwitches();
 //  testRamp();
 //    testQuick();
-    RampTest();
+//    RampTest();
+    ServoData();
    
 #else  // not TEST_MODE
  
@@ -864,6 +865,38 @@ void ramp (int channel, int state)
    delay(100); 
 
 }
+//========================================================================
+void ServoWrite(int i, int Delay_ms)
+{
+     analogWrite(DiskBrake, i);
+     for (int d = 0; d < Delay_ms; d++)
+     {
+       int feedback = analogRead(FeedbackBrake);
+       int current =  analogRead(CurrentBrake);
+       Serial.print(Delay_ms); Serial.print(", ");
+       Serial.print(i); Serial.print(", ");
+       Serial.print(feedback); Serial.print(", ");
+       Serial.print(current); Serial.print(", ");
+       Serial.println(millis());
+
+       delay(1);
+    }
+}
+//=========================================================================
+void ServoData()
+{
+  int Delay_ms = 20;
+  int incr = 8;
+  int i;
+  for (Delay_ms = 20; Delay_ms > 0; Delay_ms--)
+  {
+   for (i = 0; i < 255; i+= incr)
+      ServoWrite(i, Delay_ms);
+   for (i = 255; i >= 0; i-= incr)
+      ServoWrite(i, Delay_ms);
+  } 
+}
+//==============================================================================
 void RampTest()
 {
   static int Position[] ={ 0, 0, 0};
