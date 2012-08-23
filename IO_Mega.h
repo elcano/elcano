@@ -87,6 +87,7 @@ const int Current36V = 0;      // lower box input
 const int CurrentSteer = 1;   // lower box input
 const int CurrentBrake = 2;   // lower box input
 // Shield uses 4, 5 for RTC.
+const int FeedbackMotor = 5;  // to be determined; not implemented.
 // A3, 6 and 7 are spare
 
 // A8-15 Connector ----------------------------
@@ -96,9 +97,9 @@ const int JoystickCenter = 9;      // external input
 const int AccelerateJoystick = 11;  // external input
 
 /* These are what the autonomous vehicle wants to do */
-const int BrakeFeedback = 10;           // external input
+const int FeedbackBrake = 10;           // external input
 const int CruiseThrottle = 15;  // external input
 const int CruiseBrake = 14;     // external input
 const int CruiseSteer = 13;     // external input
-const int SteerFeedBack = 12;      // external input
+const int FeedbackSteer = 12;      // external input
 
