@@ -6,7 +6,7 @@
 <setting alwaysvectorfont="no"/>
 <setting verticaltext="up"/>
 </settings>
-<grid distance="0.05" unitdist="inch" unit="inch" style="lines" multiple="1" display="no" altdistance="0.01" altunitdist="inch" altunit="inch"/>
+<grid distance="0.1" unitdist="inch" unit="inch" style="lines" multiple="1" display="no" altdistance="0.01" altunitdist="inch" altunit="inch"/>
 <layers>
 <layer number="1" name="Top" color="4" fill="1" visible="no" active="no"/>
 <layer number="2" name="Route2" color="1" fill="3" visible="no" active="no"/>
@@ -9494,7 +9494,8 @@ Module</text>
 <label x="106.68" y="36.195" size="1.778" layer="95"/>
 <pinref part="PWML" gate="A" pin="4"/>
 <wire x1="127" y1="35.56" x2="53.34" y2="35.56" width="0.1524" layer="91"/>
-<wire x1="53.34" y1="35.56" x2="53.34" y2="104.14" width="0.1524" layer="91"/>
+<pinref part="X2" gate="G$1" pin="21"/>
+<wire x1="53.34" y1="99.06" x2="53.34" y2="35.56" width="0.1524" layer="91"/>
 </segment>
 </net>
 <net name="D2INT0" class="0">
@@ -9579,7 +9580,8 @@ Module</text>
 <label x="111.125" y="61.595" size="1.778" layer="95"/>
 <pinref part="COMMUNICATION" gate="A" pin="5"/>
 <wire x1="127" y1="60.96" x2="48.26" y2="60.96" width="0.1524" layer="91"/>
-<wire x1="48.26" y1="60.96" x2="48.26" y2="101.6" width="0.1524" layer="91"/>
+<pinref part="X2" gate="G$1" pin="19"/>
+<wire x1="48.26" y1="99.06" x2="48.26" y2="60.96" width="0.1524" layer="91"/>
 </segment>
 </net>
 <net name="D15RXD3" class="0">
@@ -9596,7 +9598,8 @@ Module</text>
 <label x="111.125" y="64.135" size="1.778" layer="95"/>
 <pinref part="COMMUNICATION" gate="A" pin="6"/>
 <wire x1="127" y1="63.5" x2="50.8" y2="63.5" width="0.1524" layer="91"/>
-<wire x1="50.8" y1="63.5" x2="50.8" y2="104.14" width="0.1524" layer="91"/>
+<pinref part="X2" gate="G$1" pin="20"/>
+<wire x1="50.8" y1="63.5" x2="50.8" y2="99.06" width="0.1524" layer="91"/>
 </segment>
 </net>
 <net name="D14TXD3" class="0">
@@ -9606,7 +9609,8 @@ Module</text>
 <wire x1="127" y1="68.58" x2="91.44" y2="68.58" width="0.1524" layer="91"/>
 <wire x1="91.44" y1="68.58" x2="91.44" y2="71.12" width="0.1524" layer="91"/>
 <wire x1="91.44" y1="71.12" x2="45.72" y2="71.12" width="0.1524" layer="91"/>
-<wire x1="45.72" y1="71.12" x2="45.72" y2="104.14" width="0.1524" layer="91"/>
+<pinref part="X2" gate="G$1" pin="18"/>
+<wire x1="45.72" y1="99.06" x2="45.72" y2="71.12" width="0.1524" layer="91"/>
 </segment>
 </net>
 <net name="D37" class="0">
@@ -10020,7 +10024,6 @@ Module</text>
 </net>
 <net name="D4" class="0">
 <segment>
-<wire x1="40.64" y1="99.06" x2="40.64" y2="104.14" width="0.1524" layer="91"/>
 <pinref part="X2" gate="G$1" pin="16"/>
 <wire x1="40.64" y1="99.06" x2="40.64" y2="68.58" width="0.1524" layer="91"/>
 <wire x1="40.64" y1="68.58" x2="81.28" y2="68.58" width="0.1524" layer="91"/>
@@ -10339,11 +10342,6 @@ Module</text>
 <junction x="83.82" y="205.74"/>
 </segment>
 </net>
-<net name="D50" class="0">
-<segment>
-<wire x1="55.88" y1="185.42" x2="54.61" y2="185.42" width="0.1524" layer="91"/>
-</segment>
-</net>
 <net name="DACD" class="0">
 <segment>
 <wire x1="-35.56" y1="175.26" x2="-35.56" y2="223.52" width="0.1524" layer="91"/>
@@ -10432,12 +10430,6 @@ Module</text>
 <wire x1="40.64" y1="177.8" x2="-12.7" y2="177.8" width="0.1524" layer="91"/>
 <pinref part="SV3" gate="G$1" pin="5"/>
 <wire x1="-12.7" y1="177.8" x2="-12.7" y2="175.26" width="0.1524" layer="91"/>
-</segment>
-</net>
-<net name="N$3" class="0">
-<segment>
-<pinref part="XIOL" gate="A" pin="4"/>
-<wire x1="48.26" y1="185.42" x2="57.15" y2="185.42" width="0.1524" layer="91"/>
 </segment>
 </net>
 <net name="N$4" class="0">
