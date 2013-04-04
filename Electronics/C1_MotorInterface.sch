@@ -6728,6 +6728,9 @@ Source: www.allegromicro.com/datafile/0750-050.pdf</description>
 <part name="JOYSTICK" library="dc-dc-converter" deviceset="DIW2" device="" value="APEM 9000"/>
 <part name="P+3" library="supply1" deviceset="+5V" device=""/>
 <part name="GND4" library="supply1" deviceset="GND" device=""/>
+<part name="G4" library="battery" deviceset="SL-150-1/2AA/PR" device="" value="12V"/>
+<part name="J9" library="con-faston" deviceset="PIN1-2" device=""/>
+<part name="J10" library="con-faston" deviceset="PIN1-2" device=""/>
 </parts>
 <sheets>
 <sheet>
@@ -6747,41 +6750,47 @@ Source: www.allegromicro.com/datafile/0750-050.pdf</description>
 <text x="48.26" y="5.08" size="1.778" layer="91">~Estop</text>
 <text x="48.26" y="2.54" size="1.778" layer="91">PWM throttle</text>
 <text x="-7.62" y="63.5" size="1.778" layer="91">Red Anderson 36V</text>
-<text x="68.58" y="60.96" size="1.778" layer="91">Red Anderson 36V</text>
-<text x="-7.62" y="76.2" size="1.778" layer="91">Black Anderson GND</text>
-<text x="63.5" y="76.2" size="1.778" layer="91">Black Anderson GND</text>
+<text x="68.58" y="68.58" size="1.778" layer="91">Red Anderson 36V</text>
+<text x="-7.62" y="83.82" size="1.778" layer="91">Black Anderson GND</text>
+<text x="63.5" y="83.82" size="1.778" layer="91">Black Anderson GND</text>
 <text x="-22.86" y="25.4" size="1.778" layer="91">JOYSTICK</text>
-<text x="93.98" y="81.28" size="1.778" layer="91">MOTOR CONTROLLER</text>
-<text x="-27.94" y="71.12" size="1.778" layer="91">BATTERY</text>
+<text x="93.98" y="88.9" size="1.778" layer="91">MOTOR CONTROLLER</text>
+<text x="-27.94" y="78.74" size="1.778" layer="91">BATTERY</text>
+<text x="50.8" y="58.42" size="1.778" layer="91">Normally closed</text>
+<rectangle x1="5.08" y1="-1.27" x2="80.01" y2="88.9" layer="95"/>
+<text x="-7.62" y="73.66" size="1.778" layer="91">Orange Anderson 12V</text>
 </plain>
 <instances>
 <instance part="X1" gate="-1" x="38.1" y="10.16"/>
 <instance part="GND1" gate="1" x="71.12" y="20.32" rot="R180"/>
 <instance part="P+1" gate="1" x="71.12" y="-2.54" rot="R180"/>
-<instance part="J1" gate="G$1" x="10.16" y="71.12" rot="R180"/>
+<instance part="J1" gate="G$1" x="10.16" y="78.74" rot="R180"/>
 <instance part="J2" gate="G$1" x="10.16" y="60.96" rot="R180"/>
-<instance part="J3" gate="G$1" x="68.58" y="66.04"/>
-<instance part="J4" gate="G$1" x="68.58" y="71.12"/>
+<instance part="J3" gate="G$1" x="68.58" y="73.66"/>
+<instance part="J4" gate="G$1" x="68.58" y="78.74"/>
 <instance part="K1" gate="1" x="55.88" y="53.34" rot="MR270"/>
 <instance part="K1" gate="2" x="55.88" y="60.96" rot="R270"/>
 <instance part="D1" gate="1" x="68.58" y="45.72" rot="MR0"/>
 <instance part="LED1" gate="G$1" x="58.42" y="38.1" rot="MR270"/>
 <instance part="R1" gate="G$1" x="73.66" y="38.1" rot="MR0"/>
-<instance part="GND2" gate="1" x="25.4" y="68.58"/>
+<instance part="GND2" gate="1" x="25.4" y="76.2"/>
 <instance part="G1" gate="G$1" x="-15.24" y="60.96"/>
 <instance part="G2" gate="G$1" x="-22.86" y="60.96"/>
 <instance part="G3" gate="G$1" x="-33.02" y="60.96"/>
 <instance part="J5" gate="G$1" x="-5.08" y="60.96"/>
-<instance part="J6" gate="G$1" x="-5.08" y="71.12"/>
-<instance part="MOTOR_CONTROL" gate="G$1" x="106.68" y="68.58" rot="MR180"/>
-<instance part="J7" gate="G$1" x="83.82" y="71.12" rot="R180"/>
-<instance part="J8" gate="G$1" x="83.82" y="66.04" rot="R180"/>
+<instance part="J6" gate="G$1" x="-5.08" y="78.74"/>
+<instance part="MOTOR_CONTROL" gate="G$1" x="106.68" y="76.2" rot="MR180"/>
+<instance part="J7" gate="G$1" x="83.82" y="78.74" rot="R180"/>
+<instance part="J8" gate="G$1" x="83.82" y="73.66" rot="R180"/>
 <instance part="IC1" gate="G$1" x="27.94" y="55.88" rot="MR270"/>
 <instance part="GND3" gate="1" x="33.02" y="33.02"/>
 <instance part="P+2" gate="1" x="22.86" y="35.56" rot="R180"/>
 <instance part="JOYSTICK" gate="G$1" x="-15.24" y="15.24"/>
 <instance part="P+3" gate="1" x="-33.02" y="27.94"/>
 <instance part="GND4" gate="1" x="-33.02" y="2.54"/>
+<instance part="G4" gate="G$1" x="-33.02" y="71.12"/>
+<instance part="J9" gate="G$1" x="-5.08" y="71.12"/>
+<instance part="J10" gate="G$1" x="10.16" y="71.12" rot="R180"/>
 </instances>
 <busses>
 </busses>
@@ -6793,18 +6802,18 @@ Source: www.allegromicro.com/datafile/0750-050.pdf</description>
 <pinref part="GND1" gate="1" pin="GND"/>
 <wire x1="71.12" y1="12.7" x2="71.12" y2="17.78" width="0.1524" layer="91"/>
 <junction x="71.12" y="12.7"/>
-<wire x1="127" y1="66.04" x2="127" y2="12.7" width="0.1524" layer="91"/>
+<wire x1="127" y1="73.66" x2="127" y2="12.7" width="0.1524" layer="91"/>
 <wire x1="127" y1="12.7" x2="71.12" y2="12.7" width="0.1524" layer="91"/>
 <pinref part="MOTOR_CONTROL" gate="G$1" pin="+VOUT@1"/>
-<wire x1="124.46" y1="66.04" x2="127" y2="66.04" width="0.1524" layer="91"/>
+<wire x1="124.46" y1="73.66" x2="127" y2="73.66" width="0.1524" layer="91"/>
 </segment>
 <segment>
 <pinref part="J1" gate="G$1" pin="1"/>
 <pinref part="J4" gate="G$1" pin="1"/>
-<wire x1="15.24" y1="71.12" x2="25.4" y2="71.12" width="0.1524" layer="91"/>
+<wire x1="15.24" y1="78.74" x2="25.4" y2="78.74" width="0.1524" layer="91"/>
 <pinref part="GND2" gate="1" pin="GND"/>
-<wire x1="25.4" y1="71.12" x2="63.5" y2="71.12" width="0.1524" layer="91"/>
-<junction x="25.4" y="71.12"/>
+<wire x1="25.4" y1="78.74" x2="63.5" y2="78.74" width="0.1524" layer="91"/>
+<junction x="25.4" y="78.74"/>
 </segment>
 <segment>
 <pinref part="IC1" gate="G$1" pin="GND"/>
@@ -6824,8 +6833,8 @@ Source: www.allegromicro.com/datafile/0750-050.pdf</description>
 <wire x1="45.72" y1="5.08" x2="71.12" y2="5.08" width="0.1524" layer="91"/>
 <pinref part="P+1" gate="1" pin="+5V"/>
 <pinref part="MOTOR_CONTROL" gate="G$1" pin="+VOUT@2"/>
-<wire x1="124.46" y1="71.12" x2="132.08" y2="71.12" width="0.1524" layer="91"/>
-<wire x1="132.08" y1="71.12" x2="132.08" y2="5.08" width="0.1524" layer="91"/>
+<wire x1="124.46" y1="78.74" x2="132.08" y2="78.74" width="0.1524" layer="91"/>
+<wire x1="132.08" y1="78.74" x2="132.08" y2="5.08" width="0.1524" layer="91"/>
 <wire x1="132.08" y1="5.08" x2="71.12" y2="5.08" width="0.1524" layer="91"/>
 <wire x1="71.12" y1="5.08" x2="71.12" y2="0" width="0.1524" layer="91"/>
 <junction x="71.12" y="5.08"/>
@@ -6844,12 +6853,8 @@ Source: www.allegromicro.com/datafile/0750-050.pdf</description>
 </net>
 <net name="N$1" class="0">
 <segment>
-<pinref part="K1" gate="2" pin="P"/>
-<wire x1="48.26" y1="60.96" x2="50.8" y2="60.96" width="0.1524" layer="91"/>
 <pinref part="K1" gate="1" pin="1"/>
 <wire x1="50.8" y1="53.34" x2="48.26" y2="53.34" width="0.1524" layer="91"/>
-<wire x1="48.26" y1="60.96" x2="48.26" y2="53.34" width="0.1524" layer="91"/>
-<junction x="48.26" y="53.34"/>
 <pinref part="D1" gate="1" pin="C"/>
 <wire x1="66.04" y1="45.72" x2="48.26" y2="45.72" width="0.1524" layer="91"/>
 <wire x1="48.26" y1="45.72" x2="48.26" y2="53.34" width="0.1524" layer="91"/>
@@ -6857,9 +6862,10 @@ Source: www.allegromicro.com/datafile/0750-050.pdf</description>
 <wire x1="55.88" y1="38.1" x2="48.26" y2="38.1" width="0.1524" layer="91"/>
 <wire x1="48.26" y1="38.1" x2="48.26" y2="45.72" width="0.1524" layer="91"/>
 <junction x="48.26" y="45.72"/>
-<pinref part="IC1" gate="G$1" pin="IP-"/>
-<wire x1="40.64" y1="60.96" x2="48.26" y2="60.96" width="0.1524" layer="91"/>
-<junction x="48.26" y="60.96"/>
+<pinref part="J10" gate="G$1" pin="1"/>
+<wire x1="15.24" y1="71.12" x2="48.26" y2="71.12" width="0.1524" layer="91"/>
+<wire x1="48.26" y1="71.12" x2="48.26" y2="53.34" width="0.1524" layer="91"/>
+<junction x="48.26" y="53.34"/>
 </segment>
 </net>
 <net name="N$4" class="0">
@@ -6873,13 +6879,23 @@ Source: www.allegromicro.com/datafile/0750-050.pdf</description>
 <segment>
 <pinref part="G2" gate="G$1" pin="-"/>
 <pinref part="G3" gate="G$1" pin="+"/>
+<wire x1="-27.94" y1="60.96" x2="-27.94" y2="71.12" width="0.1524" layer="91"/>
+<wire x1="-27.94" y1="71.12" x2="-10.16" y2="71.12" width="0.1524" layer="91"/>
+<pinref part="G4" gate="G$1" pin="+"/>
+<junction x="-27.94" y="71.12"/>
+<pinref part="J9" gate="G$1" pin="1"/>
+<junction x="-27.94" y="60.96"/>
 </segment>
 </net>
 <net name="N$8" class="0">
 <segment>
 <pinref part="G3" gate="G$1" pin="-"/>
 <wire x1="-38.1" y1="60.96" x2="-38.1" y2="71.12" width="0.1524" layer="91"/>
-<wire x1="-38.1" y1="71.12" x2="-10.16" y2="71.12" width="0.1524" layer="91"/>
+<wire x1="-38.1" y1="71.12" x2="-38.1" y2="78.74" width="0.1524" layer="91"/>
+<wire x1="-38.1" y1="78.74" x2="-10.16" y2="78.74" width="0.1524" layer="91"/>
+<pinref part="J6" gate="G$1" pin="1"/>
+<pinref part="G4" gate="G$1" pin="-"/>
+<junction x="-38.1" y="71.12"/>
 </segment>
 </net>
 <net name="N$5" class="0">
@@ -6888,9 +6904,9 @@ Source: www.allegromicro.com/datafile/0750-050.pdf</description>
 <wire x1="30.48" y1="0" x2="7.62" y2="0" width="0.1524" layer="91"/>
 <wire x1="7.62" y1="0" x2="7.62" y2="-7.62" width="0.1524" layer="91"/>
 <wire x1="7.62" y1="-7.62" x2="134.62" y2="-7.62" width="0.1524" layer="91"/>
-<wire x1="134.62" y1="-7.62" x2="134.62" y2="73.66" width="0.1524" layer="91"/>
+<wire x1="134.62" y1="-7.62" x2="134.62" y2="81.28" width="0.1524" layer="91"/>
 <pinref part="MOTOR_CONTROL" gate="G$1" pin="-VOUT@2"/>
-<wire x1="124.46" y1="73.66" x2="134.62" y2="73.66" width="0.1524" layer="91"/>
+<wire x1="124.46" y1="81.28" x2="134.62" y2="81.28" width="0.1524" layer="91"/>
 </segment>
 </net>
 <net name="N$6" class="0">
@@ -6898,7 +6914,7 @@ Source: www.allegromicro.com/datafile/0750-050.pdf</description>
 <pinref part="K1" gate="2" pin="S"/>
 <pinref part="J3" gate="G$1" pin="1"/>
 <wire x1="60.96" y1="60.96" x2="63.5" y2="60.96" width="0.1524" layer="91"/>
-<wire x1="63.5" y1="60.96" x2="63.5" y2="66.04" width="0.1524" layer="91"/>
+<wire x1="63.5" y1="60.96" x2="63.5" y2="73.66" width="0.1524" layer="91"/>
 </segment>
 </net>
 <net name="N$10" class="0">
@@ -6935,9 +6951,9 @@ Source: www.allegromicro.com/datafile/0750-050.pdf</description>
 <segment>
 <pinref part="X1" gate="-1" pin="12"/>
 <wire x1="45.72" y1="10.16" x2="129.54" y2="10.16" width="0.1524" layer="91"/>
-<wire x1="129.54" y1="10.16" x2="129.54" y2="68.58" width="0.1524" layer="91"/>
+<wire x1="129.54" y1="10.16" x2="129.54" y2="76.2" width="0.1524" layer="91"/>
 <pinref part="MOTOR_CONTROL" gate="G$1" pin="-VOUT@1"/>
-<wire x1="129.54" y1="68.58" x2="124.46" y2="68.58" width="0.1524" layer="91"/>
+<wire x1="129.54" y1="76.2" x2="124.46" y2="76.2" width="0.1524" layer="91"/>
 </segment>
 </net>
 <net name="N$3" class="0">
@@ -6975,6 +6991,13 @@ Source: www.allegromicro.com/datafile/0750-050.pdf</description>
 <pinref part="X1" gate="-1" pin="3"/>
 <wire x1="30.48" y1="12.7" x2="-2.54" y2="12.7" width="0.1524" layer="91"/>
 <pinref part="JOYSTICK" gate="G$1" pin="-VOUT"/>
+</segment>
+</net>
+<net name="N$16" class="0">
+<segment>
+<pinref part="K1" gate="2" pin="P"/>
+<pinref part="IC1" gate="G$1" pin="IP-"/>
+<wire x1="40.64" y1="60.96" x2="50.8" y2="60.96" width="0.1524" layer="91"/>
 </segment>
 </net>
 </nets>
