@@ -75,11 +75,11 @@ States:  */
 
 
 volatile int Stop = TRUE;
-volatile unsigned long TimeOfStopButton_ms;
+volatile unsigned long TimeOfStopButton_ms; //Records the millis() value when stop was last pressed
 volatile int Cruise = FALSE;
-volatile unsigned long TimeOfCruiseButton_ms;
+volatile unsigned long TimeOfCruiseButton_ms; //Records the millis() value when cruise was last pressed
 const int PauseTime_ms = 4000;
-unsigned long TimeOfReverseButton_ms;
+unsigned long TimeOfReverseButton_ms;         //Records the millis() value when reverse was last pressed
 int Forward;
 
 const int Full = 255;   // fully on for PWM signals
@@ -122,6 +122,7 @@ const int HardRight = 255;
   const int Motor = 0;
   const int Brakes = 1;
   const int Steering = 2;
+  
   class _Instruments
   {
     public:
@@ -138,58 +139,96 @@ const int HardRight = 255;
      int FeedbackPin;
      int CurrentPin;
      int CloseEnough;  // in counts; Try for 0-1023
-     int Stuck;        // max number of time steps for not getting to position
+     int Stuck;        // max number of time steps for not getting to position before giving up
      int StepSize;     // controls how quickly the servo moves. 2"/sec servo max
      int QuiescentCurrent;  // Nominally 120 counts
      int CurrentDraw;  // In counts, with 1 Amp = 12 counts
      int CurrentLimit;  // In counts
      // One count from analog input is about 5mV from ACS758lcb050U
      // The ACS758 has sensitivity of 60 mA/V
+	 
+	 //This does not actually move TO a position, it moves a distance of StepSize towards the position.
+	 //Returns the actual sensed position
      int move(int desired_position)
      {
          int Position = desired_position;    // 0 to 1023
          Feedback = analogRead(FeedbackPin);  // 0 to 1023
+		 
+		 //If the sensor says the current position is less than the desired position
+		 //Than go one step towards it.
          if (desired_position > Feedback)
          {
             Position = min(desired_position, Feedback + StepSize);
+			//But do't go any farther than the limit(Use a const here?)
             Position = min (Position, 1023);
          }
+		 //Position>Desired
          else
          {
+			//Go one step just like above and don't exceed limit.
             Position = max(desired_position,  Feedback - StepSize);
             Position = max(0, Position);
          }
+		 
+		 //Map the range of the position variable to the expected duty cycle range of the actuator
          int PWMPosition = 127 + Position/8;
          analogWrite(SignalPin, PWMPosition);  // 0 to 255
+		 
+		 //debug prints. []Should this be in an ifdef?
          Serial.print(desired_position); Serial.print(", ");
          Serial.print(Feedback); Serial.print(", ");
          Serial.print(Position); Serial.print(", ");
          Serial.println(PWMPosition);
+		 
         return Position;
      }
+	 
+	 /
+	 
+	 //--function not working, currently a no-op.--
+	 //Go to desired position. 
+	 //This operation is blocking and will block until the actuator is in the correct position
+	 //Will stop trying after a while. []Change to return sucess or failure?
+	 //[]make non blocking?
      void home(int desired_position)
      {
-       return;
+       return;//the return that makes it a no-op
        int feedback_after, Position;
-       int no_move_count = 0;
+       int no_move_count = 0; //Safety counter
+	   
+	   //Loop while the position is not CloseEnough to the desired position
        do
        {
+		//[]Debug, put in ifdef?
          Serial.print("Home ");
+		 //Move one step towards the target, wait, and check progress
          Position = move (desired_position);
          delay(STEP_SIZE_ms);
          feedback_after = analogRead(FeedbackPin);
+		 
+		 //Feedback was set in move(pos) before any actual moving happened
+		 //So this checks to see if the feedback value has changed since
+		 //the move command
+		 //If somehow the motor just moved back and forth but never got to the target
+		 //We might have an infinite loop. But I don't think that would actually happenl.
          if (abs(feedback_after - Feedback) <= CloseEnough)
            no_move_count++;
          else
+			//Reset the safety counter after every motion
            no_move_count = 0;
+		   
+		   //Quit after x attempts
          if (no_move_count > Stuck)
            return;
+		   
+		 //loop while the absolute difference in target and actual is not close enough.
        } while ((abs(desired_position - Feedback) > CloseEnough));
      }
   } Instrument[3];
  /*---------------------------------------------------------------------------------------*/ 
 void setup()  
 {  
+		//Set up pin modes and interrupts, call serial.begin and call initialize.
         pinMode(ReverseButton, INPUT);
         pinMode(CruiseReverse, INPUT);
         pinMode(StopButton, INPUT);  // via interrupt
@@ -275,6 +314,7 @@ void initialize()
         Instrument[Brakes].MinPosition = 85;  // anolog read range is 0 to 1023
         Instrument[Brakes].MaxPosition = 800;
       
+	  //Load current positios from the actual sensors
         Instrument[Motor].Feedback = 
           analogRead(Instrument[Motor].FeedbackPin);
          Instrument[Steering].Feedback = 
@@ -377,7 +417,10 @@ void loop()
   static unsigned long EndTime = 0;
   static unsigned long OutsideTime;
   
+  //Calculate how much time was spent outside the loop
   OutsideTime = EndTime - TimeNow;
+  
+  //Read the user inputs for the enable switches
   Instrument[Motor].Enabled = digitalRead(EnableMotor);
   Instrument[Brakes].Enabled = digitalRead(EnableBrake);
   Instrument[Steering].Enabled = digitalRead(EnableSteer);
@@ -395,6 +438,9 @@ void loop()
   StateTransition(Brakes);
   StateTransition(Steering);
   
+  //Motor stuff
+  
+  //This logic determines the source of LastCommand
   if (Instrument[Motor].State == ManualGo)
   {
    Instrument[Motor].LastCommand = Instrument[Motor].Joystick;
@@ -407,8 +453,11 @@ void loop()
   {
     Instrument[Motor].LastCommand = MinimumThrottle;   
   }
-   Instrument[Motor].move(Instrument[Motor].LastCommand);
   
+   //Whatever the logic says, move a step towards it.
+   Instrument[Motor].move(Instrument[Motor].LastCommand);
+   
+  //Brakes stuff
   if (Instrument[Brakes].State == ManualGo)
   {
    Instrument[Brakes].LastCommand = Instrument[Brakes].Joystick;
@@ -423,6 +472,7 @@ void loop()
   }
    Instrument[Brakes].move(Instrument[Brakes].LastCommand);
   
+  //Steering stuff
    if (Instrument[Steering].State == ManualGo)
   {
    Instrument[Steering].LastCommand = Instrument[Steering].Joystick;
@@ -475,9 +525,13 @@ void JoystickMotion()
   const int deadBandLow = 32;  // out of 1023
   const int deadBandHigh = 32;
   center = 511; // analogRead(JoystickCenter);
+  
+  //Calculate deadband info
   int tinyDown = center - deadBandLow;
   int tinyUp = center + deadBandHigh;
 
+  
+    //This appears to make it pause(ignore input?) for PauseTime_ms after the button press
     if (Stop && (millis() < TimeOfStopButton_ms + PauseTime_ms))
     {
       Instrument[Motor].StickMoved = FALSE;
@@ -486,21 +540,28 @@ void JoystickMotion()
       return;
     }
     stick = 511; // analogRead(AccelerateJoystick);
+	
+	//If stick did not move more than the "up"	deadband.
     if (stick <= tinyUp)  // 543
     {
+		//stick not outside deadBand
       Instrument[Motor].Joystick = 0;
       Instrument[Motor].StickMoved = FALSE;
     }
     else
     {
+		//stick outside of deadband
+		
       Instrument[Motor].Joystick = MinimumThrottle + (FullThrottle - MinimumThrottle)
        * (stick - tinyUp) / (1023 - tinyUp);
       Instrument[Motor].StickMoved =  TRUE;
       Stop = FALSE;
     }
  
+	//Check if Stick moved beyone "down" deadBand
     if (stick >= tinyDown)
     {
+		//Stick still in deadband
       Instrument[Brakes].Joystick = 0;
       Instrument[Brakes].StickMoved =  FALSE;
     }
@@ -511,8 +572,13 @@ void JoystickMotion()
       Instrument[Brakes].StickMoved =  TRUE;
       Stop = FALSE;
     }
-
+	
+	//This line appears to be changed in for testing
+	//read the steering pot in the joystick
     stick = 511; // 1023 - analogRead(SteerJoystick);
+	//
+	
+	//If the stick is still in the left-right deadband
     if (stick > tinyDown && stick <= tinyUp)
     {
       Instrument[Steering].Joystick = Straight;
@@ -520,6 +586,7 @@ void JoystickMotion()
     }
     else if (stick > tinyUp)
     {
+		//Stick moved past "up" deadband limit
       Instrument[Steering].Joystick = Straight + (HardRight - Straight) * (stick - tinyUp) / (1023 - tinyUp);
       Instrument[Steering].StickMoved =  TRUE;
       Stop = FALSE;
@@ -611,15 +678,19 @@ void  checkReverse()
   unsigned long TimeNow;
   int ReversePushed;
   
+ 
   if (Instrument[Motor].State == ManualStop)
  { 
    ReversePushed = digitalRead(ReverseButton);
    if (ReversePushed)
    {
+	//If we are in motor=manual stop and the reverse button is pressed
      TimeNow = millis();
+	 //If the reverse button has not been pressed in the last 2000ms
      if (TimeNow > TimeOfReverseButton_ms + 2000)
      {
          TimeOfReverseButton_ms = TimeNow;
+		 //Toggle reversed state
          Forward = !Forward;
      }
    }
