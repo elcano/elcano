@@ -183,14 +183,16 @@ const int HardRight = 255;
         return Position;
      }
 	 
+	 /
 	 
-	 //Go to desired position.
+	 //--function not working, currently a no-op.--
+	 //Go to desired position. 
 	 //This operation is blocking and will block until the actuator is in the correct position
 	 //Will stop trying after a while. []Change to return sucess or failure?
 	 //[]make non blocking?
      void home(int desired_position)
      {
-       return;
+       return;//the return that makes it a no-op
        int feedback_after, Position;
        int no_move_count = 0; //Safety counter
 	   
