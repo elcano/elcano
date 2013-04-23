@@ -1,4 +1,3 @@
-D10tcf
 /* IO_2009.h:  I/O pin assignments for Arduino DueMilleNove  */
 
 // DIGITAL I/O ----------------------------------------------

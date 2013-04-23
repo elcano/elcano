@@ -63,12 +63,12 @@
     is possible. The position of the returned spot can be used to measure the distance to
     the object.
 */
-#include "Common.h"
+#include <Common.h>
 
 #ifdef SIMULATOR
-#include "..\\Elcano\\Elcano\\Elcano_simulator.h"
+#include <Elcano_simulator.h>
 #else
-#include "Serial.cpp"
+#include <Serial.h>
 #endif
 
 namespace C7_Vision {
