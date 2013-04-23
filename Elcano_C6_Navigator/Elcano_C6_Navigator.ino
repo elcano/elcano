@@ -6,14 +6,6 @@
 Elcano Module C6: Navigator.
   Includes C5 Obstacle detection.
   
-  Create a library containing the following files, then import the library
-  C6_IO.h
-  Commom.cpp
-  Common.h
-  KalmanFilter.cpp
-  Matrix.cpp
-  Matrix.h
-  
 Documentation:
   NavigationSystem (TO DO: Write document, based on these comments).
   Wiring_C6Mega.xls
@@ -94,7 +86,7 @@ Serial lines:
 // functions will not work.
 
 #ifdef SIMULATOR
-#include "..\\Elcano\\Elcano\\Elcano_simulator.h"
+#include <Elcano_simulator.h>
 #endif
 
 

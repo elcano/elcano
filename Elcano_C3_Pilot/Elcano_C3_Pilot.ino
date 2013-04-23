@@ -5,12 +5,6 @@
 /*
 // Elcano Contol Module C3: Pilot.
 
-Copy the following software files to an Elcano_C6_Navigator directory:
-  Elcano_C3_Pilot.ino; add new tabs with the following names and copy contents
-  Common.cpp
-  Common.h
-  IO.h
-
 The Pilot program reads a serial line that specifies the desired path and speed 
 of the vehicle. It computes the analog signals to control the throttle, brakes 
 and steering and sends these to C2.
