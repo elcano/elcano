@@ -14,9 +14,9 @@ computer based on the state of the enable switches.
 #endif
 
 #ifdef MEGA
-#include "IO_Mega.h"
+#include <IO_Mega.h>
 #else
-#include "IO_2009.h"
+#include <IO_2009.h>
 #endif
 
   const int ManualStop = 0;
