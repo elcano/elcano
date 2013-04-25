@@ -51,16 +51,16 @@
  Do a road test.
  Shoot a video and post it.
  */
-#define MEGA
+//#define MEGA
 #ifndef TRUE
 #define TRUE 1
 #define FALSE 0
 #endif
-#ifdef MEGA
-#include "IO_Mega.h"
-#else
-#include "IO_2009.h" // conflict with chip select
-#endif
+//#ifdef MEGA
+#include <IO_Mega.h>
+//#else
+//#include <IO_2009.h> // conflict with chip select
+//#endif
 #include <SD.h>
 
 // On the Ethernet Shield, CS is pin 4. Note that even if it's not

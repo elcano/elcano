@@ -8,11 +8,11 @@ Elcano Contol Module C2: Instrument panel controls and LEDs.
 #define FALSE 0
 #endif
 
-// #include "Serial.cpp"
+// #include <Serial.h>
 #ifdef MEGA
-#include "IO_Mega.h"
+#include <IO_Mega.h>
 #else
-#include "IO_2009.h"
+#include <IO_2009.h>
 #endif
 
 /*

@@ -4,12 +4,6 @@
 /*  
 Elcano Module C4: Path Planner.
 
-Copy the following software files to an Elcano_C6_Navigator directory:
-  Elcano_C4_Planner.ino; add new tabs with the following names and copy contents
-  Common.cpp
-  Common.h
-  IO.h
-
 Output to C6: Desired route and speed curves and whether it exits a road or changes lane.
 Input: RNDF, MDF and initial position files from memory stick.
 Input from C5: Speed and position of obstacles.
