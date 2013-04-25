@@ -31,7 +31,7 @@ const int DiskBrake = 7;  // external PWM output
 // D8-13 Connector ----------------------
 // The shield does not provide a socket for D8-13
 // D8 and D9 are not used.
-//const int chipSelect = 10;  // for SD data logging shield from Adafruit.
+const int chipSelect = 10;  // for SD data logging shield from Adafruit.
 /** MOSI - pin 11
  ** MISO - pin 12
  ** CLK  - pin 13 */

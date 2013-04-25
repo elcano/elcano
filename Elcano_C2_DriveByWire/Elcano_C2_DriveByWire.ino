@@ -14,9 +14,9 @@
 #endif
 
 #ifdef MEGA
-#include "IO_Mega.h"
+#include <IO_Mega.h>
 #else
-#include "IO_2009.h"
+#include <IO_2009.h>
 #endif
 
 void Display (int n);
