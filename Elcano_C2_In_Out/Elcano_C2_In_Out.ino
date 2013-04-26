@@ -1,7 +1,7 @@
+
+
 /*
-Elcano Contol Module C2: Instrument panel controls and LEDs.
-This routine handles simple drive-by-wire, as well as handing control over to the
-computer based on the state of the enable switches.
+Elcano Contol Module C2: Tests for steering and brake servos
 */
 
 
@@ -14,7 +14,7 @@ computer based on the state of the enable switches.
 #endif
 
 #ifdef MEGA
-#include <IO_Mega.h>
+#include <IO_PCB.h>
 #else
 #include <IO_2009.h>
 #endif
@@ -38,13 +38,15 @@ const int Full = 255;   // fully on for PWM signals
 const int Off = 0;
 const int FullThrottle =  179;   // 3.5 V
 const int MinimumThrottle = 39;  // Throttle has no effect until 0.75 V
-const int FullBrake = 255;  
-const int MinimumBrake = 127;
-const int HardLeft = 127;
+
+const int FullBrake = 225;  // start with a conservative value; could go as high as 255;  
+const int MinimumBrake = 155; // start with a conservative value; could go as low as 127;
+
+const int HardLeft = 159; // start with a conservative value; could go as low as 127;
 const int HalfLeft = 159;
 const int Straight = 191;
 const int HalfRight = 223;
-const int HardRight = 255;
+const int HardRight = 223; // start with a conservative value; could go as high as  255;
 /*  Elcano Servo range is 50 mm for brake, 100 mm for steering.
 
     Elcano servo has a hardware controller that moves to a
@@ -64,6 +66,7 @@ const int HardRight = 255;
     White: 0V
     Yellow: 5V
     Blue: 0-5V depending on position of servo.
+    The Blue wire is 
     Black: 12V while servo extends; 0V at rest or retracting.
     Red:   12V while retracting; 0V at rest or extending.
     The reading on the Blue line has hysteresis when Elcano sends a PWM signal; 
@@ -146,12 +149,12 @@ void setup()
         pinMode(CruiseReverse, INPUT);
         pinMode(StopButton, INPUT);  // via interrupt
         pinMode(CruiseButton, INPUT); // via interrupt
-        pinMode(EnableMotor, INPUT);
+        pinMode(EnableThrottle, INPUT);
         pinMode(EnableBrake, INPUT);
         pinMode(EnableSteer, INPUT);
         pinMode(StopLED, OUTPUT);
         pinMode(CruiseLED, OUTPUT);
-        pinMode(TractionMotor, OUTPUT);
+        pinMode(Throttle, OUTPUT);
         pinMode(DiskBrake, OUTPUT);
         pinMode(Steer, OUTPUT);
         pinMode(Reverse, OUTPUT);
@@ -176,17 +179,89 @@ void setup()
         Serial.begin(9600);
 #endif
         initialize();
+        
+        CalibrateBrakes();
+        
+        CalibrateSteering();
 }	
 
+/*---------------------------------------------------------------------------------------*/ 
+void CalibrateBrakes()
+{
+  // This routine establishes the correct values for MinimumBrake and FullBrake.
+  // Verify that the value for FullBrake stops the vehicle.
+  // It allows us to establish the constants to map the feedback to the commanded position.
+  
+  // PWM signal is only effective from 127 to 255.
+  // Some of the extreme values produce no motion in an unattached servo.
+  // When the servo is atached to the brake lever, pushing too hard can draw too much power and blow a fuse.
+  
+  // Perform this test first with an unattached servo.
+  // Repeat with an attached servo.
+  
+ // It would be a good idea to put an ammeter on the brake servo to verify that excess current is not being drawn;
+ // In case current gets too high, abort by unplugging the servo.
+ 
+ // Use the serial monitor, and save the results for analysis.
+ 
+ // Mechanically adjust the brake cables so that the motion of the servo is appropriate
+       Serial.println("Calibrate brakes");
+       for (int i = MinimumBrake; i < FullBrake; i += 10)
+     {
+       analogWrite(DiskBrake, i);
+//       int current =  analogRead(CurrentBrake);
+       delay(100);  // allow tiime for brake to respond
+       int feedback = analogRead(BrakeFB);
+       // feedback signal may have glitches; use of a 5 point median filter is recommended.
+       Serial.print(i); Serial.print(", ");
+//       Serial.print(current); Serial.print(", ");
+       Serial.println(feedback);
+       delay(900);   // hold each brake position 1 second.
+     }
+}
+/*---------------------------------------------------------------------------------------*/ 
+void CalibrateSteering()
+{
+  // This routine establishes the correct values for HardLeft, HardRight, Straight, etc.
+  // Verify that the values for left are those that turn the vehicle to the let.
+  // It allows us to establish the constants to map the feedback to the commanded position.
+  
+  // PWM signal is only effective from 127 to 255.
+  // Some of the extreme values produce no motion in an unattached servo.
+  // When the servo is atached to the steering link, pushing too hard can draw too much power and blow a fuse.
+  
+  // Perform this test first with an unattached servo.
+  // Repeat with an attached servo.
+  
+ // It would be a good idea to put an ammeter on the steering servo to verify that excess current is not being drawn;
+ // In case current gets too high, abort by unplugging the servo.
+  // Use the serial monitor, and save the results for analysis.
+  
+  // Mechanically position the steering link so that servo motion half-way between extremes is straight ahead.
+
+       Serial.println("Calibrate steering");
+       for (int i = HardLeft; i < HardRight; i += 10)
+     {
+       analogWrite(Steer, i);
+//       int current =  analogRead(CurrentBrake);
+       delay(100);  // allow tiime for brake to respond
+       int feedback = analogRead(SteerFB);
+       // feedback signal may have glitches; use of a 5 point median filter is recommended.
+       Serial.print(i); Serial.print(", ");
+//       Serial.print(current); Serial.print(", ");
+       Serial.println(feedback);
+       delay(900);   // hold each brake position 1 second.
+     }
+}
 /*---------------------------------------------------------------------------------------*/ 
 void initialize()
 {
         
         Halt();
         
-        Instrument[Motor].EnablePin = EnableMotor;
-        Instrument[Motor].SignalPin = TractionMotor;
-        Instrument[Motor].FeedbackPin = FeedbackMotor;
+        Instrument[Motor].EnablePin = EnableThrottle;
+        Instrument[Motor].SignalPin = Throttle;
+ //       Instrument[Motor].FeedbackPin = FeedbackMotor;
         Instrument[Motor].CurrentPin = Current36V;
         Instrument[Motor].StepSize = 20; // max from range of 1023.
         Instrument[Motor].CloseEnough = 1000;  // no feedback
@@ -197,7 +272,7 @@ void initialize()
         
         Instrument[Steering].EnablePin = EnableSteer;
         Instrument[Steering].SignalPin = Steer;
-        Instrument[Steering].FeedbackPin = FeedbackSteer;
+        Instrument[Steering].FeedbackPin = SteerFB;
         Instrument[Steering].CurrentPin = CurrentSteer;
         Instrument[Steering].StepSize = 20;
         Instrument[Steering].CloseEnough = 1;
@@ -207,7 +282,7 @@ void initialize()
         
         Instrument[Brakes].EnablePin = EnableBrake;
         Instrument[Brakes].SignalPin = DiskBrake;
-        Instrument[Brakes].FeedbackPin = FeedbackBrake;
+        Instrument[Brakes].FeedbackPin = BrakeFB;
         Instrument[Brakes].CurrentPin = CurrentBrake;
         Instrument[Brakes].StepSize = 50;
         Instrument[Brakes].CloseEnough = 1;
@@ -282,7 +357,7 @@ void loop()
   static unsigned long OutsideTime;
   
   OutsideTime = EndTime - TimeNow;
-  Instrument[Motor].Enabled = digitalRead(EnableMotor);
+  Instrument[Motor].Enabled = digitalRead(EnableThrottle);
   Instrument[Brakes].Enabled = digitalRead(EnableBrake);
   Instrument[Steering].Enabled = digitalRead(EnableSteer);
 #ifdef TEST_MODE
@@ -323,7 +398,7 @@ void BrakeWrite(int i, int Delay_ms)
      analogWrite(DiskBrake, i);
      for (int d = 0; d < Delay_ms; d++)
      {
-       int feedback = analogRead(FeedbackBrake);
+       int feedback = analogRead(BrakeFB);
 //       int current =  analogRead(CurrentBrake);
        delay(1);
        Serial.print(d); Serial.print(", ");
@@ -341,7 +416,7 @@ void SteerWrite(int i, int Delay_ms)
      analogWrite(Steer, i);
      for (int d = 0; d < Delay_ms; d++)
      {
- //      int feedback = analogRead(FeedbackBrake);
+ //      int feedback = analogRead(BrakeFB);
  //      int current =  analogRead(CurrentBrake);
        Serial.print(d); Serial.print(", ");
        Serial.print(i); Serial.print(", ");
