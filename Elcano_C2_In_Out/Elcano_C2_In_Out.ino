@@ -182,7 +182,7 @@ void setup()
         
         CalibrateBrakes();
         
-        CalibrateSteering();
+//        CalibrateSteering();
 }	
 
 /*---------------------------------------------------------------------------------------*/ 
@@ -205,13 +205,23 @@ void CalibrateBrakes()
  // Use the serial monitor, and save the results for analysis.
  
  // Mechanically adjust the brake cables so that the motion of the servo is appropriate
+       int feedbacks[5];
        Serial.println("Calibrate brakes");
        for (int i = MinimumBrake; i < FullBrake; i += 10)
      {
        analogWrite(DiskBrake, i);
 //       int current =  analogRead(CurrentBrake);
-       delay(100);  // allow tiime for brake to respond
-       int feedback = analogRead(BrakeFB);
+       delay(95);  // allow tiime for brake to respond
+       feedbacks[0] = analogRead(BrakeFB);
+       delay(1);
+       feedbacks[1] = analogRead(BrakeFB);
+       delay(1);
+       feedbacks[2] = analogRead(BrakeFB);
+       delay(1);
+       feedbacks[3] = analogRead(BrakeFB);
+       delay(1);
+       feedbacks[4] = analogRead(BrakeFB);
+       int feedback = median_filter(feedbacks);
        // feedback signal may have glitches; use of a 5 point median filter is recommended.
        Serial.print(i); Serial.print(", ");
 //       Serial.print(current); Serial.print(", ");
@@ -239,19 +249,50 @@ void CalibrateSteering()
   
   // Mechanically position the steering link so that servo motion half-way between extremes is straight ahead.
 
+       int feedbacks[5];
        Serial.println("Calibrate steering");
        for (int i = HardLeft; i < HardRight; i += 10)
      {
        analogWrite(Steer, i);
 //       int current =  analogRead(CurrentBrake);
-       delay(100);  // allow tiime for brake to respond
-       int feedback = analogRead(SteerFB);
+       delay(95);  // allow tiime for steer to respond
        // feedback signal may have glitches; use of a 5 point median filter is recommended.
+       feedbacks[0] = analogRead(SteerFB);
+       delay(1);
+       feedbacks[1] = analogRead(SteerFB);
+       delay(1);
+       feedbacks[2] = analogRead(SteerFB);
+       delay(1);
+       feedbacks[3] = analogRead(SteerFB);
+       delay(1);
+       feedbacks[4] = analogRead(SteerFB);
+       int feedback = median_filter(feedbacks);
        Serial.print(i); Serial.print(", ");
 //       Serial.print(current); Serial.print(", ");
        Serial.println(feedback);
        delay(900);   // hold each brake position 1 second.
      }
+}
+int compareint (const void * a, const void * b)
+{
+  if ( *(int*)a <  *(int*)b ) return -1;
+  if ( *(int*)a == *(int*)b ) return 0;
+  if ( *(int*)a >  *(int*)b ) return 1;
+}
+int median_filter(int* readings)
+// on entry, readings holds the 5 most recent readings.
+// returned value is the median filter.
+// readings[0] is oldest; readings[4] is newest
+// on exit, all readings are shifted, with most recent reading in both [4] and [5]
+{
+  int sorted[5];
+  for (int i = 0; i < 5; i++)
+    sorted[i] = readings[i];
+   qsort(sorted, 5, sizeof(int), compareint);
+   for (int i = 0; i < 4; i++)
+    readings[i] = readings[i+1];
+  return sorted[2];
+
 }
 /*---------------------------------------------------------------------------------------*/ 
 void initialize()
@@ -395,12 +436,15 @@ void loop()
 //========================================================================
 void BrakeWrite(int i, int Delay_ms)
 {
+     static int BrakeFBhistory[5];
      analogWrite(DiskBrake, i);
      for (int d = 0; d < Delay_ms; d++)
      {
        int feedback = analogRead(BrakeFB);
+       BrakeFBhistory[4] = feedback;
 //       int current =  analogRead(CurrentBrake);
        delay(1);
+       feedback = median_filter(BrakeFBhistory);
        Serial.print(d); Serial.print(", ");
        Serial.print(i); Serial.print(", ");
        Serial.print(feedback); Serial.print(", ");
@@ -413,11 +457,14 @@ void BrakeWrite(int i, int Delay_ms)
 //========================================================================
 void SteerWrite(int i, int Delay_ms)
 {
+     static int SteerFBhistory[5];
      analogWrite(Steer, i);
      for (int d = 0; d < Delay_ms; d++)
      {
- //      int feedback = analogRead(BrakeFB);
- //      int current =  analogRead(CurrentBrake);
+      int feedback = analogRead(SteerFB);
+      SteerFBhistory[4] = feedback;
+ //      int current =  analogRead(CurrentSteer);
+       feedback = median_filter(SteerFBhistory);
        Serial.print(d); Serial.print(", ");
        Serial.print(i); Serial.print(", ");
 //       Serial.print(feedback); Serial.print(", ");
