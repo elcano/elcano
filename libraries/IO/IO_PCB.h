@@ -5,6 +5,9 @@ The nonMega shield uses A4 and A5 for RTC and D10,11,12,and 13 for MOSI data log
 Data on all pins are logged to an SD card in CSV format.
 */
 
+// Swap the servos
+#define BASSACKWARDS 1
+
 // DIGITAL I/O ----------------------------------------------
 
 // D0-7 Connector -------------------------------
@@ -24,10 +27,16 @@ const int WheelClick = 3;      //  interrupt; Reed switch generates one pulse pe
 const int Throttle =  5;  // external PWM output  DEPRICATED: Use MOSI
 /* Actuator A3: Steering Motor. 
   Turns left or right. Default is wheels locked to a straight ahead position. */
+
+#ifdef BASSACKWARDS
+const int Steer =  7;    // external PWM output
+const int DiskBrake = 6;  // external PWM output
+#else
 const int Steer =  6;    // external PWM output
 /* Actuator A2: Brake Motor. 
   Controls disk brakes on left and right front wheels. Brakes are mechanically linked to operate in tandem. */
 const int DiskBrake = 7;  // external PWM output
+#endif
 
 // D8-13 Connector ----------------------
 // The shield does not provide a socket for D8-13
@@ -102,10 +111,19 @@ const int SelectAB     = 53;  // Select IC 2 DAC (channels A and B)
 // A0-7 Connector -----------------------------
 /* Current sensing lets us ease back if we are drawing too much power */
 const int Current36V = 0;      //Indicates how much 36V current is being drawn.
+
+#ifdef BASSACKWARDS
+const int BrakeFB    = 5;		// Brake servo position
+const int CurrentBrake = 4;   // Current sensor from brake servo
+const int CurrentSteer = 2;   // Current sensor from steer servo
+const int SteerFB      = 1;		// Steer servo position
+#else
 const int BrakeFB    = 1;		// Brake servo position
 const int CurrentBrake = 2;   // Current sensor from brake servo
 const int CurrentSteer = 4;   // Current sensor from steer servo
 const int SteerFB      = 5;		// Steer servo position
+#endif
+
 // A6 is spare to X2-23
 // A7 is spare to X4-5
 
