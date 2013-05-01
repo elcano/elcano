@@ -4,20 +4,16 @@
  computer based on the state of the enable switches.
  */
 
-
-#define MEGA
 #define STEP_SIZE_ms 5
 #define TEST_MODE
 #ifndef TRUE
 #define TRUE 1
 #define FALSE 0
 #endif
+#define MEG 1000000
 
-#ifdef MEGA
-#include <IO_Mega.h>
-#else
-#include <IO_2009.h>
-#endif
+#include <IO_PCB.h>
+
 
 void Display (int n);
 /*
@@ -78,6 +74,8 @@ volatile int Stop = TRUE;
 volatile unsigned long TimeOfStopButton_ms; //Records the millis() value when stop was last pressed
 volatile int Cruise = FALSE;
 volatile unsigned long TimeOfCruiseButton_ms;
+// Speed in degrees per second is independent of wheel size.
+volatile long SpeedCyclometer_degPs;
 const int PauseTime_ms = 4000;
 unsigned long TimeOfReverseButton_ms;
 int Forward;
@@ -219,12 +217,12 @@ void setup()
   pinMode(CruiseReverse, INPUT);
   pinMode(StopButton, INPUT);  // via interrupt
   pinMode(CruiseButton, INPUT); // via interrupt
-  pinMode(EnableMotor, INPUT);
+  pinMode(EnableThrottle, INPUT);
   pinMode(EnableBrake, INPUT);
   pinMode(EnableSteer, INPUT);
   pinMode(StopLED, OUTPUT);
   pinMode(CruiseLED, OUTPUT);
-  pinMode(TractionMotor, OUTPUT);
+  pinMode(Throttle, OUTPUT);  // DEPRICATED: Use MOSI
   pinMode(DiskBrake, OUTPUT);
   pinMode(Steer, OUTPUT);
   pinMode(Reverse, OUTPUT);
@@ -235,7 +233,6 @@ void setup()
   pinMode(CruiseThrottle, INPUT);
   pinMode(CruiseBrake, INPUT);
   pinMode(CruiseSteer, INPUT);
-#ifdef MEGA
   pinMode(Current36V, INPUT);
   pinMode(CurrentBrake, INPUT);
   pinMode(CurrentSteer, INPUT);
@@ -249,15 +246,11 @@ void setup()
   Serial.begin(9600);
   initialize();
   attachInterrupt(0, CruiseRC1Pressed, RISING);
-  attachInterrupt(1, StopRC2Pressed, RISING);
+  attachInterrupt(1, WheelRev, RISING);
+  attachInterrupt(2, StopRC2Pressed, RISING);
   attachInterrupt(3, EStopPressed, FALLING);
   attachInterrupt(4, StopPressed, RISING);
   attachInterrupt(5, CruisePressed, RISING);
-#else
-  initialize();
-  attachInterrupt(0, StopPressed, FALLING);
-  attachInterrupt(1, CruisePressed, FALLING);
-#endif
 }
 
 /*---------------------------------------------------------------------------------------*/
@@ -269,9 +262,9 @@ void initialize()
 
   Halt();
 
-  Instrument[Motor].EnablePin = EnableMotor;
-  Instrument[Motor].SignalPin = TractionMotor;
-  Instrument[Motor].FeedbackPin = FeedbackMotor;
+  Instrument[Motor].EnablePin = EnableThrottle;
+  Instrument[Motor].SignalPin = Throttle;  // DEPRICATED: Use MOSI
+  Instrument[Motor].FeedbackPin = 0; // Motor feedback is wheel speed
   Instrument[Motor].CurrentPin = Current36V;
   Instrument[Motor].StepSize = 20; // max from range of 1023.
   Instrument[Motor].CloseEnough = 1000;  // no feedback
@@ -282,7 +275,7 @@ void initialize()
 
   Instrument[Steering].EnablePin = EnableSteer;
   Instrument[Steering].SignalPin = Steer;
-  Instrument[Steering].FeedbackPin = FeedbackSteer;
+  Instrument[Steering].FeedbackPin = SteerFB;
   Instrument[Steering].CurrentPin = CurrentSteer;
   Instrument[Steering].StepSize = 20;
   Instrument[Steering].CloseEnough = 1;
@@ -292,7 +285,7 @@ void initialize()
 
   Instrument[Brakes].EnablePin = EnableBrake;
   Instrument[Brakes].SignalPin = DiskBrake;
-  Instrument[Brakes].FeedbackPin = FeedbackBrake;
+  Instrument[Brakes].FeedbackPin = BrakeFB;
   Instrument[Brakes].CurrentPin = CurrentBrake;
   Instrument[Brakes].StepSize = 50;
   Instrument[Brakes].CloseEnough = 1;
@@ -380,6 +373,24 @@ void EStopPressed()
   TimeOfStopButton_ms = millis();
   Stop = TRUE;
 }
+/*---------------------------------------------------------------------------------------*/ 
+// WheelRev is called by an interrupt.
+void WheelRev()
+{
+    static unsigned long OldTick = 0;
+    unsigned long TickTime;
+    unsigned long WheelRevMicros;
+    TickTime = micros();
+    if (OldTick == TickTime)
+        return;
+    if (OldTick <= TickTime)
+      	WheelRevMicros = TickTime - OldTick;
+    else // overflow
+      	WheelRevMicros = TickTime + ~OldTick;
+    SpeedCyclometer_degPs = (360 * MEG) / WheelRevMicros;
+    OldTick = TickTime;
+}
+/*---------------------------------------------------------------------------------------*/
 /*---------------------------------------------------------------------------------------*/
 // Bring the vehicle to a stop.
 // Stop may be called from an interrupt or from the loop.
@@ -406,7 +417,7 @@ void loop()
   //Calculate how much time was spent outside the loop
   OutsideTime = EndTime - TimeNow;
   //Read the user inputs for the enable switches
-  Instrument[Motor].Enabled = digitalRead(EnableMotor);
+  Instrument[Motor].Enabled = digitalRead(EnableThrottle);
   Instrument[Brakes].Enabled = digitalRead(EnableBrake);
   Instrument[Steering].Enabled = digitalRead(EnableSteer);
 #ifdef TEST_MODE
@@ -707,7 +718,7 @@ void  checkReverse()
  0      0      1      1    Steer
  0      1      0      2    DiskBrake
  0      1      1      3    Current36V
- 1      0      0      4    TractionMotor
+ 1      0      0      4    Throttle    // DEPRICATED: Use MOSI
  1      0      1      5    CurrentBrake
  1      1      0      6    CurrentSteer
  1      1      1      7    SteerJoystick
@@ -717,7 +728,7 @@ void diagnostic()
   int value;
   int Pin_in = (digitalRead(EnableSteer) << 2);
   Pin_in +=    (digitalRead(EnableBrake) << 1);
-  Pin_in +=     digitalRead(EnableMotor);
+  Pin_in +=     digitalRead(EnableThrottle);
   switch (Pin_in)
   {
   case 0:
@@ -754,7 +765,7 @@ void diagnostic()
 void CruiseDiagnostic()
 {
   int value = 0;
-  if (digitalRead(EnableMotor) == HIGH)
+  if (digitalRead(EnableThrottle) == HIGH)
     value = analogRead(CruiseThrottle);
   else if (digitalRead(EnableBrake) == HIGH)
     value = analogRead(CruiseBrake);
@@ -800,13 +811,13 @@ void testRamp()
   //  delay (1000);
   //  for (i = MinimumThrottle; i <= MinimumThrottle+5; i++)
   //  {
-  //      ramp(TractionMotor, i);
+  //      ramp(Throttle, i);  // DEPRICATED: Use MOSI
   //  }
   //  write_all (HIGH);
   //  delay (1000);
   //  for (i = MinimumThrottle+5; i >= MinimumThrottle; i--)
   //  {
-  //      ramp(TractionMotor, i);
+  //      ramp(Throttle, i);  // DEPRICATED: Use MOSI
   //  }
   write_all (HIGH);
   delay (1000);
@@ -870,7 +881,7 @@ void testSwitches()
 {
   // test failed 5/2/11.  Panel LEDs do not light.
   int SwThrottle, SwBrake, SwSteer;
-  SwThrottle = digitalRead(EnableMotor);
+  SwThrottle = digitalRead(EnableThrottle);
   SwBrake = digitalRead(EnableBrake);
   SwSteer = digitalRead(EnableSteer);
   digitalWrite( StopLED, SwBrake);
@@ -919,7 +930,7 @@ void ServoWrite(int i, int Delay_ms)
   analogWrite(DiskBrake, i);
   for (int d = 0; d < Delay_ms; d++)
   {
-    int feedback = analogRead(FeedbackBrake);
+    int feedback = analogRead(BrakeFB);
     int current =  analogRead(CurrentBrake);
     Serial.print(Delay_ms); 
     Serial.print(", ");
