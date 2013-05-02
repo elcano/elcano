@@ -13,11 +13,9 @@ Elcano Contol Module C2: Tests for steering and brake servos
 #define FALSE 0
 #endif
 
-#ifdef MEGA
+
 #include <IO_PCB.h>
-#else
-#include <IO_2009.h>
-#endif
+
 
   const int ManualStop = 0;
   const int CruiseStop = 1;
@@ -42,11 +40,18 @@ const int MinimumThrottle = 39;  // Throttle has no effect until 0.75 V
 const int FullBrake = 225;  // start with a conservative value; could go as high as 255;  
 const int MinimumBrake = 155; // start with a conservative value; could go as low as 127;
 
-const int HardLeft = 159; // start with a conservative value; could go as low as 127;
-const int HalfLeft = 159;
+const int HardLeft = 223; // was 159; // start with a conservative value; could go as high as 255;
+const int HalfLeft = 223; // was 159;
 const int Straight = 191;
-const int HalfRight = 223;
-const int HardRight = 223; // start with a conservative value; could go as high as  255;
+const int HalfRight = 159; // was 223;
+const int HardRight = 159; // was 223; // start with a conservative value; could go as low as 127;
+const int StraightFB = 501;
+const int HalfRightFB = 303;
+const int HalfLeftFB = 760;
+/* There is hysteresis on steering.
+  E.g. Move to the left until PWM 223, getting FB of 760.
+  If moves to the right are then commanded, feedback will not change until PWM of about 217.
+*/
 /*  Elcano Servo range is 50 mm for brake, 100 mm for steering.
 
     Elcano servo has a hardware controller that moves to a
@@ -165,7 +170,6 @@ void setup()
         pinMode(CruiseThrottle, INPUT);
         pinMode(CruiseBrake, INPUT); 
         pinMode(CruiseSteer, INPUT);
-#ifdef MEGA
         pinMode(Current36V, INPUT);
         pinMode(CurrentBrake, INPUT);
         pinMode(CurrentSteer, INPUT);
@@ -177,12 +181,19 @@ void setup()
         pinMode(LED7, OUTPUT);
         pinMode(LED8, OUTPUT);  
         Serial.begin(9600);
-#endif
+
         initialize();
         
         CalibrateBrakes();
         
-//        CalibrateSteering();
+       CalibrateSteering(HardRight,3);     
+       CalibrateSteering(HardLeft,3);
+       delay(10000);
+       CalibrateSteering(HardRight,1);
+       CalibrateSteering(HardLeft,1);
+       delay(10000);
+       CalibrateSteering(HardRight,10);       
+       
 }	
 
 /*---------------------------------------------------------------------------------------*/ 
@@ -229,8 +240,31 @@ void CalibrateBrakes()
        delay(900);   // hold each brake position 1 second.
      }
 }
+void moveSteer(int i)
+{
+       int feedbacks[5];
+       analogWrite(Steer, i);
+//       int current =  analogRead(CurrentBrake);
+       delay(95);  // allow tiime for steer to respond
+       // feedback signal may have glitches; use of a 5 point median filter is recommended.
+       feedbacks[0] = analogRead(SteerFB);
+       delay(1);
+       feedbacks[1] = analogRead(SteerFB);
+       delay(1);
+       feedbacks[2] = analogRead(SteerFB);
+       delay(1);
+       feedbacks[3] = analogRead(SteerFB);
+       delay(1);
+       feedbacks[4] = analogRead(SteerFB);
+       int feedback = median_filter(feedbacks);
+       Serial.print(i); Serial.print(", ");
+//       Serial.print(current); Serial.print(", ");
+       Serial.println(feedback);
+       delay(900);   // hold each steer position 1 second.
+
+}
 /*---------------------------------------------------------------------------------------*/ 
-void CalibrateSteering()
+void CalibrateSteering(int SteerPosition, int delta)
 {
   // This routine establishes the correct values for HardLeft, HardRight, Straight, etc.
   // Verify that the values for left are those that turn the vehicle to the let.
@@ -249,29 +283,26 @@ void CalibrateSteering()
   
   // Mechanically position the steering link so that servo motion half-way between extremes is straight ahead.
 
-       int feedbacks[5];
+       delta = abs(delta);
+       int i;
        Serial.println("Calibrate steering");
-       for (int i = HardLeft; i < HardRight; i += 10)
-     {
-       analogWrite(Steer, i);
-//       int current =  analogRead(CurrentBrake);
-       delay(95);  // allow tiime for steer to respond
-       // feedback signal may have glitches; use of a 5 point median filter is recommended.
-       feedbacks[0] = analogRead(SteerFB);
-       delay(1);
-       feedbacks[1] = analogRead(SteerFB);
-       delay(1);
-       feedbacks[2] = analogRead(SteerFB);
-       delay(1);
-       feedbacks[3] = analogRead(SteerFB);
-       delay(1);
-       feedbacks[4] = analogRead(SteerFB);
-       int feedback = median_filter(feedbacks);
-       Serial.print(i); Serial.print(", ");
-//       Serial.print(current); Serial.print(", ");
-       Serial.println(feedback);
-       delay(900);   // hold each brake position 1 second.
-     }
+       if (SteerPosition >= Straight)
+       { 
+         for (i = Straight; i <= SteerPosition; i += delta)
+             moveSteer(i);
+         for (i = SteerPosition; i >= Straight; i -= delta)
+             moveSteer(i);
+       }
+       else
+      { 
+         for (i = Straight; i >= SteerPosition; i -= delta)
+             moveSteer(i);
+         for (i = SteerPosition; i <= Straight; i += delta)
+             moveSteer(i);
+
+       }       
+      moveSteer(Straight);    
+    
 }
 int compareint (const void * a, const void * b)
 {
@@ -319,7 +350,7 @@ void initialize()
         Instrument[Steering].CloseEnough = 1;
         Instrument[Steering].Stuck = 3;
         Instrument[Steering].MinPosition = 85;  // anolog read range is 0 to 1023
-        Instrument[Steering].MaxPosition = 800;
+        Instrument[Steering].MaxPosition = 900;
         
         Instrument[Brakes].EnablePin = EnableBrake;
         Instrument[Brakes].SignalPin = DiskBrake;
@@ -396,16 +427,19 @@ void loop()
   unsigned long NextLoopTime_ms = TimeNow + STEP_SIZE_ms;
   static unsigned long EndTime = 0;
   static unsigned long OutsideTime;
+  int center;
+  
+  return;
   
   OutsideTime = EndTime - TimeNow;
   Instrument[Motor].Enabled = digitalRead(EnableThrottle);
   Instrument[Brakes].Enabled = digitalRead(EnableBrake);
   Instrument[Steering].Enabled = digitalRead(EnableSteer);
-#ifdef TEST_MODE
-    ServoData();
+
+   // ServoData();
    
-#else  // not TEST_MODE
-#endif  // TEST_MODE 
+ 
+
  // TODO: Check out loop speed;
  // make loop faster
  // limit servo motion during loop to step size 
