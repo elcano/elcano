@@ -2535,7 +2535,6 @@ Phone: 503-829-9108 x555.&lt;p&gt; v1.1Mod10/16/07~Layers-core reversal.Distance
 <element name="JP4" library="pinhead" package="1X01" value="GND" x="11.43" y="55.88"/>
 <element name="R1" library="rcl" package="0204/5" value="1M" x="49.53" y="17.78"/>
 <element name="R2" library="rcl" package="0204/5" value="10M" x="8.89" y="5.08" rot="R270"/>
-<element name="R9" library="rcl" package="0204/5" value="10M" x="40.005" y="43.18" rot="R270"/>
 <element name="X3" library="con-subd" package="182-015-MALE" value="Motor" x="80" y="83" rot="R180">
 <attribute name="OC_NEWARK" value="unknown" x="80" y="83" size="1.778" layer="27" rot="R180" display="off"/>
 <attribute name="MPN" value="" x="80" y="83" size="1.778" layer="27" rot="R180" display="off"/>
@@ -2566,13 +2565,10 @@ Phone: 503-829-9108 x555.&lt;p&gt; v1.1Mod10/16/07~Layers-core reversal.Distance
 <contactref element="X1" pad="24"/>
 <contactref element="R1" pad="1"/>
 <contactref element="R2" pad="1"/>
-<contactref element="R9" pad="2"/>
 <contactref element="C1" pad="1"/>
 <contactref element="C2" pad="1"/>
 <wire x1="8.636" y1="12.7" x2="11.43" y2="12.7" width="0.8128" layer="16"/>
 <wire x1="11.43" y1="12.7" x2="13.97" y2="12.7" width="0.8128" layer="16"/>
-<wire x1="40.005" y1="40.64" x2="58.42" y2="40.64" width="0.8128" layer="16"/>
-<wire x1="40.005" y1="40.64" x2="40.005" y2="32.893" width="0.8128" layer="1"/>
 <wire x1="40.005" y1="32.893" x2="41.783" y2="32.893" width="0.8128" layer="1"/>
 <wire x1="41.783" y1="32.893" x2="41.783" y2="33.02" width="0.8128" layer="1"/>
 <wire x1="41.783" y1="33.02" x2="41.91" y2="33.02" width="0.8128" layer="1"/>
@@ -2586,7 +2582,6 @@ Phone: 503-829-9108 x555.&lt;p&gt; v1.1Mod10/16/07~Layers-core reversal.Distance
 <wire x1="43.942" y1="6.35" x2="43.942" y2="1.778" width="0.8128" layer="1"/>
 <wire x1="27.95" y1="39.99" x2="38.593" y2="39.99" width="0.8128" layer="16"/>
 <wire x1="38.593" y1="39.99" x2="38.735" y2="40.132" width="0.8128" layer="16"/>
-<wire x1="38.735" y1="40.132" x2="40.005" y2="40.64" width="0.8128" layer="16"/>
 <wire x1="2.54" y1="19.3294" x2="8.6106" y2="19.3294" width="0.8128" layer="16"/>
 <wire x1="8.6106" y1="19.3294" x2="8.636" y2="19.304" width="0.8128" layer="16"/>
 <wire x1="8.636" y1="19.304" x2="8.636" y2="12.7" width="0.8128" layer="1"/>
@@ -2617,7 +2612,6 @@ Phone: 503-829-9108 x555.&lt;p&gt; v1.1Mod10/16/07~Layers-core reversal.Distance
 <wire x1="44.45" y1="50.8" x2="43.688" y2="50.8" width="0.8128" layer="1"/>
 <wire x1="43.688" y1="50.8" x2="41.656" y2="48.768" width="0.8128" layer="1"/>
 <wire x1="41.656" y1="48.768" x2="41.656" y2="43.561" width="0.8128" layer="1"/>
-<wire x1="41.656" y1="43.561" x2="40.005" y2="40.64" width="0.8128" layer="1"/>
 <wire x1="83.23" y1="67.9" x2="83.312" y2="67.818" width="0.8128" layer="1"/>
 <wire x1="83.312" y1="68.326" x2="83.2612" y2="68.326" width="0.8128" layer="16"/>
 <via x="70.358" y="68.326" extent="1-16" drill="0.7"/>
@@ -2631,6 +2625,16 @@ Phone: 503-829-9108 x555.&lt;p&gt; v1.1Mod10/16/07~Layers-core reversal.Distance
 <wire x1="83.2612" y1="68.2244" x2="83.23" y2="68.26" width="0.254" layer="1"/>
 <wire x1="83.2612" y1="68.2752" x2="83.23" y2="68.26" width="0.254" layer="16"/>
 <wire x1="83.2612" y1="68.2752" x2="83.2612" y2="68.326" width="0.254" layer="16"/>
+<contactref element="U$2" pad="PIN1"/>
+<contactref element="U$2" pad="PIN4"/>
+<wire x1="29.2608" y1="51.6128" x2="29.25" y2="51.61" width="0.254" layer="1"/>
+<wire x1="29.2608" y1="57.6072" x2="29.25" y2="57.61" width="0.254" layer="1"/>
+<wire x1="29.3116" y1="51.5112" x2="29.25" y2="51.61" width="0.254" layer="1"/>
+<wire x1="49.53" y1="54.61" x2="60.96" y2="43.18" width="0" layer="19" extent="16-16"/>
+<wire x1="38.735" y1="40.132" x2="41.656" y2="43.561" width="0" layer="19" extent="1-16"/>
+<wire x1="40.005" y1="32.893" x2="38.593" y2="39.99" width="0" layer="19" extent="1-16"/>
+<wire x1="29.3116" y1="51.5112" x2="27.95" y2="39.99" width="0" layer="19" extent="1-1"/>
+<wire x1="29.25" y1="57.61" x2="29.25" y2="51.61" width="0" layer="19" extent="1-1"/>
 </signal>
 <signal name="GND">
 <contactref element="ICSP" pad="6"/>
@@ -2666,7 +2670,7 @@ Phone: 503-829-9108 x555.&lt;p&gt; v1.1Mod10/16/07~Layers-core reversal.Distance
 <contactref element="IC3" pad="5"/>
 <contactref element="IC2" pad="5"/>
 <contactref element="C2" pad="2"/>
-<wire x1="34.25" y1="57.61" x2="34.25" y2="51.61" width="0.8128" layer="1"/>
+<wire x1="34.25" y1="57.61" x2="34.25" y2="51.61" width="0" layer="19" extent="1-16"/>
 <wire x1="22.86" y1="45.72" x2="22.86" y2="55.88" width="0.8128" layer="1"/>
 <via x="22.86" y="55.88" extent="1-16" drill="0.7"/>
 <wire x1="22.86" y1="55.88" x2="13.97" y2="55.88" width="0.8128" layer="16"/>
@@ -3850,7 +3854,7 @@ Phone: 503-829-9108 x555.&lt;p&gt; v1.1Mod10/16/07~Layers-core reversal.Distance
 <contactref element="JP5" pad="7"/>
 <contactref element="U$2" pad="PIN2"/>
 <contactref element="U$2" pad="PIN5"/>
-<wire x1="31.75" y1="57.61" x2="31.75" y2="51.61" width="0.254" layer="1"/>
+<wire x1="31.75" y1="57.61" x2="31.75" y2="51.61" width="0" layer="19" extent="1-16"/>
 <wire x1="31.75" y1="29.8196" x2="27.9908" y2="29.8196" width="0.254" layer="16"/>
 <wire x1="31.75" y1="51.61" x2="31.75" y2="29.8196" width="0.254" layer="1"/>
 <wire x1="27.9908" y1="29.8196" x2="27.95" y2="29.83" width="0.254" layer="16"/>
@@ -4486,21 +4490,6 @@ Phone: 503-829-9108 x555.&lt;p&gt; v1.1Mod10/16/07~Layers-core reversal.Distance
 <wire x1="12.3444" y1="2.5908" x2="18.2372" y2="2.5908" width="0.254" layer="1"/>
 <wire x1="18.2372" y1="2.5908" x2="18.24" y2="2.58" width="0.254" layer="1"/>
 <wire x1="12.3444" y1="2.5908" x2="12.24" y2="2.58" width="0.254" layer="1"/>
-</signal>
-<signal name="N$10">
-<contactref element="R9" pad="1"/>
-<contactref element="U$2" pad="PIN1"/>
-<contactref element="U$2" pad="PIN4"/>
-<wire x1="29.2608" y1="57.6072" x2="29.2608" y2="51.6128" width="0.254" layer="1"/>
-<wire x1="29.2608" y1="51.6128" x2="29.25" y2="51.61" width="0.254" layer="1"/>
-<wire x1="29.2608" y1="57.6072" x2="29.25" y2="57.61" width="0.254" layer="1"/>
-<wire x1="38.7604" y1="46.9392" x2="39.9796" y2="45.72" width="0.254" layer="16"/>
-<wire x1="30.8864" y1="46.9392" x2="38.7604" y2="46.9392" width="0.254" layer="16"/>
-<wire x1="29.3116" y1="48.514" x2="30.8864" y2="46.9392" width="0.254" layer="1"/>
-<wire x1="29.3116" y1="51.5112" x2="29.3116" y2="48.514" width="0.254" layer="1"/>
-<wire x1="39.9796" y1="45.72" x2="40.005" y2="45.72" width="0.254" layer="16"/>
-<wire x1="29.3116" y1="51.5112" x2="29.25" y2="51.61" width="0.254" layer="1"/>
-<via x="30.8864" y="46.9392" extent="1-16" drill="0.6096"/>
 </signal>
 <signal name="D3INT1">
 <contactref element="PWML" pad="4"/>
