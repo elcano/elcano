@@ -11471,7 +11471,6 @@ general purpose rectifier, 1 A</description>
 <part name="R1" library="rcl" deviceset="R-US_" device="0204/5" value="1M"/>
 <part name="P+7" library="supply1" deviceset="+5V" device=""/>
 <part name="R2" library="rcl" deviceset="R-US_" device="0204/5" value="10M"/>
-<part name="R9" library="rcl" deviceset="R-US_" device="0204/5" value="10M"/>
 <part name="X3" library="con-subd" deviceset="M15" device="-182" value="Motor"/>
 <part name="U$1" library="elcanoParts" deviceset="DPDT_DEV" device="6X5MM_PAC"/>
 <part name="U$2" library="elcanoParts" deviceset="DPDT_DEV" device="6X5MM_PAC"/>
@@ -11569,7 +11568,6 @@ general purpose rectifier, 1 A</description>
 <text x="91.44" y="60.96" size="1.778" layer="91">Reserved</text>
 <text x="93.98" y="68.58" size="1.778" layer="91">Reserved</text>
 <text x="15.24" y="83.82" size="1.778" layer="91">Reserved</text>
-<text x="116.84" y="180.34" size="1.778" layer="91">Reserved</text>
 <text x="116.84" y="177.8" size="1.778" layer="91">Reserved</text>
 <text x="116.84" y="175.26" size="1.778" layer="91">Reserved</text>
 <text x="116.84" y="172.72" size="1.778" layer="91">Reserved</text>
@@ -11664,6 +11662,8 @@ Receiver length is 2.23 in.</text>
 <text x="81.28" y="35.56" size="1.778" layer="91">Wheel Revolution</text>
 <text x="243.84" y="43.18" size="1.778" layer="91">TIP3055 Power</text>
 <text x="193.04" y="-7.62" size="1.778" layer="91">TIP3055 Power</text>
+<text x="116.84" y="180.34" size="1.778" layer="91">LED 2</text>
+<text x="162.56" y="78.74" size="1.778" layer="91">LED 2</text>
 </plain>
 <instances>
 <instance part="ICSP" gate="A" x="236.22" y="182.88" rot="MR0"/>
@@ -11758,7 +11758,6 @@ Receiver length is 2.23 in.</text>
 <attribute name="VALUE" x="61.595" y="58.42" size="1.778" layer="96" rot="MR180"/>
 </instance>
 <instance part="R2" gate="G$1" x="241.3" y="88.9"/>
-<instance part="R9" gate="G$1" x="167.64" y="43.18"/>
 <instance part="X3" gate="-1" x="10.16" y="53.34" rot="R90"/>
 <instance part="U$1" gate="G$1" x="259.08" y="78.74"/>
 <instance part="U$2" gate="G$1" x="147.32" y="30.48" rot="MR0"/>
@@ -11806,8 +11805,14 @@ Receiver length is 2.23 in.</text>
 <pinref part="JP5" gate="A" pin="3"/>
 <wire x1="177.8" y1="43.18" x2="172.72" y2="43.18" width="0.1524" layer="91"/>
 <wire x1="172.72" y1="43.18" x2="172.72" y2="53.34" width="0.1524" layer="91"/>
-<junction x="172.72" y="43.18"/>
-<pinref part="R9" gate="G$1" pin="2"/>
+<wire x1="172.72" y1="43.18" x2="139.7" y2="43.18" width="0.1524" layer="91"/>
+<wire x1="139.7" y1="43.18" x2="139.7" y2="35.56" width="0.1524" layer="91"/>
+<pinref part="U$2" gate="G$1" pin="1"/>
+<wire x1="142.24" y1="35.56" x2="139.7" y2="35.56" width="0.1524" layer="91"/>
+<wire x1="139.7" y1="35.56" x2="139.7" y2="27.94" width="0.1524" layer="91"/>
+<pinref part="U$2" gate="G$1" pin="4"/>
+<wire x1="139.7" y1="27.94" x2="142.24" y2="27.94" width="0.1524" layer="91"/>
+<junction x="139.7" y="35.56"/>
 </segment>
 <segment>
 <pinref part="P+3" gate="1" pin="+5V"/>
@@ -12925,19 +12930,6 @@ Receiver length is 2.23 in.</text>
 <pinref part="U$1" gate="G$1" pin="1"/>
 <junction x="264.16" y="83.82"/>
 <pinref part="U$1" gate="G$1" pin="4"/>
-</segment>
-</net>
-<net name="N$10" class="0">
-<segment>
-<pinref part="R9" gate="G$1" pin="1"/>
-<wire x1="162.56" y1="43.18" x2="139.7" y2="43.18" width="0.1524" layer="91"/>
-<wire x1="139.7" y1="43.18" x2="139.7" y2="35.56" width="0.1524" layer="91"/>
-<pinref part="U$2" gate="G$1" pin="1"/>
-<wire x1="142.24" y1="35.56" x2="139.7" y2="35.56" width="0.1524" layer="91"/>
-<wire x1="139.7" y1="35.56" x2="139.7" y2="27.94" width="0.1524" layer="91"/>
-<pinref part="U$2" gate="G$1" pin="4"/>
-<wire x1="139.7" y1="27.94" x2="142.24" y2="27.94" width="0.1524" layer="91"/>
-<junction x="139.7" y="35.56"/>
 </segment>
 </net>
 <net name="D3INT1" class="0">
