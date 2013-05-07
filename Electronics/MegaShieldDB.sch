@@ -11379,17 +11379,18 @@ general purpose rectifier, 1 A</description>
 </symbol>
 </symbols>
 <devicesets>
-<deviceset name="BD535" prefix="T">
-<description>&lt;b&gt;NPN TRANSISTOR&lt;/b&gt;</description>
+<deviceset name="BD239" prefix="T">
+<description>&lt;b&gt;NPN TRANSISTOR&lt;/b&gt;&lt;p&gt;
+Source: http://www.fairchildsemi.com/ds/BD/BD239C.pdf</description>
 <gates>
 <gate name="G$1" symbol="NPN" x="0" y="0"/>
 </gates>
 <devices>
 <device name="" package="TO220">
 <connects>
-<connect gate="G$1" pin="B" pad="3"/>
+<connect gate="G$1" pin="B" pad="1"/>
 <connect gate="G$1" pin="C" pad="2"/>
-<connect gate="G$1" pin="E" pad="1"/>
+<connect gate="G$1" pin="E" pad="3"/>
 </connects>
 <technologies>
 <technology name=""/>
@@ -11475,8 +11476,8 @@ general purpose rectifier, 1 A</description>
 <part name="U$1" library="elcanoParts" deviceset="DPDT_DEV" device="6X5MM_PAC"/>
 <part name="U$2" library="elcanoParts" deviceset="DPDT_DEV" device="6X5MM_PAC"/>
 <part name="JP9" library="jumper" deviceset="JP3Q" device="" value="Wireless Select"/>
-<part name="Q1" library="transistor-neu-to92" deviceset="BD535" device="" value="TIP3055"/>
-<part name="Q2" library="transistor-neu-to92" deviceset="BD535" device="" value="TIP3055"/>
+<part name="Q1" library="transistor-neu-to92" deviceset="BD239" device="" value="TIP3055"/>
+<part name="Q2" library="transistor-neu-to92" deviceset="BD239" device="" value="TIP3055"/>
 <part name="C1" library="rcl" deviceset="C-US" device="025-025X050" value="0.1uF"/>
 <part name="C2" library="rcl" deviceset="C-US" device="025-025X050" value="0.1uF"/>
 </parts>
