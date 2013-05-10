@@ -10,6 +10,11 @@
 
 // inslude the SPI library:
 #include <SPI.h>
+
+#define MEG 1000000
+
+volatile long SpeedCyclometer_degPs;
+
 /*---------------------------------------------------------------------------------------*/
 void setup()
 {
@@ -27,7 +32,8 @@ void setup()
   SPI.begin(); 
   for (int i = 0; i < 4; i++)
       DAC_Write (i, 0);   // reset did not clear previous states
-  
+   attachInterrupt(1, WheelRev, RISING);
+ 
 //  Serial.println(SS);
 //  Serial.println(MOSI);
 //  Serial.println(MISO);
@@ -41,7 +47,7 @@ void setup()
 /*---------------------------------------------------------------------------------------*/
 /*---------------------------------------------------------------------------------------*/ 
 // WheelRev is called by an interrupt.
-/*
+
 void WheelRev()
 {
     static unsigned long OldTick = 0;
@@ -57,7 +63,7 @@ void WheelRev()
     SpeedCyclometer_degPs = (360 * MEG) / WheelRevMicros;
     OldTick = TickTime;
 }
-*/
+
 /*---------------------------------------------------------------------------------------*/
 void loop()
 {
@@ -75,25 +81,44 @@ Ramp on DAC channel D (IC3 pin 6) is seen on DB9M X5-3
 
 No ramp is seen on DB9F X4-3.  There is no continuity between IC3 pin 8 and X4-3.
 
-Only after it looks good, do we attach the DB15 cable to drive the motor.
+We attached the DB15 cable and drove the motor from PCB #1
+
+The DB-25 connector from Cruise supplies the wheel revolution click.  Since PCB #1 and #2 have
+reversed genders, the present wiring only plugs into PCB #2. When PCB #2 is used, there is no
+signal on IC2 pin 8.
    
 */
- // go through the four channels of the digital analog converter:
-  for (int channel = 0; channel < 4; channel++)
+ // Only use motor control:
+  int channel = 0;
   { 
+      /* Observed behavior with manual throttle, no load (May 10, 2013, TCF)
+      0.831 V at rest       52 counts
+      1.20 V: nothing       75
+      1.27 V: just starting 79
+      1.40 V: slow, steady  87
+      1.50 V: brisker       94
+      3.63 V: max          227 counts
+      
+      255 counts = 4.08 V
+      
+      */
       // change the voltage on this channel from min to max:
-      for (int level = 0; level < 255; level++) 
+      for (int level = 70; level < 200; level+=4) 
       {
         DAC_Write(channel, level);
-        delay(100);
+        Serial.print(SpeedCyclometer_degPs); Serial.print(", ");
+        Serial.println(level);
+        delay(3000);
       }
       // wait a second at the top:
       delay(1000);
       // change the voltage on this channel from max to min:
-      for (int level = 0; level < 255; level++) 
+      for (int level = 200; level > 70; level-=4) 
       {
-        DAC_Write(channel, 255 - level);
-        delay(100);
+        DAC_Write(channel, level);
+        Serial.print(SpeedCyclometer_degPs); Serial.print(", ");
+        Serial.println(level);
+        delay(3000);
       }
  }    
 
