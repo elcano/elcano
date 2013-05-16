@@ -9,6 +9,8 @@
 
 // inslude the SPI library:
 #include <SPI.h>
+#include <DACSPI.cpp>
+
 #ifndef TRUE
 #define TRUE 1
 #define FALSE 0
@@ -456,7 +458,6 @@ signal on IC2 pin 8.
 }
 /*---------------------------------------------------------------------------------------*/
 
-
 void DAC_Write(int address, int value)
 // address: 0 for chan A; 1 for chan B; 2 for chan C; 3 for chan D
 // value: digital value converted to analog voltage
@@ -520,6 +521,7 @@ This is as documented; with gain of 2, maximum output is 2 * Vref
       digitalWrite(SelectCD,HIGH);
   }
 }
+
 /*---------------------------------------------------------------------------------------*/
 void loop()
 {
@@ -535,7 +537,6 @@ void loop()
   if (ElapsedTime_us < MinTimeStep_usec)
     return;
   loopTime_usec = ElapsedTime_us;
-  
 
   JoystickMotion();
   // apply throttle
@@ -545,6 +546,7 @@ void loop()
      desired_position = Instrument[Motor].Joystick;
   }
   Instrument[Motor].go(desired_position);
+  Serial.print(" Motor: "); Serial.print(desired_position);
  
   // apply brakes
   desired_position =  MinimumBrake;
@@ -553,6 +555,7 @@ void loop()
      desired_position = Instrument[Brakes].Joystick;
   }
   Instrument[Brakes].go(desired_position);
+  Serial.print(" Brakes: "); Serial.print(desired_position);
   
  // apply steering
   desired_position =  Straight;
@@ -561,6 +564,7 @@ void loop()
      desired_position = Instrument[Steering].Joystick;
   }
   Instrument[Steering].go(desired_position);  
+    Serial.print(" Steering: "); Serial.println(desired_position);
 }
 /*---------------------------------------------------------------------------------------*/
 void JoystickMotion()
