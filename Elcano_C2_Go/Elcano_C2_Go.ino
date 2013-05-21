@@ -16,7 +16,7 @@
 #define FALSE 0
 #endif
 #define MEG 1000000
-#define DEBUG 1
+//#define DEBUG 1
 
 volatile int SpeedCyclometer_degPs;  // 20 mph is about 2000 deg / sec
 // Values to send over DAC
@@ -39,6 +39,12 @@ const int HalfLeftFB = 760;
 const int TopSpeed_degPs = 1800;
 const int FullBrakeFB = 760;  // need to get a real value
 const int MinimumBrakeFB = 303;  // need to get a real value
+
+// Joystick limits
+const int limitStickUp = 893;  // observed
+const int limitStickDown = 150;  // guess
+const int limitStickLeft = 900;  // guess
+const int limitStickRight = 150; // guess
 
 /* There is hysteresis on steering.
   E.g. Move to the left until PWM 223, getting FB of 760.
@@ -76,7 +82,7 @@ const int MinimumBrakeFB = 303;  // need to get a real value
 const int Motor = 0;
 const int Brakes = 1;
 const int Steering = 2;
-const unsigned long MinTimeStep_usec = 1000;
+const unsigned long MinTimeStep_usec = 10000;
 unsigned long loopTime_usec;
 class _Instruments
 {
@@ -124,20 +130,21 @@ public:
         Feedback = filteredFB();  // 0 to 1023
     else
         Feedback = SpeedCyclometer_degPs;
-    
+/*    
     if (Feedback == desired_feedback ||
         (Feedback <= MinPosition && desired_feedback <= MinPosition) ||
         (Feedback >= MaxPosition && desired_feedback >= MaxPosition))
     {   // we have arrived at desired_position
         return(Feedback);
     }
+    */
     TimeNow_usec = micros();
     if (TimeNow_usec - LastTime_usec < MinTimeStep_usec)
     {   // not enough time has passed since the last command.
         return(Feedback);
     }
     //  read current
-    CurrentDraw = abs( analogRead(CurrentPin) - QuiescentCurrent);
+/*    CurrentDraw = abs( analogRead(CurrentPin) - QuiescentCurrent);
     if (CurrentDraw >= CurrentLimit)
     {
      //    Too much current; Pause movement
@@ -176,10 +183,16 @@ public:
        }
        else  // go for it
        {
+*/ 
+        //  motor is handled differently
+        if (FeedbackPin ==  SteerFB || FeedbackPin ==  BrakeFB)
             analogWrite(SignalPin, desired_position);
+        else
+            DAC_Write(0, desired_position);
+        
             LastCommand = desired_position;
-       }
-    }
+//       }
+//    }
 
 #ifdef DEBUG
     //debug prints. 
@@ -251,7 +264,10 @@ public:
            delayMicroseconds(100);             // analogRead takes 100 usec
        }
        int feedback = median_filter(feedbacks);
+#ifdef DEBUG
+       Serial.print("Feedback: ");
        Serial.print(feedback); Serial.print(", ");
+#endif
        return feedback;
   }
 } Instrument[3];
@@ -264,7 +280,7 @@ void initialize()
   Instrument[Motor].FeedbackPin = 0; // Motor feedback is wheel speed
   Instrument[Motor].CurrentPin = Current36V;
   Instrument[Motor].StepSize = 20; // max from range of 1023.
-  Instrument[Motor].CloseEnough = 1000;  // no feedback
+  Instrument[Motor].CloseEnough = 100;  
   Instrument[Motor].Stuck = 3;
   Instrument[Motor].MinPosition = MinimumThrottle;  // position is 0-255
   Instrument[Motor].MaxPosition = FullThrottle;
@@ -273,7 +289,7 @@ void initialize()
   Instrument[Steering].FeedbackPin = SteerFB;
   Instrument[Steering].CurrentPin = CurrentSteer;
   Instrument[Steering].StepSize = 20;
-  Instrument[Steering].CloseEnough = 1;
+  Instrument[Steering].CloseEnough = 20;
   Instrument[Steering].Stuck = 3;
   Instrument[Steering].MinPosition = HardRight;  // position is PWM: 127 to 255
   Instrument[Steering].MaxPosition = HardLeft;
@@ -283,7 +299,7 @@ void initialize()
   Instrument[Brakes].FeedbackPin = BrakeFB;
   Instrument[Brakes].CurrentPin = CurrentBrake;
   Instrument[Brakes].StepSize = 50;
-  Instrument[Brakes].CloseEnough = 1;
+  Instrument[Brakes].CloseEnough = 20;
   Instrument[Brakes].Stuck = 3;
   Instrument[Brakes].MinPosition = MinimumBrake;  // position is PWM: 127 to 255
   Instrument[Brakes].MaxPosition = FullBrake;
@@ -308,15 +324,19 @@ void initialize()
   Instrument[Motor].CurrentLimit = 230;  // about 20A
   Instrument[Brakes].CurrentLimit = 55;  // about 5A
   Instrument[Steering].CurrentLimit = 55;
+  long counter = 0;
+  /*
    do
    { 
       Instrument[Motor].go(MinimumThrottle);
       Instrument[Brakes].go(FullBrake);
       Instrument[Steering].go(Straight);
-   } while (abs( Instrument[Steering].Feedback - StraightFB) > Instrument[Steering].CloseEnough
+      counter++;
+   } while ((abs( Instrument[Steering].Feedback - StraightFB) > Instrument[Steering].CloseEnough
          || abs( Instrument[Brakes].Feedback - FullBrakeFB) > Instrument[Brakes].CloseEnough
-         || abs( Instrument[Motor].Feedback - 0) > Instrument[Motor].CloseEnough);
- 
+         || abs( Instrument[Motor].Feedback - 0) > Instrument[Motor].CloseEnough)
+         && counter < 10000);
+ */
   // Read quiesent state of current sensors.
   Instrument[Brakes].CurrentDraw =
     Instrument[Brakes].QuiescentCurrent = analogRead(CurrentBrake);
@@ -366,10 +386,11 @@ void setup()
         pinMode(CurrentSteer, INPUT);
         pinMode(BrakeFB, INPUT);
         pinMode(SteerFB, INPUT);
-        
+        Serial.println("Start initialization");        
         initialize();
         
-        twitch();
+ //       twitch();
+     Serial.println("Initialized");
 }
 void twitch()
 {
@@ -380,22 +401,49 @@ void twitch()
 }
 /*---------------------------------------------------------------------------------------*/
 /*---------------------------------------------------------------------------------------*/ 
-// WheelRev is called by an interrupt.
-
+// WheelRev is called by an interrupt. 
+static unsigned long OldTick = 0;
+    
 void WheelRev()
 {
-    static unsigned long OldTick = 0;
     unsigned long TickTime;
     unsigned long WheelRevMicros;
     TickTime = micros();
     if (OldTick == TickTime)
         return;
     if (OldTick <= TickTime)
+    {
       	WheelRevMicros = TickTime - OldTick;
+        if (WheelRevMicros < 100)
+            return;  // switch bounce
+    }
+
     else // overflow
       	WheelRevMicros = TickTime + ~OldTick;
     SpeedCyclometer_degPs = (360 * MEG) / WheelRevMicros;
     OldTick = TickTime;
+}
+void NoWheelRev()  // let the speed slow down if there has been no motion
+{
+    unsigned long NoTickTime;
+    unsigned long WheelRevMicros;
+    unsigned long EntryOldTick = OldTick;
+    NoTickTime = micros();
+    if (OldTick == NoTickTime)
+        return;
+    if (OldTick > NoTickTime)
+    {
+        OldTick = 0;  // overflow
+        return;
+    }
+    unsigned long TimeToNextClick = OldTick + SpeedCyclometer_degPs * MEG / 360;
+    if (NoTickTime < TimeToNextClick)
+        return;
+    WheelRevMicros = NoTickTime - OldTick;
+    // To do: lock out interrupts at this point
+    if (EntryOldTick == OldTick)
+        SpeedCyclometer_degPs = (360 * MEG) / WheelRevMicros;
+ 
 }
 
 /*---------------------------------------------------------------------------------------*/
@@ -544,32 +592,41 @@ void loop()
   if (Instrument[Motor].StickMoved)
   {
      desired_position = Instrument[Motor].Joystick;
+     Serial.print(" FB: "); Serial.print(Instrument[Motor].Feedback);
+     Serial.print(" Motor: "); Serial.print(desired_position);
   }
   Instrument[Motor].go(desired_position);
-  Serial.print(" Motor: "); Serial.print(desired_position);
+  NoWheelRev();  // let speed slow down
  
   // apply brakes
   desired_position =  MinimumBrake;
   if (Instrument[Brakes].StickMoved)
   {
      desired_position = Instrument[Brakes].Joystick;
+     Serial.print(" FB: "); Serial.print(Instrument[Brakes].Feedback);
+     Serial.print(" Brakes: "); Serial.print(desired_position);
   }
-  Instrument[Brakes].go(desired_position);
-  Serial.print(" Brakes: "); Serial.print(desired_position);
+//  Instrument[Brakes].go(desired_position);
+
   
  // apply steering
   desired_position =  Straight;
   if (Instrument[Steering].StickMoved)
   {
      desired_position = Instrument[Steering].Joystick;
+     Serial.print(" FB: "); Serial.print(Instrument[Steering].Feedback);
+     Serial.print(" Steering: "); Serial.print(desired_position);
   }
-  Instrument[Steering].go(desired_position);  
-    Serial.print(" Steering: "); Serial.println(desired_position);
+//  Instrument[Steering].go(desired_position); 
+  if (Instrument[Motor].StickMoved || Instrument[Brakes].StickMoved ||
+     Instrument[Steering].StickMoved)
+     Serial.println(" ");
 }
 /*---------------------------------------------------------------------------------------*/
 void JoystickMotion()
 // All inputs are 0-1023
 {
+    long int x;
     int upStick = analogRead(AccelerateJoystick);
     int center  = analogRead(JoystickCenter);
     int sideStick = analogRead(SteerJoystick);
@@ -589,9 +646,21 @@ void JoystickMotion()
   else
   {
     //stick outside of deadband
-    Instrument[Motor].Joystick = MinimumThrottle + (FullThrottle - MinimumThrottle)
-      * (upStick - tinyUp) / (1023 - tinyUp);
+    if (upStick > limitStickUp)
+        upStick = limitStickUp;
+    x = (upStick - tinyUp);
+    x *= (FullThrottle - MinimumThrottle);
+    x /= (limitStickUp - tinyUp);
+    x  += MinimumThrottle;
+    Instrument[Motor].Joystick = x;
     Instrument[Motor].StickMoved =  TRUE;
+#ifdef DEBUG
+    Serial.print(" upStick: "); Serial.print(upStick);
+    Serial.print(" tinyUp: "); Serial.print(tinyUp);
+    Serial.print(" Min: "); Serial.print(MinimumThrottle);
+    Serial.print(" Full: "); Serial.print(FullThrottle);
+    Serial.print(" x: "); Serial.print(x);
+#endif
   }
 
   //Check if Stick moved beyond "down" deadBand
@@ -603,8 +672,13 @@ void JoystickMotion()
   }
   else
   {
-    Instrument[Brakes].Joystick = MinimumBrake + (FullBrake - MinimumBrake)
-      * (-upStick + tinyDown) / tinyDown;
+    if (upStick < limitStickDown)
+        upStick = limitStickDown;
+    x = (tinyDown - upStick);
+    x *= (FullBrake - MinimumBrake);
+    x /= (tinyDown - limitStickDown);
+    x  += MinimumBrake;
+    Instrument[Brakes].Joystick = x;
     Instrument[Brakes].StickMoved =  TRUE;
   }
 
@@ -617,12 +691,29 @@ void JoystickMotion()
   else if (sideStick > tinyUp)
   {
     //Stick moved past "up" deadband limit
-    Instrument[Steering].Joystick = Straight + (HardRight - Straight) * (sideStick - tinyUp) / (1023 - tinyUp);
+    if (sideStick > limitStickLeft)
+        sideStick = limitStickLeft;
+    x = (sideStick - tinyUp);  // positive
+    x *= (HardLeft - Straight);  // positive
+    x /= (limitStickLeft - tinyUp);  // x is positive
+    Instrument[Steering].Joystick = Straight + x;   
     Instrument[Steering].StickMoved =  TRUE;
   }
   else
   {
-    Instrument[Steering].Joystick = Straight + (Straight - HardLeft) * (-sideStick + tinyDown) / tinyDown;
+    if (sideStick < limitStickRight)
+        sideStick = limitStickRight;
+    x = (tinyDown - sideStick);  // positive
+    x *= (Straight - HardRight);  // positive
+    x /= (tinyDown - limitStickRight);  // x is positive
+    Instrument[Steering].Joystick = Straight - x;
+#ifdef DEBUG
+    Serial.print(" sideStick: "); Serial.print(sideStick);
+    Serial.print(" tinyDown: "); Serial.print(tinyDown);
+    Serial.print(" HardRight: "); Serial.print(HardRight);
+    Serial.print(" limitStickRight: "); Serial.print(limitStickRight);
+    Serial.print(" x: "); Serial.print(x); 
+#endif  
     Instrument[Steering].StickMoved = TRUE;
   }
 }
