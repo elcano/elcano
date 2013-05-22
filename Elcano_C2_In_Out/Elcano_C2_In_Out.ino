@@ -184,7 +184,7 @@ void setup()
 
         initialize();
         
-        CalibrateBrakes();
+        CalibrateBrakes(95,900);
         
        CalibrateSteering(HardRight,3);     
        CalibrateSteering(HardLeft,3);
@@ -197,7 +197,7 @@ void setup()
 }	
 
 /*---------------------------------------------------------------------------------------*/ 
-void CalibrateBrakes()
+void CalibrateBrakes(int delayBig, int delaySmall)
 {
   // This routine establishes the correct values for MinimumBrake and FullBrake.
   // Verify that the value for FullBrake stops the vehicle.
@@ -222,7 +222,7 @@ void CalibrateBrakes()
      {
        analogWrite(DiskBrake, i);
 //       int current =  analogRead(CurrentBrake);
-       delay(95);  // allow tiime for brake to respond
+       delay(delaySmall);  // allow tiime for brake to respond
        feedbacks[0] = analogRead(BrakeFB);
        delay(1);
        feedbacks[1] = analogRead(BrakeFB);
@@ -237,7 +237,7 @@ void CalibrateBrakes()
        Serial.print(i); Serial.print(", ");
 //       Serial.print(current); Serial.print(", ");
        Serial.println(feedback);
-       delay(900);   // hold each brake position 1 second.
+       delay(delaySmall);   // hold each brake position 1 second.
      }
 }
 void moveSteer(int i)
@@ -428,6 +428,10 @@ void loop()
   static unsigned long EndTime = 0;
   static unsigned long OutsideTime;
   int center;
+  
+  for (int i = 900; i> 0; i-=10)
+          CalibrateBrakes(i/10, i);
+  
   
   return;
   
