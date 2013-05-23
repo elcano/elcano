@@ -16,15 +16,16 @@
 #define FALSE 0
 #endif
 #define MEG 1000000
-//#define DEBUG 1
+#define DEBUG 1
+#define DEBUG_M 2
 
 volatile int SpeedCyclometer_degPs;  // 20 mph is about 2000 deg / sec
 // Values to send over DAC
 const int FullThrottle =  227;   // 3.63 V
 const int MinimumThrottle = 70;  // Throttle has no effect until 1.2 V
 // Values to send on PWM to get response of actuators
-const int FullBrake = 225;  // start with a conservative value; could go as high as 255;  
-const int MinimumBrake = 155; // start with a conservative value; could go as low as 127;
+const int FullBrake = 167;  // start with a conservative value; could go as high as 255;  
+const int NoBrake = 207; // start with a conservative value; could go as low as 127;
 // Steering
 const int HardLeft = 223; // was 159; // start with a conservative value; could go as high as 255;
 const int HalfLeft = 223; // was 159;
@@ -37,14 +38,14 @@ const int StraightFB = 501;
 const int HalfRightFB = 303;
 const int HalfLeftFB = 760;
 const int TopSpeed_degPs = 1800;
-const int FullBrakeFB = 760;  // need to get a real value
-const int MinimumBrakeFB = 303;  // need to get a real value
+const int FullBrakeFB = 375;  // Extrapolated 5/23/13
+const int NoBrakeFB = 679;  // Observed 5/23/13
 
 // Joystick limits
 const int limitStickUp = 893;  // observed
-const int limitStickDown = 150;  // guess
+const int limitStickDown = 100;  // observed 0; but make everything from 0 to 100 full brake.
 const int limitStickLeft = 900;  // guess
-const int limitStickRight = 150; // guess
+const int limitStickRight = 100; // guess
 
 /* There is hysteresis on steering.
   E.g. Move to the left until PWM 223, getting FB of 760.
@@ -194,15 +195,15 @@ public:
 //       }
 //    }
 
-#ifdef DEBUG
+#ifdef DEBUG_M
     //debug prints. 
-    Serial.print(desired_position); 
-    Serial.print(", ");
-    Serial.print(Feedback); 
-    Serial.print(", ");
-    Serial.print(desired_position); 
-    Serial.print(", ");
-    Serial.println(TimeNow_usec);
+//    Serial.print(desired_position); 
+//    Serial.print(", ");
+//    Serial.print(Feedback); 
+//    Serial.print(", ");
+//    Serial.print(desired_position); 
+//    Serial.print(", ");
+//    Serial.println(TimeNow_usec);
 #endif
     LastTime_usec = TimeNow_usec;
     LastFeedback = Feedback;
@@ -264,7 +265,7 @@ public:
            delayMicroseconds(100);             // analogRead takes 100 usec
        }
        int feedback = median_filter(feedbacks);
-#ifdef DEBUG
+#ifdef DEBUG_M
        Serial.print("Feedback: ");
        Serial.print(feedback); Serial.print(", ");
 #endif
@@ -301,8 +302,8 @@ void initialize()
   Instrument[Brakes].StepSize = 50;
   Instrument[Brakes].CloseEnough = 20;
   Instrument[Brakes].Stuck = 3;
-  Instrument[Brakes].MinPosition = MinimumBrake;  // position is PWM: 127 to 255
-  Instrument[Brakes].MaxPosition = FullBrake;
+  Instrument[Brakes].MinPosition = FullBrake;  // position is PWM: 127 to 255
+  Instrument[Brakes].MaxPosition = NoBrake;
   Instrument[Brakes].maxSlew = 1000;  // usec / FBcount
 
   //Load current positions from the actual sensors
@@ -388,16 +389,20 @@ void setup()
         pinMode(SteerFB, INPUT);
         Serial.println("Start initialization");        
         initialize();
-        
- //       twitch();
+     
+//  twitch moves Motor, Brakes and Steering.  5/23/13  TCF        
+       twitch();
+     BrakeOff();
      Serial.println("Initialized");
+     
 }
 void twitch()
 {
-  DACRamp();
-  CalibrateBrakes();
+
+  CalibrateBrakes(500);
   CalibrateSteering(HardRight,3);     
   CalibrateSteering(HardLeft,3);
+    DACRamp(200);
 }
 /*---------------------------------------------------------------------------------------*/
 /*---------------------------------------------------------------------------------------*/ 
@@ -447,7 +452,7 @@ void NoWheelRev()  // let the speed slow down if there has been no motion
 }
 
 /*---------------------------------------------------------------------------------------*/
-void DACRamp()
+void DACRamp(int pause)
 {
 /* 
 Use SPI interface to output signal to motor.
@@ -484,22 +489,22 @@ signal on IC2 pin 8.
       
       */
       // change the voltage on this channel from min to max:
-      for (int level = 70; level < 200; level+=4) 
+      for (int level = MinimumThrottle; level < FullThrottle/2; level+=4) 
       {
         DAC_Write(channel, level);
         Serial.print(SpeedCyclometer_degPs); Serial.print(", ");
         Serial.println(level);
-        delay(3000);
+        delay(pause);
       }
-      // wait a second at the top:
-      delay(1000);
+      // wait at the top:
+      delay(pause);
       // change the voltage on this channel from max to min:
-      for (int level = 200; level > 70; level-=4) 
+      for (int level = FullThrottle/2; level > MinimumThrottle; level-=4) 
       {
         DAC_Write(channel, level);
         Serial.print(SpeedCyclometer_degPs); Serial.print(", ");
         Serial.println(level);
-        delay(3000);
+        delay(pause);
       }
  }    
 
@@ -599,7 +604,7 @@ void loop()
   NoWheelRev();  // let speed slow down
  
   // apply brakes
-  desired_position =  MinimumBrake;
+  desired_position =  NoBrake;
   if (Instrument[Brakes].StickMoved)
   {
      desired_position = Instrument[Brakes].Joystick;
@@ -630,14 +635,21 @@ void JoystickMotion()
     int upStick = analogRead(AccelerateJoystick);
     int center  = analogRead(JoystickCenter);
     int sideStick = analogRead(SteerJoystick);
-    const int deadBandLow = 32;  // out of 1023
-    const int deadBandHigh = 32;
+    if (center < 420 || center > 460)
+    {
+      Serial.print(" Center: "); Serial.print(center);
+      Serial.print(" Up: "); Serial.print(upStick);
+      Serial.print(" Side: "); Serial.println(sideStick);
+      center = 446;
+   }
+    const int deadBandLow = 80;  // out of 1023
+    const int deadBandHigh = 80;
      //Calculate deadband info
      int tinyDown = center - deadBandLow;
      int tinyUp = center + deadBandHigh;
      
        //If stick did not move more than the "up"    deadband.
-  if (upStick <= tinyUp)  // 543
+  if (upStick <= tinyUp)  
   {
     //stick not outside deadBand
     Instrument[Motor].Joystick = 0;
@@ -654,7 +666,7 @@ void JoystickMotion()
     x  += MinimumThrottle;
     Instrument[Motor].Joystick = x;
     Instrument[Motor].StickMoved =  TRUE;
-#ifdef DEBUG
+#ifdef DEBUG_M
     Serial.print(" upStick: "); Serial.print(upStick);
     Serial.print(" tinyUp: "); Serial.print(tinyUp);
     Serial.print(" Min: "); Serial.print(MinimumThrottle);
@@ -675,11 +687,18 @@ void JoystickMotion()
     if (upStick < limitStickDown)
         upStick = limitStickDown;
     x = (tinyDown - upStick);
-    x *= (FullBrake - MinimumBrake);
+    x *= (NoBrake - FullBrake);  // NoBrake = 207; FullBrake = 167
     x /= (tinyDown - limitStickDown);
-    x  += MinimumBrake;
-    Instrument[Brakes].Joystick = x;
+    Instrument[Brakes].Joystick = NoBrake - x;
     Instrument[Brakes].StickMoved =  TRUE;
+#ifdef DEBUG
+    Serial.print(" upStick: "); Serial.print(upStick);
+    Serial.print(" tinyDown: "); Serial.print(tinyDown);
+    Serial.print(" center: "); Serial.print(center);
+    Serial.print(" Min: "); Serial.print(NoBrake);
+    Serial.print(" Full: "); Serial.print(FullBrake);
+    Serial.print(" x: "); Serial.print(x);
+#endif
   }
 
   //read the steering pot in the joystick
@@ -718,9 +737,17 @@ void JoystickMotion()
   }
 }
 /*---------------------------------------------------------------------------------------*/ 
-void CalibrateBrakes()
+void BrakeOn()
 {
-  // This routine establishes the correct values for MinimumBrake and FullBrake.
+     analogWrite(DiskBrake, FullBrake);
+}
+void BrakeOff()
+{
+     analogWrite(DiskBrake, NoBrake);
+}
+void CalibrateBrakes( int delaySmall)
+{
+  // This routine establishes the correct values for NoBrake and FullBrake.
   // Verify that the value for FullBrake stops the vehicle.
   // It allows us to establish the constants to map the feedback to the commanded position.
   
@@ -738,12 +765,13 @@ void CalibrateBrakes()
  
  // Mechanically adjust the brake cables so that the motion of the servo is appropriate
        int feedbacks[5];
-       Serial.println("Calibrate brakes");
-       for (int i = MinimumBrake; i < FullBrake; i += 10)
+       Serial.print(2*delaySmall);
+       Serial.println(" Calibrate brakes");
+       for (int i = NoBrake; i > FullBrake; i -= 15)
      {
        analogWrite(DiskBrake, i);
 //       int current =  analogRead(CurrentBrake);
-       delay(95);  // allow tiime for brake to respond
+       delay(delaySmall);  // allow tiime for brake to respond
        feedbacks[0] = analogRead(BrakeFB);
        delay(1);
        feedbacks[1] = analogRead(BrakeFB);
@@ -758,9 +786,10 @@ void CalibrateBrakes()
        Serial.print(i); Serial.print(", ");
 //       Serial.print(current); Serial.print(", ");
        Serial.println(feedback);
-       delay(900);   // hold each brake position 1 second.
+       delay(delaySmall);   // hold each brake position 1 second.
      }
 }
+
 void moveSteer(int i)
 {
        int feedbacks[5];
@@ -825,27 +854,47 @@ void CalibrateSteering(int SteerPosition, int delta)
       moveSteer(Straight);    
     
 }
-int compareint (const void * a, const void * b)
-{
-  if ( *(int*)a <  *(int*)b ) return -1;
-  if ( *(int*)a == *(int*)b ) return 0;
-  if ( *(int*)a >  *(int*)b ) return 1;
+#define SWAP(a,b) temp=(a);(a)=(b);(b)=temp;
+int median_filter(int arr[])
+{ // return the median of 5 numbers
+  // on exit, the order of the five numbers is unspecified.
+  // median filter has been tested and verified on 300 random arrays.
+	register int temp;
+	if (arr[0] > arr[1])
+	{
+		SWAP(arr[0],arr[1])
+	}
+	if (arr[1] > arr[2])
+	{
+		SWAP(arr[1],arr[2])
+		if (arr[0] > arr[1])
+		{
+			SWAP(arr[0],arr[1])
+		}
+	}
+	if (arr[4] < arr[3])
+	{
+		SWAP(arr[4],arr[3])	
+	}
+	if (arr[2] <= arr[3])
+		return arr[2];	
+	if (arr[4] <= arr[0])
+		return arr[0];
+	if (arr[0] < arr[3])
+	{
+		SWAP(arr[0],arr[3])	// arr[3] is the min
+	}
+	if (arr[2] > arr[4])
+	{
+		SWAP(arr[2],arr[4])	// arr[4] is the max
+	}
+	if (arr[0] >= arr[1])
+		return arr[0];	
+	if (arr[2] <= arr[1])
+		return arr[2];
+	return arr[1];
 }
-int median_filter(int* readings)
-// on entry, readings holds the 5 most recent readings.
-// returned value is the median filter.
-// readings[0] is oldest; readings[4] is newest
-// on exit, all readings are shifted, with most recent reading in both [4] and [5]
-{
-  int sorted[5];
-  for (int i = 0; i < 5; i++)
-    sorted[i] = readings[i];
-   qsort(sorted, 5, sizeof(int), compareint);
-   for (int i = 0; i < 4; i++)
-    readings[i] = readings[i+1];
-  return sorted[2];
-
-}
+/*---------------------------------------------------------------------------------------*/ 
 
 
 
