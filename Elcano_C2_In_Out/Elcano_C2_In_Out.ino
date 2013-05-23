@@ -37,8 +37,8 @@ const int Off = 0;
 const int FullThrottle =  179;   // 3.5 V
 const int MinimumThrottle = 39;  // Throttle has no effect until 0.75 V
 
-const int FullBrake = 225;  // start with a conservative value; could go as high as 255;  
-const int MinimumBrake = 155; // start with a conservative value; could go as low as 127;
+const int FullBrake = 167;  // start with a conservative value; could go as high as 255;  
+const int NoBrake = 207; // start with a conservative value; could go as low as 127;
 
 const int HardLeft = 223; // was 159; // start with a conservative value; could go as high as 255;
 const int HalfLeft = 223; // was 159;
@@ -184,22 +184,30 @@ void setup()
 
         initialize();
         
-        CalibrateBrakes();
-        
+        CalibrateBrakes(400);
+/*        
        CalibrateSteering(HardRight,3);     
        CalibrateSteering(HardLeft,3);
-       delay(10000);
+       delay(1000);
        CalibrateSteering(HardRight,1);
        CalibrateSteering(HardLeft,1);
-       delay(10000);
+       delay(1000);
        CalibrateSteering(HardRight,10);       
-       
+*/       
 }	
 
 /*---------------------------------------------------------------------------------------*/ 
-void CalibrateBrakes()
+void BrakeOn()
 {
-  // This routine establishes the correct values for MinimumBrake and FullBrake.
+     analogWrite(DiskBrake, FullBrake);
+}
+void BrakeOff()
+{
+     analogWrite(DiskBrake, NoBrake);
+}
+void CalibrateBrakes( int delaySmall)
+{
+  // This routine establishes the correct values for NoBrake and FullBrake.
   // Verify that the value for FullBrake stops the vehicle.
   // It allows us to establish the constants to map the feedback to the commanded position.
   
@@ -217,12 +225,13 @@ void CalibrateBrakes()
  
  // Mechanically adjust the brake cables so that the motion of the servo is appropriate
        int feedbacks[5];
-       Serial.println("Calibrate brakes");
-       for (int i = MinimumBrake; i < FullBrake; i += 10)
+       Serial.print(2*delaySmall);
+       Serial.println(" Calibrate brakes");
+       for (int i = NoBrake; i > FullBrake; i -= 15)
      {
        analogWrite(DiskBrake, i);
 //       int current =  analogRead(CurrentBrake);
-       delay(95);  // allow tiime for brake to respond
+       delay(delaySmall);  // allow tiime for brake to respond
        feedbacks[0] = analogRead(BrakeFB);
        delay(1);
        feedbacks[1] = analogRead(BrakeFB);
@@ -237,7 +246,7 @@ void CalibrateBrakes()
        Serial.print(i); Serial.print(", ");
 //       Serial.print(current); Serial.print(", ");
        Serial.println(feedback);
-       delay(900);   // hold each brake position 1 second.
+       delay(delaySmall);   // hold each brake position 1 second.
      }
 }
 void moveSteer(int i)
@@ -304,26 +313,46 @@ void CalibrateSteering(int SteerPosition, int delta)
       moveSteer(Straight);    
     
 }
-int compareint (const void * a, const void * b)
-{
-  if ( *(int*)a <  *(int*)b ) return -1;
-  if ( *(int*)a == *(int*)b ) return 0;
-  if ( *(int*)a >  *(int*)b ) return 1;
-}
-int median_filter(int* readings)
-// on entry, readings holds the 5 most recent readings.
-// returned value is the median filter.
-// readings[0] is oldest; readings[4] is newest
-// on exit, all readings are shifted, with most recent reading in both [4] and [5]
-{
-  int sorted[5];
-  for (int i = 0; i < 5; i++)
-    sorted[i] = readings[i];
-   qsort(sorted, 5, sizeof(int), compareint);
-   for (int i = 0; i < 4; i++)
-    readings[i] = readings[i+1];
-  return sorted[2];
 
+#define SWAP(a,b) temp=(a);(a)=(b);(b)=temp;
+int median_filter(int arr[])
+{ // return the median of 5 numbers
+  // on exit, the order of the five numbers is unspecified.
+  // median filter has been tested and verified on 300 random arrays.
+	register int temp;
+	if (arr[0] > arr[1])
+	{
+		SWAP(arr[0],arr[1])
+	}
+	if (arr[1] > arr[2])
+	{
+		SWAP(arr[1],arr[2])
+		if (arr[0] > arr[1])
+		{
+			SWAP(arr[0],arr[1])
+		}
+	}
+	if (arr[4] < arr[3])
+	{
+		SWAP(arr[4],arr[3])	
+	}
+	if (arr[2] <= arr[3])
+		return arr[2];	
+	if (arr[4] <= arr[0])
+		return arr[0];
+	if (arr[0] < arr[3])
+	{
+		SWAP(arr[0],arr[3])	// arr[3] is the min
+	}
+	if (arr[2] > arr[4])
+	{
+		SWAP(arr[2],arr[4])	// arr[4] is the max
+	}
+	if (arr[0] >= arr[1])
+		return arr[0];	
+	if (arr[2] <= arr[1])
+		return arr[2];
+	return arr[1];
 }
 /*---------------------------------------------------------------------------------------*/ 
 void initialize()
@@ -428,6 +457,25 @@ void loop()
   static unsigned long EndTime = 0;
   static unsigned long OutsideTime;
   int center;
+ 
+ /* 
+  for (int i = 300; i> 0; i-=10)
+  {
+          CalibrateBrakes(i);
+          delay(500);
+  } */
+  // With no load, there is no current limit on how fast the brakes can move.
+  // If we go from NoBrake (207) to FullBrake (167) with a delay of 250 ms between commands,
+  // maximum power draw is about 3.4 Amp; 
+  // but actuator has only a 0.3 inch throw - it is not getting to the extremes
+  // If we use delays of 500 ms, power draw is 2.5 A; throw is 0.5 inch.
+  // With a 1 sec delay, draw is 2.2 A.
+  // Full throw is 0.7 inch
+  // 
+  BrakeOn();
+  delay (500);
+  BrakeOff();
+  delay (500);
   
   return;
   
