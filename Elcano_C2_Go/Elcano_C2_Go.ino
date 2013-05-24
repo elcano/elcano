@@ -640,7 +640,14 @@ void JoystickMotion()
       Serial.print(" Center: "); Serial.print(center);
       Serial.print(" Up: "); Serial.print(upStick);
       Serial.print(" Side: "); Serial.println(sideStick);
-      center = 446;
+      // Joystick may have lost power
+      Instrument[Motor].Joystick = MinimumThrottle;
+      Instrument[Motor].StickMoved = FALSE;
+      Instrument[Steering].Joystick = Straight;
+      Instrument[Steering].StickMoved =  FALSE;
+      Instrument[Brakes].Joystick = NoBrake;
+      Instrument[Brakes].StickMoved =  FALSE;
+      return; 
    }
     const int deadBandLow = 80;  // out of 1023
     const int deadBandHigh = 80;
@@ -679,7 +686,7 @@ void JoystickMotion()
   if (upStick >= tinyDown)
   {
     //Stick still in deadband
-    Instrument[Brakes].Joystick = 0;
+    Instrument[Brakes].Joystick = NoBrake;
     Instrument[Brakes].StickMoved =  FALSE;
   }
   else
