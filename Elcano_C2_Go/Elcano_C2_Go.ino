@@ -16,8 +16,8 @@
 #define FALSE 0
 #endif
 #define MEG 1000000
-#define DEBUG 1
-#define DEBUG_M 2
+//#define DEBUG 1
+//#define DEBUG_M 2
 
 volatile int SpeedCyclometer_degPs;  // 20 mph is about 2000 deg / sec
 // Values to send over DAC
@@ -391,7 +391,7 @@ void setup()
         initialize();
      
 //  twitch moves Motor, Brakes and Steering.  5/23/13  TCF        
-       twitch();
+//       twitch();
      BrakeOff();
      Serial.println("Initialized");
      
@@ -400,8 +400,8 @@ void twitch()
 {
 
   CalibrateBrakes(500);
-  CalibrateSteering(HardRight,3);     
-  CalibrateSteering(HardLeft,3);
+  CalibrateSteering(HardRight,10);     
+  CalibrateSteering(HardLeft,10);
     DACRamp(200);
 }
 /*---------------------------------------------------------------------------------------*/
@@ -611,7 +611,7 @@ void loop()
      Serial.print(" FB: "); Serial.print(Instrument[Brakes].Feedback);
      Serial.print(" Brakes: "); Serial.print(desired_position);
   }
-//  Instrument[Brakes].go(desired_position);
+  Instrument[Brakes].go(desired_position);
 
   
  // apply steering
@@ -622,7 +622,7 @@ void loop()
      Serial.print(" FB: "); Serial.print(Instrument[Steering].Feedback);
      Serial.print(" Steering: "); Serial.print(desired_position);
   }
-//  Instrument[Steering].go(desired_position); 
+  Instrument[Steering].go(desired_position); 
   if (Instrument[Motor].StickMoved || Instrument[Brakes].StickMoved ||
      Instrument[Steering].StickMoved)
      Serial.println(" ");
@@ -640,7 +640,14 @@ void JoystickMotion()
       Serial.print(" Center: "); Serial.print(center);
       Serial.print(" Up: "); Serial.print(upStick);
       Serial.print(" Side: "); Serial.println(sideStick);
-      center = 446;
+      // Joystick may have lost power
+      Instrument[Motor].Joystick = MinimumThrottle;
+      Instrument[Motor].StickMoved = FALSE;
+      Instrument[Steering].Joystick = Straight;
+      Instrument[Steering].StickMoved =  FALSE;
+      Instrument[Brakes].Joystick = NoBrake;
+      Instrument[Brakes].StickMoved =  FALSE;
+      return; 
    }
     const int deadBandLow = 80;  // out of 1023
     const int deadBandHigh = 80;
@@ -679,7 +686,7 @@ void JoystickMotion()
   if (upStick >= tinyDown)
   {
     //Stick still in deadband
-    Instrument[Brakes].Joystick = 0;
+    Instrument[Brakes].Joystick = NoBrake;
     Instrument[Brakes].StickMoved =  FALSE;
   }
   else
