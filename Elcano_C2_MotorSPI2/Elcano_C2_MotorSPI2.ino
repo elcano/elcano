@@ -105,8 +105,11 @@ signal on IC2 pin 8.
       // change the voltage on this channel from min to max:
       for (int level = 70; level < 200; level+=4) 
       {
-        DAC_Write(channel, level);
-        Serial.print(SpeedCyclometer_degPs); Serial.print(", ");
+        DAC_Write(0, level);
+        DAC_Write(1, level);
+        DAC_Write(2, level);
+        DAC_Write(3, level);
+//       Serial.print(SpeedCyclometer_degPs); Serial.print(", ");
         Serial.println(level);
         delay(3000);
       }
@@ -115,8 +118,11 @@ signal on IC2 pin 8.
       // change the voltage on this channel from max to min:
       for (int level = 200; level > 70; level-=4) 
       {
-        DAC_Write(channel, level);
-        Serial.print(SpeedCyclometer_degPs); Serial.print(", ");
+        DAC_Write(0, level);
+        DAC_Write(1, level);
+        DAC_Write(2, level);
+        DAC_Write(3, level);
+//        Serial.print(SpeedCyclometer_degPs); Serial.print(", ");
         Serial.println(level);
         delay(3000);
       }
