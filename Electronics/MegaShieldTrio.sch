@@ -6,7 +6,7 @@
 <setting alwaysvectorfont="no"/>
 <setting verticaltext="up"/>
 </settings>
-<grid distance="0.05" unitdist="inch" unit="inch" style="lines" multiple="1" display="no" altdistance="0.01" altunitdist="inch" altunit="inch"/>
+<grid distance="0.1" unitdist="inch" unit="inch" style="lines" multiple="1" display="no" altdistance="0.01" altunitdist="inch" altunit="inch"/>
 <layers>
 <layer number="1" name="Top" color="4" fill="1" visible="no" active="no"/>
 <layer number="2" name="Route2" color="1" fill="3" visible="no" active="no"/>
@@ -7394,7 +7394,7 @@ Bistabil C0051 = 5V; C0052 = 12V</description>
 </classes>
 <parts>
 <part name="GND5" library="supply1" deviceset="GND" device=""/>
-<part name="C6D14-21" library="pinhead" deviceset="PINHD-1X8" device="" value="C6 Digital 14-21"/>
+<part name="C6D14-21" library="Elcano" deviceset="PINHD-1X8" device="SMALL8" value="C6 Digital 14-21"/>
 <part name="C6A8-15" library="pinhead" deviceset="PINHD-1X8" device="" value="C6 Analog In 8-15"/>
 <part name="C6D22-37" library="pinhead" deviceset="PINHD-2X9" device="" value="C6 Digital 22-37"/>
 <part name="C6D38-53" library="pinhead" deviceset="PINHD-2X9" device="" value="C6 Digital 38-53"/>
