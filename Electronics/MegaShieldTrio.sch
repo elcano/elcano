@@ -7456,7 +7456,7 @@ Bistabil C0051 = 5V; C0052 = 12V</description>
 <part name="R2B" library="Elcano" deviceset="PINHD-1X8" device="SMALL8"/>
 <part name="R3B" library="Elcano" deviceset="PINHD-1X8" device="SMALL8"/>
 <part name="R1B" library="Elcano" deviceset="1X6HEADER" device="" value=" "/>
-<part name="R4A" library="Elcano" deviceset="1X6HEADER" device="" value="Proto"/>
+<part name="R4A" library="Elcano" deviceset="1X6HEADER" device="" value=" "/>
 <part name="R5A" library="Elcano" deviceset="1X6HEADER" device="" value=" "/>
 <part name="R6A" library="Elcano" deviceset="1X6HEADER" device="" value=""/>
 <part name="3V" library="Elcano" deviceset="PINHD-1X8" device="SMALL8" value=" "/>

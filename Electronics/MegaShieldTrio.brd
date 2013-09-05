@@ -11,16 +11,16 @@
 <layer number="1" name="Top" color="4" fill="1" visible="no" active="yes"/>
 <layer number="16" name="Bottom" color="1" fill="1" visible="no" active="yes"/>
 <layer number="17" name="Pads" color="2" fill="1" visible="yes" active="yes"/>
-<layer number="18" name="Vias" color="2" fill="1" visible="no" active="yes"/>
+<layer number="18" name="Vias" color="2" fill="1" visible="yes" active="yes"/>
 <layer number="19" name="Unrouted" color="6" fill="1" visible="yes" active="yes"/>
 <layer number="20" name="Dimension" color="15" fill="1" visible="yes" active="yes"/>
-<layer number="21" name="tPlace" color="7" fill="1" visible="no" active="yes"/>
-<layer number="22" name="bPlace" color="7" fill="1" visible="yes" active="yes"/>
+<layer number="21" name="tPlace" color="7" fill="1" visible="yes" active="yes"/>
+<layer number="22" name="bPlace" color="7" fill="1" visible="no" active="yes"/>
 <layer number="23" name="tOrigins" color="15" fill="1" visible="yes" active="yes"/>
 <layer number="24" name="bOrigins" color="15" fill="1" visible="yes" active="yes"/>
-<layer number="25" name="tNames" color="7" fill="1" visible="no" active="yes"/>
-<layer number="26" name="bNames" color="7" fill="1" visible="yes" active="yes"/>
-<layer number="27" name="tValues" color="7" fill="1" visible="no" active="yes"/>
+<layer number="25" name="tNames" color="7" fill="1" visible="yes" active="yes"/>
+<layer number="26" name="bNames" color="7" fill="1" visible="no" active="yes"/>
+<layer number="27" name="tValues" color="7" fill="1" visible="yes" active="yes"/>
 <layer number="28" name="bValues" color="7" fill="1" visible="no" active="yes"/>
 <layer number="29" name="tStop" color="7" fill="3" visible="no" active="yes"/>
 <layer number="30" name="bStop" color="7" fill="6" visible="no" active="yes"/>
@@ -110,9 +110,11 @@
 <hole x="54.61" y="45.72" drill="3.2"/>
 <wire x1="99.822" y1="79.502" x2="99.314" y2="80.01" width="0" layer="20" curve="90"/>
 <wire x1="99.314" y1="80.01" x2="6.35" y2="80" width="0" layer="20"/>
-<text x="9.7028" y="2.7178" size="1.27" layer="25" font="vector">Made in USA</text>
 <wire x1="0" y1="0" x2="99.822" y2="0" width="0" layer="20"/>
 <wire x1="99.822" y1="0" x2="99.822" y2="79.502" width="0" layer="20"/>
+<text x="58.42" y="13.97" size="1.778" layer="21">Elcano Project</text>
+<text x="58.42" y="11.43" size="1.778" layer="21">Mega Shield Trio</text>
+<text x="5.08" y="62.23" size="1.778" layer="21" rot="R90">Made in USA</text>
 </plain>
 <libraries>
 <library name="pinhead">
@@ -2383,7 +2385,7 @@ Phone: 503-829-9108 x555.&lt;p&gt; v1.1Mod10/16/07~Layers-core reversal.Distance
 <element name="R2B" library="Elcano" package="1X8HEADER" value="" x="73.66" y="31.75"/>
 <element name="R3B" library="Elcano" package="1X8HEADER" value="" x="73.66" y="29.21"/>
 <element name="R1B" library="Elcano" package="1X6HEADER" value=" " x="78.74" y="34.29"/>
-<element name="R4A" library="Elcano" package="1X6HEADER" value="Proto" x="58.42" y="21.59"/>
+<element name="R4A" library="Elcano" package="1X6HEADER" value=" " x="58.42" y="21.59"/>
 <element name="R5A" library="Elcano" package="1X6HEADER" value=" " x="58.42" y="19.05"/>
 <element name="R6A" library="Elcano" package="1X6HEADER" value="" x="58.42" y="16.51"/>
 <element name="3V" library="Elcano" package="1X8HEADER" value=" " x="58.42" y="34.29"/>

@@ -465,8 +465,8 @@ Source: www.tycoelectronics.com .. ENG_DS_1654001_1099_RJ_L_0507.pdf</descriptio
 <part name="P+1" library="supply1" deviceset="+5V" device=""/>
 <part name="GND1" library="supply1" deviceset="GND" device=""/>
 <part name="X1" library="con-tycoelectronics" deviceset="RJ45" device="" technology="-8L-B"/>
-<part name="L-RNG1" library="pinhead" deviceset="PINHD-1X7" device="" value="Back Left"/>
-<part name="R-RNG1" library="pinhead" deviceset="PINHD-1X7" device="" value="Back"/>
+<part name="L-RNG1" library="pinhead" deviceset="PINHD-1X7" device="" value="        Back Left"/>
+<part name="R-RNG1" library="pinhead" deviceset="PINHD-1X7" device="" value="Back Right"/>
 </parts>
 <sheets>
 <sheet>
