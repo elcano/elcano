@@ -28,10 +28,10 @@ void Filter(REAL* State, // e.g  x, y position, x, y velocity
                              0,  1., 0,        deltaT_s,
                              0,  0,  1,        0,
                              0,  0,  0,        1};
-      REAL state_transition[]   = {1., 0,  deltaT_s, 0,
-                                   0,  1., 0,        deltaT_s,
-                                   0,  0,  1,        0,
-                                   0,  0,  0,        1};
+      //REAL state_transition[]   = {1., 0,  deltaT_s, 0,
+      //                             0,  1., 0,        deltaT_s,
+      //                             0,  0,  1,        0,
+      //                             0,  0,  0,        1};
       // position' = 1*position + 1*velocity
       // velocity' = 1*velocity
       REAL observable[NSEEN*NSTATES]; // = {1., 0, 0, 0,

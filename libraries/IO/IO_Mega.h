@@ -5,6 +5,10 @@ This shiels uses A4 and A5 for RTC and D10,11,12,and 13 for data logging.
 Data on all pins are logged to an SD card in CSV format.
 */
 
+#define Serial1 Serial
+#define Serial2 Serial
+#define Serial3 Serial
+
 // DIGITAL I/O ----------------------------------------------
 
 // D0-7 Connector -------------------------------
