@@ -1,11 +1,4 @@
 // Common.h - header included for all Elcano modules
-#define MEGA 
-
-#ifndef MEGA
-#define Serial1 Serial
-#define Serial2 Serial
-#define Serial3 Serial
-#endif
 
 // latitude and longitude are multiplied by 1,000,000.
 // (47.621300, -122.350900) is Seattle Center House.
