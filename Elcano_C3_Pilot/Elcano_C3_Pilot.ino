@@ -1,5 +1,7 @@
+
 #include <Common.h>
-#include <IO.h>
+#include <IO_C3.h>
+#include <IO_Mega.h>
 #include <Matrix.h>
 
 /*
@@ -105,7 +107,7 @@ void setup()
 { 
         pinMode(Rx0, INPUT);
         pinMode(Tx0, OUTPUT);
-        pinMode(LED, OUTPUT); 
+        pinMode(C3_LED, OUTPUT); 
      	Serial.begin(9600); 
         pinMode(DATA_READY, INPUT);
         DataAvailable = false;
