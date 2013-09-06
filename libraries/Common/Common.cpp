@@ -1,7 +1,7 @@
 
-#include "IO.h"
-#include "Arduino.h"
-#include "Common.h"
+#include <IO.h>
+#include <Arduino.h>
+#include <Common.h>
 
 // global variables
 char buffer[BUFFSIZ];        // string buffer for the sentence
