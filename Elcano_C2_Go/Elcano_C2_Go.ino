@@ -27,11 +27,11 @@ const int MinimumThrottle = 70;  // Throttle has no effect until 1.2 V
 const int FullBrake = 167;  // start with a conservative value; could go as high as 255;  
 const int NoBrake = 207; // start with a conservative value; could go as low as 127;
 // Steering
-const int HardLeft = 223; // was 159; // start with a conservative value; could go as high as 255;
-const int HalfLeft = 223; // was 159;
-const int Straight = 191;
+const int HardLeft = 250; // was 159; // start with a conservative value; could go as high as 255;
+const int HalfLeft = 215; // was 159;
+const int Straight = 187;
 const int HalfRight = 159; // was 223;
-const int HardRight = 159; // was 223; // start with a conservative value; could go as low as 127;
+const int HardRight = 126; // was 223; // start with a conservative value; could go as low as 127;
 
 // Values on position feedback
 const int StraightFB = 501;
