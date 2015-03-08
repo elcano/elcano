@@ -1,6 +1,9 @@
 #include <Common.h>
 #include <IO.h>
 
+#include <SPI.h>
+#include <SD.h>
+
 /*  
 Elcano Module C4: Path Planner.
 
@@ -9,16 +12,80 @@ Input: RNDF, MDF and initial position files from memory stick.
 Input from C5: Speed and position of obstacles.
 Input from C6: Position, orientation, velocity and acceleration.
 
+/*---------------------------------------------------------------------------------------
 
 Files:
-RNDF (Route Network Definition File). Format is defined on 
-http://archive.darpa.mil/grandchallenge/docs/RNDF_MDF_Formats_031407.pdf. 
-This is a digital map of all roads in the area where the vehicle will be operating. 
-The camera will locate road edges or lane markers and the vehicle will follow them. 
-Thus location can be determined primarily from odometry.
 
-MDF (Mission Definition File). These are latitudes and longitudes that the vehicle 
-is required to visit.
+Out of Scope for 3/13/2015 due date: 
+{
+  RNDF (Route Network Definition File). Format is defined on 
+  http://archive.darpa.mil/grandchallenge/docs/RNDF_MDF_Formats_031407.pdf. 
+  This is a digital map of all roads in the area where the vehicle will be operating. 
+  The camera will locate road edges or lane markers and the vehicle will follow them. 
+  Thus location can be determined primarily from odometry.
+  
+  MDF (Mission Definition File). These are latitudes and longitudes that the vehicle 
+  is required to visit.
+}
+We attempted to research the above file system; however, it has been archived and the
+examples are no longer available. Rather than spending extra time reading through the
+documentation to implement it, we decided to focus on implementing a file system with
+comma delimited values for the data we need to build junction objects.
+
+
+-----------------------
+| map_definitions.txt |
+-----------------------
+
+This file provides the latitude and longitude coordinates for each of the maps, followed
+by the file name for that map. A newline is created after each map.
+
+The format should be as follows:
+
+latitude_0,longitude_0,filename_0.txt\n
+...\n
+latitude_n,longitude_n,filename_n.txt\n
+
+
+A practical example would look like this:
+
+47.758949,-122.190746,map_47_758949_-122_190746.txt\n
+47.6213,-122.3509,map_47_6213_-122_3509.txt\n
+
+
+-----------------------
+|      map files      |
+-----------------------
+
+These files provide the junction data. The junction struct has the following variables:
+
+long east_mm
+long north_mm
+int destination[4]
+long Distance[4]
+
+east_mm is the position East of the origin in millimeters
+north_mm is the position North of the origin in millimeters
+destination is an array of indeces into the Nodes[] array that connect to this node
+Distance is an array of longs holding the distances from this node to each of the destinations
+  in millimeters.
+
+The file format is a comma delimited list of the values in the struct, with a newline after each.
+It should be formated as follows:
+
+east_mm_0,north_mm_0,destination_0[0],destination_0[1],destination_0[2],destination_0[3],Distance_0[0],Distance_0[1],Distance_0[2],Distance_0[3]\n
+...\n
+east_mm_n,north_mm_n,destination_n[0],destination_n[1],destination_n[2],destination_n[3],Distance_n[0],Distance_n[1],Distance_n[2],Distance_n[3]\n
+
+A practical example would look like this:
+
+-183969,380865,1,2,END,END,1,1,1,1\n
+-73039,380865,0,3,7,END,1,1,1,1\n
+-182101,338388,0,3,4,5,1,1,1,1\n
+
+
+/*---------------------------------------------------------------------------------------
+
 
 Initial position. Specifies the starting location and orientation. Velocity is zero. 
 If this is a file, it is read by C4 (Path Planner) and passed to C6 (Navigator). 
@@ -33,7 +100,16 @@ C4, which may have an OS, or
 C6, which needs to talk to lots of instruments, or
 C7, which may have a USB link to a camera, or
 we could have another processor whose sole function is communication.
-*/
+
+
+ * SD card attached to SPI bus as follows:
+ ** UNO:  MOSI - pin 11, MISO - pin 12, CLK - pin 13, CS - pin 4 (CS pin can be changed)
+  and pin #10 (SS) must be an output
+ ** Mega:  MOSI - pin 51, MISO - pin 50, CLK - pin 52, CS - pin 4 (CS pin can be changed)
+  and pin #52 (SS) must be an output
+ ** Leonardo: Connect to hardware SPI via the ICSP header
+ ** Note: SD card functions tested with a stand-alone SD card shield on the Mega 2560. Some
+    adjustments may need to be made if using a different configuration.*/
 
 /*---------------------------------------------------------------------------------------*/ 
 
@@ -47,6 +123,14 @@ we could have another processor whose sole function is communication.
 
 void DataReady();
 extern bool DataAvailable;
+
+File myFile;
+
+// change this to match your SD shield or module;
+//     Arduino Ethernet shield: pin 4
+//     Adafruit SD shields and modules: pin 10
+//     Sparkfun SD shield: pin 8
+//const int chipSelect = 4;
 
 /*---------------------------------------------------------------------------------------*/ 
 // EDIT for route
@@ -71,7 +155,7 @@ long goal_lon[CONES] = {-122349894, -122352120, -122351987, -122351087, -1223498
 
 
 
-#define MAX_WAYPOINTS 20
+#define MAX_WAYPOINTS 50
 /*   There are two coordinate systems.
      MDF and RNDF use latitude and longitude.
      C3 and C6 assume that the earth is flat at the scale that they deal with
@@ -89,33 +173,16 @@ long goal_lon[CONES] = {-122349894, -122352120, -122351987, -122351087, -1223498
     Route is a finer scale list of waypoints from present or recent position.
     Exit is the route from Path[last]-> location to Destination.
 */
-#define MAP_POINTS 16
-struct curve Links[20];
-struct junction Nodes[MAP_POINTS] = {
-  -140828,  221434, 3 ,   1 ,  END,  END,  1, 1, 1, 1,  // 0
-  -140986,   88800, 0 ,   2 ,   5 ,  END,  1, 1, 1, 1,  // 1
-  -144313,  -42065, 1 ,   6 ,  END,  END,  1, 1, 1, 1,  // 2
-  -78568,   222090, 0 ,   4 ,  END,  END,  1, 1, 1, 1,  // 3
-  -38276,   222290, 3 ,   5 ,  END,  END,  1, 1, 1, 1,  // 4
-  -39558,    87844, 1 ,   4 ,   8 ,   6 ,  1, 1, 1, 1,  // 5
-  -46528,   -41631, 2 ,   5 ,   7 ,   9 ,  1, 1, 1, 1,  // 6
-  -45764,  -135413, 6 ,   10,  END,  END,  1, 1, 1, 1,  // 7
-  51834,     87232, 5 ,   9 ,   14,  END,  1, 1, 1, 1,  // 8
-  53041,    -41220, 6 ,   8 ,   10,  13 ,  1, 1, 1, 1,  // 9
-  53438,   -133901, 7 ,   9 ,   11,  END,  1, 1, 1, 1,  // 10
-  108750,  -134590, 10 , 12 ,  END,  END,  1, 1, 1, 1,  // 11
-  130021,  -143108, 11 , END,  END,  END,  1, 1, 1, 1,  // 12
-  182559,   -41031, 9 ,  END,  END,  END,  1, 1, 1, 1,  // 13
-  177598,    86098, 8 ,   15,  END,  END,  1, 1, 1, 1,  // 14
-  170313,    69008, 14 , END,  END,  END,  1, 1, 1, 1   // 15
-};
+int map_points = 16;
+// struct curve Links[20];
+struct junction Nodes[MAX_WAYPOINTS];
 struct AStar
 {
     int ParentID;
     long CostFromStart;
     long CostToGoal;
     long TotalCost;
-} Open[MAP_POINTS];
+} Open[MAX_WAYPOINTS];
 
 class waypoint Origin, Start;
 waypoint Path[MAX_WAYPOINTS];  // course route to goal
@@ -265,7 +332,7 @@ void FindClosestRoad(waypoint *start,
   long done = 2000;
   int i, j;
   // find closest road.
-  for (i = 0; i < MAP_POINTS; i++)
+  for (i = 0; i < map_points; i++)
   {
     dist = distance(i, &j, start->east_mm, start->north_mm, &perCent);
     if (abs(dist) < abs(closest_mm))
@@ -295,7 +362,7 @@ void FindClosestRoad(waypoint *start,
  }
   else
   { // find closest node
-     for (i = 0; i < MAP_POINTS; i++)
+     for (i = 0; i < map_points; i++)
     {
       dist = start->distance_mm(Nodes[i].east_mm, Nodes[i].north_mm);
       if (dist < closest_mm)
@@ -329,11 +396,11 @@ int BuildPath (int j, waypoint* start, waypoint* destination)
    // Done; we have reached the node that leads to goal turn-off
    // Construct path backward to start.
   int last = 1;
-  int route[MAP_POINTS];
+  int route[map_points];
   int i, k, node;
   long dist_mm;
 
-   k = MAP_POINTS-1;
+   k = map_points-1;
    route[k] = j;
 //   Serial.println(k);
    while(Open[j].ParentID != START)
@@ -342,7 +409,7 @@ int BuildPath (int j, waypoint* start, waypoint* destination)
  //     Serial.println(k);
    }
    Path[last] = start;
-   for ( ; k < MAP_POINTS; k++)
+   for ( ; k < map_points; k++)
    {
      node = route[k];
      Path[++last].east_mm = Nodes[node].east_mm;
@@ -372,7 +439,7 @@ int BuildPath (int j, waypoint* start, waypoint* destination)
 int FindPath(waypoint *start, waypoint *destination)
 {
 
-  long ClosedCost[MAP_POINTS];
+  long ClosedCost[map_points];
 //  int OpenIndex = 0;
 //  int ClosedIndex = 1;
   int  i, j, k;
@@ -381,7 +448,7 @@ int FindPath(waypoint *start, waypoint *destination)
   long BestCost, BestID;
   bool Processed = false;
   
-  for (i = 0; i < MAP_POINTS; i++)
+  for (i = 0; i < map_points; i++)
   { // mark all nodes as empty
     Open[i].TotalCost = MAX_DISTANCE;
     ClosedCost[i] = MAX_DISTANCE;
@@ -411,7 +478,7 @@ int FindPath(waypoint *start, waypoint *destination)
      BestID = -1;
 //     Serial.println(BestCost);
      // pop lowest cost node from Open; i.e. find index of lowest cost item
-     for (i = 0; i < MAP_POINTS; i++)
+     for (i = 0; i < map_points; i++)
      {
 //       Serial.print(i); Serial.print(", "); Serial.print(Open[i].TotalCost); 
 //       Serial.print(", "); Serial.println(ClosedCost[i]);
@@ -528,6 +595,81 @@ void SendPath(waypoint *course, int count)
         break;
   }
 }
+/*---------------------------------------------------------------------------------------*/
+// LoadMap
+// Loads the map nodes from a file.
+// Takes in the name of the file to load and loads the appropriate map. 
+// Returns true if the map was loaded.
+// Returns false if the load failed.
+boolean LoadMap(char* fileName)
+{
+  // Define serial connection to SD card
+  // Attempt to load file
+  // If file loaded, read data into Nodes[]
+  return true;
+}
+
+/*---------------------------------------------------------------------------------------*/
+// SelectMap
+// Determines which map to load.
+// Takes in the current location as a waypoint and a string with the name of the file that
+// contains the origins and file names of the maps. Determines which origin is closest to 
+// the waypoint and returns it as a junction.
+char* SelectMap(waypoint currentLocation, char* fileName)
+{
+
+  Serial.print("Initializing SD card...");
+  // On the Ethernet Shield, CS is pin 4. It's set as an output by default.
+  // Note that even if it's not used as the CS pin, the hardware SS pin 
+  // (10 on most Arduino boards, 53 on the Mega) must be left as an output 
+  // or the SD library functions will not work. 
+   pinMode(SS, OUTPUT);
+   
+  if (!SD.begin(chipSelect)) {
+    Serial.println("initialization failed!");
+    return NULL;
+  }
+  Serial.println("initialization done.");
+  
+  // open the file. note that only one file can be open at a time,
+  // so you have to close this one before opening another.
+  myFile = SD.open("test.txt", FILE_WRITE);
+  
+  // if the file opened okay, write to it:
+  if (myFile) {
+    Serial.print("Writing to test.txt...");
+    myFile.println("testing 1, 2, 3.");
+	// close the file:
+    myFile.close();
+    Serial.println("done.");
+  } else {
+    // if the file didn't open, print an error:
+    Serial.println("error opening test.txt");
+  }
+  
+  // re-open the file for reading:
+  myFile = SD.open("test.txt");
+  if (myFile) {
+    Serial.println("test.txt:");
+    
+    // read from the file until there's nothing else in it:
+    while (myFile.available()) {
+      Serial.write(myFile.read());
+    }
+    // close the file:
+    myFile.close();
+  } else {
+  	// if the file didn't open, print an error:
+    Serial.println("error opening test.txt");
+  }
+
+  // Define serial connection to SD card
+  // Attempt to load file
+  // If file loaded, read waypoints into junction array and read file names into char* array
+  // Update Origin global variable
+  // Return the file name of the closest origin 
+}
+
 /*---------------------------------------------------------------------------------------*/ 
 void initialize()
 {
@@ -537,9 +679,31 @@ void initialize()
   Origin.east_mm = 0;
   Origin.north_mm = 0;  
   Origin.latitude = INVALID;
-  Origin.longitude = INVALID;  
+  Origin.longitude = INVALID; 
+  struct junction nodeList[MAX_WAYPOINTS] =  {
+    -140828,  221434, 3 ,   1 ,  END,  END,  1, 1, 1, 1,  // 0
+    -140986,   88800, 0 ,   2 ,   5 ,  END,  1, 1, 1, 1,  // 1
+    -144313,  -42065, 1 ,   6 ,  END,  END,  1, 1, 1, 1,  // 2
+    -78568,   222090, 0 ,   4 ,  END,  END,  1, 1, 1, 1,  // 3
+    -38276,   222290, 3 ,   5 ,  END,  END,  1, 1, 1, 1,  // 4
+    -39558,    87844, 1 ,   4 ,   8 ,   6 ,  1, 1, 1, 1,  // 5
+    -46528,   -41631, 2 ,   5 ,   7 ,   9 ,  1, 1, 1, 1,  // 6
+    -45764,  -135413, 6 ,   10,  END,  END,  1, 1, 1, 1,  // 7
+    51834,     87232, 5 ,   9 ,   14,  END,  1, 1, 1, 1,  // 8
+    53041,    -41220, 6 ,   8 ,   10,  13 ,  1, 1, 1, 1,  // 9
+    53438,   -133901, 7 ,   9 ,   11,  END,  1, 1, 1, 1,  // 10
+    108750,  -134590, 10 , 12 ,  END,  END,  1, 1, 1, 1,  // 11
+    130021,  -143108, 11 , END,  END,  END,  1, 1, 1, 1,  // 12
+    182559,   -41031, 9 ,  END,  END,  END,  1, 1, 1, 1,  // 13
+    177598,    86098, 8 ,   15,  END,  END,  1, 1, 1, 1,  // 14
+    170313,    69008, 14 , END,  END,  END,  1, 1, 1, 1   // 15
+  };
+  for (int i = 0; i < map_points; i++)
+  {
+    Nodes[i] = nodeList[i];
+  }
   
-     ConstructNetwork(Nodes, MAP_POINTS);
+     ConstructNetwork(Nodes, map_points);
      
   /* If (initial position is provided)  // used when GPS is unavailable or inaccurate
      {
