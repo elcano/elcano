@@ -38,19 +38,19 @@ comma delimited values for the data we need to build junction objects.
 -----------------------
 
 This file provides the latitude and longitude coordinates for each of the maps, followed
-by the file name for that map. A newline is created after each map.
+by the file name for that map. Commas also separate each map.
 
 The format should be as follows:
 
-latitude_0,longitude_0,filename_0.txt\n
-...\n
-latitude_n,longitude_n,filename_n.txt\n
+latitude_0,longitude_0,filename_0.txt,
+...,
+latitude_n,longitude_n,filename_n.txt
 
 
 A practical example would look like this:
 
-47.758949,-122.190746,map_47_758949_-122_190746.txt\n
-47.6213,-122.3509,map_47_6213_-122_3509.txt\n
+47.758949,-122.190746,map_47_758949_-122_190746.txt,
+47.6213,-122.3509,map_47_6213_-122_3509.txt
 
 
 -----------------------
@@ -70,18 +70,18 @@ destination is an array of indeces into the Nodes[] array that connect to this n
 Distance is an array of longs holding the distances from this node to each of the destinations
   in millimeters.
 
-The file format is a comma delimited list of the values in the struct, with a newline after each.
+The file format is a comma delimited list of the values in the struct, with a comma after each junction.
 It should be formated as follows:
 
-east_mm_0,north_mm_0,destination_0[0],destination_0[1],destination_0[2],destination_0[3],Distance_0[0],Distance_0[1],Distance_0[2],Distance_0[3]\n
-...\n
-east_mm_n,north_mm_n,destination_n[0],destination_n[1],destination_n[2],destination_n[3],Distance_n[0],Distance_n[1],Distance_n[2],Distance_n[3]\n
+east_mm_0,north_mm_0,destination_0[0],destination_0[1],destination_0[2],destination_0[3],Distance_0[0],Distance_0[1],Distance_0[2],Distance_0[3],
+...,
+east_mm_n,north_mm_n,destination_n[0],destination_n[1],destination_n[2],destination_n[3],Distance_n[0],Distance_n[1],Distance_n[2],Distance_n[3],
 
 A practical example would look like this:
 
--183969,380865,1,2,END,END,1,1,1,1\n
--73039,380865,0,3,7,END,1,1,1,1\n
--182101,338388,0,3,4,5,1,1,1,1\n
+-183969,380865,1,2,END,END,1,1,1,1,
+-73039,380865,0,3,7,END,1,1,1,1,
+-182101,338388,0,3,4,5,1,1,1,1
 
 
 /*---------------------------------------------------------------------------------------
