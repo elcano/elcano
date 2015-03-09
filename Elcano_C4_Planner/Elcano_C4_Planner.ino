@@ -32,9 +32,8 @@ examples are no longer available. Rather than spending extra time reading throug
 documentation to implement it, we decided to focus on implementing a file system with
 comma delimited values for the data we need to build junction objects.
 
-
 -----------------------
-| map_definitions.txt |
+|     MAP_DEFS.txt    |
 -----------------------
 
 This file provides the latitude and longitude coordinates for each of the maps, followed
@@ -49,8 +48,8 @@ latitude_n,longitude_n,filename_n.txt
 
 A practical example would look like this:
 
-47.758949,-122.190746,map_47_758949_-122_190746.txt,
-47.6213,-122.3509,map_47_6213_-122_3509.txt
+47.758949,-122.190746,MAP001.txt,
+47.6213,-122.3509,MAP002.txt
 
 
 -----------------------
@@ -83,6 +82,15 @@ A practical example would look like this:
 -73039,380865,0,3,7,END,1,1,1,1,
 -182101,338388,0,3,4,5,1,1,1,1
 
+-----------------------
+|     file names      |
+-----------------------
+
+The Arduino SD Card library uses a FAT file system. FAT file systems have a limitation when it comes to 
+naming conventions. You must use the 8.3 format, so that file names look like “NAME001.EXT”, where 
+“NAME001” is an 8 character or fewer string, and “EXT” is a 3 character extension. People commonly use 
+the extensions .TXT and .LOG. It is possible to have a shorter file name (for example, mydata.txt, or 
+time.log), but you cannot use longer file names. 
 
 /*---------------------------------------------------------------------------------------
 
@@ -155,7 +163,8 @@ long goal_lon[CONES] = {-122349894, -122352120, -122351987, -122351087, -1223498
 
 
 
-#define MAX_WAYPOINTS 50
+#define MAX_MAPS 10         // The maximum number of map files stored to SD card.
+#define MAX_WAYPOINTS 20    // The maximum number of waypoints in each map file.
 /*   There are two coordinate systems.
      MDF and RNDF use latitude and longitude.
      C3 and C6 assume that the earth is flat at the scale that they deal with
@@ -613,55 +622,127 @@ boolean LoadMap(char* fileName)
 // SelectMap
 // Determines which map to load.
 // Takes in the current location as a waypoint and a string with the name of the file that
-// contains the origins and file names of the maps. Determines which origin is closest to 
-// the waypoint and returns it as a junction.
+//   contains the origins and file names of the maps. 
+// Determines which origin is closest to the waypoint and returns it as a junction.
+// Assumes the file is in the correct format according to the description above.
 char* SelectMap(waypoint currentLocation, char* fileName)
 {
-
-  Serial.print("Initializing SD card...");
-  // On the Ethernet Shield, CS is pin 4. It's set as an output by default.
-  // Note that even if it's not used as the CS pin, the hardware SS pin 
-  // (10 on most Arduino boards, 53 on the Mega) must be left as an output 
-  // or the SD library functions will not work. 
-   pinMode(SS, OUTPUT);
-   
-  if (!SD.begin(chipSelect)) {
-    Serial.println("initialization failed!");
-    return NULL;
-  }
-  Serial.println("initialization done.");
-  
   // open the file. note that only one file can be open at a time,
   // so you have to close this one before opening another.
-  myFile = SD.open("test.txt", FILE_WRITE);
+  myFile = SD.open(fileName, FILE_READ);
   
   // if the file opened okay, write to it:
   if (myFile) {
-    Serial.print("Writing to test.txt...");
-    myFile.println("testing 1, 2, 3.");
-	// close the file:
-    myFile.close();
-    Serial.println("done.");
-  } else {
-    // if the file didn't open, print an error:
-    Serial.println("error opening test.txt");
-  }
-  
-  // re-open the file for reading:
-  myFile = SD.open("test.txt");
-  if (myFile) {
-    Serial.println("test.txt:");
+    // Initialize a string buffer to read lines from the file into
+    // Allocate an extra char at the end to add null terminator
+    char* buffer = (char*)malloc(myFile.size()+1);  
+
+    // index for the next character to read into buffer
+    char* ptr = buffer;
     
     // read from the file until there's nothing else in it:
     while (myFile.available()) {
-      Serial.write(myFile.read());
+      *ptr = myFile.read();
+      ++ptr;
     }
+
+    // Null terminate the buffer string
+    *ptr = '\0';
+
+    // Set up storage for coordinates and file names
+    // Note: we malloc here because the stack is too small
+    float* map_latitudes = (float*)malloc(MAX_MAPS * 4);
+    float* map_longitudes = (float*)malloc(MAX_MAPS * 4);
+    String* map_file_names = (String*)malloc(MAX_MAPS * sizeof(String)); 
+    for(int i = 0; i < MAX_MAPS; i++)
+    {
+      // initialize using invalid values so that we can ensure valid data in allocated memory
+      map_latitudes[i] = 91;  
+      map_longitudes[i] = 181;
+      map_file_names[i] = "";
+    }
+    
+    // Set up tokenizer for the file buffer string
+    char delimiter[2] = ",";
+    char* token;
+    int col = 0;
+    int row = 0;
+    
+    // get the first token 
+    token = strtok(buffer, delimiter);
+    
+    // walk through other tokens
+    while( token != NULL && row < MAX_MAPS ) 
+    {
+      switch (col % 3)
+      {
+        case 0:  // latitude
+        map_latitudes[row] = String(token).toFloat();
+        col++;
+        break;
+        
+        case 1:  // longitude
+        map_longitudes[row] = String(token).toFloat();
+        col++;
+        break;
+        
+        case 2:  // filename
+        map_file_names[row] = String(token);
+        col++;
+        row++;
+        break;
+        
+        default:  // unexpected condition; print error
+        Serial.println("Unexpected error happened while reading map description file. Please verify the file is in the correct format. Planner may not work correctly if this message appears.");
+        break;
+      }
+      token = strtok(NULL, delimiter);
+    }
+    Serial.println("Latitudes: ");
+    for (int i = 0; i < MAX_MAPS; i++)
+    {
+      if (map_latitudes[i] >= -90 && map_latitudes[i] <= 90)
+      {
+        Serial.println(map_latitudes[i],8);
+      }
+    }
+
+    Serial.println("Longitudes: ");
+    for (int i = 0; i < MAX_MAPS; i++)
+    {
+      if (map_longitudes[i] >= -180 && map_longitudes[i] <= 180)
+      {
+        Serial.println(map_longitudes[i],8);
+      }
+    }
+    
+    Serial.println("File names: ");
+    for (int i = 0; i < MAX_MAPS; i++)
+    {
+      if (map_file_names[i] != "")
+      {
+        Serial.println(map_file_names[i]);
+      }
+    }
+    
+    // Free the memory allocated for the buffer    
+    free(buffer);
+    
+    free(map_latitudes);
+    free(map_longitudes);
+    free(map_file_names);
+
     // close the file:
     myFile.close();
+    Serial.println("Map definitions loaded.");
   } else {
-  	// if the file didn't open, print an error:
-    Serial.println("error opening test.txt");
+    
+    // if the file didn't open, print an error:
+    myFile.close();
+    Serial.println("error opening map_defs.txt");
   }
+
+  
 
   // Define serial connection to SD card
   // Attempt to load file
@@ -702,6 +783,18 @@ void initialize()
   {
     Nodes[i] = nodeList[i];
   }
+  Serial.print("Initializing SD card...");
+  // On the Ethernet Shield, CS is pin 4. It's set as an output by default.
+  // Note that even if it's not used as the CS pin, the hardware SS pin 
+  // (10 on most Arduino boards, 53 on the Mega) must be left as an output 
+  // or the SD library functions will not work. 
+   pinMode(SS, OUTPUT);
+   
+  if (!SD.begin(chipSelect)) {
+    Serial.println("initialization failed!");
+  }
+  Serial.println("initialization done.");
+  SelectMap(Origin,"map_defs.txt");
   
      ConstructNetwork(Nodes, map_points);
      
