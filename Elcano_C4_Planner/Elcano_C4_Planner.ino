@@ -163,8 +163,8 @@ long goal_lon[CONES] = {-122349894, -122352120, -122351987, -122351087, -1223498
 
 
 
-#define MAX_MAPS 10         // The maximum number of map files stored to SD card.
-#define MAX_WAYPOINTS 20    // The maximum number of waypoints in each map file.
+#define MAX_MAPS 16         // The maximum number of map files stored to SD card.
+#define MAX_WAYPOINTS 16    // The maximum number of waypoints in each map file.
 /*   There are two coordinate systems.
      MDF and RNDF use latitude and longitude.
      C3 and C6 assume that the earth is flat at the scale that they deal with
@@ -612,9 +612,41 @@ void SendPath(waypoint *course, int count)
 // Returns false if the load failed.
 boolean LoadMap(char* fileName)
 {
-  // Define serial connection to SD card
-  // Attempt to load file
-  // If file loaded, read data into Nodes[]
+  // open the file. note that only one file can be open at a time,
+  // so you have to close this one before opening another.
+  myFile = SD.open(fileName, FILE_READ);
+  
+  // if the file opened okay, read from it:
+  if (myFile) {
+    // Initialize a string buffer to read lines from the file into
+    // Allocate an extra char at the end to add null terminator
+    char* buffer = (char*)malloc(myFile.size()+1);  
+
+    // index for the next character to read into buffer
+    char* ptr = buffer;
+    
+    // read from the file until there's nothing else in it:
+    while (myFile.available()) {
+      *ptr = myFile.read();
+      ++ptr;
+    }
+
+    // Null terminate the buffer string
+    *ptr = '\0';
+    Serial.println(buffer);
+    // Define serial connection to SD card
+    // Attempt to load file
+    // If file loaded, read data into Nodes[]
+    free(buffer);
+    myFile.close();
+  } else {
+    
+    // if the file didn't open, print an error:
+    myFile.close();
+    Serial.print("error opening ");
+    Serial.print(fileName);
+    return false;
+  }  
   return true;
 }
 
@@ -631,7 +663,7 @@ char* SelectMap(waypoint currentLocation, char* fileName)
   // so you have to close this one before opening another.
   myFile = SD.open(fileName, FILE_READ);
   
-  // if the file opened okay, write to it:
+  // if the file opened okay, read from it:
   if (myFile) {
     // Initialize a string buffer to read lines from the file into
     // Allocate an extra char at the end to add null terminator
@@ -719,7 +751,7 @@ char* SelectMap(waypoint currentLocation, char* fileName)
     Serial.println("File names: ");
     for (int i = 0; i < MAX_MAPS; i++)
     {
-      if (map_file_names[i] != "")
+      if (map_file_names[i] != NULL)
       {
         Serial.println(map_file_names[i]);
       }
@@ -727,6 +759,9 @@ char* SelectMap(waypoint currentLocation, char* fileName)
     
     // Free the memory allocated for the buffer    
     free(buffer);
+    
+    // Determine closest map to current location
+    // Update Origin global variable
     
     free(map_latitudes);
     free(map_longitudes);
@@ -740,14 +775,9 @@ char* SelectMap(waypoint currentLocation, char* fileName)
     // if the file didn't open, print an error:
     myFile.close();
     Serial.println("error opening map_defs.txt");
+    return NULL;
   }
-
   
-
-  // Define serial connection to SD card
-  // Attempt to load file
-  // If file loaded, read waypoints into junction array and read file names into char* array
-  // Update Origin global variable
   // Return the file name of the closest origin 
 }
 
@@ -794,7 +824,8 @@ void initialize()
     Serial.println("initialization failed!");
   }
   Serial.println("initialization done.");
-  SelectMap(Origin,"map_defs.txt");
+  String nearestMap = String(SelectMap(Origin,"map_defs.txt"));
+  LoadMap("MAP000.txt");
   
      ConstructNetwork(Nodes, map_points);
      
