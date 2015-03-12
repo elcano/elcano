@@ -1,3 +1,5 @@
+#include <MemoryFree.h>
+
 #include <Common.h>
 #include <IO.h>
 
@@ -121,7 +123,6 @@ we could have another processor whose sole function is communication.
 
 /*---------------------------------------------------------------------------------------*/ 
 
-
 #define PI ((float) 3.1415925)
 #ifndef NULL
 #define NULL 0 
@@ -131,8 +132,6 @@ we could have another processor whose sole function is communication.
 
 void DataReady();
 extern bool DataAvailable;
-
-File myFile;
 
 // change this to match your SD shield or module;
 //     Arduino Ethernet shield: pin 4
@@ -163,8 +162,8 @@ long goal_lon[CONES] = {-122349894, -122352120, -122351987, -122351087, -1223498
 
 
 
-#define MAX_MAPS 16         // The maximum number of map files stored to SD card.
-#define MAX_WAYPOINTS 16    // The maximum number of waypoints in each map file.
+#define MAX_MAPS 10         // The maximum number of map files stored to SD card.
+#define MAX_WAYPOINTS 40    // The maximum number of waypoints in each map file.
 /*   There are two coordinate systems.
      MDF and RNDF use latitude and longitude.
      C3 and C6 assume that the earth is flat at the scale that they deal with
@@ -195,7 +194,7 @@ struct AStar
 
 class waypoint Origin, Start;
 waypoint Path[MAX_WAYPOINTS];  // course route to goal
-waypoint FinePath[MAX_WAYPOINTS];  // a low level part of path that smoothes the corners.
+//waypoint FinePath[MAX_WAYPOINTS];  // a low level part of path that smoothes the corners.
   
 waypoint mission[CONES];  // aka MDF
 int waypoints = CONES;
@@ -548,7 +547,7 @@ int FindPath(waypoint *start, waypoint *destination)
 /*---------------------------------------------------------------------------------------*/
 // Low level path is a straight line from start to detination.
 // PathPlan makes an intermediate level path that uses as many roads as possible.
- int PlanPath (waypoint *start, waypoint *destination)
+int PlanPath (waypoint *start, waypoint *destination)
  {
    waypoint roadOrigin, roadDestination;
    int last = 0;
@@ -614,7 +613,7 @@ boolean LoadMap(char* fileName)
 {
   // open the file. note that only one file can be open at a time,
   // so you have to close this one before opening another.
-  myFile = SD.open(fileName, FILE_READ);
+  File myFile = SD.open(fileName, FILE_READ);
   
   // if the file opened okay, read from it:
   if (myFile) {
@@ -661,13 +660,20 @@ char* SelectMap(waypoint currentLocation, char* fileName)
 {
   // open the file. note that only one file can be open at a time,
   // so you have to close this one before opening another.
-  myFile = SD.open(fileName, FILE_READ);
+  File myFile = SD.open(fileName, FILE_READ);
   
   // if the file opened okay, read from it:
   if (myFile) {
+    
+        Serial.print("Before select map file malloc freeMemory()=");
+        Serial.println(freeMemory());
+
     // Initialize a string buffer to read lines from the file into
     // Allocate an extra char at the end to add null terminator
     char* buffer = (char*)malloc(myFile.size()+1);  
+
+        Serial.print("After select map file malloc freeMemory()=");
+        Serial.println(freeMemory());
 
     // index for the next character to read into buffer
     char* ptr = buffer;
@@ -683,9 +689,13 @@ char* SelectMap(waypoint currentLocation, char* fileName)
 
     // Set up storage for coordinates and file names
     // Note: we malloc here because the stack is too small
+        Serial.print("Before select map array malloc freeMemory()=");
+        Serial.println(freeMemory());
+
     float* map_latitudes = (float*)malloc(MAX_MAPS * 4);
     float* map_longitudes = (float*)malloc(MAX_MAPS * 4);
-    String* map_file_names = (String*)malloc(MAX_MAPS * sizeof(String)); 
+    char** map_file_names = (char**)malloc(MAX_MAPS * sizeof(char*)); 
+
     for(int i = 0; i < MAX_MAPS; i++)
     {
       // initialize using invalid values so that we can ensure valid data in allocated memory
@@ -709,17 +719,17 @@ char* SelectMap(waypoint currentLocation, char* fileName)
       switch (col % 3)
       {
         case 0:  // latitude
-        map_latitudes[row] = String(token).toFloat();
+        map_latitudes[row] = atof(token);
         col++;
         break;
         
         case 1:  // longitude
-        map_longitudes[row] = String(token).toFloat();
+        map_longitudes[row] = atof(token);
         col++;
         break;
         
         case 2:  // filename
-        map_file_names[row] = String(token);
+        map_file_names[row] = token;
         col++;
         row++;
         break;
@@ -730,6 +740,9 @@ char* SelectMap(waypoint currentLocation, char* fileName)
       }
       token = strtok(NULL, delimiter);
     }
+        Serial.print("After select map tokenizer freeMemory()=");
+        Serial.println(freeMemory());
+
     Serial.println("Latitudes: ");
     for (int i = 0; i < MAX_MAPS; i++)
     {
@@ -751,7 +764,7 @@ char* SelectMap(waypoint currentLocation, char* fileName)
     Serial.println("File names: ");
     for (int i = 0; i < MAX_MAPS; i++)
     {
-      if (map_file_names[i] != NULL)
+      if (map_file_names[i] != "")
       {
         Serial.println(map_file_names[i]);
       }
@@ -824,8 +837,8 @@ void initialize()
     Serial.println("initialization failed!");
   }
   Serial.println("initialization done.");
-  String nearestMap = String(SelectMap(Origin,"map_defs.txt"));
-  LoadMap("MAP000.txt");
+  char* nearestMap = SelectMap(Origin,"map_defs.txt");
+  LoadMap("MAP000.txt"); //LoadMap(nearestMap);
   
      ConstructNetwork(Nodes, map_points);
      
@@ -841,7 +854,7 @@ void initialize()
      
   /* Convert latitude and longitude positions to flat earth coordinates.
      Fill in waypoint structure  */
-       GetGoals(mission, CONES);
+//       GetGoals(mission, CONES);
        
        // Send mission to C3.
        SendPath(mission, CONES);
@@ -904,8 +917,16 @@ void setup()
         pinMode(DATA_READY, INPUT);
         DataAvailable = false;
         attachInterrupt(0, DataReady, FALLING);
+        
+        Serial.print("Before initialize freeMemory()=");
+        Serial.println(freeMemory());
 
-   initialize();
+       initialize();
+       
+       Serial.print("After initialize freeMemory()=");
+       Serial.println(freeMemory());
+
+
 }
 /*---------------------------------------------------------------------------------------*/ 
 void loop() 
