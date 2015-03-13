@@ -630,9 +630,108 @@ boolean LoadMap(char* fileName)
 
     // Null terminate the buffer string
     *ptr = '\0';
-    Serial.println(buffer);
-    // Define serial connection to SD card
-    // Attempt to load file
+    
+    // Set up tokenizer for the file buffer string
+    char delimiter[2] = ",";
+    char* token;
+    int col = 0;
+    int row = 0;
+    
+    // get the first token 
+    token = strtok(buffer, delimiter);
+    
+    // walk through other tokens
+    while( token != NULL && row < MAX_WAYPOINTS ) 
+    {
+      switch (col % 10)
+      {
+        case 0:  // latitude
+        Nodes[row].east_mm = atol(token);
+        col++;
+        break;
+        
+        case 1:  // longitude
+        Nodes[row].north_mm = atol(token);
+        col++;
+        break;
+        
+        case 2:  // filename
+        if (token == "END")
+        {
+          Nodes[row].destination[0] = END;
+        }
+        else
+        {
+          Nodes[row].destination[0] = atoi(token);
+        }
+        col++;
+        break;
+        
+        case 3:  // filename
+        if (token == "END")
+        {
+          Nodes[row].destination[1] = END;
+        }
+        else
+        {
+          Nodes[row].destination[1] = atoi(token);
+        }
+        col++;
+        break;
+
+        case 4:  // filename
+        if (token == "END")
+        {
+          Nodes[row].destination[2] = END;
+        }
+        else
+        {
+          Nodes[row].destination[2] = atoi(token);
+        }
+        col++;
+        break;
+
+        case 5:  // filename
+        if (token == "END")
+        {
+          Nodes[row].destination[3] = END;
+        }
+        else
+        {
+          Nodes[row].destination[3] = atoi(token);
+        }
+        col++;
+        break;
+
+        case 6:  // filename
+        Nodes[row].Distance[0] = atol(token);
+        col++;
+        break;
+
+        case 7:  // filename
+        Nodes[row].Distance[1] = atol(token);
+        col++;
+        break;
+
+        case 8:  // filename
+        Nodes[row].Distance[2] = atol(token);
+        col++;
+        break;
+
+        case 9:  // filename
+        Nodes[row].Distance[3] = atol(token);
+        col++;
+        row++;
+        break;
+
+        default:  // unexpected condition; print error
+        Serial.println("Unexpected error happened while reading map description file. Please verify the file is in the correct format. Planner may not work correctly if this message appears.");
+        break;
+      }
+      token = strtok(NULL, delimiter);
+    }
+    map_points = row;
+    
     // If file loaded, read data into Nodes[]
     free(buffer);
     myFile.close();
@@ -654,7 +753,7 @@ boolean LoadMap(char* fileName)
 //   contains the origins and file names of the maps. 
 // Determines which origin is closest to the waypoint and returns it as a junction.
 // Assumes the file is in the correct format according to the description above.
-char* SelectMap(waypoint currentLocation, char* fileName)
+void SelectMap(waypoint currentLocation, char* fileName, char* nearestMap)
 {
   // open the file. note that only one file can be open at a time,
   // so you have to close this one before opening another.
@@ -729,7 +828,7 @@ char* SelectMap(waypoint currentLocation, char* fileName)
       }
       token = strtok(NULL, delimiter);
     }
-    Serial.println("Latitudes: ");
+/*    Serial.println("Latitudes: ");
     for (int i = 0; i < MAX_MAPS; i++)
     {
       if (map_latitudes[i] >= -90 && map_latitudes[i] <= 90)
@@ -754,8 +853,34 @@ char* SelectMap(waypoint currentLocation, char* fileName)
       {
         Serial.println(map_file_names[i]);
       }
+    }*/
+    int closestIndex = -1;
+    long closestDistance = MAX_DISTANCE;
+    for (int i = 0; i < MAX_MAPS; i++)
+    {
+      int dist = sqrt((map_latitudes[i] - currentLocation.latitude)*(map_latitudes[i] - currentLocation.latitude) + (map_longitudes[i] - currentLocation.longitude)*(map_longitudes[i] - currentLocation.longitude));
+      if (dist < closestDistance) 
+      {
+        closestIndex = i;
+        closestDistance = dist;
+      }
     }
-    
+    if (closestIndex >= 0)
+    {
+      Origin.latitude = map_latitudes[closestIndex];
+      Origin.longitude = map_longitudes[closestIndex];
+      for (int i = 0; i < 13; i++)
+      {
+        nearestMap[i] = map_file_names[closestIndex][i];
+      }
+      Serial.print("Map ");
+      Serial.print(nearestMap);
+      Serial.println(" found.");
+    }
+    else
+    {
+      Serial.println("error determining closest map.");
+    }
     // Free the memory allocated for the buffer    
     free(buffer);
     
@@ -774,7 +899,6 @@ char* SelectMap(waypoint currentLocation, char* fileName)
     // if the file didn't open, print an error:
     myFile.close();
     Serial.println("error opening map_defs.txt");
-    return NULL;
   }
   
   // Return the file name of the closest origin 
@@ -790,28 +914,6 @@ void initialize()
   Origin.north_mm = 0;  
   Origin.latitude = INVALID;
   Origin.longitude = INVALID; 
-  struct junction nodeList[MAX_WAYPOINTS] =  {
-    -140828,  221434, 3 ,   1 ,  END,  END,  1, 1, 1, 1,  // 0
-    -140986,   88800, 0 ,   2 ,   5 ,  END,  1, 1, 1, 1,  // 1
-    -144313,  -42065, 1 ,   6 ,  END,  END,  1, 1, 1, 1,  // 2
-    -78568,   222090, 0 ,   4 ,  END,  END,  1, 1, 1, 1,  // 3
-    -38276,   222290, 3 ,   5 ,  END,  END,  1, 1, 1, 1,  // 4
-    -39558,    87844, 1 ,   4 ,   8 ,   6 ,  1, 1, 1, 1,  // 5
-    -46528,   -41631, 2 ,   5 ,   7 ,   9 ,  1, 1, 1, 1,  // 6
-    -45764,  -135413, 6 ,   10,  END,  END,  1, 1, 1, 1,  // 7
-    51834,     87232, 5 ,   9 ,   14,  END,  1, 1, 1, 1,  // 8
-    53041,    -41220, 6 ,   8 ,   10,  13 ,  1, 1, 1, 1,  // 9
-    53438,   -133901, 7 ,   9 ,   11,  END,  1, 1, 1, 1,  // 10
-    108750,  -134590, 10 , 12 ,  END,  END,  1, 1, 1, 1,  // 11
-    130021,  -143108, 11 , END,  END,  END,  1, 1, 1, 1,  // 12
-    182559,   -41031, 9 ,  END,  END,  END,  1, 1, 1, 1,  // 13
-    177598,    86098, 8 ,   15,  END,  END,  1, 1, 1, 1,  // 14
-    170313,    69008, 14 , END,  END,  END,  1, 1, 1, 1   // 15
-  };
-  for (int i = 0; i < map_points; i++)
-  {
-    Nodes[i] = nodeList[i];
-  }
   Serial.print("Initializing SD card...");
   // On the Ethernet Shield, CS is pin 4. It's set as an output by default.
   // Note that even if it's not used as the CS pin, the hardware SS pin 
@@ -823,8 +925,33 @@ void initialize()
     Serial.println("initialization failed!");
   }
   Serial.println("initialization done.");
-  char* nearestMap = SelectMap(Origin,"map_defs.txt");
-  LoadMap("MAP000.txt"); //LoadMap(nearestMap);
+  char nearestMap[13] = "";
+  SelectMap(Start,"map_defs.txt",nearestMap);
+  Serial.print("nearestMap: ");
+  Serial.println(nearestMap);
+  LoadMap(nearestMap);
+  for (int i = 0; i < map_points; i++)
+  {
+    Serial.print(Nodes[i].east_mm);
+    Serial.print(",");
+    Serial.print(Nodes[i].north_mm);
+    Serial.print(",");
+    Serial.print(Nodes[i].destination[0]);
+    Serial.print(",");
+    Serial.print(Nodes[i].destination[1]);
+    Serial.print(",");
+    Serial.print(Nodes[i].destination[2]);
+    Serial.print(",");
+    Serial.print(Nodes[i].destination[3]);
+    Serial.print(",");
+    Serial.print(Nodes[i].Distance[0]);
+    Serial.print(",");
+    Serial.print(Nodes[i].Distance[1]);
+    Serial.print(",");
+    Serial.print(Nodes[i].Distance[2]);
+    Serial.print(",");
+    Serial.println(Nodes[i].Distance[3]);
+  }
   
      ConstructNetwork(Nodes, map_points);
      
@@ -840,7 +967,7 @@ void initialize()
      
   /* Convert latitude and longitude positions to flat earth coordinates.
      Fill in waypoint structure  */
-//       GetGoals(mission, CONES);
+       GetGoals(mission, CONES);
        
        // Send mission to C3.
        SendPath(mission, CONES);
