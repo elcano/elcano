@@ -1,5 +1,3 @@
-#include <MemoryFree.h>
-
 #include <Common.h>
 #include <IO.h>
 
@@ -665,15 +663,9 @@ char* SelectMap(waypoint currentLocation, char* fileName)
   // if the file opened okay, read from it:
   if (myFile) {
     
-        Serial.print("Before select map file malloc freeMemory()=");
-        Serial.println(freeMemory());
-
     // Initialize a string buffer to read lines from the file into
     // Allocate an extra char at the end to add null terminator
     char* buffer = (char*)malloc(myFile.size()+1);  
-
-        Serial.print("After select map file malloc freeMemory()=");
-        Serial.println(freeMemory());
 
     // index for the next character to read into buffer
     char* ptr = buffer;
@@ -689,9 +681,6 @@ char* SelectMap(waypoint currentLocation, char* fileName)
 
     // Set up storage for coordinates and file names
     // Note: we malloc here because the stack is too small
-        Serial.print("Before select map array malloc freeMemory()=");
-        Serial.println(freeMemory());
-
     float* map_latitudes = (float*)malloc(MAX_MAPS * 4);
     float* map_longitudes = (float*)malloc(MAX_MAPS * 4);
     char** map_file_names = (char**)malloc(MAX_MAPS * sizeof(char*)); 
@@ -740,9 +729,6 @@ char* SelectMap(waypoint currentLocation, char* fileName)
       }
       token = strtok(NULL, delimiter);
     }
-        Serial.print("After select map tokenizer freeMemory()=");
-        Serial.println(freeMemory());
-
     Serial.println("Latitudes: ");
     for (int i = 0; i < MAX_MAPS; i++)
     {
@@ -918,14 +904,8 @@ void setup()
         DataAvailable = false;
         attachInterrupt(0, DataReady, FALLING);
         
-        Serial.print("Before initialize freeMemory()=");
-        Serial.println(freeMemory());
-
        initialize();
        
-       Serial.print("After initialize freeMemory()=");
-       Serial.println(freeMemory());
-
 
 }
 /*---------------------------------------------------------------------------------------*/ 
