@@ -161,7 +161,7 @@ long goal_lon[CONES] = {-122349894, -122352120, -122351987, -122351087, -1223498
 
 
 #define MAX_MAPS 10         // The maximum number of map files stored to SD card.
-#define MAX_WAYPOINTS 40    // The maximum number of waypoints in each map file.
+#define MAX_WAYPOINTS 64    // The maximum number of waypoints in each map file.
 /*   There are two coordinate systems.
      MDF and RNDF use latitude and longitude.
      C3 and C6 assume that the earth is flat at the scale that they deal with
@@ -179,7 +179,7 @@ long goal_lon[CONES] = {-122349894, -122352120, -122351987, -122351087, -1223498
     Route is a finer scale list of waypoints from present or recent position.
     Exit is the route from Path[last]-> location to Destination.
 */
-int map_points = 16;
+int map_points = 64;
 // struct curve Links[20];
 struct junction Nodes[MAX_WAYPOINTS];
 struct AStar
@@ -749,10 +749,12 @@ boolean LoadMap(char* fileName)
 /*---------------------------------------------------------------------------------------*/
 // SelectMap
 // Determines which map to load.
-// Takes in the current location as a waypoint and a string with the name of the file that
-//   contains the origins and file names of the maps. 
-// Determines which origin is closest to the waypoint and returns it as a junction.
-// Assumes the file is in the correct format according to the description above.
+// Takes in the current location as a waypoint, a string with the name of the file that
+//   contains the origins and file names of the maps, and a string reference. 
+// Determines which origin is closest to the waypoint updates the string reference to the
+//   nearest waypoint's file name.
+// Assumes the file is in the correct format according to the description in the 
+//   documentation.
 void SelectMap(waypoint currentLocation, char* fileName, char* nearestMap)
 {
   // open the file. note that only one file can be open at a time,
@@ -930,28 +932,6 @@ void initialize()
   Serial.print("nearestMap: ");
   Serial.println(nearestMap);
   LoadMap(nearestMap);
-  for (int i = 0; i < map_points; i++)
-  {
-    Serial.print(Nodes[i].east_mm);
-    Serial.print(",");
-    Serial.print(Nodes[i].north_mm);
-    Serial.print(",");
-    Serial.print(Nodes[i].destination[0]);
-    Serial.print(",");
-    Serial.print(Nodes[i].destination[1]);
-    Serial.print(",");
-    Serial.print(Nodes[i].destination[2]);
-    Serial.print(",");
-    Serial.print(Nodes[i].destination[3]);
-    Serial.print(",");
-    Serial.print(Nodes[i].Distance[0]);
-    Serial.print(",");
-    Serial.print(Nodes[i].Distance[1]);
-    Serial.print(",");
-    Serial.print(Nodes[i].Distance[2]);
-    Serial.print(",");
-    Serial.println(Nodes[i].Distance[3]);
-  }
   
      ConstructNetwork(Nodes, map_points);
      
@@ -993,7 +973,7 @@ void initialize()
      
      We will need finer grain that the Route waypoints from the map. */
      
-     SendPath(Path, MAX_WAYPOINTS);
+     SendPath(Path, map_points);
       Serial.println();     
     
      /* Read vehicle position, attitude and velocity.
@@ -1031,14 +1011,28 @@ void setup()
         DataAvailable = false;
         attachInterrupt(0, DataReady, FALLING);
         
-       initialize();
+        long startTime = 0;
+        long endTime = 0;
+        long averageTime = 0;
+        for (int i = 0; i < 10; i++)
+        {
+          startTime = millis();
+          initialize();
+          endTime = millis();
+          averageTime += endTime - startTime;
+        }
+        averageTime /= 10;
+        Serial.print("Average time with ");
+        Serial.print(map_points);
+        Serial.print(" nodes: ");
+        Serial.println(averageTime);
        
 
 }
 /*---------------------------------------------------------------------------------------*/ 
 void loop() 
 {
-  static int Goal = 1;
+/*  static int Goal = 1;
   int last;
   /*
     Maintain a list of waypoints from current position to destination.
@@ -1054,7 +1048,7 @@ void loop()
     get a reset, we can start from where we left off.   
     */
  //   Serial.println("Loop");
-    if (DataAvailable)
+/*    if (DataAvailable)
     {
         // read vehicle position from C6
         readline(0);
@@ -1082,7 +1076,7 @@ void loop()
         {
             if (DataAvailable) break;
         }
-    }
+    }*/
 }
 
 
