@@ -3,9 +3,8 @@
     The board uses an Arduino Micro, with interrupts on digital pins 0, 1, 2, 3 and 7.
     
     The interrupt numbers are 2, 3, 1, 0 and 4 respectively. 
-*/
 
-/*  Two boards can hold 12 sonars on the points of a clock.
+    Two boards can hold 12 sonars on the points of a clock.
     The front board holds Sonar 12 (straight ahead)
     and 1, 2, and 3F to the right.
     It also holds 9F, 10, and 11 to the left.
@@ -46,41 +45,27 @@
 //  MISO    This processor's serial output
 // #################################################################################################
 
-
-#define cbi(port, bit) (port &= ~(1 << bit))    //Clear a bit
-#define sbi(port, bit) (port |= (1 << bit))     //Set a bit
-
-//When DEBUG_MODE is true, send data over Serial, false send data over SPI
-#define DEBUG_MODE      true
-
-//When sedning over Serial, true gives verbose output
-#define VERBOSE_DEBUG   false
+#define DEBUG_MODE       true   //When DEBUG_MODE is true, send data over Serial, false send data over SPI
+#define VERBOSE_DEBUG   false   //When sedning over Serial, true gives verbose output
 // -------------------------------------------------------------------------------------------------
 
-#define PW_OR3        7     //Pulse 9, 10 or 11 ====>> (actually pulse 1, 2, or 3 - Tai B.)
-#define IRQright_ID   4     //The interrupt ID relating to pin above
-
-#define PW_OR1        3     //Pulse on 6 or 12
-#define IRQcenter_ID  0     //The interrupt ID relating to pin above
-
+//Pin configuration for the Arduino Micro (atmega32u4)
 //If using I2C to communicate with rear board, its SDA will need to share pin 2 with PW_OR2
-#define PW_OR2        2     //Pulse on 1, 2, or 3; or I2C. (actually pulse on 9, 10, or 11 - Tai B.)
-#define IRQleft_ID    1     //The interrupt ID relating to pin above
+#define PW_OR3       7     //Pulse on 9, 10 or 11 ====>> (actually pulse 1, 2, or 3 - Tai B.)
+#define PW_OR1       3     //Pulse on 6 or 12
+#define PW_OR2       2     //Pulse on 1, 2, or 3; or I2C. (actually pulse on 9, 10, or 11 - Tai B.)
+
+#define S_DEC1       5     //Low order bit for selecting the round     //S-DECx pins good - Tai B.
+#define S_DEC2       6     //Hi bit of round select
+
+#define V_ENABLE    13     //Apply power to sonars                     //POWER good - Tai B.
+#define V_TOGGLE     4     //(V_TOGGLE) HIGH for 3.4v, LOW for 5v sonar power
+
+#define F_BSY       11     //pin signals to rear sonar board       IMPORTANT - FBSY should be pin 11 was 9
+#define R_BSY        8     //pin signals from rear sonar bord      IMPORTANT - RBSY should be pin 8 was 10
 // -------------------------------------------------------------------------------------------------
 
-//S-DECx pins good - Tai B.
-#define S_DEC1        5     //Low order bit for selecting the round
-#define S_DEC2        6     //Hi bit of round select
-
-//POWER good - Tai B.
-#define V_EN         13     //Apply power to sonars
-#define V_TOGGLE      4     //(V_TOGGLE) HIGH for 3.4v, LOW for 5v sonar power
-
-#define F_BSY        11     //pin signals to rear sonar board       IMPORTANT - FBSY should be pin  11 was 9
-#define R_BSY         8     //pin signals from rear sonar bord      IMPORTANT - RBSY should be pin  8 was 10
-// -------------------------------------------------------------------------------------------------
-
-#define DEBUG_PIN   A0      //Light-emitting diode indicator for DEBUG_status = TRUE
+#define DEBUG_PIN   A0     //Light-emitting diode indicator for DEBUG_status = TRUE
 
 //Analog input pins from sonars           
 // #define ANx  Ay // x is clock position; Ay is the analog input channel
@@ -98,17 +83,25 @@
 #define ROUND_DELAY     100 //ms between rounds, seems to help stability
 
 //Modify EXPECTED_SIGNALS to match which sonars are on the board.
-#define EXPECTED_SIGNALS1   3
-#define EXPECTED_SIGNALS2   3
-#define EXPECTED_SIGNALS3   2
-#define COMMAND_GO          1
+#define EXPECTED_SIGNALS1    3
+#define EXPECTED_SIGNALS2    3
+#define EXPECTED_SIGNALS3    2
+#define COMMAND_GO           1
 #define RANGE_DATA_SIZE     13
+// -------------------------------------------------------------------------------------------------
 
-#include "pins_arduino.h"
+//Bit Manipulation Functions
+#define cbi(port, bit) (port &= ~(1 << bit))        //Clear a bit
+#define sbi(port, bit) (port |= (1 << bit))         //Set a bit
+#define tbi(port, bit) (port ^= (1 << bit))         //toggle a bit
+#define ibh(port, bit) ((port & (1 << bit)) > 0)    //Is a bit high
+#define ibl(port, bit) ((port & (1 << bit)) == 0)   //Is a bit low
+// -------------------------------------------------------------------------------------------------
 
-enum STATE { INITIAL, READY, ROUND1, ROUND2, ROUND3 };
+enum STATE : byte { INITIAL, READY, ROUND1, ROUND2, ROUND3 };
+STATE boardState;   //initializing sonar board state
 
-STATE boardState = INITIAL;     //initializing sonar board state
+// enum SONAR : byte {};
 
 volatile byte SignalsReceived;
 volatile unsigned long timeLeft;
@@ -116,30 +109,30 @@ volatile unsigned long timeRight;
 volatile unsigned long timeCenter;
 
 volatile unsigned long timeStart;
-// volatile unsigned long timeLeftStart;        //currently not being used
-// volatile unsigned long timeRightStart;       //currently not being used
-// volatile unsigned long timeCenterStart;      //currently not being used
+// volatile unsigned long timeLeftStart;       //currently not being used
+// volatile unsigned long timeRightStart;      //currently not being used
+// volatile unsigned long timeCenterStart;     //currently not being used
 
-volatile boolean timeStartSet;
-// volatile boolean timeLeftStartSet;           //currently not being used
-// volatile boolean timeRightStartSet;          //currently not being used
-// volatile boolean timeCenterStartSet;         //currently not being used
+volatile bool timeStartSet;
+// volatile bool timeLeftStartSet;             //currently not being used
+// volatile bool timeRightStartSet;            //currently not being used
+// volatile bool timeCenterStartSet;           //currently not being used
 
 //For SPI communications
 volatile unsigned long timeWriteStart;
 volatile byte valueIn;
-volatile boolean processIt;
+volatile bool processIt;
 
-int range[RANGE_DATA_SIZE] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-int analogRange[RANGE_DATA_SIZE] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+int range[RANGE_DATA_SIZE]{};
+int analogRange[RANGE_DATA_SIZE]{};
+
 int roundCount, timeoutStart, timeSinceLastRound;
+byte boardCount; //just the front board
 
 volatile int isr1Count, isr2Count, isr3Count;
 
-const byte BoardCount = 1;      //just the front board
-const int SCALE_FACTOR = 58;    //to calculate the distance, use the scale factor of 58us per cm
+const byte SCALE_FACTOR = 58;   //to calculate the distance, use the scale factor of 58us per cm
 const int BAUD_RATE = 115200;
-
 
 // -------------------------------------------------------------------------------------------------
 void setup()
@@ -149,31 +142,33 @@ void setup()
 
     if (DEBUG_MODE)
     {
+        //Baud rate configured for 115200
+        //It communicates on digital pins 0 (RX) and 1 (TX) as well as with the computer via USB
+        Serial.begin(BAUD_RATE);
+
         digitalWrite(DEBUG_PIN, HIGH);
     }
-  
-    //Serial Peripheral Interface (SPI) Setup
-    pinMode(MISO, OUTPUT);
+    else
+    {
+        //Serial Peripheral Interface (SPI) Setup
+        pinMode(MISO, OUTPUT);
 
-    //SPI Control Register (SPCR)
-    SPCR |= _BV(SPE);   //Turn on SPI in slave mode (SPI Enable)
-    SPCR |= _BV(SPIE);  //Turn on interrupts for SPI (SPI Interrupt Enable) 
+        //SPI Control Register (SPCR)
+        SPCR |= _BV(SPE);   //Turn on SPI in slave mode (SPI Enable)
+        SPCR |= _BV(SPIE);  //Turn on interrupts for SPI (SPI Interrupt Enable) 
 
-    processIt = false;  //False until we have a request to process
-  
+        processIt = false;  //False until we have a request to process
+    }  
+
     // timeLeftStart = timeRightStart = timeCenterStart = 0;
     timeLeft = timeRight = timeCenter = timeStart = 0;
     roundCount = timeoutStart = timeSinceLastRound = 0;
     isr1Count = isr2Count = isr3Count = 0;
 
-    timeLeftStartSet = false;
-    timeRightStartSet = false;
-    timeCenterStartSet = false;
+    // timeLeftStartSet = false;
+    // timeRightStartSet = false;
+    // timeCenterStartSet = false;
     timeStartSet = false;
-
-    //Baud rate configured for 115200
-    //It communicates on digital pins 0 (RX) and 1 (TX) as well as with the computer via USB
-    Serial.begin(BAUD_RATE);
  
     pinMode(S_DEC1, OUTPUT);        //Pin 5 (PWM)       --> SD1
     pinMode(S_DEC2, OUTPUT);        //Pin 6 (PWM/A7)    --> SD2
@@ -183,20 +178,21 @@ void setup()
     pinMode(PW_OR2, INPUT);         //Pin 2 (SDA)       --> PW2
     pinMode(PW_OR3, INPUT);         //Pin 7             --> PW3
 
+    boardState = INITIAL; 
+    SignalsReceived = 0; 
+    boardCount = 1;
 
-    boardState = INITIAL;  
-    BoardCount = 1;
-
-    digitalWrite(S_DEC1, LOW);
-    digitalWrite(S_DEC2, LOW);
+    // digitalWrite(S_DEC1, LOW);
+    // digitalWrite(S_DEC2, LOW);
+    setRound(0, 0);
 
     digitalWrite(F_BSY, HIGH); //Signal rear board that we are here; See if there is a rear board
-  
-    //Select 5V power(LOW), or 3.8V power(HIGH)
-    digitalWrite(V_TOGGLE, LOW);    //Pin 4 (A6)        --> VTOG
+    digitalWrite(V_TOGGLE, LOW); //Select 5V power(LOW), or 3.8V power(HIGH)
+//    digitalWrite(V_TOGGLE, HIGH); //Select 5V power(LOW), or 3.8V power(HIGH)
+
 
     //Turn on sonars
-    digitalWrite(V_EN, HIGH);
+    digitalWrite(V_ENABLE, HIGH);
     
 
     //for (int i = 0; i < 1000; i++)
@@ -205,7 +201,7 @@ void setup()
     //    byte Rear = digitalRead(R_BSY);
     //    if (Rear == HIGH)
     //    {
-    //        BoardCount = 2;
+    //        boardCount = 2;
     //        //Need to dynamically attach/detacy PW_OR2 so that it is shared between IntRight and I2C
     //        break;
     //    }
@@ -214,9 +210,9 @@ void setup()
     //Required delay above 175ms after power-up with the board for all XL-MaxSonars to be ready
     delay(200); //Per sonar datasheet, needs 175ms for boot
 
-    attachInterrupt(IRQleft_ID, IsrLeft, CHANGE);
-    attachInterrupt(IRQcenter_ID, IsrCenter, CHANGE);
-    attachInterrupt(IRQright_ID, IsrRight, CHANGE);
+    attachInterrupt( digitalPinToInterrupt(PW_OR2), IsrLeft, CHANGE );
+    attachInterrupt( digitalPinToInterrupt(PW_OR1), IsrCenter, CHANGE );
+    attachInterrupt( digitalPinToInterrupt(PW_OR3), IsrRight, CHANGE );
 
     digitalWrite(F_BSY, LOW); //Open for business
     boardState = READY;
@@ -241,7 +237,8 @@ void IsrLeft()
     isr1Count++;
 
     //Checks the PWM from PW_OR3 is HIGH
-    if (digitalRead(PW_OR3) == HIGH && !timeStartSet)
+    if (digitalRead(PW_OR3) == HIGH && timeStartSet == false)
+    // if (ibh(PINE, PE6) && !timeStartSet)
     {
         timeStart = micros();        
         timeStartSet = true;
@@ -263,7 +260,8 @@ void IsrCenter()
 
     isr2Count++;
 
-    if (digitalRead(PW_OR1) == HIGH && !timeStartSet)
+    if (digitalRead(PW_OR1) == HIGH && timeStartSet == false)
+    // if (ibh(PIND, PD2) && !timeStartSet)
     {
         timeStart = micros();        
         timeStartSet = true;
@@ -282,13 +280,12 @@ void IsrCenter()
 void IsrRight()
 {
     //ISR for end of pulse on sonar 1, 2 or 3
-    //Log time of the pulse end
-
     noInterrupts(); 
 
     isr3Count++; 
 
-    if (digitalRead(PW_OR2) == HIGH && !timeStartSet)
+    if (digitalRead(PW_OR2) == HIGH && timeStartSet == false)
+    // if (ibh(PIND, PD1) && !timeStartSet)
     {
         timeStart = micros();        
         timeStartSet = true;
@@ -307,25 +304,19 @@ void loop()
 {
     boardState = READY;
 
-    digitalWrite(S_DEC1, LOW);
-    digitalWrite(S_DEC2, LOW);   // superfluous
+    setRound(0, 0); //Send a pulse on sonars, superfluous
+
     //readInput(); //Sonar is slave waiting for command from master
     //TO DO: Send start signal to rear board.
     
+    interrupts(); // Not sure if we need this here at all
+
 //****** ROUND 1 ***************************************************************
     boardState = ROUND1;  
     SignalsReceived = 0;
-    //Send a pulse on sonars 
-    interrupts();    
-    //digitalWrite(S_DEC2, HIGH);
-    setRound(0, 1);
- 
-    timeoutStart = millis();
-    while (SignalsReceived < EXPECTED_SIGNALS1) 
-    {
-        if ((millis() - timeoutStart) > TIMEOUT_PERIOD) { break; }
-    }
-    delay(ROUND_DELAY);
+
+    setRound(0, 1); //Send a pulse on sonars
+    delayPeriod(EXPECTED_SIGNALS1);
 
     //==== extra interrupt data holders for timing tests ========
     //    timeLeftStartSet = false;
@@ -339,25 +330,17 @@ void loop()
     range[3]  = (timeRight - timeStart) / SCALE_FACTOR;
     range[9]  = (timeLeft - timeStart) / SCALE_FACTOR;
 
-    analogRange[12] = analogRead(AN12);
-    analogRange[3] =  analogRead(AN3);
-    analogRange[9] =  analogRead(AN9);
+    // analogRange[12] = analogRead(AN12);
+    // analogRange[3] =  analogRead(AN3);
+    // analogRange[9] =  analogRead(AN9);
 
  
 //****** ROUND 3 ***************************************************************
-    // Gray code; only one bit changes at a time
     boardState = ROUND3;
-    SignalsReceived = 0;       
-    //Send a pulse on sonars 
-    //digitalWrite(S_DEC1, HIGH);
-    setRound(1, 1);
-    
-    timeoutStart = millis();
-    while (SignalsReceived < EXPECTED_SIGNALS3) 
-    {
-        if ((millis() - timeoutStart) > TIMEOUT_PERIOD) { break; }
-    }
-    delay(ROUND_DELAY);
+    SignalsReceived = 0;
+
+    setRound(1, 1); //Send a pulse on sonars
+    delayPeriod(EXPECTED_SIGNALS3);
 
     //==== extra interrupt data holders for timing tests ========
     //    timeLeftStartSet = false;
@@ -369,23 +352,16 @@ void loop()
     range[10] = (timeLeft - timeStart) / SCALE_FACTOR;
     range[1]  = (timeRight - timeStart) / SCALE_FACTOR;
 
-    analogRange[10] = analogRead(AN10);
-    analogRange[1] =  analogRead(AN1);
+    // analogRange[10] = analogRead(AN10);
+    // analogRange[1] =  analogRead(AN1);
    
     
 //****** ROUND 2 ***************************************************************
     boardState = ROUND2;
-    SignalsReceived = 0; 
-    //Send a pulse on sonars 
-    //digitalWrite(S_DEC2, LOW);
-    setRound(1, 0);
-    
-    timeoutStart = millis();
-    while (SignalsReceived < EXPECTED_SIGNALS2) 
-    {
-        if ((millis() - timeoutStart) > TIMEOUT_PERIOD) { break; }
-    }
-    delay(ROUND_DELAY);
+    SignalsReceived = 0;
+
+    setRound(1, 0); //Send a pulse on sonars
+    delayPeriod(EXPECTED_SIGNALS2);
 
     //==== extra interrupt data holders for timing tests ========
     //    timeLeftStartSet = false;
@@ -399,14 +375,12 @@ void loop()
     range[2]  = (timeRight - timeStart) / SCALE_FACTOR;
     range[6]  = (timeCenter - timeStart) / SCALE_FACTOR;
 
-    analogRange[11] = analogRead(AN11);
-    analogRange[2] =  analogRead(AN2);
-    analogRange[6] =  analogRead(AN6);
-
-
+    // analogRange[11] = analogRead(AN11);
+    // analogRange[2] =  analogRead(AN2);
+    // analogRange[6] =  analogRead(AN6);
+    
     //TO DO: Receive data from rear board
     writeOutput();
-    boardState = READY;
     roundCount++;
 }
 
@@ -467,6 +441,19 @@ void setRound(int highOrderBit, int lowOrderBit)
 
 
 // -------------------------------------------------------------------------------------------------
+void delayPeriod(byte expectedSingal)
+{
+    timeoutStart = millis();
+    while (SignalsReceived < expectedSingal) 
+    {
+        if ((millis() - timeoutStart) > TIMEOUT_PERIOD) { break; }
+    }
+    
+    delay(ROUND_DELAY);
+}
+
+
+// -------------------------------------------------------------------------------------------------
 void readInput()
 { 
     byte select;
@@ -508,10 +495,10 @@ void writeOutput()
             Serial.print(" Vals: ");
         }
 
-        for (int index = 1; index < RANGE_DATA_SIZE; ++index)
+        for (int index = 1; index < RANGE_DATA_SIZE; index++)
         {
             //Prints out only the sonars for one board (9, 10, 11, 12, 1, 2, 3)
-            if (BoardCount == 1 && (index == 4 || index == 5 || index == 7 || index == 8)) { continue; }
+            if (boardCount == 1 && (index == 4 || index == 5 || index == 7 || index == 8)) { continue; }
 
             if (index < 10) { Serial.print("[ "); }
             else { Serial.print('['); }
