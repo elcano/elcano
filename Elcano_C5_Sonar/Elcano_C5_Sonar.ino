@@ -30,9 +30,9 @@
 
     Round(AB)   Output     Sonars
     00          Y0         none
-    01          Y1         12, 3, 9
-    11          Y2         1, 10     // original design included 6
-    10          Y3         2, 11, 6  // 6 not in original design
+    01          Y1         9, 12, 3
+    11          Y2         6, 11, 2
+    10          Y3         1, 10 
 
     A round may fire up to 3 sonars. The sonar range may be reported as either an analog value
     or as a pulse width. A pulse width will cause an interrupt.
@@ -46,14 +46,17 @@
 // #################################################################################################
 
 #define DEBUG_MODE       true   //When DEBUG_MODE is true, send data over Serial, false send data over SPI
-#define VERBOSE_DEBUG   false   //When sedning over Serial, true gives verbose output
+#define VERBOSE_DEBUG    true   //When sedning over Serial, true gives verbose output
+#define SONAR_POWER_5V   true   //TRUE for 5v sonar power, FALSE for 3.4v,
+#define BAUD_RATE      115200   //Serial Baud Rate for debugging
 // -------------------------------------------------------------------------------------------------
 
 //Pin configuration for the Arduino Micro (atmega32u4)
 //If using I2C to communicate with rear board, its SDA will need to share pin 2 with PW_OR2
-#define PW_OR3       7     //Pulse on 9, 10 or 11 ====>> (actually pulse 1, 2, or 3 - Tai B.)
-#define PW_OR1       3     //Pulse on 6 or 12
-#define PW_OR2       2     //Pulse on 1, 2, or 3; or I2C. (actually pulse on 9, 10, or 11 - Tai B.)
+
+#define PW_OR1       3     //Pulse on the center and back of the board 6 or 12
+#define PW_OR2       2     //Pulse on the left side of the board 9, 10, or 11
+#define PW_OR3       7     //Pulse on the right side of the board 1, 2, or 3
 
 #define S_DEC1       5     //Low order bit for selecting the round     //S-DECx pins good - Tai B.
 #define S_DEC2       6     //Hi bit of round select
@@ -80,14 +83,17 @@
 // -------------------------------------------------------------------------------------------------
 
 #define TIMEOUT_PERIOD  100 //ms: 20.5ms for calc + up to 62ms for the reading + a little buffer
-#define ROUND_DELAY     100 //ms between rounds, seems to help stability
+#define ROUND_DELAY      45 //ms between rounds, seems to help stability
 
 //Modify EXPECTED_SIGNALS to match which sonars are on the board.
 #define EXPECTED_SIGNALS1    3
 #define EXPECTED_SIGNALS2    3
 #define EXPECTED_SIGNALS3    2
+
 #define COMMAND_GO           1
+
 #define RANGE_DATA_SIZE     13
+#define SAMPLE_DATA_SIZE     5
 // -------------------------------------------------------------------------------------------------
 
 //Bit Manipulation Functions
@@ -101,7 +107,8 @@
 enum STATE : byte { INITIAL, READY, ROUND1, ROUND2, ROUND3 };
 STATE boardState;   //initializing sonar board state
 
-// enum SONAR : byte {};
+const int SCALE_FACTOR_PW = 58;   //to calculate the distance, use the scale factor of 58us per cm
+const float SCALE_FACTOR_AN = ((SONAR_POWER_5V ? 5.0 : 3.3) / 1024.0);
 
 volatile byte SignalsReceived;
 volatile unsigned long timeLeft;
@@ -109,43 +116,33 @@ volatile unsigned long timeRight;
 volatile unsigned long timeCenter;
 
 volatile unsigned long timeStart;
-// volatile unsigned long timeLeftStart;       //currently not being used
-// volatile unsigned long timeRightStart;      //currently not being used
-// volatile unsigned long timeCenterStart;     //currently not being used
-
 volatile bool timeStartSet;
-// volatile bool timeLeftStartSet;             //currently not being used
-// volatile bool timeRightStartSet;            //currently not being used
-// volatile bool timeCenterStartSet;           //currently not being used
 
 //For SPI communications
 volatile unsigned long timeWriteStart;
 volatile byte valueIn;
 volatile bool processIt;
 
-int range[RANGE_DATA_SIZE]{};
+int range[RANGE_DATA_SIZE][SAMPLE_DATA_SIZE]{};
 int analogRange[RANGE_DATA_SIZE]{};
 
 int roundCount, timeoutStart, timeSinceLastRound;
-byte boardCount; //just the front board
+byte boardCount, sampleIndex;
 
 volatile int isr1Count, isr2Count, isr3Count;
 
-const byte SCALE_FACTOR = 58;   //to calculate the distance, use the scale factor of 58us per cm
-const int BAUD_RATE = 115200;
 
 // -------------------------------------------------------------------------------------------------
 void setup()
 {
-    //DEBUG LED test
-    pinMode(DEBUG_PIN, OUTPUT);
-
     if (DEBUG_MODE)
     {
+        //DEBUG LED test
+        pinMode(DEBUG_PIN, OUTPUT);
+
         //Baud rate configured for 115200
         //It communicates on digital pins 0 (RX) and 1 (TX) as well as with the computer via USB
         Serial.begin(BAUD_RATE);
-
         digitalWrite(DEBUG_PIN, HIGH);
     }
     else
@@ -160,14 +157,9 @@ void setup()
         processIt = false;  //False until we have a request to process
     }  
 
-    // timeLeftStart = timeRightStart = timeCenterStart = 0;
     timeLeft = timeRight = timeCenter = timeStart = 0;
     roundCount = timeoutStart = timeSinceLastRound = 0;
     isr1Count = isr2Count = isr3Count = 0;
-
-    // timeLeftStartSet = false;
-    // timeRightStartSet = false;
-    // timeCenterStartSet = false;
     timeStartSet = false;
  
     pinMode(S_DEC1, OUTPUT);        //Pin 5 (PWM)       --> SD1
@@ -182,14 +174,10 @@ void setup()
     SignalsReceived = 0; 
     boardCount = 1;
 
-    // digitalWrite(S_DEC1, LOW);
-    // digitalWrite(S_DEC2, LOW);
-    setRound(0, 0);
+    setRound(LOW, LOW);
 
     digitalWrite(F_BSY, HIGH); //Signal rear board that we are here; See if there is a rear board
-    digitalWrite(V_TOGGLE, LOW); //Select 5V power(LOW), or 3.8V power(HIGH)
-//    digitalWrite(V_TOGGLE, HIGH); //Select 5V power(LOW), or 3.8V power(HIGH)
-
+    digitalWrite(V_TOGGLE, (SONAR_POWER_5V ? LOW:HIGH)); //Select 5V power(LOW), or 3.8V power(HIGH)
 
     //Turn on sonars
     digitalWrite(V_ENABLE, HIGH);
@@ -210,12 +198,14 @@ void setup()
     //Required delay above 175ms after power-up with the board for all XL-MaxSonars to be ready
     delay(200); //Per sonar datasheet, needs 175ms for boot
 
-    attachInterrupt( digitalPinToInterrupt(PW_OR2), IsrLeft, CHANGE );
-    attachInterrupt( digitalPinToInterrupt(PW_OR1), IsrCenter, CHANGE );
-    attachInterrupt( digitalPinToInterrupt(PW_OR3), IsrRight, CHANGE );
+    attachInterrupt( digitalPinToInterrupt(PW_OR2), ISRLeft, CHANGE );
+    attachInterrupt( digitalPinToInterrupt(PW_OR1), ISRCenter, CHANGE );
+    attachInterrupt( digitalPinToInterrupt(PW_OR3), ISRRight, CHANGE );
 
     digitalWrite(F_BSY, LOW); //Open for business
     boardState = READY;
+
+    // digitalWrite(R_BSY, LOW);        //TESTING REMOVE ME LATER // REMOVE ME // PICOSCOPE TESTING
 }
 
 
@@ -229,16 +219,15 @@ ISR (SPI_STC_vect)
 
 
 // -------------------------------------------------------------------------------------------------
-void IsrLeft()
+void ISRLeft()
 {  
     //ISR for end of pulse on sonar 9, 10 or 11    
     noInterrupts();
 
     isr1Count++;
 
-    //Checks the PWM from PW_OR3 is HIGH
-    if (digitalRead(PW_OR3) == HIGH && timeStartSet == false)
-    // if (ibh(PINE, PE6) && !timeStartSet)
+    //if (digitalRead(PW_OR3) == HIGH && timeStartSet == false)
+    if (ibh(PINE, PE6) && !timeStartSet)
     {
         timeStart = micros();        
         timeStartSet = true;
@@ -253,15 +242,15 @@ void IsrLeft()
 
 
 // -------------------------------------------------------------------------------------------------
-void IsrCenter()
+void ISRCenter()
 {  
     //ISR for end of pulse on sonar 6 or 12
     noInterrupts();
 
     isr2Count++;
 
-    if (digitalRead(PW_OR1) == HIGH && timeStartSet == false)
-    // if (ibh(PIND, PD2) && !timeStartSet)
+    //if (digitalRead(PW_OR1) == HIGH && timeStartSet == false)
+    if (ibh(PIND, PD2) && !timeStartSet)
     {
         timeStart = micros();        
         timeStartSet = true;
@@ -277,15 +266,15 @@ void IsrCenter()
  
 
 // -------------------------------------------------------------------------------------------------
-void IsrRight()
+void ISRRight()
 {
     //ISR for end of pulse on sonar 1, 2 or 3
     noInterrupts(); 
 
     isr3Count++; 
 
-    if (digitalRead(PW_OR2) == HIGH && timeStartSet == false)
-    // if (ibh(PIND, PD1) && !timeStartSet)
+    //if (digitalRead(PW_OR2) == HIGH && timeStartSet == false)
+    if (ibh(PIND, PD1) && !timeStartSet)
     {
         timeStart = micros();        
         timeStartSet = true;
@@ -302,140 +291,142 @@ void IsrRight()
 // -------------------------------------------------------------------------------------------------
 void loop()
 {
+    // sbi(PORTB, PB7);    // D0 HIGH (FBSY) // REMOVE ME // PICOSCOPE TESTING
+
     boardState = READY;
 
-    setRound(0, 0); //Send a pulse on sonars, superfluous
+    setRound(LOW, LOW); //Send a pulse on sonars, superfluous
 
     //readInput(); //Sonar is slave waiting for command from master
     //TO DO: Send start signal to rear board.
     
     interrupts(); // Not sure if we need this here at all
 
-//****** ROUND 1 ***************************************************************
+    //Gets the current sample index to be used for the range array
+    sampleIndex = (roundCount % SAMPLE_DATA_SIZE);
+
+//*****  ROUND 1  **************************************************************
+    // sbi(PORTB, PB4);         // D1 HIGH (RBSY) // REMOVE ME // PICOSCOPE TESTING
+
     boardState = ROUND1;  
     SignalsReceived = 0;
 
-    setRound(0, 1); //Send a pulse on sonars
+    setRound(LOW, HIGH); //Send a pulse on sonars
     delayPeriod(EXPECTED_SIGNALS1);
 
-    //==== extra interrupt data holders for timing tests ========
-    //    timeLeftStartSet = false;
-    //    timeRightStartSet = false;
-    //    timeCenterStartSet = false;
-    //===========================================================
-
-    timeStartSet = false;
-
-    range[12] = (timeCenter - timeStart) / SCALE_FACTOR;
-    range[3]  = (timeRight - timeStart) / SCALE_FACTOR;
-    range[9]  = (timeLeft - timeStart) / SCALE_FACTOR;
+    range[12][sampleIndex] = (timeCenter - timeStart) / SCALE_FACTOR_PW;
+    range[3] [sampleIndex] = (timeRight - timeStart) / SCALE_FACTOR_PW;
+    range[9] [sampleIndex] = (timeLeft - timeStart) / SCALE_FACTOR_PW;
 
     // analogRange[12] = analogRead(AN12);
     // analogRange[3] =  analogRead(AN3);
     // analogRange[9] =  analogRead(AN9);
 
+    // cbi(PORTB, PB4);         // D1 LOW (RBSY) // REMOVE ME // PICOSCOPE TESTING
+
  
-//****** ROUND 3 ***************************************************************
+//*****  ROUND 3  **************************************************************
+    // sbi(PORTF, PF7);         // D2 HIGH (DEBUG_PIN) // REMOVE ME // PICOSCOPE TESTING
+
     boardState = ROUND3;
     SignalsReceived = 0;
 
-    setRound(1, 1); //Send a pulse on sonars
+    setRound(HIGH, HIGH); //Send a pulse on sonars
     delayPeriod(EXPECTED_SIGNALS3);
 
-    //==== extra interrupt data holders for timing tests ========
-    //    timeLeftStartSet = false;
-    //    timeRightStartSet = false;
-    //    timeCenterStartSet = false;
-    //===========================================================
-    timeStartSet = false;
-
-    range[10] = (timeLeft - timeStart) / SCALE_FACTOR;
-    range[1]  = (timeRight - timeStart) / SCALE_FACTOR;
+    range[10][sampleIndex] = (timeLeft - timeStart) / SCALE_FACTOR_PW;
+    range[1] [sampleIndex] = (timeRight - timeStart) / SCALE_FACTOR_PW;
 
     // analogRange[10] = analogRead(AN10);
     // analogRange[1] =  analogRead(AN1);
-   
+
+    // cbi(PORTF, PF7);         // D2 LOW (DEBUG_PIN) // REMOVE ME // PICOSCOPE TESTING
+
     
 //****** ROUND 2 ***************************************************************
+    // sbi(PORTB, PB0);         // D3 HIGH (RX) // REMOVE ME // PICOSCOPE TESTING
+
     boardState = ROUND2;
     SignalsReceived = 0;
 
-    setRound(1, 0); //Send a pulse on sonars
+    setRound(HIGH, LOW); //Send a pulse on sonars
     delayPeriod(EXPECTED_SIGNALS2);
 
-    //==== extra interrupt data holders for timing tests ========
-    //    timeLeftStartSet = false;
-    //    timeRightStartSet = false;
-    //    timeCenterStartSet = false;
-    //===========================================================
-
-    timeStartSet = false;
-
-    range[11] = (timeLeft - timeStart) / SCALE_FACTOR;
-    range[2]  = (timeRight - timeStart) / SCALE_FACTOR;
-    range[6]  = (timeCenter - timeStart) / SCALE_FACTOR;
+    range[11][sampleIndex] = (timeLeft - timeStart) / SCALE_FACTOR_PW;
+    range[2] [sampleIndex] = (timeRight - timeStart) / SCALE_FACTOR_PW;
+    range[6] [sampleIndex] = (timeCenter - timeStart) / SCALE_FACTOR_PW;
 
     // analogRange[11] = analogRead(AN11);
     // analogRange[2] =  analogRead(AN2);
     // analogRange[6] =  analogRead(AN6);
-    
+
+    // cbi(PORTB, PB0);         // D3 LOW (RX) // REMOVE ME // PICOSCOPE TESTING
+
+//******************************************************************************
+
     //TO DO: Receive data from rear board
-    writeOutput();
+    if (sampleIndex == (SAMPLE_DATA_SIZE - 1))
+    {
+        writeOutput();
+        // cbi(PORTB, PB7);     // D0 LOW (FBSY) // REMOVE ME // PICOSCOPE TESTING
+        // delay(500); // REMOVE ME // PICOSCOPE TESTING
+    }
+    // cbi(PORTB, PB7);         // D0 LOW (FBSY) // REMOVE ME // PICOSCOPE TESTING
+    // delayMicroseconds(50);   // REMOVE ME // PICOSCOPE TESTING
+
     roundCount++;
 }
 
 
 // -------------------------------------------------------------------------------------------------
-void setRound(int highOrderBit, int lowOrderBit)
 //we should rewrite this method to manipulate the digital pin registers rather that using
 //digitalWrite to toggle RND pins.  This way the pins will change simultaneously, which
 //will create more reliable functionality -- tb
 
-// //@@@@@@@@@@@  S-DECx pins good -- tb @@@@@@@@@@@@@@@@@@
-// #define S_DEC1     5 //Low order bit for selecting the round
-// #define S_DEC2     6 //Hi bit of round select
-// //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+//If Pin 4 is left open or held high (20uS or greater), the sensor will take a range reading
+//Bring high 20uS or more for range reading.
 
+void setRound(int highOrderBit, int lowOrderBit)
 {
-    if (highOrderBit == 0 && lowOrderBit == 0)
+    //Turn off all sonars
+    if (highOrderBit == LOW && lowOrderBit == LOW)
     {
-        //Turn off all sonars
-        cbi(PORTC, PORTC6);     // digitalWrite(S_DEC1, LOW);
-        cbi(PORTD, PORTD7);     // digitalWrite(S_DEC2, LOW);
+        cbi(PORTC, PC6);     // digitalWrite(S_DEC1, LOW);
+        cbi(PORTD, PD7);     // digitalWrite(S_DEC2, LOW);
     }
 
-    else if (highOrderBit == 0 && lowOrderBit == 1)
+    //SD1 = HIGH, SD2 = LOW. Clock positions 9, 12, and 3
+    else if (highOrderBit == LOW && lowOrderBit == HIGH)
     {
-        // 12, 3, 9
-        cbi(PORTD, PORTD7);     // digitalWrite(S_DEC2, LOW); 
-        sbi(PORTC, PORTC6);     // digitalWrite(S_DEC1, HIGH);
+        cbi(PORTD, PD7);     // digitalWrite(S_DEC2, LOW); 
+        sbi(PORTC, PC6);     // digitalWrite(S_DEC1, HIGH);
 
         delayMicroseconds(50);
 
-        cbi(PORTC, PORTC6);     // digitalWrite(S_DEC1, LOW);
+        cbi(PORTC, PC6);     // digitalWrite(S_DEC1, LOW);
     }
 
-    else if (highOrderBit == 1 && lowOrderBit == 0)
+    //SD1 = LOW, SD2 = HIGH. Clock positions 6, 11, and 2
+    else if (highOrderBit == HIGH && lowOrderBit == LOW)
     {
-        // 2, 11, 6
-        cbi(PORTC, PORTC6);     // digitalWrite(S_DEC1, LOW);
-        sbi(PORTD, PORTD7);     // digitalWrite(S_DEC2, HIGH);
+        cbi(PORTC, PC6);     // digitalWrite(S_DEC1, LOW);
+        sbi(PORTD, PD7);     // digitalWrite(S_DEC2, HIGH);
 
         delayMicroseconds(50);
 
-        cbi(PORTD, PORTD7);     // digitalWrite(S_DEC2, LOW);
+        cbi(PORTD, PD7);     // digitalWrite(S_DEC2, LOW);
     }
 
-    else if (highOrderBit == 1 && lowOrderBit == 1)
+    //SD1 = HIGH, SD2 = HIGH. Clock positions 10, and 1
+    else if (highOrderBit == HIGH && lowOrderBit == HIGH)
     {
-        // 1, 6, 10
-        sbi(PORTC, PORTC6);     // digitalWrite(S_DEC1, HIGH);
-        sbi(PORTD, PORTD7);     // digitalWrite(S_DEC2, HIGH);
+        sbi(PORTC, PC6);     // digitalWrite(S_DEC1, HIGH);
+        sbi(PORTD, PD7);     // digitalWrite(S_DEC2, HIGH);
 
         delayMicroseconds(50);
 
-        cbi(PORTC, PORTC6);     // digitalWrite(S_DEC1, LOW);
-        cbi(PORTD, PORTD7);     // digitalWrite(S_DEC2, LOW);
+        cbi(PORTC, PC6);     // digitalWrite(S_DEC1, LOW);
+        cbi(PORTD, PD7);     // digitalWrite(S_DEC2, LOW);
     }
 }
 
@@ -450,6 +441,8 @@ void delayPeriod(byte expectedSingal)
     }
     
     delay(ROUND_DELAY);
+
+    timeStartSet = false;
 }
 
 
@@ -474,45 +467,58 @@ void readInput()
 void writeOutput()
 {
     if (DEBUG_MODE) 
-    {
-        if (VERBOSE_DEBUG) 
-        {
-            Serial.print("Round: ");
-            Serial.print(roundCount);
-            Serial.print(" micros: ");
-            Serial.print(micros());
-            Serial.print(", micros since last: ");
-            Serial.print(micros() - timeSinceLastRound);
-            timeSinceLastRound = micros();
-            Serial.print(", SigReceived: ");
-            Serial.print(SignalsReceived);
-            Serial.print(", isr1: ");
-            Serial.print(isr1Count);
-            Serial.print(", isr2: ");
-            Serial.print(isr2Count);
-            Serial.print(", isr3: ");
-            Serial.println(isr3Count);
-            Serial.print(" Vals: ");
-        }
-
+    { 
         for (int index = 1; index < RANGE_DATA_SIZE; index++)
         {
-            //Prints out only the sonars for one board (9, 10, 11, 12, 1, 2, 3)
-            if (boardCount == 1 && (index == 4 || index == 5 || index == 7 || index == 8)) { continue; }
+            if (VERBOSE_DEBUG)
+            {
+                //Prints out only the sonars for one board (9, 10, 11, 12, 1, 2, 3)
+                if (index == 4 || index == 5 || index == 7 || index == 8) { continue; }
 
-            if (index < 10) { Serial.print("[ "); }
-            else { Serial.print('['); }
+                Serial.print(F("Round: "));     Serial.print(roundCount);
+                Serial.print(F(" micros: "));   Serial.print(micros());
+               
+                Serial.print(F(", micros since last: "));
+                Serial.print(micros() - timeSinceLastRound);
+                timeSinceLastRound = micros();
                 
-            Serial.print(index);
-            Serial.print("] ");
-            Serial.println(range[index]);
+                Serial.print(F(", SigReceived: ")); Serial.print(SignalsReceived);
+                Serial.print(F(", isr1: "));        Serial.print(isr1Count);
+                Serial.print(F(", isr2: "));        Serial.print(isr2Count);
+                Serial.print(F(", isr3: "));        Serial.println(isr3Count);
+
+                if (index < 10) { Serial.print(F("[ ")); }
+                else { Serial.print(F("[")); }
+
+                Serial.print(index);
+                Serial.print(F("]\t"));
+
+                for (int position = 0; position < SAMPLE_DATA_SIZE; position++)
+                {
+                    Serial.print(range[index][position]);
+                    Serial.print(F("\t"));
+                }
+                Serial.print(F("\t"));
+            }
+           
+            // sortArray(range, index, SAMPLE_DATA_SIZE);   //Bubble Sort
+            quicksort(range, index, 0, SAMPLE_DATA_SIZE);   //Quicksort
+
+            Serial.print(findMode(range, index, SAMPLE_DATA_SIZE));
+            
+            if (VERBOSE_DEBUG) { Serial.println(); }
+            else { Serial.print(F(" ")); }
+            
             // Serial.println(analogRange[index]);
         }
         Serial.println();
     }
+
+// =============================================================================
+// TODO -- Below is where data will be sent over SPI.
+// =============================================================================
     else 
     {
-        //Here is where data will be sent over SPI. Still needs work
         int dataPos = 0;
         processIt = false;
         while (dataPos < RANGE_DATA_SIZE) 
@@ -524,13 +530,12 @@ void writeOutput()
                 if (millis() - timeWriteStart > TIMEOUT_PERIOD) { break; }
             }
 
-            writeIntData(range[dataPos++]);
+            writeIntData(range[dataPos++][0]);
             delay(20);
         }
-
-        //NOTE -- Why do I need to set dataPos back to 0 if it will be deleted from the stack later on?
         dataPos = 0;
     }
+// =============================================================================
 }
 
 
@@ -554,4 +559,123 @@ void writeIntData(int data)
     //Send second byte
     SPDR = lowOrderByte;
     processIt = false;
+}
+
+
+// -------------------------------------------------------------------------------------------------
+//Sorting function (Array, clock postion, numer of samples)
+void sortArray(int array[][SAMPLE_DATA_SIZE], int clockPos, int size)
+{
+    for (int index = 1; index < size; ++index)
+    {
+        int next = array[clockPos][index];
+        int current;
+    
+        for (current = (index - 1); (current >= 0) && (next < array[clockPos][current]); current--)
+        {
+            array[clockPos][current + 1] = array[clockPos][current];
+        }
+        array[clockPos][current + 1] = next;
+    }
+}
+
+
+// -------------------------------------------------------------------------------------------------
+//Sorting function (Array, clock postion, 0, numer of samples)
+
+//Pass by Reference
+// void quicksort(int (&array)[RANGE_DATA_SIZE][SAMPLE_DATA_SIZE], int clockPos, int start, int end)
+
+void quicksort(int array[][SAMPLE_DATA_SIZE], int clockPos, int start, int end)
+{
+    int up = start, down = end;
+    int pivot = array[clockPos][(start + end) / 2];
+    
+    while (up <= down)  //Loop until they cross
+    {
+        
+        while (array[clockPos][up] < pivot) { up++; }     // Walks the up right
+        while (array[clockPos][down] > pivot) { down--; } // Walks the down left
+        
+        if (up <= down)
+        {
+            //Swap
+            int temp = array[clockPos][up];
+            array[clockPos][up] = array[clockPos][down];
+            array[clockPos][down] = temp;
+            
+            up++;
+            down--;
+        }
+    }
+    if (start < down) { quicksort(array, clockPos, start, down); }
+    if (up < end) { quicksort(array, clockPos, up, end); }
+}
+
+
+// -------------------------------------------------------------------------------------------------
+//Mode function, returning the mode or median.
+// - Finds the MODE in the given data set
+// - If there isn't a MODE, the MEDIAN is returned
+// - if there are two or more MODES (bimodal), the MEDIAN is returned
+// - Negative values are not included when finding the MODE or MEDIAN
+// - Known issue if all samples are negative but one, returns negative
+int findMode(int array[][SAMPLE_DATA_SIZE], int clockPos, int arraySize)
+{
+    int modeValue = 0;    //Mode Value
+
+    bool bimodal = false; //Bimodal Distribution
+
+    int index = 0;        //Sample Index
+    int shiftSize = 0;    //Shift Array Size
+    
+    int count = 0;
+    int prevCount = 0;
+    
+    int maxCount = 0;
+    int prevMaxCount = 0;
+    
+    //checks if you reached the end of the array
+    while (index < (arraySize - 1))
+    {
+        if (array[clockPos][index] < 0)
+        {
+            shiftSize++;
+            index++;
+            continue;
+        }
+        
+        prevCount = count;  //copy the previous count value
+        count = 0;          //reset the count value
+
+        //counts the number of duplications values
+        while (array[clockPos][index] == array[clockPos][index + 1])
+        {
+            count++;
+            index++;
+        }
+        
+        if (count > prevCount && count >= maxCount) //Found the MODE. Higher than max and prev
+        {
+            modeValue = array[clockPos][index]; //set the new MODE
+            prevMaxCount = maxCount;
+            maxCount = count;
+            bimodal = false;
+        }
+        
+        //Moves to the next sample if no MODE was found
+        if (count == 0) { index++; }
+        //If the sample dataset has 2 or more MODES.
+        else if (count == prevMaxCount && maxCount == prevMaxCount)
+        {
+            bimodal = true;
+        }
+        
+        //Return the MEDIAN if there is no MODE or are more than two MODES.
+        if (modeValue == 0 || bimodal)
+        {
+            modeValue = array[clockPos][((arraySize + shiftSize ) / 2)];
+        }
+    }
+    return modeValue;
 }
