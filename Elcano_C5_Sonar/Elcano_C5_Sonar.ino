@@ -618,36 +618,28 @@ void quicksort(int array[][SAMPLE_DATA_SIZE], int clockPos, int start, int end)
 // - Finds the MODE in the given data set
 // - If there isn't a MODE, the MEDIAN is returned
 // - if there are two or more MODES (bimodal), the MEDIAN is returned
-// - Negative values are not included when finding the MODE or MEDIAN
-// - Known issue if all samples are negative but one, returns negative
+// - Equal and less than Zero values are not included when finding the MODE or MEDIAN
+// -------------------------------------------------------------------------------------------------
 int findMode(int array[][SAMPLE_DATA_SIZE], int clockPos, int arraySize)
 {
-    int modeValue = 0;    //Mode Value
-
+    int modeValue = 0;    //Known Mode/Medium Value
     bool bimodal = false; //Bimodal Distribution
-
     int index = 0;        //Sample Index
     int shiftSize = 0;    //Shift Array Size
     
-    int count = 0;
-    int prevCount = 0;
+    int count = 0,    prevCount = 0;
+    int maxCount = 0, prevMaxCount = 0;
     
-    int maxCount = 0;
-    int prevMaxCount = 0;
+    //Checks the value for anything equal and less than zero
+    while (array[clockPos][index] <= 0) { index++; }
+    shiftSize = index;
     
     //checks if you reached the end of the array
-    while (index < (arraySize - 1))
+    while (index < arraySize)
     {
-        if (array[clockPos][index] < 0)
-        {
-            shiftSize++;
-            index++;
-            continue;
-        }
-        
         prevCount = count;  //copy the previous count value
         count = 0;          //reset the count value
-
+        
         //counts the number of duplications values
         while (array[clockPos][index] == array[clockPos][index + 1])
         {
@@ -666,16 +658,15 @@ int findMode(int array[][SAMPLE_DATA_SIZE], int clockPos, int arraySize)
         //Moves to the next sample if no MODE was found
         if (count == 0) { index++; }
         //If the sample dataset has 2 or more MODES.
-        else if (count == prevMaxCount && maxCount == prevMaxCount)
-        {
-            bimodal = true;
-        }
+        else if (maxCount == prevMaxCount) { bimodal = true; }
         
-        //Return the MEDIAN if there is no MODE or are more than two MODES.
+        //Return the MEDIAN if there is no MODE or there are more than two MODES.
         if (modeValue == 0 || bimodal)
         {
             modeValue = array[clockPos][((arraySize + shiftSize ) / 2)];
+            bimodal = true;
         }
+        else { bimodal = false; }
     }
     return modeValue;
 }
