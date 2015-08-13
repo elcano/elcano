@@ -9,6 +9,7 @@ The variable rc_index tells where the next data will go in RC_results.
 #include <SPI.h>
 
 //RC input values - pulse widths in microseconds
+const int LONG_DEADZONE_THRESHOLD = 10000; // used for syncing to determine if the last down time was the long down zone
 const int DEAD_ZONE = 75;
 const int MIDDLE = 1510;  // was 1322;
 // extremes of RC pulse width
@@ -36,8 +37,8 @@ const int RC_REVERSE_PIN = 36;
 const int RC_INTERRUPT_PIN = 20;  
 const int RC_INTERRUPT = 3;
 const int PIN_ORDER[8] = {0, RC_STEER_PIN, RC_CRUISE_PIN, RC_THROTTLE_PIN, RC_ESTOP_PIN, RC_RUDDER_PIN, RC_REVERSE_PIN, 0};
-const int STEER_OUT_PIN = 6; // Output to steer actuator
-const int BRAKE_OUT_PIN = 7;  // output to brake actuator
+const int STEER_OUT_PIN = 7; // Output to steer actuator
+const int BRAKE_OUT_PIN = 6;  // output to brake actuator
 const int SelectCD = 49; // Select IC 3 DAC (channels C and D)
 const int SelectAB = 53; // Select IC 2 DAC (channels A and B)
 
@@ -48,6 +49,8 @@ const int RC_DONE  = 2;   // rc_index is 7
 volatile int rc_index = 0;
 volatile  unsigned long RC_results[7];
 volatile int rc_state = RC_WAIT;
+volatile boolean synced = false;
+volatile unsigned long last_fallingedge_time = 4294967295; // max long
 
 void setup()
 { //Set up pins
@@ -72,53 +75,61 @@ void setup()
       rc_state = RC_WAIT;
           
       attachInterrupt(RC_INTERRUPT, ISR_rise, RISING);
-      attachInterrupt(RC_INTERRUPT, ISR_fall, FALLING);
 }
 void ISR_rise()
 {
     noInterrupts();
-    unsigned long time = micros();
-    for (register int i = 0; i < 8; i++)
+
+    if (rc_state != RC_WAIT)
     {
-        register int index = (rc_index+i)&7;
-        if (PIN_ORDER[index] == 0)
-            continue;
-        if (digitalRead(PIN_ORDER[index]) == HIGH)
+      if (!synced)
+      {
+        unsigned int elapsed = micros() - last_fallingedge_time;
+        if (elapsed > LONG_DEADZONE_THRESHOLD)
         {
-            rc_index = (rc_index+i) & 7;
-            RC_results[rc_index] = time;
-            rc_state = RC_PROCESSING;
-            if (rc_index == 1)   // first signal of group
-                RC_results[0] = RC_results[1];  // log starting time
-            
+          RC_results[rc_index] = micros();
+          synced = true;
+          rc_index = 1;
         }
+      }
+      else
+      {
+        RC_results[rc_index] = micros();
+      }
+      attachInterrupt(RC_INTERRUPT, ISR_fall, FALLING);
     }
+    
     interrupts();
 }
 void ISR_fall()
 {
     noInterrupts();
-    if (PIN_ORDER[rc_index] != 0 && digitalRead(PIN_ORDER[rc_index]) == LOW)
+    
+    if (rc_state != RC_WAIT)
     {
-        unsigned int elapsed = RC_results[rc_index] - micros();
-        if (elapsed > MAX_RC)
+      if (!synced)
+      {
+        last_fallingedge_time = micros();
+      }
+      else
+      {
+        RC_results[rc_index] = micros() - RC_results[rc_index];
+        rc_index++;
+        if (rc_index == 7)
         {
-            RC_results[rc_index] = INVALID_DATA;
-            if (rc_index == 7)
-                rc_state = RC_DONE;
+          rc_index = 1;
+          rc_state = RC_DONE;
         }
-        else if (elapsed < MIN_RC)
-        {
-            RC_results[rc_index] = elapsed;
-            if (rc_index == 7)
-                rc_state = RC_DONE;
-        }
-        else; // spurious interrupt; wait for the next.
+      }
+      attachInterrupt(RC_INTERRUPT, ISR_rise, RISING);
     }
     interrupts();
 }
 void loop()  {
     unsigned long Start_us = micros();
+    
+    startCapturingRCState();
+    
     unsigned long local_results[7];
     while (rc_state != RC_DONE)
         ;
@@ -139,6 +150,14 @@ void loop()  {
     
     processRC(local_results);
 }
+
+void startCapturingRCState()
+{
+  synced = false;
+  rc_index = 1;
+  rc_state = RC_PROCESSING;
+}
+
 void processRC (unsigned long *RC_results)
 {   
     // 1st pulse is aileron (position 5 on receiver; controlled by Right left/right joystick on transmitter)
@@ -185,7 +204,7 @@ void processRC (unsigned long *RC_results)
         moveVehicle(RC_results[3]);
     else
         moveVehicle(MIN_ACC_OUT);
-
+        
     steer(RC_results[1]); 
     
     /* 5th pulse is rudder (position 3 on receiver; controlled by Left left/right joystick on transmitter) 
@@ -287,7 +306,7 @@ void moveVehicle(int acc)
       3.63 V: max 227 counts
       255 counts = 4.08 V
       */
-      DAC_Write(0, acc);
+      DAC_Write(3, acc);
 }
 /*---------------------------------------------------------------------------------------*/
 /* DAC_Write applies value to address, producing an analog voltage.
