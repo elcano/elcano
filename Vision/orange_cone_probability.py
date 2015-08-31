@@ -273,6 +273,28 @@ def read_ocp(ocp_file):
 
 # -----------------------------------------------------------------------------    
 
+# Run all three parts:
+# Histogram the cones.
+# Histogram the backgrounds.
+# Compute the conditional probability of orange cone given color.
+#
+# Example command line, for work in a directory called "vision_work", cone
+# images in subdirectory "cones" and background images in "backgrounds":
+#
+# python orange_cone_probabilities.py \
+# --directory "Vision" \
+# --orange_cone_images "orange_cones_cropped.png" \
+# --background_images "backgrounds" \
+# --orange_cone_histogram "orange.csv" \
+# --background_histogram "backgrounds.csv" \
+# --orange_cone_probability_table "ocp.csv" \
+# --orange_cone_probability_object "ocp.pkl" \
+# --skip_color "255,255,255" \
+# --binsize 4
+#
+# (Caution -- don't run this in your elcano git repository unless you really
+# want to change the csv files there, else you'll have a spurious change.)
+
 if __name__ == '__main__':
 
     import argparse
