@@ -8,7 +8,7 @@
 from __future__ import division
 
 import math
-import Image
+from PIL import Image
 
 # A background color to be excluded from images.  Default for the orange cone
 # images is white.  If a transparent background is used, then is not needed.
@@ -19,7 +19,7 @@ SKIP_COLOR = (255, 255, 255)
 # bin width.
 BINSIZE = 4
 
-# Constants for keys in the command-line arguments.
+# Constants for keys in command-line arguments.
 DIR = "DIR"
 CONEIMGS = "CONEIMGS"
 BGIMGS = "BGIMGS"
@@ -29,6 +29,14 @@ CONETBL = "CONETBL"
 CONEOBJ = "CONEOBJ"
 BIN = "BIN"
 SKIP = "SKIP"
+RGBIMG = "RGBIMG"
+OCPIMG = "OCPIMG"
+ALTPRI = "ALTPRI"
+GRAY = "GRAY"
+
+# Appropriate image formats for modes.  Only TIFF supports floating point
+# numbers for pixels.
+IMAGE_FORMAT_BY_MODE = dict(F = "TIFF", L = "PNG", RGB = "PNG", RGBA = "PNG")
 
 # This class holds orange cone probability info and provides accessors.
 # Typically an OrangeConeProbability object will be created by reading in the
@@ -40,32 +48,43 @@ SKIP = "SKIP"
 #
 # If you also have a modified prior probability for orange cone pixels (i.e.
 # the fraction of image pixels that you expect to contain orange cone), then
-# that can be included in the call:
+# that can be included in the call as alt_prior.  If you want grayscale
+# integers in the range 0-255 rather than gloating point probabilities in the
+# range 0-1, set the grayscale parameter to True.
 #
-# prob = ocp(rgb, alt_prior)
+# prob = ocp(rgb, alt_prior, grayscale)
 
 class OrangeConeProbability:
 
-    # @table - dict of color versus probability P(orange cone | color), for
+    # @table - Dict of color versus probability P(orange cone | color), for
     # orange cone colors only.  All other colors are assumed to have probability
     # zero.
     # @prior - P(orange cone) constant default value, derived from training
     # images.  This can (should) be adjusted according to the probability of
     # orange cone pixels in the current camera view, based on location and
     # orientations of the robot, by supplying an alt_prior when reading out the
-    # conditional probability.
-    def __init__(self, prior, table):
-        self.prior = prior
+    # conditional probability.  Set this to the fraction of the image that is
+    # expected to be covered by orange cone.
+    # @binsize - The granularity of binning of the R, G, B values.  The values
+    # are still stored as 0-255 8-bit values, but values from K * binsize to
+    # (K+1) * binsize - 1 are combined and indexed by K * binsize.
+    def __init__(self, prior, table, binsize):
+        self.prior = float(prior)
         self.table = table
+        self.binsize = int(binsize)
 
-    # Given an tuple (r, g, b), return the conditional probability of an orange
-    # cone given that color.  An alternative prior probability of orange cone
-    # can be supplied.  This should be set to the fraction of the image that
-    # the orange cone is expected to occupy.
-    def __call__(self, color, alt_prior=None):
-        prob = self.table.get(color, 0)
+    # Given an pixel as a tuple (r, g, b, a), return the conditional
+    # probability of an orange cone given that color.  An alternative prior
+    # probability of orange cone can be supplied.  This should be set to the
+    # fraction of the image that the orange cone is expected to occupy.
+    # If grayscale is True, scale the 0-1 probability into the range 0-255.
+    def __call__(self, rgba, alt_prior=None, grayscale=False):
+        rgb = rgb_bin(rgba, self.binsize)
+        prob = self.table.get(rgb, 0)
         if prob != 0 and alt_prior != None:
             prob = prob * alt_prior / self.prior
+        if grayscale:
+            prob = int(math.floor(prob * 255))
         return prob
         
     # Given an OrangeConeProbability object, write out a csv file representing
@@ -76,7 +95,7 @@ class OrangeConeProbability:
         import csv
         with open(ocp_file, "w") as ocp_handle:
             writer = csv.writer(ocp_handle)
-            writer.writerow([-1,-1,-1,self.prior])
+            writer.writerow([self.prior, self.binsize])
             for rgb, prob in self.table.iteritems():
                 r,g,b = rgb
                 writer.writerow([r,g,b,prob])
@@ -87,7 +106,45 @@ class OrangeConeProbability:
         with open(ocp_file, "wb") as ocp_handle:
             pickle.dump(self, ocp_handle, pickle.HIGHEST_PROTOCOL)
 
+    # Convert an RGB image to orange cone probabilities. The new image has
+    # a single band.
+    # @img - Image object
+    # @alt_prior - Alternative prior probability for orange cone in this image.
+    # @grayscale - if True, probabilities are converted to grayscale in the
+    # range 0-255.
+    # Returns an image in mode "F" (32-bit floating point) if grayscale is
+    # False (the default), or in mode "L" (8-bit integer) if grayscale is True.
+    def rgb_to_ocp_image(self, img, alt_prior=None, grayscale=False):
+        img = img.convert("RGBA")
+        img_pixels = img.load()
+        w,h = img.size
+        if grayscale:
+            prob_img = Image.new("L", (w,h))
+        else:
+            prob_img = Image.new("F", (w,h))
+        prob_pixels = prob_img.load()
+        for x in range(0,w):
+            for y in range(0,h):
+                rgba = img_pixels[x,y]
+                prob_pixels[x,y] = self(rgba, alt_prior, grayscale)
+        return prob_img
+
 # -----------------------------------------------------------------------------
+
+# Compute the RGB index for the hash table.  We do not need a bin for every
+# RGB value, and do not have enough training images to support that anyway.
+# So, lump together the adjacent R, G, and B values in bins of size binsize.
+def rgb_bin(rgba, binsize):
+    if binsize == 1:
+        rgb = rgba[0:3]
+    else:
+        r,g,b,_a = rgba
+        # math.floor returns a float
+        r = int(math.floor(r/binsize) * binsize)
+        g = int(math.floor(g/binsize) * binsize)
+        b = int(math.floor(b/binsize) * binsize)
+        rgb = (r,g,b)
+    return rgb
 
 # Helper for process_images that updates the histogram hash table.
 def count_colors(img, hist, listtotal, none_value, skip_color, binsize):
@@ -104,15 +161,7 @@ def count_colors(img, hist, listtotal, none_value, skip_color, binsize):
                 # Bin the orange values -- we don't need a full 256 gradations
                 # and we don't have enough orange data to support that fine of
                 # granularity.
-                if binsize == 1:
-                    rgb = rgba[0:3]
-                else:
-                    r,g,b,_a = rgba
-                    # math.floor returns a float
-                    r = int(math.floor(r/binsize) * binsize)
-                    g = int(math.floor(g/binsize) * binsize)
-                    b = int(math.floor(b/binsize) * binsize)
-                    rgb = (r,g,b)
+                rgb = rgb_bin(rgba, binsize)
                 count = hist.get(rgb, none_value)
                 if count >= 0:
                     hist[rgb] = count + 1
@@ -187,7 +236,7 @@ def process_images(fgfile, bgfile, imgpaths, skip_color=SKIP_COLOR, binsize=BINS
         # Write out a row to hold the total count of pixels.  We need this
         # for computing the probability of each pixel values, but want to
         # keep the raw counts as we may be adding more images.
-        writer.writerow([-1,-1,-1,listtotal[0]])
+        writer.writerow([listtotal[0], binsize])
         for rgb, count in hist.iteritems():
             r,g,b = rgb
             writer.writerow([r,g,b,count])
@@ -205,13 +254,13 @@ def read_histogram(hist_file):
     import csv
     with open(hist_file, "r") as hist_handle:
         hist_reader = csv.reader(hist_handle)
-        _r,_g,_b,total = hist_reader.next()
+        total, binsize = hist_reader.next()
         total = int(total)
         hist = dict()
         for row in hist_reader:
             r,g,b,count = row
             hist[(int(r),int(g),int(b))] = int(count)
-        return (total, hist)
+        return (total, binsize, hist)
 
 # Read in orange and background histograms, and construct
 # P(orange cone | color) = P(color | orange cone) P(orange cone) / P(color)
@@ -220,8 +269,10 @@ def read_histogram(hist_file):
 # P(color | background).
 # Return an OrangeConeProbability object.
 def ocp_from_histograms(orange_file, background_file):
-    or_total, or_hist = read_histogram(orange_file)
-    bg_total, bg_hist = read_histogram(background_file)
+    or_total, or_binsize, or_hist = read_histogram(orange_file)
+    bg_total, bg_binsize, bg_hist = read_histogram(background_file)
+    if or_binsize != bg_binsize:
+        raise ValueError("Histograms must have the same binsize.")
     total = or_total + bg_total
     # Prior P(orange cone) for the training images.  Save this in case we
     # adapt it per location and heading later.
@@ -249,7 +300,7 @@ def ocp_from_histograms(orange_file, background_file):
         # of that color anywhere.
         color_count = or_count + bg_count
         p_or_per_color[rgb] = or_count / color_count
-    return OrangeConeProbability(p_or, p_or_per_color)
+    return OrangeConeProbability(p_or, p_or_per_color, or_binsize)
 
 # Read in a saved OrangeConeProbability csv file.  Return an
 # OrangeConeProbability object.
@@ -257,12 +308,12 @@ def read_ocp_csv(ocp_file):
     import csv
     with open(ocp_file, "r") as ocp_handle:
         reader = csv.reader(ocp_handle)
-        _r,_g,_b,prior = reader.next()
+        prior, binsize = reader.next()
         table = dict()
         for row in reader:
             r,g,b,prob = row
             table[(int(r),int(g),int(b))] = float(prob)
-    return OrangeConeProbability(prior, table)
+    return OrangeConeProbability(prior, table, binsize)
 
 # Read in a serialized OrangeConeProbability object.
 def read_ocp(ocp_file):
@@ -270,157 +321,3 @@ def read_ocp(ocp_file):
     with open(ocp_file, "rb") as ocp_handle:
         ocp = pickle.load(ocp_handle)
     return ocp
-
-# -----------------------------------------------------------------------------    
-
-# Run all three parts:
-# Histogram the cones.
-# Histogram the backgrounds.
-# Compute the conditional probability of orange cone given color.
-#
-# Example command line, for work in a directory called "vision_work", cone
-# images in subdirectory "cones" and background images in "backgrounds":
-#
-# python orange_cone_probabilities.py \
-# --directory "Vision" \
-# --orange_cone_images "orange_cones_cropped.png" \
-# --background_images "backgrounds" \
-# --orange_cone_histogram "orange.csv" \
-# --background_histogram "backgrounds.csv" \
-# --orange_cone_probability_table "ocp.csv" \
-# --orange_cone_probability_object "ocp.pkl" \
-# --skip_color "255,255,255" \
-# --binsize 4
-#
-# (Caution -- don't run this in your elcano git repository unless you really
-# want to change the csv files there, else you'll have a spurious change.)
-
-if __name__ == '__main__':
-
-    import argparse
-    import os
-
-    parser = argparse.ArgumentParser(
-        description = """
-        Generate table of conditional probability of an orange cone, given
-        a color.
-        """,
-        usage = """
-        python orange_cone_probabilities.py
-            --directory [If provided, will cd to this before attempting to
-              look up images. This is also where outputs will be written, else
-              to current directory.]
-            --orange_cone_images [Comma separated list of orange cone images.
-              If this is a directory, all files in the directory will be processed.]
-            --background_images [Comma separated list of background images.
-              If this is a directory, all files in the directory will be processed.]
-            --orange_cone_histogram [Name of file to receive the histogram of
-              orange colors, as a csv file.]
-            --background_histogram [Name of file to receive the histogram of
-              background colors, as a csv file.]
-            --orange_cone_probability_table [Name of file to receive the
-              orange cone conditional probability table, as a csv file.]
-            --orange_cone_probability_object [Name of file to receive the
-              pickled OrangeConeProbability object.]
-            --skip_color [Color to ignore when processing images, as an (r,g,b)
-              tuple with r,g,b in the range 0-255. If orange cones were cropped
-              and placed into a single image with a background color, supply
-              that here. Default is white. For preference, use a transparent
-              background and disable this by setting it to None. Background
-              images with orange cones cropped out will likely require the
-              holes to be transparent, as all colors are expected to be legal
-              in backgrounds.]
-            --binsize [At what granularity should r,g,b be binned in the
-              probability table indices? Default is 4.]
-        """)
-    parser.add_argument(
-        "--directory", dest=DIR,
-        help="""
-If provided, will cd to this before attempting to look up images.
-This is also where outputs will be written, else to current directory.
-""")
-    parser.add_argument(
-        "--orange_cone_images", dest=CONEIMGS,
-        help="""
-Comma separated list of orange cone images.
-""")
-    parser.add_argument(
-        "--background_images", dest=BGIMGS,
-        help="""
-Comma separated list of background images.
-""")
-    parser.add_argument(
-        "--orange_cone_histogram", dest=CONEHIST,
-        help="""
-Name of file to receive the histogram of orange colors, as a csv file.
-""")
-    parser.add_argument(
-        "--background_histogram", dest=BGHIST,
-        help="""
-Name of file to receive the histogram of background colors, as a csv file.
-""")
-    parser.add_argument(
-        "--orange_cone_probability_table", dest=CONETBL,
-        help="""
-Name of file to receive the orange cone conditional probability table,
-as a csv file.
-""")
-    parser.add_argument(
-        "--orange_cone_probability_object", dest=CONEOBJ,
-        help="""
-Name of file to receive the pickled OrangeConeProbability object.
-""")
-    parser.add_argument(
-        "--skip_color", dest=SKIP,
-        help="""
-Color to ignore when processing images, as a comma-separated triple r,g,b with
-values in the range 0-255. If orange cones were cropped and placed into a
-single image with a background color other than white, supply that here.
-For preference, use a transparent background and disable this by setting it
-to False. Background images with orange cones cropped out will likely require
-the holes to be transparent, as all colors are expected to be legal in
-backgrounds.
-""")
-    parser.add_argument(
-        "--binsize", dest=BIN,
-        help="""
-At what granularity should r,g,b be binned in the probability table indices?
-Default is 4.
-""")
-    args = vars(parser.parse_args())
-
-    if args[DIR]:
-        os.chdir(args[DIR])
-    if args[SKIP]:
-        if args[SKIP] == "False":
-            args[SKIP] = False
-        else:
-            args[SKIP] = tuple(int(n) for n in args[SKIP].split(","))
-    else:
-        args[SKIP] = SKIP_COLOR
-    if args[BIN]:
-        args[BIN] = int(args[BIN])
-    else:
-        args[BIN] = BINSIZE
-
-    # First step is to histogram the orange cones by themselves.  This is done
-    # first so we'll know the colors that are in the orange cones, which are a
-    # very small subset of all r,g,b space.  Histograms and the final
-    # probability table are stored in dicts, which are hash tables, keyed by
-    # the r,g,b values, and we don't need to store values for anything but the
-    # orange colors, so this yields a much smaller storage requirement.
-    args[CONEIMGS] = [img.strip() for img in args[CONEIMGS].split(",")]
-    total = process_images(args[CONEHIST], "", args[CONEIMGS], args[SKIP], args[BIN])
-    print "Total # pixels included in cone histogram = %d" % total
-
-    # Next histogram the backgrounds.
-    args[BGIMGS] = [img.strip() for img in args[BGIMGS].split(",")]
-    total = process_images(args[CONEHIST], args[BGHIST], args[BGIMGS], args[SKIP], args[BIN])
-    print "Total # pixels included in background histogram = %d" % total
-
-    # And finally, compute the conditional probability that a pixel belongs to
-    # an orange cone, given the color.
-    ocp = ocp_from_histograms(args[CONEHIST], args[BGHIST])
-    ocp.write_ocp_csv(args[CONETBL])
-    ocp.write_ocp(args[CONEOBJ])
-    print "Orange cone probability table and object written."
