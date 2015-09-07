@@ -1,0 +1,193 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<HTML>
+<HEAD>
+	<META HTTP-EQUIV="CONTENT-TYPE" CONTENT="text/html; charset=utf-8">
+	<TITLE></TITLE>
+	<META NAME="GENERATOR" CONTENT="LibreOffice 3.4  (Unix)">
+	<META NAME="AUTHOR" CONTENT="Tyler Folsom">
+	<META NAME="CREATED" CONTENT="20140620;1454100">
+	<META NAME="CHANGEDBY" CONTENT="Tyler Folsom">
+	<META NAME="CHANGED" CONTENT="20150906;15373200">
+	<META NAME="CHANGEDBY" CONTENT="Tyler Folsom">
+	<META NAME="CHANGEDBY" CONTENT="Tyler Folsom">
+	<META NAME="CHANGEDBY" CONTENT="Tyler Folsom">
+	<META NAME="CHANGEDBY" CONTENT="Tyler Folsom">
+	<STYLE TYPE="text/css">
+	<!--
+		@page { margin: 0.79in }
+		P { margin-bottom: 0.08in }
+		A:link { so-language: zxx }
+	-->
+	</STYLE>
+</HEAD>
+<BODY LANG="en-US" DIR="LTR">
+<P STYLE="margin-bottom: 0in"><FONT FACE="Verdana, sans-serif"><B>Serial
+commands</B></FONT></P>
+<P STYLE="margin-bottom: 0in"><BR>
+</P>
+<P STYLE="margin-bottom: 0in">There are two formats for the keyword.
+Those starting with '$' are comma separated values, followed by a
+checksum. Commands starting with a character other than '$' have
+arguments grouped by braces into keywords and values. The former may
+be used with instruments; the latter is the format used for
+interprocessor communication.</P>
+<P STYLE="margin-bottom: 0in"><BR>
+</P>
+<P STYLE="margin-bottom: 0in"><FONT FACE="Verdana, sans-serif"><B>DRIVE</B></FONT></P>
+<P STYLE="margin-bottom: 0in">GameBots serial command format allows
+replacement by the USARSim simulator. Since USARsim is no longer
+available, the Gamebots format has been modified:</P>
+<P STYLE="margin-bottom: 0in"><BR>
+</P>
+<P STYLE="margin-bottom: 0in"><FONT FACE="Courier New, monospace">1.
+DRIVE</FONT> <FONT FACE="Courier New, monospace">{Speed</FONT>
+ComandedSpeed<FONT FACE="Courier New, monospace">} {Ang</FONT>
+ComandedSteerAngle<FONT FACE="Courier New, monospace">}</FONT></P>
+<P STYLE="margin-bottom: 0in"><BR>
+</P>
+<P STYLE="margin-bottom: 0in">Where:</P>
+<P STYLE="margin-bottom: 0in"><FONT FACE="Courier New, monospace">{Speed</FONT>
+ComandedSpeed} ComandedSpeed is an intege giving the speed for the
+rear wheel in centimeters per second.</P>
+<P STYLE="margin-bottom: 0in">The value is the speed, in centimeters
+/ second.</P>
+<P STYLE="margin-bottom: 0in"><FONT FACE="Courier New, monospace">{Ang
+</FONT>ComandedSteerAngle} ComandedSteerAngle is an integer that
+specifies the steer angle</P>
+<P STYLE="margin-bottom: 0in">of Elcano’s front wheels. The value
+is the absolute steer angle, in degrees.</P>
+<P STYLE="margin-bottom: 0in"><BR>
+</P>
+<P STYLE="margin-bottom: 0in">Example: <FONT FACE="Courier New, monospace">DRIVE
+{Speed 259}{FrontSteer -3}</FONT></P>
+<P STYLE="margin-bottom: 0in"><BR>
+</P>
+<P STYLE="margin-bottom: 0in"><FONT FACE="Verdana, sans-serif"><B>SENSOR</B></FONT></P>
+<P STYLE="margin-bottom: 0in">A similar format will be used for
+sensed information from C6.</P>
+<P STYLE="margin-bottom: 0in"><FONT FACE="Courier New, monospace">2.
+SENSOR {Speed</FONT> ActualSpeed}</P>
+<P STYLE="margin-bottom: 0in">ActualSpeed gives the speed for the
+rear wheel.</P>
+<P STYLE="margin-bottom: 0in">The value is the speed, in centimeters
+per second.</P>
+<P STYLE="margin-bottom: 0in">Other sensors are:</P>
+<P STYLE="margin-bottom: 0in"><FONT FACE="Courier New, monospace">3.
+SENSOR {Ang Deg}</FONT></P>
+<P STYLE="margin-bottom: 0in"><FONT FACE="Times New Roman, serif">Steering
+angle of the front wheels, in degrees times. </FONT>
+</P>
+<P STYLE="margin-bottom: 0in"><FONT FACE="Times New Roman, serif">0
+degrees is straight ahead, small positive numbers are degrees to the
+right.</FONT></P>
+<P STYLE="margin-bottom: 0in"><FONT FACE="Times New Roman, serif">Negative
+numbers (mod 360) are degrees to the left.</FONT></P>
+<P STYLE="margin-bottom: 0in"><FONT FACE="Courier New, monospace">4.
+SENSOR {Pos EPosMeters,NPosMeters} {Br Deg}</FONT></P>
+<P STYLE="margin-bottom: 0in">// Best estimate of vehicle position,
+fused from all sensors.</P>
+<P STYLE="margin-bottom: 0in">The East and North positions are
+relative to the origin.</P>
+<P STYLE="margin-bottom: 0in">Bearing tells which way the vehicle is
+pointing.</P>
+<P STYLE="margin-bottom: 0in"><BR>
+</P>
+<P STYLE="margin-bottom: 0in"><FONT FACE="Verdana, sans-serif"><B>OTHER</B></FONT></P>
+<P STYLE="margin-bottom: 0in"><FONT FACE="Courier New, monospace">5.
+GOAL {Num n} {Pos EPosMeters,NPosMeters} {Br Deg}</FONT></P>
+<P STYLE="margin-bottom: 0in"><FONT FACE="Courier New, monospace">5a.
+GOAL {Num n} {Pos EPosMeters,NPosMeters} {Br Deg} {Prob n}</FONT></P>
+<P STYLE="margin-bottom: 0in"><FONT FACE="Courier New, monospace">6.
+SEG {Num n} {Pos EPosMeters,NPosMeters} {Br Deg} {Speed SegSpeed}</FONT></P>
+<P STYLE="margin-bottom: 0in"><FONT FACE="Times New Roman, serif">Goal
+gives the positions of the cones, which may be updated from visual
+information. The next goal is always {Num 1} If a bearing is present,
+it is the desired direction of approach to the goal.</FONT></P>
+<P STYLE="margin-bottom: 0in"><FONT FACE="Times New Roman, serif">The
+localization processor passes messages 4, SENSOR and 5, GOAL to the
+vision processor. The vision processor then computes the expected
+position of the cone in the image. After processing the image, it
+will compute an updated cone position, including the probability that
+a cone is present in the image. It passes message 5a back to the
+vision processor.</FONT></P>
+<P STYLE="margin-bottom: 0in"><FONT FACE="Times New Roman, serif">Segment
+1 is the next desired position from the present position. These are
+followed by Segments 2, 3, 4, 5. Farther segments would not be
+transmitted. The speed on a segment is the recommended speed, taking
+account of conditions and turning radius. </FONT>
+</P>
+<P STYLE="margin-bottom: 0in"><BR>
+</P>
+<P STYLE="margin-bottom: 0in"><BR>
+</P>
+<P STYLE="margin-bottom: 0in"><FONT FACE="Verdana, sans-serif"><B>GPS</B></FONT></P>
+<P STYLE="margin-bottom: 0in">NMEA Output sentences $GPxxx. These
+include <FONT FACE="Courier New, monospace">$GPRMC, $GPVTG. $GPGGA,
+$GPGSA</FONT> and <FONT FACE="Courier New, monospace">$GPGSV</FONT>.
+See
+<A HREF="http://www.adafruit.com/datasheets/GlobalTop-FGPMMOPA6H-Datasheet-V0A.pdf">http://www.adafruit.com/datasheets/GlobalTop-FGPMMOPA6H-Datasheet-V0A.pdf</A>
+</P>
+<P STYLE="margin-bottom: 0in">Communication to the GPS receiver uses
+NMEA PMTK packets such as <FONT FACE="Courier New, monospace">$PMTK220,
+$PMTK314</FONT> and <FONT FACE="Courier New, monospace">$PMTK605</FONT>.
+See <A HREF="http://www.adafruit.com/datasheets/PMTK_A08.pdf">http://www.adafruit.com/datasheets/PMTK_A08.pdf</A>
+</P>
+<P STYLE="margin-bottom: 0in"><BR>
+</P>
+<P STYLE="margin-bottom: 0in"><FONT FACE="Verdana, sans-serif"><B>Maps</B></FONT></P>
+<P STYLE="margin-bottom: 0in">Format is similar to NMEA output. <SPAN STYLE="font-weight: normal">'*xx'
+means the character '*' followed by a checksum.</SPAN></P>
+<P STYLE="margin-bottom: 0in"><FONT FACE="Courier New, monospace">$MAPLS,N</FONT>*xx</P>
+<P STYLE="margin-bottom: 0in">Requests processor <FONT FACE="Courier New, monospace">N</FONT>
+to list the names of all maps.</P>
+<P STYLE="margin-bottom: 0in"><FONT FACE="Courier New, monospace">$MAPTX,N,count,num,name</FONT>*xx</P>
+<P STYLE="margin-bottom: 0in">Processor <FONT FACE="Courier New, monospace">N</FONT>
+transmits the <FONT FACE="Courier New, monospace">name</FONT> of map
+<FONT FACE="Courier New, monospace">num</FONT> of <FONT FACE="Courier New, monospace">count</FONT>.
+<FONT FACE="Courier New, monospace">Count</FONT> is the number of
+maps on the processor.</P>
+<P STYLE="margin-bottom: 0in"><FONT FACE="Courier New, monospace">$MAPSL,N,name</FONT>*xx</P>
+<P STYLE="margin-bottom: 0in">Request processor <FONT FACE="Courier New, monospace">N</FONT>
+to send contents of map '<FONT FACE="Courier New, monospace">name</FONT>'.</P>
+<P STYLE="margin-bottom: 0in"><FONT FACE="Courier New, monospace">$MAPLN,N,count,num,data</FONT>*xx</P>
+<P STYLE="margin-bottom: 0in">Processor <FONT FACE="Courier New, monospace">N</FONT>
+sends line <FONT FACE="Courier New, monospace">num</FONT> of <FONT FACE="Courier New, monospace">count</FONT>
+for the requested map. '<FONT FACE="Courier New, monospace">Data</FONT>'
+consists of</P>
+<P STYLE="margin-bottom: 0in"><FONT FACE="Courier New, monospace">node,latitude,longitude,PositionEast,PositionNorth,Link1,Link2,Link3,Link4,Dist1,Dist2,Dist3,Dist4</FONT></P>
+<P STYLE="margin-bottom: 0in">Where 
+</P>
+<P STYLE="margin-bottom: 0in"><FONT FACE="Courier New, monospace">node</FONT>
+is the name or number of the point.</P>
+<P STYLE="margin-bottom: 0in"><FONT FACE="Courier New, monospace">latitude</FONT>
+and <FONT FACE="Courier New, monospace">longitude</FONT> are in
+decimal degrees.</P>
+<P STYLE="margin-bottom: 0in"><FONT FACE="Courier New, monospace">Positions</FONT>
+are in meters</P>
+<P STYLE="margin-bottom: 0in"><FONT FACE="Courier New, monospace">Links</FONT>
+are other nodes that are directly linked to this node. If there are
+more than four, use two different names for the present node, but
+separate them by zero distance. If there are fewer than four, that
+field is blank.</P>
+<P STYLE="margin-bottom: 0in"><FONT FACE="Courier New, monospace">Dist</FONT>
+are distances in meters along the road to a node.</P>
+<P STYLE="margin-bottom: 0in">Example data:</P>
+<P STYLE="margin-bottom: 0in"><FONT FACE="Courier New, monospace">8,47.760342,-122.189784,71.903,154.917,2,7,15,,268.441,142.961,269.358,</FONT></P>
+<P STYLE="margin-bottom: 0in"><FONT FACE="Courier New, monospace">15,47.757929,-122.189467,95.599,-113.397,8,16,18,,269.358,26.369,182.216,</FONT></P>
+<P STYLE="margin-bottom: 0in"><FONT FACE="Courier New, monospace">13,47.621921,-122.348628,170.313,69.008,14,,,,18.578,,,,</FONT></P>
+<P STYLE="margin-bottom: 0in"><BR>
+</P>
+<P STYLE="margin-bottom: 0in"><FONT FACE="Courier New, monospace">The
+maps themselves are internal to C4 and its SD card. They do not have
+to be transmitted. C4 needs to have additional information about the
+route. From this information, it will produce the next portion of the
+drive path, which will be transmitted to C3.</FONT></P>
+<P STYLE="margin-bottom: 0in"><FONT FACE="Courier New, monospace">The
+map for the SD card must contain information about the links between
+nodes. Each link will have the following information:</FONT></P>
+<P STYLE="margin-bottom: 0in"><FONT FACE="Courier New, monospace">$LNKLST,startNode,endNode,numberOfSegments,segmentIndex1,...,segmentIndexN</FONT></P>
+<P STYLE="margin-bottom: 0in"><FONT FACE="Courier New, monospace">$LNKSEG,index,nextIndex,PositionEast,PositionNorth,bearing,width,speed</FONT></P>
+<P STYLE="margin-bottom: 0in"><BR>
+</P>
+</BODY>
+</HTML>
