@@ -41,7 +41,7 @@
 
 
 #define BAUD_RATE      115200   //Serial Baud Rate for debugging
-#define DEBUG_MODE      false   //When DEBUG_MODE is true, send data over Serial, false send data over SPI
+#define DEBUG_MODE       true   //When DEBUG_MODE is true, send data over Serial, false send data over SPI
 #define VERBOSE_DEBUG    true   //false   //When sedning over Serial, true gives verbose output
 #define SONAR_POWER_5V   true   //TRUE for 5v sonar power, FALSE for 3.4v,
 // -------------------------------------------------------------------------------------------------
@@ -67,7 +67,7 @@
 // -------------------------------------------------------------------------------------------------
 
 #define TIMEOUT_PERIOD  100 //ms: 20.5ms for calc + up to 62ms for the reading + a little buffer
-#define ROUND_DELAY      80 //ms between rounds, seems to help stability
+#define ROUND_DELAY     100 //ms between rounds, seems to help stability
 
 //Modify EXPECTED_SIGNALS to match which sonars are on the board.
 #define EXPECTED_SIGNALS1    3
@@ -205,18 +205,18 @@ void loop()
     setRound(LOW, HIGH); //Send a pulse on sonars
     delayPeriod(EXPECTED_SIGNALS1);
 
-    if (bitRead(controlSwitch, S12))
-    {
+    // if (bitRead(controlSwitch, S12))
+    // {
         sampleRange[12][sampleIndex] = (timeCenter - timeStart) / SCALE_FACTOR;
-    }
-    if (bitRead(controlSwitch, S03))
-    {
+    // }  
+    // if (bitRead(controlSwitch, S03))
+    // {
         sampleRange[3][sampleIndex] = (timeRight - timeStart) / SCALE_FACTOR;
-    }
-    if (bitRead(controlSwitch, S09))
-    {
+    // }
+    // if (bitRead(controlSwitch, S09))
+    // {
         sampleRange[9][sampleIndex] = (timeLeft - timeStart) / SCALE_FACTOR;
-    }
+    // }
  
 //*****  ROUND 3  **************************************************************
 
@@ -225,14 +225,14 @@ void loop()
     setRound(HIGH, HIGH); //Send a pulse on sonars
     delayPeriod(EXPECTED_SIGNALS3);
 
-    if (bitRead(controlSwitch, S10))
-    {
+    // if (bitRead(controlSwitch, S10))
+    // {
         sampleRange[10][sampleIndex] = (timeLeft - timeStart) / SCALE_FACTOR;
-    }
-    if (bitRead(controlSwitch, S01))
-    {
+    // }
+    // if (bitRead(controlSwitch, S01))
+    // {
         sampleRange[1][sampleIndex] = (timeRight - timeStart) / SCALE_FACTOR;
-    }
+    // }
     
 //****** ROUND 2 ***************************************************************
 
@@ -241,18 +241,18 @@ void loop()
     setRound(HIGH, LOW); //Send a pulse on sonars
     delayPeriod(EXPECTED_SIGNALS2);
 
-    if (bitRead(controlSwitch, S11))
-    {
+    // if (bitRead(controlSwitch, S11))
+    // {
         sampleRange[11][sampleIndex] = (timeLeft - timeStart) / SCALE_FACTOR;
-    }
-    if (bitRead(controlSwitch, S02))
-    {
+    // }
+    // if (bitRead(controlSwitch, S02))
+    // {
         sampleRange[2][sampleIndex] = (timeRight - timeStart) / SCALE_FACTOR;
-    }
-    if (bitRead(controlSwitch, S06))
-    {
+    // }
+    // if (bitRead(controlSwitch, S06))
+    // {
         sampleRange[6][sampleIndex] = (timeCenter - timeStart) / SCALE_FACTOR;
-    }
+    // }
 
 //******************************************************************************
 

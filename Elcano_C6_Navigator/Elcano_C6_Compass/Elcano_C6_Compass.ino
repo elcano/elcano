@@ -47,7 +47,6 @@ void setup(void)
 
 void loop(void) 
 {
-  Serial.println(ARDUINO);
   /* Get a new sensor event */ 
   sensors_event_t event; 
   mag.getEvent(&event);
@@ -56,5 +55,20 @@ void loop(void)
   Serial.print("X: "); Serial.print(event.magnetic.x); Serial.print("  ");
   Serial.print("Y: "); Serial.print(event.magnetic.y); Serial.print("  ");
   Serial.print("Z: "); Serial.print(event.magnetic.z); Serial.print("  ");Serial.println("uT");
+
+  Serial.println(M_PI);
+  
+  // Calculate the angle of the vector y,x
+  float heading = (atan2(event.magnetic.y,event.magnetic.x) * 180) / M_PI;
+  
+  // Normalize to 0-360
+  if (heading < 0)
+  {
+    heading = 360 + heading;
+  }
+  Serial.print("Compass Heading: ");
+  Serial.println(heading);
+
+
   delay(500);
 }
