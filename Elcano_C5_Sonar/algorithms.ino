@@ -92,7 +92,7 @@ int findMode(int array[][SAMPLE_DATA_SIZE], int clockPos, int arraySize)
     }
     if (VERBOSE_DEBUG && DEBUG_MODE)
     {
-        Serial.print((bimodal ? "MEDIUM\t": "MODE\t"));
+        Serial.print((bimodal ? "MEAN\t": "MODE\t"));
     }
     return modeValue;
 }

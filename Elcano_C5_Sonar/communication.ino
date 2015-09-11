@@ -4,20 +4,20 @@ void writeOutput()
 {
     if (DEBUG_MODE) 
     { 
-        if (VERBOSE_DEBUG)
-        {
-            Serial.print(F("Round: "));     Serial.print(roundCount);
-            Serial.print(F(" micros: "));   Serial.print(micros());
+        // if (VERBOSE_DEBUG)
+        // {
+        //     Serial.print(F("Round: "));     Serial.print(roundCount);
+        //     Serial.print(F(" micros: "));   Serial.print(micros());
            
-            Serial.print(F(", micros since last: "));
-            Serial.print(micros() - timeSinceLastRound);
-            timeSinceLastRound = micros();
+        //     Serial.print(F(", micros since last: "));
+        //     Serial.print(micros() - timeSinceLastRound);
+        //     timeSinceLastRound = micros();
             
-            Serial.print(F(", SigReceived: ")); Serial.print(SignalsReceived);
-            Serial.print(F(", isr1: "));        Serial.print(isr1Count);
-            Serial.print(F(", isr2: "));        Serial.print(isr2Count);
-            Serial.print(F(", isr3: "));        Serial.println(isr3Count);
-        }
+        //     Serial.print(F(", SigReceived: ")); Serial.print(SignalsReceived);
+        //     Serial.print(F(", isr1: "));        Serial.print(isr1Count);
+        //     Serial.print(F(", isr2: "));        Serial.print(isr2Count);
+        //     Serial.print(F(", isr3: "));        Serial.println(isr3Count);
+        // }
 
         for (int index = 1; index < RANGE_DATA_SIZE; index++)
         {
@@ -25,6 +25,7 @@ void writeOutput()
             {
                 //Prints out only the sonars for one board (9, 10, 11, 12, 1, 2, 3)
                 if (index == 4 || index == 5 || index == 7 || index == 8) { continue; }
+                // if (bitRead(controlSwitch, valueToClockPosition(index))) { continue; }
 
                 if (index < 10) { Serial.print(F("[ ")); }
                 else { Serial.print(F("[")); }

@@ -83,7 +83,7 @@ void ISRCenter()
     isr2Count++;
 
     //if (digitalRead(PW_OR1) == HIGH && timeStartSet == false)
-    if (ibh(PIND, PD2) && !timeStartSet)
+    if (ibh(PIND, PD0) && !timeStartSet)
     {
         timeStart = micros();
         timeStartSet = true;
