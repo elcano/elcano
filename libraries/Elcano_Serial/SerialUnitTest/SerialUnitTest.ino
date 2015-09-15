@@ -9,9 +9,9 @@ This test was run an an Arduino Mega, with pin D18 (TX1) connected to pin D0 (RX
 #define LOOP_TIME_MS 5000
 
 void setup() {
-    Serial.begin(115200); 
+    Serial.begin(9600); 
     Serial.print("\n\n\n");
-    Serial1.begin(115200);
+    Serial1.begin(9600);
 }
 
 void loop() {
