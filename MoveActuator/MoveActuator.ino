@@ -12,7 +12,7 @@
  */
 
 // Input/Output (IO) pin names for the MegaShieldDB printed circuit board (PCB)
-#include "IOPCB.h"
+#include <IOPCB.h>
 
 // When setting up the project, select
 //   Sketch  |  Import Library ... |  SPI
