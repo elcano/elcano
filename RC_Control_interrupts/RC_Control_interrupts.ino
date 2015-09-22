@@ -1,12 +1,62 @@
-//RC_Control_interrupts.ino
-/*
-This version assumes that each of 
-RC_STEER_PIN, RC_CRUISE_PIN, RC_THROTTLE_PIN, RC_ESTOP_PIN, RC_RUDDER_PIN and RC_REVERSE_PIN
-go into an OR gate to form RC_INTERRUPT_PIN.
-The variable rc_index tells where the next data will go in RC_results.
 
-*/
 #include <SPI.h>
+
+// New section    TCF 9/17/15
+// Indices for information stored in array RC_results
+#define VEHICLE_NUMBER 2
+// Channel order differs for differernt vehicles
+#if (VEHICLE_NUMBER == 1)
+#define RC_TURN 1
+#define RC_AUTO 2
+#define RC_GO   3
+#define RC_ESTP 4
+#define RC_RDR  5
+#define RC_RVS  6
+
+#define NUMBER_CHANNELS = 6
+
+//OUTPUT values -  0 to 255
+#define MIN_ACC_OUT 40
+#define MAX_ACC_OUT 227
+#define MIN_BRAKE_OUT 167
+#define MAX_BRAKE_OUT 207
+#define RIGHT_TURN_OUT 146
+#define LEFT_TURN_OUT 230
+#define STRAIGHT_TURN_OUT 187
+#define DAC_CHANNEL 0
+#define STEER_OUT_PIN 7 // Output to steer actuator
+#define BRAKE_OUT_PIN 6  // output to brake actuator
+
+#endif
+#if (VEHICLE_NUMBER == 2)
+
+#define RC_AUTO 1
+#define RC_ESTP 2
+#define RC_RDR  3
+#define RC_GO   4
+#define RC_TURN 5
+#define NUMBER_CHANNELS 5
+// Controller has no channel for RC_AUTO
+#define RC_RVS  6
+
+
+//OUTPUT values -  0 to 255
+#define MIN_ACC_OUT 40
+#define MAX_ACC_OUT 227
+#define MIN_BRAKE_OUT 167
+#define MAX_BRAKE_OUT 207
+#define RIGHT_TURN_OUT 146
+#define LEFT_TURN_OUT 230
+#define STRAIGHT_TURN_OUT 187
+
+#define DAC_CHANNEL 3
+#define STEER_OUT_PIN 7 // Output to steer actuator
+#define BRAKE_OUT_PIN 9  // output to brake actuator
+
+#endif
+
+
+// End new section
 
 //RC input values - pulse widths in microseconds
 const int LONG_DEADZONE_THRESHOLD = 10000; // used for syncing to determine if the last down time was the long down zone
@@ -18,14 +68,6 @@ const int MAX_RC = 1930; // was 1730;
 const int CYCLE_MAX = 25000;  // Pulses come at 42.27 Hz, every 21155 us
 const int MAX_PULSE = 4000; // Next pulse should be no longer than this time from last.
 
-//OUTPUT values -  0 to 255
-const int MIN_ACC_OUT = 40;
-const int MAX_ACC_OUT = 227;
-const int MIN_BRAKE_OUT = 167;
-const int MAX_BRAKE_OUT = 207;
-const int LEFT_TURN_OUT = 126;
-const int RIGHT_TURN_OUT = 250;
-const int STRAIGHT_TURN_OUT = 187;
 
 //ARDUINO PIN SELECTORS
 const int RC_STEER_PIN = 44; // Input from RC // was 2;
@@ -37,8 +79,6 @@ const int RC_REVERSE_PIN = 36;
 const int RC_INTERRUPT_PIN = 20;  
 const int RC_INTERRUPT = 3;
 const int PIN_ORDER[8] = {0, RC_STEER_PIN, RC_CRUISE_PIN, RC_THROTTLE_PIN, RC_ESTOP_PIN, RC_RUDDER_PIN, RC_REVERSE_PIN, 0};
-const int STEER_OUT_PIN = 7; // Output to steer actuator
-const int BRAKE_OUT_PIN = 6;  // output to brake actuator
 const int SelectCD = 49; // Select IC 3 DAC (channels C and D)
 const int SelectAB = 53; // Select IC 2 DAC (channels A and B)
 
@@ -51,6 +91,114 @@ volatile  unsigned long RC_results[7];
 volatile int rc_state = RC_WAIT;
 volatile boolean synced = false;
 volatile unsigned long last_fallingedge_time = 4294967295; // max long
+volatile int RC_Done[7] = {0,0,0,0,0,0,0};
+
+const int Signals[6] = {1, 2, 3, 4, 5, 0}; // {4, 3, 2, 0, 0, 0};
+/* Arduino Mega:
+  D2 = Int 0  Chan 6 [closest to ind/Data]
+  D3 = Int 1  Wheel Click
+  D21 = Int 2 Green wire Chan 2
+  D20 = Int 3 Yellow wire Chan 3
+  D19 = Int 4 Orange wire Chan 4
+  D18 = Int 5 Red wire Chan 5
+  Blue wire Chan 1 No Connect
+*/
+
+void ProcessRiseOfINT(int intIndex) {
+  RC_results[intIndex] = micros();
+}
+
+void ISR1_rise() {
+  noInterrupts();
+  ProcessRiseOfINT(1);
+  attachInterrupt(Signals[0], ISR1_fall, FALLING);
+  interrupts();
+}
+
+void ISR2_rise() {
+  noInterrupts();
+  ProcessRiseOfINT(2);
+  attachInterrupt(Signals[1], ISR2_fall, FALLING);
+  interrupts();
+}
+
+void ISR3_rise() {
+  noInterrupts();
+  ProcessRiseOfINT(3);
+  attachInterrupt(Signals[2], ISR3_fall, FALLING);
+  interrupts();
+}
+
+void ISR4_rise() {
+  noInterrupts();
+  ProcessRiseOfINT(4);
+  attachInterrupt(Signals[3], ISR4_fall, FALLING);
+  interrupts();
+}
+
+void ISR5_rise() {noInterrupts();
+  ProcessRiseOfINT(5);
+  attachInterrupt(Signals[4], ISR5_fall, FALLING);
+  interrupts();
+}
+
+void ISR6_rise() {
+  noInterrupts();
+  ProcessRiseOfINT(6);
+  attachInterrupt(Signals[5], ISR6_fall, FALLING);
+  interrupts();
+}
+
+void ProcessFallOfINT(int intIndex) {
+  RC_results[intIndex] = micros() - RC_results[intIndex];
+}
+
+void ISR1_fall() {  
+  noInterrupts();
+  ProcessFallOfINT(1);
+  RC_Done[1] = 1;
+  attachInterrupt(Signals[0], ISR1_rise, RISING);
+  interrupts();
+}
+
+void ISR2_fall() {
+  noInterrupts();
+  ProcessFallOfINT(2);
+  RC_Done[2] = 1;
+  attachInterrupt(Signals[1], ISR2_rise, RISING);
+  interrupts();
+}
+
+void ISR3_fall() {
+  noInterrupts();
+  ProcessFallOfINT(3);
+  RC_Done[3] = 1;
+  attachInterrupt(Signals[2], ISR3_rise, RISING);
+  interrupts();
+}
+void ISR4_fall() {  
+  noInterrupts();
+  ProcessFallOfINT(4);
+  RC_Done[4] = 1;
+  attachInterrupt(Signals[3], ISR4_rise, RISING);
+  interrupts();
+}
+
+void ISR5_fall() {
+  noInterrupts();
+  ProcessFallOfINT(5);
+  RC_Done[5] = 1;
+  attachInterrupt(Signals[4], ISR5_rise, RISING);
+  interrupts();
+}
+
+void ISR6_fall() {
+  noInterrupts();
+  ProcessFallOfINT(6);
+  RC_Done[6] = 1;
+  attachInterrupt(Signals[5], ISR6_rise, RISING);
+  interrupts();
+}
 
 void setup()
 { //Set up pins
@@ -74,65 +222,21 @@ void setup()
           RC_results[i] = INVALID_DATA;
       rc_state = RC_WAIT;
           
-      attachInterrupt(RC_INTERRUPT, ISR_rise, RISING);
+    attachInterrupt(Signals[0], ISR1_rise, RISING);
+    attachInterrupt(Signals[1], ISR2_rise, RISING);
+    attachInterrupt(Signals[2], ISR3_rise, RISING);
+    attachInterrupt(Signals[3], ISR4_rise, RISING);
+    attachInterrupt(Signals[4], ISR5_rise, RISING);
+    attachInterrupt(Signals[5], ISR6_rise, RISING);
 }
-void ISR_rise()
-{
-    noInterrupts();
-
-    if (rc_state != RC_WAIT)
-    {
-      if (!synced)
-      {
-        unsigned int elapsed = micros() - last_fallingedge_time;
-        if (elapsed > LONG_DEADZONE_THRESHOLD)
-        {
-          RC_results[rc_index] = micros();
-          synced = true;
-          rc_index = 1;
-        }
-      }
-      else
-      {
-        RC_results[rc_index] = micros();
-      }
-      attachInterrupt(RC_INTERRUPT, ISR_fall, FALLING);
-    }
-    
-    interrupts();
-}
-void ISR_fall()
-{
-    noInterrupts();
-    
-    if (rc_state != RC_WAIT)
-    {
-      if (!synced)
-      {
-        last_fallingedge_time = micros();
-      }
-      else
-      {
-        RC_results[rc_index] = micros() - RC_results[rc_index];
-        rc_index++;
-        if (rc_index == 7)
-        {
-          rc_index = 1;
-          rc_state = RC_DONE;
-        }
-      }
-      attachInterrupt(RC_INTERRUPT, ISR_rise, RISING);
-    }
-    interrupts();
-}
-void loop()  {
+void loop() {
     unsigned long Start_us = micros();
     
     startCapturingRCState();
     
     unsigned long local_results[7];
-    while (rc_state != RC_DONE)
-        ;
+    while (!(RC_Done[2] == 1&& RC_Done[3] == 1&& RC_Done[4] == 1&& RC_Done[5] == 1&& RC_Done[6] == 1))
+    ;
     // got data;    
     rc_state = RC_WAIT;  // ignore pulses on data line.
     for (int i = 0; i < 8; i++)
@@ -140,7 +244,7 @@ void loop()  {
     unsigned long Elapsed_us = micros() - Start_us;
     Serial.print(Start_us);      Serial.print("\t");
     Serial.print(Elapsed_us);    Serial.print("\t");
-    Serial.print(local_results[0]); Serial.print("\t");
+    Serial.print(local_results[0]);  Serial.print("\t");
     Serial.print(local_results[1]); Serial.print("\t");
     Serial.print(local_results[2]); Serial.print("\t");
     Serial.print(local_results[3]); Serial.print("\t");
@@ -149,89 +253,112 @@ void loop()  {
     Serial.println(local_results[6]);
     
     processRC(local_results);
+    delay(200);
 }
 
 void startCapturingRCState()
 {
-  synced = false;
-  rc_index = 1;
-  rc_state = RC_PROCESSING;
+  for (int i = 1; i < 7; i++) {
+    RC_Done[i] = 0;
+  }
 }
 
+// processRC modified by TCF  9/17/15
 void processRC (unsigned long *RC_results)
 {   
     // 1st pulse is aileron (position 5 on receiver; controlled by Right left/right joystick on transmitter)
     //     used for Steering
-    int aileron = RC_results[1];
-    RC_results[1] = liveTurn(aileron)? convertTurn(aileron): STRAIGHT_TURN_OUT;
+    int aileron = RC_results[RC_TURN];
+//    RC_results[RC_TURN] = liveTurn(aileron)? convertTurn(aileron): STRAIGHT_TURN_OUT;
+    RC_results[RC_TURN] = convertTurn(aileron);
     
     /* 2nd pulse is aux (position 1 on receiver; controlled by flap/gyro toggle on transmitter) 
        will be used for selecting remote control or autonomous control. */
-    RC_results[2] = (RC_results[2] > MIDDLE? HIGH: LOW);
+    if (NUMBER_CHANNELS > 5) 
+        RC_results[RC_AUTO] = (RC_results[RC_AUTO] > MIDDLE? HIGH: LOW);
 
     /* 4th pulse is gear (position 2 on receiver; controlled by gear/mode toggle on transmitter) 
     will be used for emergency stop. D38 */
-    RC_results[4] = (RC_results[4] > MIDDLE? HIGH: LOW);
+    RC_results[RC_ESTP] = (RC_results[RC_ESTP] > MIDDLE? HIGH: LOW);
     
-    if (RC_results[4] == HIGH)
+    if (RC_results[RC_ESTP] == HIGH)
     {
         E_Stop();
-        if (RC_results[2] == HIGH) // under RC control
-            steer(RC_results[1]); 
+        if (RC_results[RC_AUTO] == HIGH  && NUMBER_CHANNELS > 5) // under RC control
+            steer(RC_results[RC_TURN]); 
         return;
     }
-    if ( RC_results[2] == LOW)
+    if ( RC_results[RC_AUTO] == LOW  && NUMBER_CHANNELS > 5)
         return;  // not under RC control
 
     /*  6th pulse is marked throttle (position 6 on receiver; controlled by Left up/down joystick on transmitter). 
     It will be used for shifting from Drive to Reverse . D40
     */
-    RC_results[6] = (RC_results[6] > MIDDLE? HIGH: LOW);
+    RC_results[RC_RVS] = (RC_results[RC_RVS] > MIDDLE? HIGH: LOW);
         
-// TO DO: Select Forward / reverse based on RC_results[6]
+// TO DO: Select Forward / reverse based on RC_results[RC_RVS]
 
        
     /*   3rd pulse is elevator (position 4 on receiver; controlled by Right up/down.  
        will be used for throttle/brake: RC_Throttle
     */
     // Braking or Throttle
-    if (liveBrake(RC_results[3])) 
-        brake(convertTurn(RC_results[3]));
+    if (liveBrake(RC_results[RC_GO])) 
+        brake(convertBrake(RC_results[RC_GO]));
     else
         brake(MIN_BRAKE_OUT);
     //Accelerating
-    if(liveThrottle(RC_results[3]))
-        moveVehicle(RC_results[3]);
+    if(liveThrottle(RC_results[RC_GO]))
+        moveVehicle(RC_results[RC_GO]);
     else
         moveVehicle(MIN_ACC_OUT);
         
-    steer(RC_results[1]); 
+    steer(RC_results[RC_TURN]); 
     
     /* 5th pulse is rudder (position 3 on receiver; controlled by Left left/right joystick on transmitter) 
     Not used */
-    RC_results[5] = (RC_results[5] > MIDDLE? HIGH: LOW);  // could be analog
+    RC_results[RC_RDR] = (RC_results[RC_RDR] > MIDDLE? HIGH: LOW);  // could be analog
 
 }
-//Converts RC values to corresponding values for the DAC
+//Converts RC values to corresponding values for the PWM output
 int convertTurn(int input)
 {
-      //full turn right = 250, full turn left = 126
-      int dacRange = RIGHT_TURN_OUT - LEFT_TURN_OUT;
-      int rcRange = MAX_RC - MIN_RC;
-      input-= MIN_RC;
-      // TO DO: No doubles
-      double output = (double)input /(double)rcRange;
-      //swap left and right
-      output = 1 - output;
-      output *= dacRange;
-      output += LEFT_TURN_OUT;
-      //set max and min values if out of range
-      int trueOut = (int)output;
-      if(trueOut > RIGHT_TURN_OUT)
-          trueOut = RIGHT_TURN_OUT;
-      else if(trueOut < LEFT_TURN_OUT)
-          trueOut = LEFT_TURN_OUT;
-      return trueOut;
+     long int steerRange, rcRange;
+     long output;
+     int trueOut;
+//  Check if Input is in steer dead zone
+      if (input <= MIDDLE + DEAD_ZONE && input >= MIDDLE - DEAD_ZONE)
+       return STRAIGHT_TURN_OUT;
+       // MIN_RC = 1 msec = right; MAX_RC = 2 msec = left
+      // LEFT_TURN_OUT > RIGHT_TURN_OUT
+      if (input > MIDDLE + DEAD_ZONE)
+      {  // left turn
+         steerRange = LEFT_TURN_OUT - STRAIGHT_TURN_OUT;
+         rcRange = MAX_RC - (MIDDLE + DEAD_ZONE);
+        input-= MIDDLE + DEAD_ZONE;
+        output = STRAIGHT_TURN_OUT + input * steerRange / rcRange;
+        //set max and min values if out of range
+        trueOut = (int)output;
+        if(trueOut > LEFT_TURN_OUT)
+            trueOut = LEFT_TURN_OUT;
+        if(trueOut < STRAIGHT_TURN_OUT)
+            trueOut = STRAIGHT_TURN_OUT;
+        return trueOut;
+    }
+      if (input < MIDDLE - DEAD_ZONE)
+      {  // right turn
+         steerRange = STRAIGHT_TURN_OUT - RIGHT_TURN_OUT;
+         rcRange = MIDDLE - DEAD_ZONE - MIN_RC;
+        input = input - DEAD_ZONE - MIDDLE;  // input is negative
+        output = STRAIGHT_TURN_OUT + input * steerRange / rcRange;
+        //set max and min values if out of range
+        trueOut = (int)output;
+        if(trueOut < RIGHT_TURN_OUT)
+            trueOut = RIGHT_TURN_OUT;
+        if(trueOut > STRAIGHT_TURN_OUT)
+            trueOut = STRAIGHT_TURN_OUT;
+        return trueOut;
+    }
 }
 int convertBrake(int input)
 {
@@ -264,11 +391,6 @@ int convertThrottle(int input)
       return trueOut;
 }
 //Tests for inputs
-// Input is not in steer dead zone
-boolean liveTurn(int turn)
-{
-      return (turn > MIDDLE + DEAD_ZONE || turn < MIDDLE - DEAD_ZONE);
-}
 // Input not in throttle dead zone
 boolean liveThrottle(int acc)
 {
@@ -294,19 +416,6 @@ void steer(int pos)
 void brake(int amount)
 {
       analogWrite(BRAKE_OUT_PIN, amount);
-}
-void moveVehicle(int acc)
-{
-      /* Observed behavior on ElCano #1 E-bike no load (May 10, 2013, TCF)
-      0.831 V at rest 52 counts
-      1.20 V: nothing 75
-      1.27 V: just starting 79
-      1.40 V: slow, steady 87
-      1.50 V: brisker 94
-      3.63 V: max 227 counts
-      255 counts = 4.08 V
-      */
-      DAC_Write(3, acc);
 }
 /*---------------------------------------------------------------------------------------*/
 /* DAC_Write applies value to address, producing an analog voltage.
@@ -366,4 +475,17 @@ This is as documented; with gain of 2, maximum output is 2 * Vref
           // take the SS pin high to de-select the chip:
           digitalWrite(SelectCD,HIGH);
       }
+}
+void moveVehicle(int acc)
+{
+      /* Observed behavior on ElCano #1 E-bike no load (May 10, 2013, TCF)
+      0.831 V at rest 52 counts
+      1.20 V: nothing 75
+      1.27 V: just starting 79
+      1.40 V: slow, steady 87
+      1.50 V: brisker 94
+      3.63 V: max 227 counts
+      255 counts = 4.08 V
+      */
+      DAC_Write(DAC_CHANNEL, acc);
 }
