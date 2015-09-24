@@ -6,7 +6,7 @@
 # Example command line, for work in a directory called "vision_work", a single
 # cone image "orange_cones.png" and background images in "backgrounds":
 #
-# python orange_cone_probabilities.py \
+# python make_orange_cone_probabilities.py \
 # --directory "vision_work" \
 # --orange_cone_images "orange_cones.png" \
 # --background_images "backgrounds" \
@@ -32,7 +32,7 @@ if __name__ == '__main__':
         a color.
         """,
         usage = """
-        python orange_cone_probabilities.py
+        python make_orange_cone_probabilities.py
             --directory [If provided, will cd to this before attempting to
               look up images. This is also where outputs will be written, else
               to current directory.]
