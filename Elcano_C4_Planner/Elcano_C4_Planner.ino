@@ -3,6 +3,7 @@
 
 #include <SPI.h>
 #include <SD.h>
+#include <Elcano_Serial.h>
 
 /*  
 Elcano Module C4: Path Planner.
@@ -594,11 +595,14 @@ void SendPath(waypoint *course, int count)
   char *dataString;
   for( int i = 0; i < count; i++)
   {
+#ifdef NEW
+#else
     dataString = course[i].formPointString();
     checksum(dataString);
     Serial.println(dataString);
     if (course[i].index & END)
         break;
+#endif
   }
 }
 /*---------------------------------------------------------------------------------------*/
