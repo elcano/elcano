@@ -4,6 +4,7 @@
 #include <SPI.h>
 #include <SD.h>
 #include <Elcano_Serial.h>
+#define NEW
 
 /*  
 Elcano Module C4: Path Planner.
@@ -49,8 +50,8 @@ latitude_n,longitude_n,filename_n.txt
 
 A practical example would look like this:
 
-47.758949,-122.190746,MAP001.txt,
-47.6213,-122.3509,MAP002.txt
+47.758949,-122.190746,UWB_MAP.txt,
+47.6213,-122.3509,SEATLCEN.txt
 
 
 -----------------------
@@ -589,13 +590,29 @@ int PlanPath (waypoint *start, waypoint *destination)
     return last;
  }
 /*---------------------------------------------------------------------------------------*/
+#if (ARDUINO_AVR_UNO || ARDUINO_AVR_NANO)
+#define Serial1 Serial
+#endif
+
 // Transmit the path to C3 Pilot over a serial line.
 void SendPath(waypoint *course, int count)
 {
   char *dataString;
+  SerialData Results;
   for( int i = 0; i < count; i++)
   {
 #ifdef NEW
+     Results.Clear();
+     Results.number = i;
+     Results.kind = MSG_SEG;
+     Results.posE_cm = course->east_mm / 10;
+     Results.posN_cm = course->north_mm / 10;
+     // TODO: compute bearing
+     float angle = atan2(course->Nvector_x1000, course->Evector_x1000) * 180 / PI + 90.;
+     Results.bearing_deg = (long) (-angle);
+     Results.speed_cmPs = course->speed_mmPs / 10;
+     
+     writeSerial( &Serial1, &Results);
 #else
     dataString = course[i].formPointString();
     checksum(dataString);
