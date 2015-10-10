@@ -5,19 +5,11 @@
 #define ERROR_HISTORY 20
 
 // New section    TCF 9/17/15
-// Indices for information stored in array RC_results
-#define VEHICLE_NUMBER 2
-// Channel order differs for differernt vehicles
+#define VEHICLE_NUMBER 1
+#define RC_SPEKTRUM 
+#undef  RC_HITEC
+
 #if (VEHICLE_NUMBER == 1)
-#define RC_TURN 1
-#define RC_AUTO 2
-#define RC_GO   3
-#define RC_ESTP 4
-#define RC_RDR  5
-#define RC_RVS  6
-
-#define NUMBER_CHANNELS 5
-
 //OUTPUT values -  0 to 255
 #define MIN_ACC_OUT 40
 #define MAX_ACC_OUT 227
@@ -53,16 +45,6 @@
 
 #if (VEHICLE_NUMBER == 2)
 
-#define RC_AUTO 1
-#define RC_ESTP 2
-#define RC_RDR  3
-#define RC_GO   4
-#define RC_TURN 5
-#define NUMBER_CHANNELS 5
-// Controller has no channel for RC_AUTO
-#define RC_RVS  6
-
-
 //OUTPUT values -  0 to 255
 #define MIN_ACC_OUT 40
 #define MAX_ACC_OUT 227
@@ -87,9 +69,27 @@
 #define LEFT_MAX_COUNT 559  // Original value 284
 
 #endif
-
-
 // End new section
+
+// Channel order differs for differernt vehicles
+// Indices for information stored in array RC_results
+// Right joystick left/right to D21
+#define RC_TURN 1
+#define RC_AUTO 2
+// Right joystick up/down to D19
+#define RC_GO   3
+// Red (Gear) Switch to D18
+#define RC_ESTP 4
+// Left joystick left/right to D20 
+#define RC_RDR  5
+// Left joystick up/down to D2
+#define RC_RVS  6
+// There are six channels, but we are limited to five interrupts
+#define NUMBER_CHANNELS 6
+
+#define ProcessFallOfINT(Index)  RC_results[Index]=(micros()-RC_results[Index])
+#define ProcessRiseOfINT(Index) RC_results[Index]=micros()
+
 // TO DO: Throttle and brake values should be in a header file and depend on vehicle number.
 // Values to send over DAC
 const int FullThrottle =  227;   // 3.63 V
@@ -108,41 +108,35 @@ const int MAX_RC = 1930; // was 1730;
 const int CYCLE_MAX = 25000;  // Pulses come at 42.27 Hz, every 21155 us
 const int MAX_PULSE = 4000; // Next pulse should be no longer than this time from last.
 
-
-//ARDUINO PIN SELECTORS
-const int RC_STEER_PIN = 44; // Input from RC // was 2;
-const int RC_CRUISE_PIN = 42;
-const int RC_THROTTLE_PIN = 46; // Input // was 3;
-const int RC_ESTOP_PIN = 38;
-const int RC_RUDDER_PIN = 40;
-const int RC_REVERSE_PIN = 36;
-const int RC_INTERRUPT_PIN = 20;  
-const int RC_INTERRUPT = 3;
-const int PIN_ORDER[8] = {0, RC_STEER_PIN, RC_CRUISE_PIN, RC_THROTTLE_PIN, RC_ESTOP_PIN, RC_RUDDER_PIN, RC_REVERSE_PIN, 0};
 const int SelectCD = 49; // Select IC 3 DAC (channels C and D)
 const int SelectAB = 53; // Select IC 2 DAC (channels A and B)
 
 const unsigned long INVALID_DATA = 0;
-const int RC_WAIT = 0;  // rc_index is 0, waiting for data
-const int RC_PROCESSING = 1;  // rc_index is 1 to 6
-const int RC_DONE  = 2;   // rc_index is 7
 volatile int rc_index = 0;
 volatile  unsigned long RC_results[7];
-volatile int rc_state = RC_WAIT;
 volatile boolean synced = false;
 volatile unsigned long last_fallingedge_time = 4294967295; // max long
 volatile int RC_Done[7] = {0,0,0,0,0,0,0};
 
-const int Signals[6] = {1, 2, 3, 4, 5, 0}; // {4, 3, 2, 0, 0, 0};
-/* Arduino Mega:
-  D2 = Int 0  Chan 6 [closest to ind/Data]
-  D3 = Int 1  Wheel Click
-  D21 = Int 2 Green wire Chan 2
-  D20 = Int 3 Yellow wire Chan 3
-  D19 = Int 4 Orange wire Chan 4
-  D18 = Int 5 Red wire Chan 5
-  Blue wire Chan 1 No Connect
-*/
+// interrupt number handling a function depends on the RC controller.
+
+#ifdef RC_SPEKTRUM
+const int IRPT_RVS = 0;   // D2  = Int 0 
+const int IRPT_TURN = 2;  // D21 = Int 2 
+const int IRPT_GO = 3;   //  D20 = Int 3 
+const int IRPT_RDR = 4;   // D19 = Int 4
+const int IRPT_ESTOP = 5; // D18 = Int 5
+#endif
+
+#ifdef RC_HITEC
+const int IRPT_RVS = 0;   // D2  = Int 0 
+const int IRPT_TURN = 2;  // D21 = Int 2 
+const int IRPT_GO = 3;   //  D20 = Int 3 
+const int IRPT_RDR = 4;   // D19 = Int 4
+const int IRPT_ESTOP = 5; // D18 = Int 5
+#endif
+//  D3 = Int 1  Wheel Click
+
 // globals
 long sensor_speed_mmPs = 0;
 long drive_speed_mmPs = 0;
@@ -156,101 +150,80 @@ long speed_errors[ERROR_HISTORY];
 long old_turn_degx1000, older_turn_degx1000;
 long expected_turn_degx1000;
 
-void ProcessRiseOfINT(int intIndex) {
-  RC_results[intIndex] = micros();
-}
-
-void ISR1_rise() {
+void ISR_TURN_rise() {
   noInterrupts();
-  ProcessRiseOfINT(1);
-  attachInterrupt(Signals[0], ISR1_fall, FALLING);
+  ProcessRiseOfINT(RC_TURN);
+  attachInterrupt(IRPT_TURN, ISR_TURN_fall, FALLING);
   interrupts();
 }
 
-void ISR2_rise() {
+void ISR_RDR_rise() {
   noInterrupts();
-  ProcessRiseOfINT(2);
-  attachInterrupt(Signals[1], ISR2_fall, FALLING);
+  ProcessRiseOfINT(RC_RDR);
+  attachInterrupt(IRPT_RDR, ISR_RDR_fall, FALLING);
   interrupts();
 }
 
-void ISR3_rise() {
+void ISR_GO_rise() {
   noInterrupts();
-  ProcessRiseOfINT(3);
-  attachInterrupt(Signals[2], ISR3_fall, FALLING);
+  ProcessRiseOfINT(RC_GO);
+  attachInterrupt(IRPT_GO, ISR_GO_fall, FALLING);
   interrupts();
 }
 
-void ISR4_rise() {
+void ISR_ESTOP_rise() {
   noInterrupts();
-  ProcessRiseOfINT(4);
-  attachInterrupt(Signals[3], ISR4_fall, FALLING);
+  ProcessRiseOfINT(RC_ESTP);
+  attachInterrupt(IRPT_ESTOP, ISR_ESTOP_fall, FALLING);
   interrupts();
 }
 
-void ISR5_rise() {noInterrupts();
-  ProcessRiseOfINT(5);
-  attachInterrupt(Signals[4], ISR5_fall, FALLING);
-  interrupts();
-}
-
-void ISR6_rise() {
+void ISR_RVS_rise() {
   noInterrupts();
-  ProcessRiseOfINT(6);
-  attachInterrupt(Signals[5], ISR6_fall, FALLING);
+  ProcessRiseOfINT(RC_RVS);
+  attachInterrupt(IRPT_RVS, ISR_RVS_fall, FALLING);
   interrupts();
 }
 
-void ProcessFallOfINT(int intIndex) {
-  RC_results[intIndex] = micros() - RC_results[intIndex];
-}
-
-void ISR1_fall() {  
+void ISR_TURN_fall() {  
   noInterrupts();
-  ProcessFallOfINT(1);
-  RC_Done[1] = 1;
-  attachInterrupt(Signals[0], ISR1_rise, RISING);
+  ProcessFallOfINT(RC_TURN);
+  RC_Done[RC_TURN] = 1;
+  attachInterrupt(IRPT_TURN, ISR_TURN_rise, RISING);
   interrupts();
 }
 
-void ISR2_fall() {
+void ISR_RDR_fall() {
   noInterrupts();
-  ProcessFallOfINT(2);
-  RC_Done[2] = 1;
-  attachInterrupt(Signals[1], ISR2_rise, RISING);
+  ProcessFallOfINT(RC_RDR);
+  RC_Done[RC_RDR] = 1;
+  attachInterrupt(IRPT_RDR, ISR_RDR_rise, RISING);
   interrupts();
 }
 
-void ISR3_fall() {
+void ISR_GO_fall() {
   noInterrupts();
-  ProcessFallOfINT(3);
-  RC_Done[3] = 1;
-  attachInterrupt(Signals[2], ISR3_rise, RISING);
+  ProcessFallOfINT(RC_GO);
+  RC_Done[RC_GO] = 1;
+  attachInterrupt(IRPT_GO, ISR_GO_rise, RISING);
   interrupts();
 }
-void ISR4_fall() {  
+void ISR_ESTOP_fall() {  
   noInterrupts();
-  ProcessFallOfINT(4);
-  RC_Done[4] = 1;
-  attachInterrupt(Signals[3], ISR4_rise, RISING);
-  interrupts();
-}
-
-void ISR5_fall() {
-  noInterrupts();
-  ProcessFallOfINT(5);
-  RC_Done[5] = 1;
-  attachInterrupt(Signals[4], ISR5_rise, RISING);
+  ProcessFallOfINT(RC_ESTP);
+  RC_Done[RC_ESTP] = 1;
+  attachInterrupt(IRPT_ESTOP, ISR_ESTOP_rise, RISING);
   interrupts();
 }
 
-void ISR6_fall() {
+void ISR_RVS_fall() {
   noInterrupts();
-  ProcessFallOfINT(6);
-  RC_Done[6] = 1;
-  attachInterrupt(Signals[5], ISR6_rise, RISING);
+  ProcessFallOfINT(RC_RVS);
+  RC_Done[RC_RVS] = 1;
+  attachInterrupt(IRPT_RVS, ISR_RVS_rise, RISING);
   interrupts();
 }
+
 void initialize()
 {
   for (int i = 0; i < ERROR_HISTORY; i++)
@@ -279,17 +252,15 @@ void setup()
       rc_index = 0;
       for (int i = 0; i < 8; i++)
           RC_results[i] = INVALID_DATA;
-      rc_state = RC_WAIT;
       initialize();
 
       setupWheelRev(); // WheelRev4 addition
 
-    attachInterrupt(Signals[0], ISR1_rise, RISING);
-    attachInterrupt(Signals[1], ISR2_rise, RISING);
-    attachInterrupt(Signals[2], ISR3_rise, RISING);
-    attachInterrupt(Signals[3], ISR4_rise, RISING);
-    attachInterrupt(Signals[4], ISR5_rise, RISING);
-    attachInterrupt(Signals[5], ISR6_rise, RISING);
+    attachInterrupt(IRPT_TURN,  ISR_TURN_rise,  RISING);
+    attachInterrupt(IRPT_RDR,   ISR_RDR_rise,   RISING);
+    attachInterrupt(IRPT_GO,    ISR_GO_rise,    RISING);
+    attachInterrupt(IRPT_ESTOP, ISR_ESTOP_rise, RISING);
+    attachInterrupt(IRPT_RVS,   ISR_RVS_rise,   RISING);
 
     old_turn_degx1000 = older_turn_degx1000 = expected_turn_degx1000 = 0; // ReadTurnAngle addition
 }
@@ -303,10 +274,16 @@ void loop() {
     startCapturingRCState();
     
     unsigned long local_results[7];
-    while (!(RC_Done[2] == 1&& RC_Done[3] == 1&& RC_Done[4] == 1&& RC_Done[5] == 1&& RC_Done[6] == 1))
+    delay (10);
+    for (int j = 2; j < 7; j++)
+    {
+         Serial.print(RC_Done[j]);    Serial.print("\t");
+    }
+ 
+    while (!(RC_Done[RC_ESTP] == 1 && RC_Done[RC_GO] == 1 && RC_Done[RC_TURN] == 1))
+//            RC_Done[RC_RVS] == 1 && RC_Done[RC_RDR] == 1))
     ;
     // got data;    
-    rc_state = RC_WAIT;  // ignore pulses on data line.
     for (int i = 0; i < 8; i++)
         local_results[i] = RC_results[i];
     unsigned long Elapsed_us = micros() - Start_us;
@@ -325,11 +302,12 @@ void loop() {
     Results.kind = MSG_SENSOR;
     Results.angle_deg = TurnAngle_degx10() / 10;
     show_speed (&Results);
-    while (time < endTime)
+    delay(500);
+/*    while (time < endTime)
     {
         time = millis();
     }
-
+*/
 }
 
 void startCapturingRCState()
@@ -345,7 +323,6 @@ void processRC (unsigned long *RC_results)
     // 1st pulse is aileron (position 5 on receiver; controlled by Right left/right joystick on transmitter)
     //     used for Steering
     int aileron = RC_results[RC_TURN];
-//    RC_results[RC_TURN] = liveTurn(aileron)? convertTurn(aileron): STRAIGHT_TURN_OUT;
     RC_results[RC_TURN] = convertTurn(aileron);
     
     /* 2nd pulse is aux (position 1 on receiver; controlled by flap/gyro toggle on transmitter) 
