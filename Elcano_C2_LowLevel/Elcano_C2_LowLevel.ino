@@ -72,7 +72,7 @@
 // End new section
 
 // Channel order differs for differernt vehicles
-// Indices for information stored in array RC_results
+// Indices for information stored in arrays RC_rise, RC_elapsed, local_results,...
 // Right joystick left/right to D21
 #define RC_TURN 1
 #define RC_AUTO 2
@@ -87,8 +87,11 @@
 // There are six channels, but we are limited to five interrupts
 #define NUMBER_CHANNELS 6
 
-#define ProcessFallOfINT(Index)  RC_results[Index]=(micros()-RC_results[Index])
-#define ProcessRiseOfINT(Index) RC_results[Index]=micros()
+// RC_rise contains the time value collected in the rising edge interrupts.
+// RC_elapsed contains the width of the pulse. The rise and fall interrupts
+// should alternate.
+#define ProcessFallOfINT(Index)  RC_elapsed[Index]=(micros()-RC_rise[Index])
+#define ProcessRiseOfINT(Index) RC_rise[Index]=micros()
 
 // TO DO: Throttle and brake values should be in a header file and depend on vehicle number.
 // Values to send over DAC
@@ -113,7 +116,8 @@ const int SelectAB = 53; // Select IC 2 DAC (channels A and B)
 
 const unsigned long INVALID_DATA = 0;
 volatile int rc_index = 0;
-volatile  unsigned long RC_results[7];
+volatile unsigned long RC_rise[7];
+volatile unsigned long RC_elapsed[7];
 volatile boolean synced = false;
 volatile unsigned long last_fallingedge_time = 4294967295; // max long
 volatile int RC_Done[7] = {0,0,0,0,0,0,0};
@@ -251,7 +255,10 @@ void setup()
       Serial.begin(9600);
       rc_index = 0;
       for (int i = 0; i < 8; i++)
-          RC_results[i] = INVALID_DATA;
+      {
+          RC_rise[i] = INVALID_DATA;
+          RC_elapsed[i] = INVALID_DATA;
+      }
       initialize();
 
       setupWheelRev(); // WheelRev4 addition
@@ -264,31 +271,50 @@ void setup()
 
     old_turn_degx1000 = older_turn_degx1000 = expected_turn_degx1000 = 0; // ReadTurnAngle addition
 }
+
+unsigned long nextTime = micros();
 void loop() {
     SerialData Results;
-    unsigned long Start_us = micros();
-    unsigned long time, endTime;
-    time = millis();
-    endTime = time + LOOP_TIME_MS ;
+
+    // Save start time for performance report.
+    unsigned long startTime = micros();
+    // Get the next loop start time.
+    unsigned long nextTime = nextTime + LOOP_TIME_MS;
     
     startCapturingRCState();
     
     unsigned long local_results[7];
-    delay (10);
-    for (int j = 2; j < 7; j++)
+    //delay (10);
+/*    for (int j = 2; j < 7; j++)
     {
          Serial.print(RC_Done[j]);    Serial.print("\t");
     }
+ */
  
-    while (!(RC_Done[RC_ESTP] == 1 && RC_Done[RC_GO] == 1 && RC_Done[RC_TURN] == 1))
-//            RC_Done[RC_RVS] == 1 && RC_Done[RC_RDR] == 1))
-    ;
+  Serial.print("RC_Done values: RC_ESTP "); Serial.print(RC_Done[RC_ESTP]);
+  Serial.print(" RC_GO "); Serial.print(RC_Done[RC_GO]);
+  Serial.print(" RC_TURN "); Serial.print(RC_Done[RC_TURN]);
+  //Serial.print(" RC_RVS "); Serial.print(RC_Done[RC_RVS]);
+  Serial.print(" RC_RDR "); Serial.println(RC_Done[RC_RDR]);
+  // Not currently using RC_RVS, and it is always zero.
+  //if ((RC_Done[RC_ESTP] == 1) && (RC_Done[RC_GO] == 1) && (RC_Done[RC_TURN] == 1) &&
+  //         (RC_Done[RC_RVS] == 1) && (RC_Done[RC_RDR] == 1))
+  if ((RC_Done[RC_ESTP] == 1) && (RC_Done[RC_GO] == 1) && (RC_Done[RC_TURN] == 1) && (RC_Done[RC_RDR] == 1))
+  {
     // got data;    
     for (int i = 0; i < 8; i++)
-        local_results[i] = RC_results[i];
-    unsigned long Elapsed_us = micros() - Start_us;
-    Serial.print(Start_us);      Serial.print("\t");
-    Serial.print(Elapsed_us);    Serial.print("\t");
+        local_results[i] = RC_elapsed[i];
+
+    Serial.print("received data ");
+    Serial.print(local_results[0]); Serial.print("\t");
+    Serial.print(local_results[1]); Serial.print("\t");
+    Serial.print(local_results[2]); Serial.print("\t");
+    Serial.print(local_results[3]); Serial.print("\t");
+    Serial.print(local_results[4]); Serial.print("\t");
+    Serial.print(local_results[5]); Serial.print("\t");
+    Serial.println(local_results[6]);
+    processRC(local_results);
+    Serial.print("processed data ");
     Serial.print(local_results[0]);  Serial.print("\t");
     Serial.print(local_results[1]); Serial.print("\t");
     Serial.print(local_results[2]); Serial.print("\t");
@@ -297,17 +323,26 @@ void loop() {
     Serial.print(local_results[5]); Serial.print("\t");
     Serial.println(local_results[6]);
     
-    processRC(local_results);
+  }
     Results.Clear();
     Results.kind = MSG_SENSOR;
     Results.angle_deg = TurnAngle_degx10() / 10;
     show_speed (&Results);
-    delay(500);
-/*    while (time < endTime)
-    {
-        time = millis();
+    
+    // Report how long the loop took.
+    unsigned long endTime = micros();
+    unsigned long elapsedTime = endTime - startTime;  
+    //Serial.print("loop elapsed time = ");
+    //Serial.println(elapsedTime);
+    // Did we spend long enough in the loop that we should immediately
+    // start the next pass?
+    if (nextTime > endTime) {
+        // No, pause til the next loop start time.
+        delay(nextTime - endTime);
+    } else {
+        // Yes, we overran the expected loop interval. Extend the time.
+        nextTime = endTime + LOOP_TIME_MS;
     }
-*/
 }
 
 void startCapturingRCState()
@@ -318,59 +353,68 @@ void startCapturingRCState()
 }
 
 // processRC modified by TCF  9/17/15
-void processRC (unsigned long *RC_results)
+void processRC (unsigned long *results)
 {   
     // 1st pulse is aileron (position 5 on receiver; controlled by Right left/right joystick on transmitter)
     //     used for Steering
-    int aileron = RC_results[RC_TURN];
-    RC_results[RC_TURN] = convertTurn(aileron);
+    int aileron = results[RC_TURN];
+    results[RC_TURN] = convertTurn(aileron);
     
     /* 2nd pulse is aux (position 1 on receiver; controlled by flap/gyro toggle on transmitter) 
        will be used for selecting remote control or autonomous control. */
+    Serial.print("In processRC, received results[RC_AUTO] = "); Serial.println(results[RC_AUTO]);
     if (NUMBER_CHANNELS > 5) 
-        RC_results[RC_AUTO] = (RC_results[RC_AUTO] > MIDDLE? HIGH: LOW);
+        results[RC_AUTO] = (results[RC_AUTO] > MIDDLE? HIGH: LOW);
+    Serial.print("processed results[RC_AUTO] = "); Serial.println(results[RC_AUTO]);
 
     /* 4th pulse is gear (position 2 on receiver; controlled by gear/mode toggle on transmitter) 
     will be used for emergency stop. D38 */
-    RC_results[RC_ESTP] = (RC_results[RC_ESTP] > MIDDLE? HIGH: LOW);
+    results[RC_ESTP] = (results[RC_ESTP] > MIDDLE? HIGH: LOW);
     
-    if (RC_results[RC_ESTP] == HIGH)
+    if (results[RC_ESTP] == HIGH)
     {
         E_Stop();
-        if (RC_results[RC_AUTO] == HIGH  && NUMBER_CHANNELS > 5) // under RC control
-            steer(RC_results[RC_TURN]); 
+        if ((results[RC_AUTO] == LOW)  && (NUMBER_CHANNELS > 5)) // under RC control
+            steer(results[RC_TURN]);
+        Serial.println("Exiting processRC due to E-stop.");
         return;
     }
-    if ( RC_results[RC_AUTO] == LOW  && NUMBER_CHANNELS > 5)
+    
+    
+    if ((results[RC_AUTO] == HIGH)  && (NUMBER_CHANNELS > 5))
+    {
+        Serial.println("Exiting processRC as not under RC control.");
         return;  // not under RC control
-
+    } else {
+        Serial.println("Continuing processRC as under RC control.");
+    }
     /*  6th pulse is marked throttle (position 6 on receiver; controlled by Left up/down joystick on transmitter). 
     It will be used for shifting from Drive to Reverse . D40
     */
-    RC_results[RC_RVS] = (RC_results[RC_RVS] > MIDDLE? HIGH: LOW);
+    results[RC_RVS] = (results[RC_RVS] > MIDDLE? HIGH: LOW);
         
-// TO DO: Select Forward / reverse based on RC_results[RC_RVS]
+// TO DO: Select Forward / reverse based on results[RC_RVS]
 
        
     /*   3rd pulse is elevator (position 4 on receiver; controlled by Right up/down.  
        will be used for throttle/brake: RC_Throttle
     */
     // Braking or Throttle
-    if (liveBrake(RC_results[RC_GO])) 
-        brake(convertBrake(RC_results[RC_GO]));
+    if (liveBrake(results[RC_GO])) 
+        brake(convertBrake(results[RC_GO]));
     else
         brake(MIN_BRAKE_OUT);
     //Accelerating
-    if(liveThrottle(RC_results[RC_GO]))
-        moveVehicle(convertThrottle(RC_results[RC_GO]));
+    if(liveThrottle(results[RC_GO]))
+        moveVehicle(convertThrottle(results[RC_GO]));
     else
         moveVehicle(MIN_ACC_OUT);
         
-    steer(RC_results[RC_TURN]); 
+    steer(results[RC_TURN]); 
     
     /* 5th pulse is rudder (position 3 on receiver; controlled by Left left/right joystick on transmitter) 
     Not used */
-    RC_results[RC_RDR] = (RC_results[RC_RDR] > MIDDLE? HIGH: LOW);  // could be analog
+    results[RC_RDR] = (results[RC_RDR] > MIDDLE? HIGH: LOW);  // could be analog
 
 }
 //Converts RC values to corresponding values for the PWM output
@@ -379,8 +423,9 @@ int convertTurn(int input)
      long int steerRange, rcRange;
      long output;
      int trueOut;
-//  Check if Input is in steer dead zone
-      if (input <= MIDDLE + DEAD_ZONE && input >= MIDDLE - DEAD_ZONE)
+     Serial.print("convertTurn: input = "); Serial.println(input);
+     //  Check if Input is in steer dead zone
+     if ((input <= MIDDLE + DEAD_ZONE) && (input >= MIDDLE - DEAD_ZONE))
        return STRAIGHT_TURN_OUT;
        // MIN_RC = 1 msec = right; MAX_RC = 2 msec = left
       // LEFT_TURN_OUT > RIGHT_TURN_OUT
@@ -660,11 +705,11 @@ void setupWheelRev()
 }
 /*---------------------------------------------------------------------------------------*/ 
 
-void show_speed(SerialData *Results)
+void show_speed(SerialData *results)
 {
 
    ShowTime_ms = millis();       
-   if (InterruptState == IRQ_NONE || InterruptState == IRQ_FIRST)  // no OR 1 interrupts
+   if ((InterruptState == IRQ_NONE) || (InterruptState == IRQ_FIRST))  // no OR 1 interrupts
    {
        SpeedCyclometer_mmPs = 0;
        SpeedCyclometer_revPs = 0;
@@ -704,8 +749,8 @@ void show_speed(SerialData *Results)
       }
     }
     Odometer_m += (float)(LOOP_TIME_MS * SpeedCyclometer_mmPs) / MEG;
-    Results->speed_cmPs = SpeedCyclometer_mmPs / 10;
-    writeSerial(&Serial3, Results);
+    results->speed_cmPs = SpeedCyclometer_mmPs / 10;
+    writeSerial(&Serial3, results);
 
     // Show on monitor
 /*    SerialMonitor.print("\nWheelRev (ms): ");
@@ -727,11 +772,11 @@ int TurnAngle_degx10()
     bool OK_left = false;
     int right = analogRead(A3);
     int left = analogRead(A2);
-    Serial.print("Left"); Serial.print("\t"); Serial.println(left);
-    Serial.print("Right"); Serial.print("\t"); Serial.println(right);
-    if (RIGHT_MIN_COUNT <= right && right <= RIGHT_MAX_COUNT)
+    //Serial.print("Left"); Serial.print("\t"); Serial.println(left);
+    //Serial.print("Right"); Serial.print("\t"); Serial.println(right);
+    if ((RIGHT_MIN_COUNT <= right) && (right <= RIGHT_MAX_COUNT))
        OK_right = true;    
-    if (LEFT_MIN_COUNT <= left && left <= LEFT_MAX_COUNT)
+    if ((LEFT_MIN_COUNT <= left) && (left <= LEFT_MAX_COUNT))
        OK_left = true;    
     long right_degx1000 = (right - RIGHT_STRAIGHT_A3) * RIGHT_DEGx1000pCOUNT;  
     long left_degx1000  = (left -  LEFT_STRAIGHT_A2) *  LEFT_DEGx1000pCOUNT;  
