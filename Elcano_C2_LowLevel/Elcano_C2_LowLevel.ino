@@ -503,11 +503,12 @@ void E_Stop()
 void steer(int pos)
 {
       analogWrite(STEER_OUT_PIN, pos);
+      Serial.print("Steering to: "); Serial.println(pos);
 }
 void brake(int amount)
 {
       analogWrite(BRAKE_OUT_PIN, amount);
-      Serial.println(amount);
+      Serial.print("Braking to: "); Serial.println(amount);
 }
 /*---------------------------------------------------------------------------------------*/
 /* DAC_Write applies value to address, producing an analog voltage.
