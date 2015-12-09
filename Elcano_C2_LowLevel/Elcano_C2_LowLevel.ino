@@ -855,10 +855,11 @@ void Throttle_PID(long error_speed_mmPs)
   speed_errors[error_index] = error_speed_mmPs;
   error_sum += error_speed_mmPs;
   mean_speed_error = error_sum / ERROR_HISTORY;
-  i = (error_index-1) % ERROR_HISTORY;
+  i = (error_index -1) % ERROR_HISTORY;
+  if (++error_index >= ERROR_HISTORY)
+      error_index = 0;
   extrapolated_error = 2 * error_speed_mmPs - speed_errors[i];
-  
-  PID_error = P_tune * error_speed_mmPs 
+    PID_error = P_tune * error_speed_mmPs
             + I_tune * mean_speed_error
             + D_tune * extrapolated_error;
   if (PID_error > speed_tolerance_mmPs)
