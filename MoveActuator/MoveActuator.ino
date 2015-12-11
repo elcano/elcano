@@ -30,9 +30,9 @@ The nonMega shield uses A4 and A5 for RTC and D10,11,12,and 13 for MOSI data log
 7/1/15 TCF  Removed BASSACKWARDS, put in VEHICLE_NUMBER
 */
 // Orange trike
-#define VEHICLE_NUMBER 1
+//#define VEHICLE_NUMBER 1
 // Yellow trike
-//#define VEHICLE_NUMBER 2
+#define VEHICLE_NUMBER 2
 
 // DIGITAL I/O ----------------------------------------------
 
