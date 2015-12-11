@@ -4,10 +4,14 @@
 #define LOOP_TIME_MS 200
 #define ERROR_HISTORY 20
 
-// New section    TCF 9/17/15
-#define VEHICLE_NUMBER 1
-#define RC_SPEKTRUM 
-#undef  RC_HITEC
+// Orange Trike
+//#define VEHICLE_NUMBER 1
+//#define RC_SPEKTRUM 
+//#undef  RC_HITEC
+// Yellow Trike
+#define VEHICLE_NUMBER 2
+#undef RC_SPEKTRUM 
+#define  RC_HITEC
 
 #if (VEHICLE_NUMBER == 1)
 //OUTPUT values -  0 to 255
@@ -136,8 +140,8 @@ const int IRPT_ESTOP = 5; // D18 = Int 5
 const int IRPT_RVS = 0;   // D2  = Int 0 
 const int IRPT_TURN = 2;  // D21 = Int 2 
 const int IRPT_GO = 3;   //  D20 = Int 3 
-const int IRPT_RDR = 4;   // D19 = Int 4
-const int IRPT_ESTOP = 5; // D18 = Int 5
+const int IRPT_RDR = 5;   // D19 = Int 4
+const int IRPT_ESTOP = 4; // D18 = Int 5
 #endif
 //  D3 = Int 1  Wheel Click
 
@@ -427,8 +431,12 @@ int convertTurn(int input)
      //  Check if Input is in steer dead zone
      if ((input <= MIDDLE + DEAD_ZONE) && (input >= MIDDLE - DEAD_ZONE))
        return STRAIGHT_TURN_OUT;
-       // MIN_RC = 1 msec = right; MAX_RC = 2 msec = left
+       // On SPEKTRUM, MIN_RC = 1 msec = stick right; MAX_RC = 2 msec = stick left
+       // On HI_TEC, MIN_RC = 1 msec = stick left; MAX_RC = 2 msec = stick right
       // LEFT_TURN_OUT > RIGHT_TURN_OUT
+#ifdef RC_HITEC
+  input = MAX_RC - (input - MIN_RC);
+#endif
       
       if (input > MIDDLE + DEAD_ZONE)
       {  // left turn
