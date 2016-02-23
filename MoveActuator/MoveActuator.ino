@@ -13,7 +13,7 @@
 // Define the tests to do.
 #define BRAKE_RAMP
 #define STEER_RAMP
-#define MOTOR_RAMP
+// #define MOTOR_RAMP
 // If operating with the MegaShieldDB, we can use the Digital Analog Converter to move the vehicle
 #define DAC
 
@@ -175,9 +175,9 @@ const int MinimumThrottle = 40;  // Throttle has no effect until 1.2 V
 const int FullBrake = 210;//167;  // start with a conservative value; could go as high as 255;  
 const int NoBrake = 244; // 207; // start with a conservative value; could go as low as 127;
 // Steering
-const int HardLeft = 250; //  could go as high as 255;
-const int Straight = 187;
-const int HardRight = 126;
+const int HardLeft = 240; //187; //  could go as high as 255;
+const int Straight = 195;// 187;
+const int HardRight = 150;  //126;
 
 // set the initial positions
 int ThrottlePosition = MinimumThrottle;
