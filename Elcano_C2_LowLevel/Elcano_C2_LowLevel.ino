@@ -288,45 +288,16 @@ void loop() {
     startCapturingRCState();
     
     unsigned long local_results[7];
-    //delay (10);
-/*    for (int j = 2; j < 7; j++)
-    {
-         Serial.print(RC_Done[j]);    Serial.print("\t");
-    }
- */
- 
-  Serial.print("RC_Done values: RC_ESTP "); Serial.print(RC_Done[RC_ESTP]);
-  Serial.print(" RC_GO "); Serial.print(RC_Done[RC_GO]);
-  Serial.print(" RC_TURN "); Serial.print(RC_Done[RC_TURN]);
-  //Serial.print(" RC_RVS "); Serial.print(RC_Done[RC_RVS]);
-  Serial.print(" RC_RDR "); Serial.println(RC_Done[RC_RDR]);
-  // Not currently using RC_RVS, and it is always zero.
-  //if ((RC_Done[RC_ESTP] == 1) && (RC_Done[RC_GO] == 1) && (RC_Done[RC_TURN] == 1) &&
-  //         (RC_Done[RC_RVS] == 1) && (RC_Done[RC_RDR] == 1))
+//    PrintDone();
+
   if ((RC_Done[RC_ESTP] == 1) && (RC_Done[RC_GO] == 1) && (RC_Done[RC_TURN] == 1) && (RC_Done[RC_RDR] == 1))
   {
     // got data;    
     for (int i = 0; i < 8; i++)
         local_results[i] = RC_elapsed[i];
-
-    Serial.print("received data ");
-    Serial.print(local_results[0]); Serial.print("\t");
-    Serial.print(local_results[1]); Serial.print("\t");
-    Serial.print(local_results[2]); Serial.print("\t");
-    Serial.print(local_results[3]); Serial.print("\t");
-    Serial.print(local_results[4]); Serial.print("\t");
-    Serial.print(local_results[5]); Serial.print("\t");
-    Serial.println(local_results[6]);
+//    Print7( false, local_results);
     processRC(local_results);
-    Serial.print("processed data ");
-    Serial.print(local_results[0]);  Serial.print("\t");
-    Serial.print(local_results[1]); Serial.print("\t");
-    Serial.print(local_results[2]); Serial.print("\t");
-    Serial.print(local_results[3]); Serial.print("\t");
-    Serial.print(local_results[4]); Serial.print("\t");
-    Serial.print(local_results[5]); Serial.print("\t");
-    Serial.println(local_results[6]);
-    
+//    Print7( true, local_results);
   }
     Results.Clear();
     Results.kind = MSG_SENSOR;
@@ -348,6 +319,27 @@ void loop() {
         nextTime = endTime + LOOP_TIME_MS;
     }
 }
+void PrintDone()
+{
+  Serial.print("RC_Done values: RC_ESTP "); Serial.print(RC_Done[RC_ESTP]);
+  Serial.print(" RC_GO "); Serial.print(RC_Done[RC_GO]);
+  Serial.print(" RC_TURN "); Serial.print(RC_Done[RC_TURN]);
+  //Serial.print(" RC_RVS "); Serial.print(RC_Done[RC_RVS]);
+  Serial.print(" RC_RDR "); Serial.println(RC_Done[RC_RDR]);
+  // Not currently using RC_RVS, and it is always zero.
+
+}
+void Print7 (bool processed, unsigned long results[7])
+{
+    processed? Serial.print("processed data \t") : Serial.print("received data \t");
+    Serial.print(results[0]); Serial.print("\t");
+    Serial.print(results[1]); Serial.print("\t");
+    Serial.print(results[2]); Serial.print("\t");
+    Serial.print(results[3]); Serial.print("\t");
+    Serial.print(results[4]); Serial.print("\t");
+    Serial.print(results[5]); Serial.print("\t");
+    Serial.println(results[6]);
+}
 
 void startCapturingRCState()
 {
@@ -366,10 +358,10 @@ void processRC (unsigned long *results)
     
     /* 2nd pulse is aux (position 1 on receiver; controlled by flap/gyro toggle on transmitter) 
        will be used for selecting remote control or autonomous control. */
-    Serial.print("In processRC, received results[RC_AUTO] = "); Serial.println(results[RC_AUTO]);
+//    Serial.print("In processRC, received results[RC_AUTO] = "); Serial.println(results[RC_AUTO]);
     if (NUMBER_CHANNELS > 5) 
         results[RC_AUTO] = (results[RC_AUTO] > MIDDLE? HIGH: LOW);
-    Serial.print("processed results[RC_AUTO] = "); Serial.println(results[RC_AUTO]);
+//    Serial.print("processed results[RC_AUTO] = "); Serial.println(results[RC_AUTO]);
 
     /* 4th pulse is gear (position 2 on receiver; controlled by gear/mode toggle on transmitter) 
     will be used for emergency stop. D38 */
@@ -390,7 +382,7 @@ void processRC (unsigned long *results)
         Serial.println("Exiting processRC as not under RC control.");
         return;  // not under RC control
     } else {
-        Serial.println("Continuing processRC as under RC control.");
+//        Serial.println("Continuing processRC as under RC control.");
     }
     /*  6th pulse is marked throttle (position 6 on receiver; controlled by Left up/down joystick on transmitter). 
     It will be used for shifting from Drive to Reverse . D40
@@ -419,6 +411,7 @@ void processRC (unsigned long *results)
     /* 5th pulse is rudder (position 3 on receiver; controlled by Left left/right joystick on transmitter) 
     Not used */
     results[RC_RDR] = (results[RC_RDR] > MIDDLE? HIGH: LOW);  // could be analog
+    Serial.println("");  // New line
 
 }
 //Converts RC values to corresponding values for the PWM output
@@ -427,7 +420,7 @@ int convertTurn(int input)
      long int steerRange, rcRange;
      long output;
      int trueOut;
-     Serial.print("convertTurn: input = "); Serial.println(input);
+     Serial.print("\tconvertTurn: input = \t"); Serial.print(input);
      //  Check if Input is in steer dead zone
      if ((input <= MIDDLE + DEAD_ZONE) && (input >= MIDDLE - DEAD_ZONE))
        return STRAIGHT_TURN_OUT;
@@ -511,12 +504,12 @@ void E_Stop()
 void steer(int pos)
 {
       analogWrite(STEER_OUT_PIN, pos);
-      Serial.print("Steering to: "); Serial.println(pos);
+      Serial.print("\tSteering to: \t"); Serial.print(pos);
 }
 void brake(int amount)
 {
       analogWrite(BRAKE_OUT_PIN, amount);
-      Serial.print("Braking to: "); Serial.println(amount);
+      Serial.print("\tBraking to: \t"); Serial.print(amount);
 }
 /*---------------------------------------------------------------------------------------*/
 /* DAC_Write applies value to address, producing an analog voltage.
@@ -902,12 +895,12 @@ void Throttle_PID(long error_speed_mmPs)
     brake(brake_control);
   }
   // else maintain current speed
-  //Serial.print("Thottle Brake,");  // csv for spreadsheet
+  Serial.print("\tThottle Brake \t");  // csv for spreadsheet
   Serial.print(throttle_control);
-  Serial.print(",");
+  Serial.print("\t");
   Serial.print(brake_control);
-  Serial.print(",");
-  Serial.print(drive_speed_mmPs);  Serial.print(",");
+  Serial.print("\t");
+  Serial.print(drive_speed_mmPs);  Serial.print("\t");
   Serial.println(sensor_speed_mmPs); 
 }
 
