@@ -169,6 +169,11 @@ char* obstacleDetect()
   return ObstacleString;
 }
 /*---------------------------------------------------------------------------------------*/
+/* Feb 23, 2016  TCF.  This instance of WheelRev is depricated.
+   Current code for WheelRev is in Elcano_C2_LowLevel.
+   The odometer processing is part of low level control.
+   C2 will send odometer information to C6 over a serial line. */
+
 // WheelRev is called by an interrupt.
 void WheelRev()
 {
