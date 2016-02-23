@@ -620,13 +620,14 @@ float Odometer_m = 0;
 long SpeedCyclometer_mmPs = 0;
 // Speed in revolutions per second is independent of wheel size.
 float SpeedCyclometer_revPs = 0.0;//revolutions per sec
-volatile unsigned long TickTime = 0;
+
 long WheelRev_ms = 0;
-unsigned long OldTick = 0;
 #define IRQ_NONE 0
 #define IRQ_FIRST 1
 #define IRQ_RUNNING 2
-volatile int InterruptState = IRQ_NONE;
+volatile byte InterruptState = IRQ_NONE;
+volatile unsigned long TickTime = 0;
+volatile unsigned long OldTick = 0;
 unsigned long ShowTime_ms;
 
 /*---------------------------------------------------------------------------------------*/ 
@@ -707,9 +708,9 @@ void setupWheelRev()
 }
 /*---------------------------------------------------------------------------------------*/ 
 
-void show_speed(SerialData *results)
+void show_speed(SerialData *Results)
 {
-
+   unsigned long int showTickTime, showOldTick; // local varsions
    ShowTime_ms = millis();       
    if ((InterruptState == IRQ_NONE) || (InterruptState == IRQ_FIRST))  // no OR 1 interrupts
    {
@@ -731,7 +732,11 @@ void show_speed(SerialData *results)
     }
     else
     {  // moving
-        WheelRev_ms = max(TickTime - OldTick, ShowTime_ms - TickTime);
+        noInterrupts();
+        showTickTime = TickTime;
+        showOldTick = OldTick;
+        interrupts();
+        WheelRev_ms = max(showTickTime - showOldTick, ShowTime_ms - showTickTime);
         if (InterruptState == IRQ_RUNNING)
         {  // have new data
       
@@ -751,8 +756,9 @@ void show_speed(SerialData *results)
       }
     }
     Odometer_m += (float)(LOOP_TIME_MS * SpeedCyclometer_mmPs) / MEG;
-    results->speed_cmPs = SpeedCyclometer_mmPs / 10;
-    writeSerial(&Serial3, results);
+// Since Results have not been cleard, angle information will also be sent.
+    Results->speed_cmPs = SpeedCyclometer_mmPs / 10;
+    writeSerial(&Serial3, Results);  // Send speed to C6
 
     // Show on monitor
 /*    SerialMonitor.print("\nWheelRev (ms): ");
