@@ -309,6 +309,9 @@ void loop() {
     unsigned long elapsedTime = endTime - startTime;  
     //Serial.print("loop elapsed time = ");
     //Serial.println(elapsedTime);
+    
+    LogData(local_results, &Results);  // data for spreadsheet
+    
     // Did we spend long enough in the loop that we should immediately
     // start the next pass?
     if (nextTime > endTime) {
@@ -339,6 +342,12 @@ void Print7 (bool processed, unsigned long results[7])
     Serial.print(results[4]); Serial.print("\t");
     Serial.print(results[5]); Serial.print("\t");
     Serial.println(results[6]);
+}
+void LogData(unsigned long commands[7], SerialData *sensors)  // data for spreadsheet
+{
+     Serial.print(sensors->speed_cmPs); Serial.print("\t");
+     Serial.print(sensors->angle_deg); Serial.print("\t");
+     Print7 (true, commands);
 }
 
 void startCapturingRCState()
