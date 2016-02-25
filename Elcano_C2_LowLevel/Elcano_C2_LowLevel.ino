@@ -140,8 +140,8 @@ const int IRPT_ESTOP = 5; // D18 = Int 5
 const int IRPT_RVS = 0;   // D2  = Int 0 
 const int IRPT_TURN = 2;  // D21 = Int 2 
 const int IRPT_GO = 3;   //  D20 = Int 3 
-const int IRPT_RDR = 5;   // D19 = Int 4
-const int IRPT_ESTOP = 4; // D18 = Int 5
+const int IRPT_RDR = 5;   // D18 = Int 5
+const int IRPT_ESTOP = 4; // D19 = Int 4
 #endif
 //  D3 = Int 1  Wheel Click
 
@@ -298,7 +298,7 @@ void loop() {
     // got data;    
     for (int i = 0; i < 8; i++)
         local_results[i] = RC_elapsed[i];
-    Print7( false, local_results);
+//    Print7( false, local_results);
     processRC(local_results);
 //    Print7( true, local_results);
   
@@ -313,7 +313,7 @@ void loop() {
     //Serial.print("loop elapsed time = ");
     //Serial.println(elapsedTime);
     
-//    LogData(local_results, &Results);  // data for spreadsheet
+    LogData(local_results, &Results);  // data for spreadsheet
     
     // Did we spend long enough in the loop that we should immediately
     // start the next pass?
@@ -344,8 +344,8 @@ void Print7headers (bool processed)
     Serial.print("TURN\t");
     Serial.print("AUTO\t");
     Serial.print("GO\t");
-    Serial.print("E-Stop\t");
     Serial.print("Rudder\t");
+    Serial.print("E-Stop\t");
     Serial.println("Reverse\t"); 
 #endif
 
@@ -426,19 +426,20 @@ void processRC (unsigned long *results)
     results[RC_RVS] = (results[RC_RVS] > MIDDLE? HIGH: LOW);
         
 // TO DO: Select Forward / reverse based on results[RC_RVS]
-
        
     /*   3rd pulse is elevator (position 4 on receiver; controlled by Right up/down.  
        will be used for throttle/brake: RC_Throttle
     */
     // Braking or Throttle
-    if (liveBrake(results[RC_GO])) 
-        brake(convertBrake(results[RC_GO]));
-    else
-        brake(MIN_BRAKE_OUT);
+    if (liveBrake(results[RC_GO]))
+         convertBrake (&(results[RC_GO]));
+
     //Accelerating
-    if(liveThrottle(results[RC_GO]))
-        moveVehicle(convertThrottle(results[RC_GO]));
+    else if(liveThrottle(results[RC_GO]))
+    {
+        results[RC_GO] = convertThrottle(results[RC_GO]);
+        moveVehicle(results[RC_GO]);
+    }
     else
         moveVehicle(MIN_ACC_OUT);
         
@@ -447,7 +448,7 @@ void processRC (unsigned long *results)
     /* 5th pulse is rudder (position 3 on receiver; controlled by Left left/right joystick on transmitter) 
     Not used */
     results[RC_RDR] = (results[RC_RDR] > MIDDLE? HIGH: LOW);  // could be analog
-    Serial.println("");  // New line
+//  Serial.println("");  // New line
 
 }
 //Converts RC values to corresponding values for the PWM output
@@ -496,13 +497,7 @@ int convertTurn(int input)
         return trueOut;
     }
 }
-int convertBrake(int input)
-{
-      if (input < (MIDDLE + MIN_RC)/2)
-           return MAX_BRAKE_OUT;
-      else
-           return MIN_BRAKE_OUT;     
-}
+
 int convertThrottle(int input)
 {
       //full throttle = 227, min = 40
@@ -542,10 +537,18 @@ void steer(int pos)
       analogWrite(STEER_OUT_PIN, pos);
 //      Serial.print("\tSteering to: \t"); Serial.print(pos);
 }
-void brake(int amount)
+void convertBrake(long unsigned *amount)
+{
+      if (*amount < (MIDDLE + MIN_RC)/2)
+          *amount = MAX_BRAKE_OUT;
+      else
+           *amount = MIN_BRAKE_OUT; 
+      brake (*amount);     
+}
+void brake (int amount)
 {
       analogWrite(BRAKE_OUT_PIN, amount);
- //     Serial.print("\tBraking to: \t"); Serial.print(amount);
+ //     Serial.print("\tBraking to: \t"); Serial.print(*amount);
 }
 /*---------------------------------------------------------------------------------------*/
 /* DAC_Write applies value to address, producing an analog voltage.
