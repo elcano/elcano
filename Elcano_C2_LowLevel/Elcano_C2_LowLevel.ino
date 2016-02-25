@@ -274,6 +274,7 @@ void setup()
     attachInterrupt(IRPT_RVS,   ISR_RVS_rise,   RISING);
 
     old_turn_degx1000 = older_turn_degx1000 = expected_turn_degx1000 = 0; // ReadTurnAngle addition
+    Print7headers(false);
 }
 
 unsigned long nextTime = micros();
@@ -290,15 +291,17 @@ void loop() {
     unsigned long local_results[7];
 //    PrintDone();
 
-  if ((RC_Done[RC_ESTP] == 1) && (RC_Done[RC_GO] == 1) && (RC_Done[RC_TURN] == 1) && (RC_Done[RC_RDR] == 1))
-  {
+  while (micros() < nextTime &&
+    ~((RC_Done[RC_ESTP] == 1) && (RC_Done[RC_GO] == 1) && (RC_Done[RC_TURN] == 1) && (RC_Done[RC_RDR] == 1)))
+    ;  //wait
+  
     // got data;    
     for (int i = 0; i < 8; i++)
         local_results[i] = RC_elapsed[i];
-//    Print7( false, local_results);
+    Print7( false, local_results);
     processRC(local_results);
 //    Print7( true, local_results);
-  }
+  
     Results.Clear();
     Results.kind = MSG_SENSOR;
     Results.angle_deg = TurnAngle_degx10() / 10;
@@ -310,7 +313,7 @@ void loop() {
     //Serial.print("loop elapsed time = ");
     //Serial.println(elapsedTime);
     
-    LogData(local_results, &Results);  // data for spreadsheet
+//    LogData(local_results, &Results);  // data for spreadsheet
     
     // Did we spend long enough in the loop that we should immediately
     // start the next pass?
@@ -331,6 +334,30 @@ void PrintDone()
   Serial.print(" RC_RDR "); Serial.println(RC_Done[RC_RDR]);
   // Not currently using RC_RVS, and it is always zero.
 
+}
+
+void Print7headers (bool processed)
+{
+    processed? Serial.print("processed data \t") : Serial.print("received data \t");
+ #ifdef RC_SPEKTRUM
+    Serial.print("Time\t");
+    Serial.print("TURN\t");
+    Serial.print("AUTO\t");
+    Serial.print("GO\t");
+    Serial.print("E-Stop\t");
+    Serial.print("Rudder\t");
+    Serial.println("Reverse\t"); 
+#endif
+
+#ifdef RC_HITEC
+    Serial.print("Time\t");
+    Serial.print("TURN\t");
+    Serial.print("AUTO\t");
+    Serial.print("GO\t");
+    Serial.print("E-Stop\t");
+    Serial.print("Rudder\t");
+    Serial.println("Reverse\t"); 
+#endif
 }
 void Print7 (bool processed, unsigned long results[7])
 {
@@ -429,7 +456,7 @@ int convertTurn(int input)
      long int steerRange, rcRange;
      long output;
      int trueOut;
-     Serial.print("\tconvertTurn: input = \t"); Serial.print(input);
+//     Serial.print("\tconvertTurn: input = \t"); Serial.print(input);
      //  Check if Input is in steer dead zone
      if ((input <= MIDDLE + DEAD_ZONE) && (input >= MIDDLE - DEAD_ZONE))
        return STRAIGHT_TURN_OUT;
@@ -513,12 +540,12 @@ void E_Stop()
 void steer(int pos)
 {
       analogWrite(STEER_OUT_PIN, pos);
-      Serial.print("\tSteering to: \t"); Serial.print(pos);
+//      Serial.print("\tSteering to: \t"); Serial.print(pos);
 }
 void brake(int amount)
 {
       analogWrite(BRAKE_OUT_PIN, amount);
-      Serial.print("\tBraking to: \t"); Serial.print(amount);
+ //     Serial.print("\tBraking to: \t"); Serial.print(amount);
 }
 /*---------------------------------------------------------------------------------------*/
 /* DAC_Write applies value to address, producing an analog voltage.
