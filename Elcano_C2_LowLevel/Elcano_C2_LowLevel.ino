@@ -373,6 +373,7 @@ void Print7 (bool processed, unsigned long results[7])
 void LogData(unsigned long commands[7], SerialData *sensors)  // data for spreadsheet
 {
      Serial.print(sensors->speed_cmPs); Serial.print("\t");
+     Serial.print(sensors->speed_cmPs*36.0/1000.); Serial.print("\t"); // km/hr
      Serial.print(sensors->angle_deg); Serial.print("\t");
      Print7 (true, commands);
 }
@@ -641,7 +642,12 @@ void moveVehicle(int acc)
 #define SerialOdoOut  Serial3
 #define SerialMonitor Serial
 
+#if (VEHICLE_NUMBER == 1)
 #define WHEEL_DIAMETER_MM 397
+#endif
+#if (VEHICLE_NUMBER == 2)
+#define WHEEL_DIAMETER_MM 500
+#endif
 #define MEG 1000000
 #define MAX_SPEED_KPH 50
 #define MAX_SPEED_mmPs   ((MAX_SPEED_KPH * MEG) / 3600)
@@ -649,7 +655,7 @@ void moveVehicle(int acc)
 unsigned long MinTickTime_ms;
 // ((WHEEL_DIAMETER_MM * 3142) / MAX_SPEED_mmPs)
 // MinTickTime_ms = 89 ms
-#define MIN_SPEED_mPh 500
+#define MIN_SPEED_mPh 3000
 // A speed of less than 0.5 KPH is zero.
 unsigned long MaxTickTime_ms;
 // ((WHEEL_DIAMETER_MM * 3142) / MIN_SPEED_mmPs)
@@ -703,7 +709,7 @@ void setupWheelRev()
     pinMode(13, OUTPUT); //led
     digitalWrite(13, LOW);//turn LED off
     
-    pinMode(2, INPUT);//pulls input HIGH
+    pinMode(3, INPUT);//pulls input HIGH
     float MinTick = WHEEL_DIAMETER_MM * PI;
 //    SerialMonitor.print (" MinTick = ");
 //    SerialMonitor.println (MinTick);
@@ -736,7 +742,7 @@ void setupWheelRev()
     ShowTime_ms = TickTime;
     InterruptState = IRQ_NONE;
 
-    attachInterrupt (0, WheelRev, RISING);//pin 2 on Mega
+    attachInterrupt (1, WheelRev, RISING);//pin 3 on Mega
     SerialMonitor.print("TickTime: ");
     SerialMonitor.print(TickTime);
     SerialMonitor.print(" OldTick: ");
