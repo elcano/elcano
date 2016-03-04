@@ -13,7 +13,7 @@
 // Define the tests to do.
 #define BRAKE_RAMP
 #define STEER_RAMP
-// #define MOTOR_RAMP
+#define MOTOR_RAMP
 // If operating with the MegaShieldDB, we can use the Digital Analog Converter to move the vehicle
 #define DAC
 
