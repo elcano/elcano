@@ -630,15 +630,12 @@ void moveVehicle(int acc)
  
 /* Wheel Revolution Interrupt routine
    Ben Spencer 10/21/13
-   Modified by Tyler Folsom 3/16/14
+   Modified by Tyler Folsom 3/16/14; 3/3/16
    
    A cyclometer gives a click once per revolution. 
    This routine computes the speed.
 */
-// CLICK_IN defined: use interrupt; not defined: simulate with timer
-#define CLICK_IN 1
-#define LOOP_TIME_MS 1000
-#define CLICK_TIME_MS 1000
+
 #define SerialOdoOut  Serial3
 #define SerialMonitor Serial
 
@@ -656,7 +653,7 @@ unsigned long MinTickTime_ms;
 // ((WHEEL_DIAMETER_MM * 3142) / MAX_SPEED_mmPs)
 // MinTickTime_ms = 89 ms
 #define MIN_SPEED_mPh 3000
-// A speed of less than 0.5 KPH is zero.
+// A speed of less than 0.3 KPH is zero.
 unsigned long MaxTickTime_ms;
 // ((WHEEL_DIAMETER_MM * 3142) / MIN_SPEED_mmPs)
 // MinTickTime_ms = 9239 ms = 9 sec
@@ -666,14 +663,31 @@ long SpeedCyclometer_mmPs = 0;
 // Speed in revolutions per second is independent of wheel size.
 float SpeedCyclometer_revPs = 0.0;//revolutions per sec
 
-long WheelRev_ms = 0;
 #define IRQ_NONE 0
 #define IRQ_FIRST 1
-#define IRQ_RUNNING 2
-volatile byte InterruptState = IRQ_NONE;
-volatile unsigned long TickTime = 0;
+#define IRQ_SECOND 2
+#define IRQ_RUNNING 3
+#define NO_DATA 0x7FFFFFFF
+volatile byte InterruptState = IRQ_NONE;  // Tells us if we have initialized.
+volatile byte ClickNumber = 0;         // Used to distinguish old data from new.
+volatile unsigned long TickTime = 0;  // Time from one wheel rotation to the next gives speed.
 volatile unsigned long OldTick = 0;
-unsigned long ShowTime_ms;
+
+   static struct hist {
+     long olderSpeed_mmPs;  // older data
+     unsigned long olderTime_ms;   // time stamp of older speed
+     
+     long oldSpeed_mmPs;  // last data from the interrupt
+     byte oldClickNumber;
+     unsigned long oldTime_ms;  // time stamp of old speed
+     
+     byte nowClickNumber;  // situation when we want to display the speed
+     byte InterruptState;
+     unsigned long nowTime_ms;
+     unsigned long TickTime_ms;  // Tick times are used to compute speeds
+     unsigned long OldTick_ms;   // Tick times may not match time stamps if we don't process
+                                 // results of every interrupt
+   } history;
 
 /*---------------------------------------------------------------------------------------*/ 
 // WheelRev is called by an interrupt.
@@ -691,6 +705,7 @@ void WheelRev()
     {
         OldTick = TickTime;
         TickTime = tick;
+        ++ClickNumber;
     }
     if (flip)
         digitalWrite(13, LOW);
@@ -739,8 +754,9 @@ void setupWheelRev()
     // TickTime would overflow after days of continuous operation, causing a glitch of
     // a display of zero speed.  It is unlikely that we have enough battery power to ever see this.
     OldTick = TickTime;
-    ShowTime_ms = TickTime;
     InterruptState = IRQ_NONE;
+    ClickNumber = 0;
+    history.oldSpeed_mmPs = history.olderSpeed_mmPs = NO_DATA;
 
     attachInterrupt (1, WheelRev, RISING);//pin 3 on Mega
     SerialMonitor.print("TickTime: ");
@@ -752,63 +768,96 @@ void setupWheelRev()
 
 }
 /*---------------------------------------------------------------------------------------*/ 
+void ComputeSpeed( struct hist *data)
+{
+    if (data->InterruptState == IRQ_NONE || data->InterruptState == IRQ_FIRST)
+    {  // No data
+       SpeedCyclometer_mmPs = 0;
+       SpeedCyclometer_revPs = 0;
+       return;
+    }
+    float Circum_mm = (WHEEL_DIAMETER_MM * PI);
+    long WheelRev_ms = data->TickTime_ms - data->OldTick_ms;
+    if (data->InterruptState >= IRQ_SECOND && data->oldSpeed_mmPs == NO_DATA && WheelRev_ms > 0)
+    {   //  first computed speed
+        SpeedCyclometer_revPs = 1000.0 / WheelRev_ms;
+        SpeedCyclometer_mmPs  = 
+        data->oldSpeed_mmPs = Circum_mm * SpeedCyclometer_revPs;
+        data->oldTime_ms = data->TickTime_ms;  // time stamp for oldSpeed_mmPs
+        data->oldClickNumber = data->nowClickNumber;
+        return;
+    }
+    if (data->InterruptState == IRQ_RUNNING && data->olderSpeed_mmPs == NO_DATA && WheelRev_ms > 0
+       && data->nowClickNumber != data->oldClickNumber)
+    {   //  new data for second computed speed
+        data->olderSpeed_mmPs = data->oldSpeed_mmPs;
+        data->olderTime_ms = data->oldTime_ms;
+    
+        SpeedCyclometer_revPs = 1000.0 / WheelRev_ms;
+        SpeedCyclometer_mmPs  = 
+        data->oldSpeed_mmPs = Circum_mm * SpeedCyclometer_revPs;
+        data->oldTime_ms = data->TickTime_ms;  // time stamp for oldSpeed_mmPs
+        data->oldClickNumber = data->nowClickNumber;
+        return;
+    }
+    if (data->InterruptState == IRQ_RUNNING && data->olderSpeed_mmPs != NO_DATA && WheelRev_ms > 0)
+    {  // Normal situation after initialization
+        if (data->nowClickNumber == data->oldClickNumber)
+        {  // No new information; extrapolate the speed if decelerating; else keep old speed
+            if (data->olderSpeed_mmPs > data->oldSpeed_mmPs)
+            {   // decelerrating
+                float deceleration = (float) (data->olderSpeed_mmPs - data->oldSpeed_mmPs) /
+                (data->oldTime_ms - data->olderTime_ms);
+                SpeedCyclometer_mmPs = data->oldSpeed_mmPs - deceleration * 
+                (data->nowTime_ms - data->oldTime_ms);
+                if (SpeedCyclometer_mmPs < 0)
+                    SpeedCyclometer_mmPs = 0;
+                SpeedCyclometer_revPs = SpeedCyclometer_mmPs / Circum_mm;
+            }
+            else
+            {  // accelerating; should get new data soon
+                if(data->nowTime_ms - data->oldTime_ms > MaxTickTime_ms)
+                {  // too long without getting a tick
+                    SpeedCyclometer_mmPs = 0;
+                    SpeedCyclometer_revPs = 0;
+                }
+            }
+        }
+        else
+        {  // moving; use new data to compute speed
+            data->olderSpeed_mmPs = data->oldSpeed_mmPs;
+            data->olderTime_ms = data->oldTime_ms;
+    
+            SpeedCyclometer_revPs = 1000.0 / WheelRev_ms;
+            SpeedCyclometer_mmPs  = 
+            data->oldSpeed_mmPs = Circum_mm * SpeedCyclometer_revPs;
+            data->oldTime_ms = data->TickTime_ms;  // time stamp for oldSpeed_mmPs
+            data->oldClickNumber = data->nowClickNumber;
+        }
+    }
+    return;
+}
+/*---------------------------------------------------------------------------------------*/ 
 
 void show_speed(SerialData *Results)
 {
-   unsigned long int showTickTime, showOldTick; // local varsions
-   ShowTime_ms = millis();       
-   if ((InterruptState == IRQ_NONE) || (InterruptState == IRQ_FIRST))  // no OR 1 interrupts
-   {
-       SpeedCyclometer_mmPs = 0;
-       SpeedCyclometer_revPs = 0;
-   } 
-
-  //check if velocity has gone to zero
-  else
-  {
-    if(ShowTime_ms - TickTime > MaxTickTime_ms)
-    {  // stopped
-/*        SerialMonitor.print("Stop. Showtime: ");
-        SerialMonitor.print(ShowTime_ms);
-        SerialMonitor.print(" Tick: ");
-        SerialMonitor.println(TickTime); */
-        SpeedCyclometer_mmPs = 0;
-        SpeedCyclometer_revPs = 0;
-    }
-    else
-    {  // moving
-        noInterrupts();
-        showTickTime = TickTime;
-        showOldTick = OldTick;
-        interrupts();
-        WheelRev_ms = max(showTickTime - showOldTick, ShowTime_ms - showTickTime);
-        if (InterruptState == IRQ_RUNNING)
-        {  // have new data
-      
-            float Circum_mm = (WHEEL_DIAMETER_MM * PI);
-            if (WheelRev_ms > 0)
-            {
-                SpeedCyclometer_revPs = 1000.0 / WheelRev_ms;
-                SpeedCyclometer_mmPs  = Circum_mm * SpeedCyclometer_revPs;
-            }
-            else
-            {
-                SpeedCyclometer_mmPs = 0;
-                SpeedCyclometer_revPs = 0;
-            }
-        }
-
-      }
-    }
+   history.nowTime_ms = millis();       
+   noInterrupts();
+   history.TickTime_ms = TickTime;
+   history.OldTick_ms = OldTick;
+   history.nowClickNumber = ClickNumber;
+   history.InterruptState = InterruptState;
+   interrupts();
+   
+   ComputeSpeed (&history);
+    
     Odometer_m += (float)(LOOP_TIME_MS * SpeedCyclometer_mmPs) / MEG;
-// Since Results have not been cleard, angle information will also be sent.
+// Since Results have not been cleared, angle information will also be sent.
     Results->speed_cmPs = SpeedCyclometer_mmPs / 10;
     writeSerial(&Serial3, Results);  // Send speed to C6
 
     // Show on monitor
-/*    SerialMonitor.print("\nWheelRev (ms): ");
-    SerialMonitor.print(WheelRev_ms);
-    SerialMonitor.print(" SENSOR ");
+/*  SerialMonitor.print(" SENSOR ");
     SerialMonitor.print("{Speed ");
     SerialMonitor.print(SpeedCyclometer_revPs);
     SerialMonitor.println("}\0");
