@@ -1,7 +1,7 @@
 
 #include <SPI.h>
 #include <Elcano_Serial.h>
-#define LOOP_TIME_MS 200
+#define LOOP_TIME_MS 400
 #define ERROR_HISTORY 20
 
 // Orange Trike
@@ -50,10 +50,10 @@
 #if (VEHICLE_NUMBER == 2)
 
 //OUTPUT values -  0 to 255
-#define MIN_ACC_OUT 40
+#define MIN_ACC_OUT 50
 #define MAX_ACC_OUT 227
-#define MIN_BRAKE_OUT 180
-#define MAX_BRAKE_OUT 250
+#define MIN_BRAKE_OUT 210
+#define MAX_BRAKE_OUT 254
 #define RIGHT_TURN_OUT 146 // Original value 146
 #define LEFT_TURN_OUT 223 // Original value 230
 #define STRAIGHT_TURN_OUT 182 // Original value 187
@@ -313,7 +313,7 @@ void loop() {
     //Serial.print("loop elapsed time = ");
     //Serial.println(elapsedTime);
     
-    LogData(local_results, &Results);  // data for spreadsheet
+//    LogData(local_results, &Results);  // data for spreadsheet
     
     // Did we spend long enough in the loop that we should immediately
     // start the next pass?
@@ -816,10 +816,17 @@ void ComputeSpeed( struct hist *data)
             }
             else
             {  // accelerating; should get new data soon
-                if(data->nowTime_ms - data->oldTime_ms > MaxTickTime_ms)
-                {  // too long without getting a tick
-                    SpeedCyclometer_mmPs = 0;
-                    SpeedCyclometer_revPs = 0;
+               
+            }
+            if(data->nowTime_ms - data->oldTime_ms > MaxTickTime_ms)
+            {  // too long without getting a tick
+                SpeedCyclometer_mmPs = 0;
+                SpeedCyclometer_revPs = 0;
+                if(data->nowTime_ms - data->oldTime_ms > 2 * MaxTickTime_ms)
+                {
+                    InterruptState = IRQ_FIRST;  //  Invalidate old data
+                    data->oldSpeed_mmPs = NO_DATA;
+                    data->olderSpeed_mmPs = NO_DATA;
                 }
             }
         }
@@ -830,15 +837,36 @@ void ComputeSpeed( struct hist *data)
     
             SpeedCyclometer_revPs = 1000.0 / WheelRev_ms;
             SpeedCyclometer_mmPs  = 
-            data->oldSpeed_mmPs = Circum_mm * SpeedCyclometer_revPs;
+          data->oldSpeed_mmPs = Circum_mm * SpeedCyclometer_revPs;
             data->oldTime_ms = data->TickTime_ms;  // time stamp for oldSpeed_mmPs
             data->oldClickNumber = data->nowClickNumber;
         }
     }
+    if(data->nowTime_ms - data->TickTime_ms > WheelRev_ms)
+    {  // at this speed, should have already gotten a tick?; If so, we are slowing.
+        float SpeedSlowing_revPs = 1000.0 / (data->nowTime_ms - data->TickTime_ms);
+        long SpeedSlowing_mmPs  = Circum_mm * SpeedCyclometer_revPs;                 
+        SpeedCyclometer_revPs = min(SpeedCyclometer_revPs, SpeedSlowing_revPs);
+        SpeedCyclometer_mmPs  = min(SpeedCyclometer_mmPs, SpeedSlowing_mmPs);
+   }
     return;
 }
 /*---------------------------------------------------------------------------------------*/ 
-
+void PrintSpeed( struct hist *data)
+{
+      Serial.print(SpeedCyclometer_mmPs); Serial.print("\t");
+      Serial.print(data->InterruptState); Serial.print("\t");
+      Serial.print(data->oldSpeed_mmPs); Serial.print("\t");
+      Serial.print(data->olderSpeed_mmPs); Serial.print("\t");
+      Serial.print(data->oldClickNumber); Serial.print("\t");
+      Serial.print(data->nowClickNumber); Serial.print("\t");
+      Serial.print(data->olderTime_ms); Serial.print("\t");
+      Serial.print(data->oldTime_ms); Serial.print("\t");      
+      Serial.print(data->nowTime_ms); Serial.print("\t");
+      Serial.print(data->TickTime_ms); Serial.print("\t");
+      Serial.println(data->OldTick_ms);
+}
+/*---------------------------------------------------------------------------------------*/ 
 void show_speed(SerialData *Results)
 {
    history.nowTime_ms = millis();       
@@ -850,6 +878,7 @@ void show_speed(SerialData *Results)
    interrupts();
    
    ComputeSpeed (&history);
+   PrintSpeed(&history);
     
     Odometer_m += (float)(LOOP_TIME_MS * SpeedCyclometer_mmPs) / MEG;
 // Since Results have not been cleared, angle information will also be sent.
