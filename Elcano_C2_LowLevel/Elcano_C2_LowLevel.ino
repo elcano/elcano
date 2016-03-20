@@ -155,7 +155,7 @@ unsigned long straightTime_ms;
 int  throttle_control = MIN_ACC_OUT;
 int  brake_control = MAX_BRAKE_OUT;
 int  steer_control = STRAIGHT_TURN_OUT;
-
+float Odometer_m = 0;
 //==========================================================================================
 void ISR_TURN_rise() {
   noInterrupts();
@@ -275,7 +275,8 @@ void setup()
       attachInterrupt(IRPT_GO,    ISR_GO_rise,    RISING);
       attachInterrupt(IRPT_ESTOP, ISR_ESTOP_rise, RISING);
       attachInterrupt(IRPT_RVS,   ISR_RVS_rise,   RISING);
-      Print7headers(false);
+//      Print7headers(false);
+      PrintHeaders();
 }
 
 void loop() {
@@ -384,6 +385,7 @@ void Print7 (bool processed, unsigned long results[7])
 }
 void LogData(unsigned long commands[7], SerialData *sensors)  // data for spreadsheet
 {
+     Serial.print(millis()); Serial.print("\t");
      Serial.print(sensors->speed_cmPs); Serial.print("\t");
      Serial.print(sensors->speed_cmPs*36.0/1000.); Serial.print("\t"); // km/hr
      Serial.print(sensors->angle_deg); Serial.print("\t");
@@ -391,9 +393,25 @@ void LogData(unsigned long commands[7], SerialData *sensors)  // data for spread
      int left = analogRead(A3);
      Serial.print(right); Serial.print("\t");
      Serial.print(left); Serial.print("\t");
-     Print7 (true, commands);
+     Serial.print(throttle_control); Serial.print("\t");
+     Serial.print(brake_control); Serial.print("\t");
+     Serial.print(steer_control); Serial.print("\t");
+     Serial.println(Odometer_m);
+//     Print7 (true, commands);
 }
-
+void PrintHeaders (void)
+{
+    Serial.print("(ms) Time\t");
+    Serial.print("(cm/s) Speed\t");
+    Serial.print("(km/h) Speed\t");
+    Serial.print("(deg) Angle\t");
+    Serial.print("Right\t");
+    Serial.print("Left\t");
+    Serial.print("Throttle\t");
+    Serial.print("Brake\t");
+    Serial.print("Steer\t");
+    Serial.println("(m) Distance");
+}
 void startCapturingRCState()
 {
   for (int i = 1; i < 7; i++) {
@@ -679,7 +697,6 @@ unsigned long MaxTickTime_ms;
 // ((WHEEL_DIAMETER_MM * 3142) / MIN_SPEED_mmPs)
 // MinTickTime_ms = 9239 ms = 9 sec
 
-float Odometer_m = 0;
 long SpeedCyclometer_mmPs = 0;
 // Speed in revolutions per second is independent of wheel size.
 float SpeedCyclometer_revPs = 0.0;//revolutions per sec
@@ -955,8 +972,8 @@ void CalibrateTurnAngle(int count, int pause)
         Left_Min_Count = LEFT_MIN_COUNT;
         Left_Max_Count = LEFT_MAX_COUNT;
     }
-    Serial.print("CALIBRATE: Left Straight = "); Serial.print(LeftStraight_A3);
-     Serial.print("\tRight Straight = "); Serial.print(RightStraight_A2);
+//    Serial.print("\tCALIBRATE: Left Straight\t"); Serial.print(LeftStraight_A3);
+//    Serial.print("\tRight Straight\t"); Serial.println(RightStraight_A2);
     old_turn_degx1000 = 0; // straight
 }
 /*======================ReadTurnAngle======================*/
