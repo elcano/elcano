@@ -123,6 +123,7 @@ const int IRPT_RVS = 0;   // D2  = Int 0
 const int IRPT_TURN = 2;  // D21 = Int 2 
 const int IRPT_GO = 3;   //  D20 = Int 3 
 const int IRPT_RDR = 4;   // D19 = Int 4
+// RDR (rudder) is not used. Instead, use this interrupt for the motor phase feedback, which gives speed.
 const int IRPT_ESTOP = 5; // D18 = Int 5
 //RC input values - pulse widths in microseconds
 const int DEAD_ZONE = 75;
@@ -137,6 +138,7 @@ const int IRPT_RVS = 0;   // D2  = Int 0
 const int IRPT_TURN = 2;  // D21 = Int 2 
 const int IRPT_GO = 3;   //  D20 = Int 3 
 const int IRPT_RDR = 5;   // D18 = Int 5
+// RDR (rudder) is not used. Instead, use this interrupt for the motor phase feedback, which gives speed.
 const int IRPT_ESTOP = 4; // D19 = Int 4
 //RC input values - pulse widths in microseconds
 const int DEAD_ZONE = 75;
@@ -156,6 +158,9 @@ int  throttle_control = MIN_ACC_OUT;
 int  brake_control = MAX_BRAKE_OUT;
 int  steer_control = STRAIGHT_TURN_OUT;
 float Odometer_m = 0;
+float HubSpeed_kmPh;
+const float  HubSpeed2kmPh = 13000000;
+const unsigned long HubAtZero = 1159448;
 //==========================================================================================
 void ISR_TURN_rise() {
   noInterrupts();
@@ -165,9 +170,17 @@ void ISR_TURN_rise() {
 }
 
 void ISR_RDR_rise() {
+// RDR (rudder) is not used. Instead, use this interrupt for the motor phase feedback, which gives speed.
   noInterrupts();
+  unsigned long old_phase_rise = RC_rise[RC_RDR];
   ProcessRiseOfINT(RC_RDR);
-  attachInterrupt(IRPT_RDR, ISR_RDR_fall, FALLING);
+  RC_elapsed[RC_RDR] = RC_rise[RC_RDR] - old_phase_rise;
+  // The phase frequency is proportional to wheel rotation.
+  // An e-bike hub is powered by giving it 3 phased 36 V lines
+  // The e-bike controller needs feeback from the hub.
+  // The hub supplies 3 Hall Phase sensors; each is a 5V square wave and tells how fast the wheel rotates.
+  // The square wave feedback has sone noise, which is cleaned up by an RC low pass filter 
+  //  with R = 1K, C = 100 nF 
   interrupts();
 }
 
@@ -197,14 +210,6 @@ void ISR_TURN_fall() {
   ProcessFallOfINT(RC_TURN);
   RC_Done[RC_TURN] = 1;
   attachInterrupt(IRPT_TURN, ISR_TURN_rise, RISING);
-  interrupts();
-}
-
-void ISR_RDR_fall() {
-  noInterrupts();
-  ProcessFallOfINT(RC_RDR);
-  RC_Done[RC_RDR] = 1;
-  attachInterrupt(IRPT_RDR, ISR_RDR_rise, RISING);
   interrupts();
 }
 
@@ -293,7 +298,7 @@ void loop() {
 //  PrintDone();
 
   while (micros() < nextTime &&
-    ~((RC_Done[RC_ESTP] == 1) && (RC_Done[RC_GO] == 1) && (RC_Done[RC_TURN] == 1) && (RC_Done[RC_RDR] == 1)))
+    ~((RC_Done[RC_ESTP] == 1) && (RC_Done[RC_GO] == 1) && (RC_Done[RC_TURN] == 1) ))
     ;  //wait
   
     // got data;    
@@ -344,7 +349,6 @@ void PrintDone()
   Serial.print(" RC_GO "); Serial.print(RC_Done[RC_GO]);
   Serial.print(" RC_TURN "); Serial.print(RC_Done[RC_TURN]);
   //Serial.print(" RC_RVS "); Serial.print(RC_Done[RC_RVS]);
-  Serial.print(" RC_RDR "); Serial.println(RC_Done[RC_RDR]);
   // Not currently using RC_RVS, and it is always zero.
 
 }
@@ -388,6 +392,7 @@ void LogData(unsigned long commands[7], SerialData *sensors)  // data for spread
      Serial.print(millis()); Serial.print("\t");
      Serial.print(sensors->speed_cmPs); Serial.print("\t");
      Serial.print(sensors->speed_cmPs*36.0/1000.); Serial.print("\t"); // km/hr
+     Serial.print(HubSpeed_kmPh); Serial.print("\t");
      Serial.print(sensors->angle_deg); Serial.print("\t");
      int right = analogRead(A2);
      int left = analogRead(A3);
@@ -404,6 +409,7 @@ void PrintHeaders (void)
     Serial.print("(ms) Time\t");
     Serial.print("(cm/s) Speed\t");
     Serial.print("(km/h) Speed\t");
+    Serial.print("(km/h) Hub Speed\t");
     Serial.print("(deg) Angle\t");
     Serial.print("Right\t");
     Serial.print("Left\t");
@@ -483,7 +489,13 @@ void processRC (unsigned long *results)
     
     /* 5th pulse is rudder (position 3 on receiver; controlled by Left left/right joystick on transmitter) 
     Not used */
-    results[RC_RDR] = (results[RC_RDR] > MIDDLE? HIGH: LOW);  // could be analog
+//    results[RC_RDR] = (results[RC_RDR] > MIDDLE? HIGH: LOW);  // could be analog
+    Serial.println(results[RC_RDR]);
+    if (results[RC_RDR] >= HubAtZero)
+        HubSpeed_kmPh = 0;
+    else
+        HubSpeed_kmPh = HubSpeed2kmPh / results[RC_RDR];
+    
 //  Serial.println("");  // New line
 
 }
