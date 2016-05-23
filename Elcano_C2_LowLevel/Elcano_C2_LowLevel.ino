@@ -1,5 +1,4 @@
-
-#include <SPI.h>
+#include <SPI.h> 
 #include <Elcano_Serial.h>
 
 //#include <SoftwareSerial.h>
@@ -13,14 +12,14 @@ const int softwareRx = 7;   // not used
 #define ERROR_HISTORY 20
 
 // Orange Trike
-//#define VEHICLE_NUMBER 1
-//#define RC_SPEKTRUM 
-//#undef  RC_HITEC
+#define VEHICLE_NUMBER 1
+#define RC_SPEKTRUM 
+#undef  RC_HITEC
 
 // Yellow Trike
-#define VEHICLE_NUMBER 2
-#undef RC_SPEKTRUM 
-#define  RC_HITEC
+//#define VEHICLE_NUMBER 2
+//#undef RC_SPEKTRUM 
+//#define  RC_HITEC
 
 #if (VEHICLE_NUMBER == 1)
 //OUTPUT values -  0 to 255
@@ -119,12 +118,12 @@ volatile int RC_Done[7] = {0,0,0,0,0,0,0};
 // interrupt number handling a function depends on the RC controller.
 
 #ifdef RC_SPEKTRUM
-const int IRPT_RVS = 0;   // D2  = Int 0 
-const int IRPT_TURN = 2;  // D21 = Int 2 
-const int IRPT_GO = 3;   //  D20 = Int 3 
-const int IRPT_RDR = 4;   // D19 = Int 4
+const int IRPT_RVS  = 0; // D2  = Int 0 
+const int IRPT_TURN = 2; // D21 = Int 2
+const int IRPT_GO   = 3; // D20 = Int 3 
+const int IRPT_RDR  = 5; // D18 = Int 5
 // RDR (rudder) is not used. Instead, use this interrupt for the motor phase feedback, which gives speed.
-const int IRPT_ESTOP = 5; // D18 = Int 5
+const int IRPT_ESTOP = 4; // D19 = Int 4
 //RC input values - pulse widths in microseconds
 const int DEAD_ZONE = 75;
 const int MIDDLE = 1500;  // was 1322; new stable value = 1510
@@ -280,7 +279,7 @@ void setup()
       attachInterrupt(IRPT_GO,    ISR_GO_rise,    RISING);
       attachInterrupt(IRPT_ESTOP, ISR_ESTOP_rise, RISING);
       attachInterrupt(IRPT_RVS,   ISR_RVS_rise,   RISING);
-//      Print7headers(false);
+      Print7headers(false);
       PrintHeaders();
 }
 
@@ -304,14 +303,14 @@ void loop() {
     // got data;    
     for (int i = 0; i < 8; i++)
         local_results[i] = RC_elapsed[i];
-//  Print7( false, local_results);
+  Print7( false, local_results);
     processRC(local_results);
 //    Print7( true, local_results);
   
     Results.Clear();
     Results.kind = MSG_SENSOR;
     Results.angle_deg = TurnAngle_degx10() / 10;
-    show_speed (&Results);
+    //show_speed (&Results);
     
     // Report how long the loop took.
     unsigned long endTime = micros();
