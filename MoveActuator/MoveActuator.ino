@@ -10,12 +10,6 @@
  
  7/1/15 TCF: Added ThrottleChannel
  */
-// Define the tests to do.
-#define BRAKE_RAMP
-#define STEER_RAMP
-#define MOTOR_RAMP
-// If operating with the MegaShieldDB, we can use the Digital Analog Converter to move the vehicle
-#define DAC
 
 // Input/Output (IO) pin names for the MegaShieldDB printed circuit board (PCB)
 // #include <IOPCB.h>
@@ -23,16 +17,25 @@
 // Temporary fix 10/7/15:   IOPCB.h is here
 /*==========================================================================*/
 /* IO_PCB.h:  I/O pin assignments for Arduino Mega 2560 on MegaShieldDB
+*/
 
+#include <Settings.h>
+
+// Define the tests to do.
+#define BRAKE_RAMP
+#define STEER_RAMP
+#define MOTOR_RAMP
+// If operating with the MegaShieldDB, we can use the Digital Analog Converter to move the vehicle
+#define DAC
+
+/*
 The Mega is designed to be used with a data-logging shield.
 The nonMega shield uses A4 and A5 for RTC and D10,11,12,and 13 for MOSI data logging.
-
-7/1/15 TCF  Removed BASSACKWARDS, put in VEHICLE_NUMBER
 */
-// Orange trike
-//#define VEHICLE_NUMBER 1
-// Yellow trike
-#define VEHICLE_NUMBER 2
+
+// @ToDo: There are declarations here that are per-trike, and some that are common.
+// Parameters have been added to Settings.h for the per-trike values.
+// Should the common parameters also be defined in Settings.h?
 
 // DIGITAL I/O ----------------------------------------------
 
@@ -54,13 +57,8 @@ const int Throttle =  5;  // external PWM output  DEPRICATED: Use MOSI
   Turns left or right. Default is wheels locked to a straight ahead position. */
 
 const int Steer =  7;    // external PWM output
-#if (VEHICLE_NUMBER == 1)
-const int DiskBrake = 6;  // external PWM output
-const int ThrottleChannel = 0;  // Use DAC A
-#elif (VEHICLE_NUMBER == 2)
-const int DiskBrake = 9;  // external PWM output
-const int ThrottleChannel = 3;  // Use DAC D
-#endif
+const int DiskBrake = DISK_BRAKE;
+const int ThrottleChannel = THROTTLE_CHANNEL;
 
 // D8-13 Connector ----------------------
 // The shield does not provide a socket for D8-13
