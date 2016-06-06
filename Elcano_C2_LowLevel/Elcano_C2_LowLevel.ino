@@ -1,7 +1,13 @@
 #include <SPI.h> 
 #include <Elcano_Serial.h>
-
 //#include <SoftwareSerial.h>
+
+// Read in VEHICLE_NUMBER, which specifies which trike is being used.
+// Also provides definitions specific to that trike, under
+// VEHICLE_NUMBER conditionals. See README.txt for how to use and
+// modify Settings.h.
+#include <Settings.h>
+
 // On Mega, TX must use d10-15, d50-53, or a8-a15 (62-69)
 const int softwareTx = 10;  // to 7 segment LED display
 const int softwareRx = 7;   // not used
@@ -10,58 +16,6 @@ const int softwareRx = 7;   // not used
 
 #define LOOP_TIME_MS 400
 #define ERROR_HISTORY 20
-
-// Orange Trike
-//#define VEHICLE_NUMBER 1
-
-// Yellow Trike
-#define VEHICLE_NUMBER 2
-
-#if (VEHICLE_NUMBER == 1)
-#define RC_SPEKTRUM 
-#undef  RC_HITEC
-//OUTPUT values -  0 to 255
-#define MIN_ACC_OUT 40
-#define MAX_ACC_OUT 227
-#define MIN_BRAKE_OUT 180
-#define MAX_BRAKE_OUT 250
-#define RIGHT_TURN_OUT 146
-#define LEFT_TURN_OUT 230
-#define STRAIGHT_TURN_OUT 180
-// Turn sensors are believed if they are in this range while wheels are straight
-#define RIGHT_MIN_COUNT 80
-#define RIGHT_MAX_COUNT 284
-#define LEFT_MIN_COUNT  80
-#define LEFT_MAX_COUNT  284
-#define DAC_CHANNEL 0    // output to motor actuator
-#define STEER_OUT_PIN 7 // Output to steer actuator
-#define BRAKE_OUT_PIN 6  // output to brake actuator
-#define WHEEL_DIAMETER_MM 397
-#define MOTOR_POLE_PAIRS 23
-#endif
-
-#if (VEHICLE_NUMBER == 2)
-#undef RC_SPEKTRUM 
-#define  RC_HITEC
-//OUTPUT values -  0 to 255
-#define MIN_ACC_OUT 50
-#define MAX_ACC_OUT 227
-#define MIN_BRAKE_OUT 210
-#define MAX_BRAKE_OUT 254
-#define RIGHT_TURN_OUT 160 
-#define LEFT_TURN_OUT 254 
-#define STRAIGHT_TURN_OUT 192
-// Turn sensors are believed if they are in this range while wheels are straight
-#define RIGHT_MIN_COUNT 725
-#define RIGHT_MAX_COUNT 785
-#define LEFT_MIN_COUNT  880
-#define LEFT_MAX_COUNT  940
-#define DAC_CHANNEL 3
-#define STEER_OUT_PIN 7 // Output to steer actuator
-#define BRAKE_OUT_PIN 9  // output to brake actuator
-#define WHEEL_DIAMETER_MM 500
-#define MOTOR_POLE_PAIRS 23
-#endif
 
 // Distance the wheel outer circumference moves during one phase cycle.
 const float WHEEL_PHASE_DISTANCE_MM = WHEEL_DIAMETER_MM * PI / MOTOR_POLE_PAIRS;
