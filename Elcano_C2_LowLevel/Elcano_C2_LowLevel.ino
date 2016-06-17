@@ -391,6 +391,7 @@ void LogData(unsigned long commands[7], SerialData *sensors)  // data for spread
 {
      Serial.print(millis()); Serial.print("\t");
      Serial.print(sensors->speed_cmPs); Serial.print("\t");
+     show7seg(sensors->speed_cmPs);
      Serial.print(sensors->speed_cmPs*36.0/1000.); Serial.print("\t"); // km/hr
      Serial.print(HubSpeed_kmPh); Serial.print("\t");
      Serial.print(sensors->angle_deg); Serial.print("\t");
@@ -1166,13 +1167,13 @@ void setup7seg()
 
   // Clear the display, and then turn on all segments and decimals
   clearDisplay();  // Clears display, resets cursor
-  setBrightness(127);  // Medium brightness
-//  setBrightness(255);  // High brightness
+//  setBrightness(127);  // Medium brightness
+  setBrightness(255);  // High brightness
 }
 
 void show7seg(int speed_mmPs)
 {
-  char tempString[10];  // Will be used with sprintf to create strings
+  char tempString[4];  // Will be used with sprintf to create strings
   // convert mm/s to km/h
   int speed_kmPhx10 = (speed_mmPs*.036);
   // Magical sprintf creates a string for us to send to the s7s.
@@ -1189,6 +1190,8 @@ void show7seg(int speed_mmPs)
 void clearDisplay()
 {
   s7s.write(0x76);  // Clear display command
+  s7s.write(0x79); // Send the Move Cursor Command
+  s7s.write(0x00); // Move Cursor to left-most digit
 }
 
 // Set the displays brightness. Should receive byte with the value
