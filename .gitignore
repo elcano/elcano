@@ -1,4 +1,17 @@
 # Add more here #
+
+# These are specific to the elcano repository.
+
+# Note: Settings.h is a site-specific variant of SettingsTemplate.h.
+# Only SettingsTemplate.h should ever be committed into the repository.
+# Do not use git add with any of these options, ever, even once.
+# -A
+# --all
+# --no-ignore-removal
+# --no-all
+# --ignore-removal
+libraries/Settings/Settings.h
+
 ###################
 .dropbox.cache
 
