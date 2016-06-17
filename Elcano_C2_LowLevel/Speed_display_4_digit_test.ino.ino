@@ -25,7 +25,7 @@ Writes to display must be sent in 4 byte packets.
 
  */
 
-void setup() {
+void testsetup() {
   // Open serial communications and wait for port to open:
   Serial.begin(9600);
   while (!Serial) {
@@ -49,7 +49,7 @@ void setup() {
 
 uint16_t count = random(0,100);
 
-void loop() {
+void testloop() {
   char temp[4];
   sprintf(temp, "%4d", count);
   String temp3 = (String)temp;
