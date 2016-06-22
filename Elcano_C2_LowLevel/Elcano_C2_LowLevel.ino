@@ -1,13 +1,7 @@
-#include <SPI.h> 
+#include <SPI.h>
 #include <Elcano_Serial.h>
+
 //#include <SoftwareSerial.h>
-
-// Read in VEHICLE_NUMBER, which specifies which trike is being used.
-// Also provides definitions specific to that trike, under
-// VEHICLE_NUMBER conditionals. See README.txt for how to use and
-// modify Settings.h.
-#include <Settings.h>
-
 // On Mega, TX must use d10-15, d50-53, or a8-a15 (62-69)
 const int softwareTx = 10;  // to 7 segment LED display
 const int softwareRx = 7;   // not used
@@ -17,23 +11,56 @@ const int softwareRx = 7;   // not used
 #define LOOP_TIME_MS 400
 #define ERROR_HISTORY 20
 
-// Distance the wheel outer circumference moves during one phase cycle.
-const float WHEEL_PHASE_DISTANCE_MM = WHEEL_DIAMETER_MM * PI / MOTOR_POLE_PAIRS;
-// Conversion factor from 1 / (motor phase cycle time in microseconds) to speed
-// in km/h:
-// There are MOTOR_POLE_PAIRS phase cycles per wheel rotation, so the time for
-// one wheel rotation (based on a single phase cycle) is the duration of that
-// phase cycle times the number of pole pairs.  Also, we want km / h rather
-// than mm / usec.  Units conversion:
-// speed measured in km / hr
-// = (speed measured in mm / usec) * (km / 10^6 mm) * (3600 * 10^6 usec / hr)
-// = (speed in mm / usec) * 3600
-// = (wheel phase distance in mm / motor feedback cycle time in usec) * 3600
-// = (wheel phase distance in mm * 3600) / (motor feedback cycle time in usec)
-// The first part is a constant for a given motor and wheel diameter:
-const float HUB_PHASE_TO_KMPH = WHEEL_PHASE_DISTANCE_MM * 3600;
-// For a motor with 23 pole pairs and a 500 mm diameter drive wheel, this is
-// about 245863.8.
+// Orange Trike
+//#define VEHICLE_NUMBER 1
+//#define RC_SPEKTRUM 
+//#undef  RC_HITEC
+
+// Yellow Trike
+#define VEHICLE_NUMBER 2
+#undef RC_SPEKTRUM 
+#define  RC_HITEC
+
+#if (VEHICLE_NUMBER == 1)
+//OUTPUT values -  0 to 255
+#define MIN_ACC_OUT 40
+#define MAX_ACC_OUT 227
+#define MIN_BRAKE_OUT 180
+#define MAX_BRAKE_OUT 250
+#define RIGHT_TURN_OUT 146
+#define LEFT_TURN_OUT 230
+#define STRAIGHT_TURN_OUT 180
+// Turn sensors are believed if they are in this range while wheels are straight
+#define RIGHT_MIN_COUNT 80
+#define RIGHT_MAX_COUNT 284
+#define LEFT_MIN_COUNT  80
+#define LEFT_MAX_COUNT  284
+#define DAC_CHANNEL 0    // output to motor actuator
+#define STEER_OUT_PIN 7 // Output to steer actuator
+#define BRAKE_OUT_PIN 6  // output to brake actuator
+
+#endif
+
+#if (VEHICLE_NUMBER == 2)
+
+//OUTPUT values -  0 to 255
+#define MIN_ACC_OUT 50
+#define MAX_ACC_OUT 227
+#define MIN_BRAKE_OUT 210
+#define MAX_BRAKE_OUT 254
+#define RIGHT_TURN_OUT 160 
+#define LEFT_TURN_OUT 254 
+#define STRAIGHT_TURN_OUT 192
+// Turn sensors are believed if they are in this range while wheels are straight
+#define RIGHT_MIN_COUNT 725
+#define RIGHT_MAX_COUNT 785
+#define LEFT_MIN_COUNT  880
+#define LEFT_MAX_COUNT  940
+#define DAC_CHANNEL 3
+#define STEER_OUT_PIN 7 // Output to steer actuator
+#define BRAKE_OUT_PIN 9  // output to brake actuator
+
+#endif
 
 /*================ReadTurnAngle ================*/
 // Value measured at analog input A2 from right steering column when wheels pointed straight ahead.
@@ -91,12 +118,12 @@ volatile int RC_Done[7] = {0,0,0,0,0,0,0};
 // interrupt number handling a function depends on the RC controller.
 
 #ifdef RC_SPEKTRUM
-const int IRPT_RVS  = 0; // D2  = Int 0 
-const int IRPT_TURN = 2; // D21 = Int 2
-const int IRPT_GO   = 3; // D20 = Int 3 
-const int IRPT_RDR  = 5; // D18 = Int 5
+const int IRPT_RVS = 0;   // D2  = Int 0 
+const int IRPT_TURN = 2;  // D21 = Int 2 
+const int IRPT_GO = 3;   //  D20 = Int 3 
+const int IRPT_RDR = 4;   // D19 = Int 4
 // RDR (rudder) is not used. Instead, use this interrupt for the motor phase feedback, which gives speed.
-const int IRPT_ESTOP = 4; // D19 = Int 4
+const int IRPT_ESTOP = 5; // D18 = Int 5
 //RC input values - pulse widths in microseconds
 const int DEAD_ZONE = 75;
 const int MIDDLE = 1500;  // was 1322; new stable value = 1510
@@ -109,9 +136,8 @@ const int MAX_RC = 1930; // was 1730;
 const int IRPT_RVS = 0;   // D2  = Int 0 
 const int IRPT_TURN = 2;  // D21 = Int 2 
 const int IRPT_GO = 3;   //  D20 = Int 3 
-// RDR (rudder) is not used. Instead, use this interrupt for the motor phase
-// feedback, which gives speed.
 const int IRPT_RDR = 5;   // D18 = Int 5
+// RDR (rudder) is not used. Instead, use this interrupt for the motor phase feedback, which gives speed.
 const int IRPT_ESTOP = 4; // D19 = Int 4
 //RC input values - pulse widths in microseconds
 const int DEAD_ZONE = 75;
@@ -121,16 +147,6 @@ const int MIN_RC = 960;
 const int MAX_RC = 1800;
 #endif
 //  D3 = Int 1  Wheel Click
-
-// Currently different interrupts are used for the motor phase feedback.
-#if (VEHICLE_NUMBER == 1)
-#define RC_MOTOR_FEEDBACK RC_RVS
-const int IRPT_MOTOR_FEEDBACK = IRPT_RVS;
-#endif
-#if (VEHICLE_NUMBER == 2)
-#define RC_MOTOR_FEEDBACK RC_RDR
-const int IRPT_MOTOR_FEEDBACK = IRPT_RDR;
-#endif
 
 long speed_errors[ERROR_HISTORY];
 long old_turn_degx1000;
@@ -152,12 +168,18 @@ void ISR_TURN_rise() {
   interrupts();
 }
 
-// RDR (rudder) is currently not used.
 void ISR_RDR_rise() {
+// RDR (rudder) is not used. Instead, use this interrupt for the motor phase feedback, which gives speed.
   noInterrupts();
   unsigned long old_phase_rise = RC_rise[RC_RDR];
   ProcessRiseOfINT(RC_RDR);
   RC_elapsed[RC_RDR] = RC_rise[RC_RDR] - old_phase_rise;
+  // The phase frequency is proportional to wheel rotation.
+  // An e-bike hub is powered by giving it 3 phased 36 V lines
+  // The e-bike controller needs feeback from the hub.
+  // The hub supplies 3 Hall Phase sensors; each is a 5V square wave and tells how fast the wheel rotates.
+  // The square wave feedback has sone noise, which is cleaned up by an RC low pass filter 
+  //  with R = 1K, C = 100 nF 
   interrupts();
 }
 
@@ -214,34 +236,6 @@ void ISR_RVS_fall() {
   attachInterrupt(IRPT_RVS, ISR_RVS_rise, RISING);
   interrupts();
 }
-
-// An e-bike hub motor is powered by giving it 3 phase power. This is supplied
-// by the motor controller. The controller needs feeback from the hub.  It
-// receives three feedback signals from the motor, one for each phase.  These
-// are the *actual* phase rotation of the motor, not the phases supplied by the
-// controller, which differ from what the motor is currently doing whenever the
-// controller is attempting to speed up or slow down or change direction of the
-// motor. The motor phase feedback pulse rate is an integer multiple of wheel
-// rotation rate. The factor is the number of pole pairs in the motor. Note
-// that the controller has no idea how many pole pairs the motor has, so it
-// only controls the phase rate, not the actual rotation rate.  It is "someone
-// else's problem" to limit the actual rotation rate or speed. The feedback
-// signals are 5V square waves.  They have some noise -- spikes of several
-// volts, which exceeds the maximum voltage allowed for Arduino inputs, which
-// is 5.5V.  The signal is cleaned up by an RC low pass filter with R = 1K,
-// C = 100 nF.
-void ISR_MOTOR_FEEDBACK_rise() {
-  noInterrupts();
-  // This differs from the other interrupt routines since we need the *cycle*
-  // duration, not the width of the high pulse.  So here, we get the time from
-  // the previous rising edge to the current rising edge.  Q: Are we properly
-  // ignoring the first value from all of these interval computations?
-  unsigned long old_phase_rise = RC_rise[RC_MOTOR_FEEDBACK];
-  ProcessRiseOfINT(RC_MOTOR_FEEDBACK);
-  RC_elapsed[RC_MOTOR_FEEDBACK] = RC_rise[RC_MOTOR_FEEDBACK] - old_phase_rise;
-  interrupts();
-}
-
 //----------------------------------------------------------------------------
 void setup()
 { //Set up pins
@@ -255,7 +249,6 @@ void setup()
       SPI.setBitOrder( MSBFIRST);
       // initialize SPI:
       // The following line should not be neccessary. It uses a system library.
-      // Note PRR0 and PRR1 are defined for the Mega 2560 but smaller boards have just PRR.
       PRR0 &= ~4; // turn off PRR0.PRSPI bit so power isn't off
       SPI.begin();
       for (int channel = 0; channel < 4; channel++)
@@ -282,12 +275,11 @@ void setup()
       CalibrateTurnAngle(32, 20);
       calibrationTime_ms = millis();
       attachInterrupt(IRPT_TURN,  ISR_TURN_rise,  RISING);
-      //attachInterrupt(IRPT_RDR,   ISR_RDR_rise,   RISING);
+      attachInterrupt(IRPT_RDR,   ISR_RDR_rise,   RISING);
       attachInterrupt(IRPT_GO,    ISR_GO_rise,    RISING);
       attachInterrupt(IRPT_ESTOP, ISR_ESTOP_rise, RISING);
-      //attachInterrupt(IRPT_RVS,   ISR_RVS_rise,   RISING);
-      attachInterrupt(IRPT_MOTOR_FEEDBACK, ISR_MOTOR_FEEDBACK_rise, RISING);
-      Print7headers(false);
+      attachInterrupt(IRPT_RVS,   ISR_RVS_rise,   RISING);
+//      Print7headers(false);
       PrintHeaders();
 }
 
@@ -304,16 +296,6 @@ void loop() {
     unsigned long local_results[7];
 //  PrintDone();
 
-  // ToDo: Refactor this to not have a spinloop.
-  // We get three signals from the RC controller in turn, one each for RC_ESTP,
-  // RC_GO, and RC_TURN. The three signals are sent separately. We get triples of
-  // new RC values at about 30Hz, which is faster than the loop runs. It doesn't
-  // really matter if we are using exactly the latest value, as there isn't much
-  // change between one an the next, except for ESTP, and if we wait til the next
-  // loop pass for that, it should be ok. So just have the interrupt routines read
-  // the RC information and store it, then the loop can use the latest values.
-  // It should check that it has received any values, since the Arduino may be
-  // started before the RC controller is turned on.
   while (micros() < nextTime &&
     ~((RC_Done[RC_ESTP] == 1) && (RC_Done[RC_GO] == 1) && (RC_Done[RC_TURN] == 1) ))
     ;  //wait
@@ -321,9 +303,9 @@ void loop() {
     // got data;    
     for (int i = 0; i < 8; i++)
         local_results[i] = RC_elapsed[i];
-    Print7(false, local_results);
+  Print7( false, local_results);
     processRC(local_results);
-//    Print7( true, local_results);
+    Print7( true, local_results);
   
     Results.Clear();
     Results.kind = MSG_SENSOR;
@@ -395,6 +377,7 @@ void Print7headers (bool processed)
 }
 void Print7 (bool processed, unsigned long results[7])
 {
+  
     processed? Serial.print("processed data \t") : Serial.print("received data \t");
     Serial.print(results[0]); Serial.print("\t");
     Serial.print(results[1]); Serial.print("\t");
@@ -408,6 +391,7 @@ void LogData(unsigned long commands[7], SerialData *sensors)  // data for spread
 {
      Serial.print(millis()); Serial.print("\t");
      Serial.print(sensors->speed_cmPs); Serial.print("\t");
+     show7seg(sensors->speed_cmPs);
      Serial.print(sensors->speed_cmPs*36.0/1000.); Serial.print("\t"); // km/hr
      Serial.print(HubSpeed_kmPh); Serial.print("\t");
      Serial.print(sensors->angle_deg); Serial.print("\t");
@@ -507,11 +491,11 @@ void processRC (unsigned long *results)
     /* 5th pulse is rudder (position 3 on receiver; controlled by Left left/right joystick on transmitter) 
     Not used */
 //    results[RC_RDR] = (results[RC_RDR] > MIDDLE? HIGH: LOW);  // could be analog
-    Serial.println(results[RC_MOTOR_FEEDBACK]);
-    if (results[RC_MOTOR_FEEDBACK] >= HubAtZero)
+    Serial.println(results[RC_RDR]);
+    if (results[RC_RDR] >= HubAtZero)
         HubSpeed_kmPh = 0;
     else
-        HubSpeed_kmPh = HubSpeed2kmPh / results[RC_MOTOR_FEEDBACK];
+        HubSpeed_kmPh = HubSpeed2kmPh / results[RC_RDR];
     
 //  Serial.println("");  // New line
 
@@ -707,6 +691,12 @@ void moveVehicle(int acc)
 #define SerialOdoOut  Serial3
 #define SerialMonitor Serial
 
+#if (VEHICLE_NUMBER == 1)
+#define WHEEL_DIAMETER_MM 397
+#endif
+#if (VEHICLE_NUMBER == 2)
+#define WHEEL_DIAMETER_MM 500
+#endif
 #define MEG 1000000
 #define MAX_SPEED_KPH 50
 #define MAX_SPEED_mmPs   ((MAX_SPEED_KPH * MEG) / 3600)
@@ -1177,13 +1167,13 @@ void setup7seg()
 
   // Clear the display, and then turn on all segments and decimals
   clearDisplay();  // Clears display, resets cursor
-  setBrightness(127);  // Medium brightness
-//  setBrightness(255);  // High brightness
+//  setBrightness(127);  // Medium brightness
+  setBrightness(255);  // High brightness
 }
 
 void show7seg(int speed_mmPs)
 {
-  char tempString[10];  // Will be used with sprintf to create strings
+  char tempString[4];  // Will be used with sprintf to create strings
   // convert mm/s to km/h
   int speed_kmPhx10 = (speed_mmPs*.036);
   // Magical sprintf creates a string for us to send to the s7s.
@@ -1200,6 +1190,8 @@ void show7seg(int speed_mmPs)
 void clearDisplay()
 {
   s7s.write(0x76);  // Clear display command
+  s7s.write(0x79); // Send the Move Cursor Command
+  s7s.write(0x00); // Move Cursor to left-most digit
 }
 
 // Set the displays brightness. Should receive byte with the value
