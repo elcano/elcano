@@ -10,7 +10,7 @@
 //      Compiled as a Windows console application.
 //  Other modules required:
 //		KalmanFilter.cpp; Matrix.h; Matrix.c
-
+/*
 #include "stdafx.h"   // required for MSVC. Remove for Arduino.
 #include "Matrix.h"
 void filter(matrix& x, matrix& P, matrix& meas);
@@ -127,3 +127,4 @@ void Show(float x)
 {
 	printf("%.6f, ", x);
 }
+*/

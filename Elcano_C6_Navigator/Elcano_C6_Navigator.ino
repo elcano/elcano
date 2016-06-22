@@ -1,11 +1,9 @@
-#include <Common.h>
-#include <IO.h>
-#include <Matrix.h>
+#include <GPS.h>
 
 /*
 Elcano Module C6: Navigator.
   Includes C5 Obstacle detection.
-  
+
 Documentation:
   NavigationSystem (TO DO: Write document, based on these comments).
   Wiring_C6Mega.xls
@@ -16,7 +14,7 @@ position, attitude, velocity and acceleration.
 
 It uses a variety of sensors, some of which may not be present or reliable.
 
-Yes: S1: Hall Odometer.  This unit gives wheel spin speed feedback. 
+Yes: S1: Hall Odometer.  This unit gives wheel spin speed feedback.
 TO DO: Connect hardware and integrate into Kalman Filter
 
 Future: Visual Odometry from S4 (Smart camera) as passed though C7 (Visual Data
@@ -31,19 +29,19 @@ TO DO: Integrate Kalman Filter with GPS and Odometry.
 
 Yes: Distance and bearing to landmarks / obstacles.
 
-Yes: S7: GPS.  GPS should not the primary navigation sensor and the robot should be 
+Yes: S7: GPS.  GPS should not the primary navigation sensor and the robot should be
 able to operate indoors, in tunnels or other areas where GPS is not available
 or accurate.
 
-Sensed navigation information is passed to C3/C4, which use prexisting or SLAM 
+Sensed navigation information is passed to C3/C4, which use prexisting or SLAM
 digital maps, intended path to refine the estimated position.
-C3/C4 may use a particle filter. 
+C3/C4 may use a particle filter.
 C3/C4 may also receive lateral lane deviation from a camera (C7).
 
-The odometry sensor is one dimensional and gives the position along the 
+The odometry sensor is one dimensional and gives the position along the
 intended path. Lane deviation is also one dimensional and gives position
 normal to the intended path. Odometry, lane following and a digital map
-should be sufficient for localization.  An odometer will drift. This drift 
+should be sufficient for localization.  An odometer will drift. This drift
 can be nulled out by landmark recognition or GPS.
 
 An alternative to the Kalman Filter (KF) is fuzzy numbers.
@@ -54,16 +52,16 @@ is the crisp position and whose limits are the tolerances to which
 the position is known.
 
 GPS provides a pyramid aligned north-south and east-west, in contrast to
-odometry / lane deviation, which is a pyramid oriented in the direction of 
+odometry / lane deviation, which is a pyramid oriented in the direction of
 vehicle motion. The intersection of two fuzzy sets is their minimum.
 By taking the minima of all position estimate pyramids, we get a surface
-describing the possible positions of the vehicle, whichcan be used by a 
+describing the possible positions of the vehicle, whichcan be used by a
 particle filter.
 
 Serial lines:
 0: Monitor
 1: INU
-2: Tx: Estimated state; 
+2: Tx: Estimated state;
       $C6EST,<east_mm>,<north_mm>,<speed_mmPs>,<bearing>,<time_ms><positionStndDev_mm>*CKSUM
       $C6OBS,<number>,<obstacle1_range_mm>,<obstacle1_bearing>, ...*CKSUM
    Rx: Desired course
@@ -76,9 +74,22 @@ Serial lines:
   Tx: $PSRF103,...
 */
 
-/*---------------------------------------------------------------------------------------*/ 
+/*---------------------------------------------------------------------------------------*/
 
+#define MEGA
+#include <Common.h>
+#include <SPI.h>
 #include <SD.h>
+#include <IO.h>
+#include <Matrix.h>
+#include <Wire.h>
+//#include "Adafruit_Sensor.h"
+//#include "Adafruit_LSM303_U.h"
+
+/* Assign a unique ID to this sensor at the same time */
+Adafruit_LSM303_Mag mag = Adafruit_LSM303_Mag(1366123);
+
+float CurrentHeading = -1;
 
 // On the Ethernet Shield, CS is pin 4. Note that even if it's not
 // used as the CS pin, the hardware CS pin (10 on most Arduino boards,
@@ -90,10 +101,12 @@ Serial lines:
 #endif
 
 
-namespace C6_Navigator {
+namespace C6_Navigator
+{
     void setup();
     void loop();
 }
+
 // Set the GPSRATE to the baud rate of the GPS module. Most are 4800
 // but some are 38400 or other. Check the datasheet!
 #define GPSRATE 4800
@@ -117,8 +130,9 @@ namespace C6_Navigator {
 #endif
 // limited to 8+3 characters
 #define FILE_NAME "GPSLog.csv"
+
 File dataFile;
-char GPSfile[BUFFSIZ] = "mmddhhmm.csv"; 
+char GPSfile[BUFFSIZ] = "mmddhhmm.csv";
 char ObstacleString[BUFFSIZ];
 char StartTime[BUFFSIZ] = "yy,mm,dd,hh,mm,ss,xxx";
 const char TimeHeader[] = "year,month,day,hour,minute,second,msec";
@@ -138,6 +152,7 @@ waypoint GPS_reading;
 waypoint estimated_position;
 //instrument IMU;
 const unsigned long LoopPeriod = 100;  // msec
+
 //---------------------------------------------------------------------------
 char* obstacleDetect()
 {
@@ -147,13 +162,18 @@ char* obstacleDetect()
     int Range =      analogRead(FRONT) + OFFSET;
     int RightRange = analogRead(RIGHT) + OFFSET;
 
-  sprintf(ObstacleString, 
+  sprintf(ObstacleString,
   "%d.%0.2d,%d.%0.2d,%d.%0.2d,",
   LeftRange/100, LeftRange%100, Range/100, Range%100, RightRange/100, RightRange%100);
- 
+
   return ObstacleString;
 }
-/*---------------------------------------------------------------------------------------*/ 
+/*---------------------------------------------------------------------------------------*/
+/* Feb 23, 2016  TCF.  This instance of WheelRev is depricated.
+   Current code for WheelRev is in Elcano_C2_LowLevel.
+   The odometer processing is part of low level control.
+   C2 will send odometer information to C6 over a serial line. */
+
 // WheelRev is called by an interrupt.
 void WheelRev()
 {
@@ -164,15 +184,15 @@ void WheelRev()
     if (OldTick == TickTime)
         return;
     if (OldTick <= TickTime)
-      	WheelRevMicros = TickTime - OldTick;
+        WheelRevMicros = TickTime - OldTick;
     else // overflow
-      	WheelRevMicros = TickTime + ~OldTick;
+        WheelRevMicros = TickTime + ~OldTick;
     SpeedCyclometer_degPs = (360 * MEG) / WheelRevMicros;
     SpeedCyclometer_mmPs  = (WHEEL_DIAMETER_MM * MEG * PI) / WheelRevMicros;
     Odometer_mm += WHEEL_DIAMETER_MM * PI;
     OldTick = TickTime;
 }
-/*---------------------------------------------------------------------------------------*/ 
+/*---------------------------------------------------------------------------------------*/
 
 void initialize()
 {
@@ -182,13 +202,13 @@ void initialize()
   char* disable =   "$PSRF103,02,00,00,01*26\r\n";
   char* querryGGA = "$PSRF103,00,01,00,01*25";
   bool GPS_available = false;
-  Serial3.begin(GPSRATE);   
+  Serial3.begin(GPSRATE);
   digitalWrite(GPS_POWER, LOW);         // pull low to turn on!
   Serial.flush();
   Serial3.flush();
   delay(5000);
-  // prints title with ending line break 
-  Serial.println(" GPS parser");  
+  // prints title with ending line break
+  Serial.println(" GPS parser");
 //  Serial.print("Acquiring GPS RMC...");
   checksum(protocol);
   Serial3.println(protocol);
@@ -196,7 +216,10 @@ void initialize()
   checksum(disable);
   Serial3.println(disable);   // no GSA
 
-  GPS_available = estimated_position.AcquireGPRMC(70000);
+  if(estimated_position)
+  {
+    GPS_available = estimated_position.AcquireGPRMC(70000);
+  }
   Serial.println(TimeHeader);
   Serial.println(StartTime);
   Serial.println(RawKF);
@@ -223,7 +246,7 @@ void initialize()
   estimated_position.Evector_x1000 = 1000;  // to be taken from path or set by hand
   estimated_position.Nvector_x1000 = 0;
   GPS_reading = estimated_position;
-  GPSString = estimated_position.formPointString();  
+  GPSString = estimated_position.formPointString();
   Serial.println(GPSString);
   // Set Odometer to 0.
   // Set lateral deviation to 0.
@@ -253,12 +276,11 @@ void initialize()
     // ready to roll
     // Fuse all position estimates.
     // Send vehicle state to C3 and C4.
-    
 }
-/*---------------------------------------------------------------------------------------*/ 
+/*---------------------------------------------------------------------------------------*/
 
-void setup() 
-{ 
+void setup()
+{
     pinMode(Rx0, INPUT);
     pinMode(Tx0, OUTPUT);
     pinMode(GPS_RX, INPUT);
@@ -268,7 +290,7 @@ void setup()
     pinMode(INU_RX, INPUT);
     pinMode(INU_TX, OUTPUT);
     pinMode(GPS_POWER, OUTPUT);
-    Serial3.begin(GPSRATE); // GPS   
+    Serial3.begin(GPSRATE); // GPS
     Serial.begin(9600);
     digitalWrite(GPS_POWER, LOW);         // pull low to turn on!
     // make sure that the default chip select pin is set to
@@ -277,14 +299,26 @@ void setup()
     pinMode(53, OUTPUT);  // Unused CS on Mega
     pinMode(GPS_RED_LED, OUTPUT);
     pinMode(GPS_GREEN_LED, OUTPUT);
-    digitalWrite(GPS_GREEN_LED, LOW); 
+    digitalWrite(GPS_GREEN_LED, LOW);
     digitalWrite(GPS_RED_LED, LOW);
 
     initialize();
-//    Serial.print("Initializing GPS SD card...");
-    
+    //Serial.print("Initializing GPS SD card...");
+
+
+    //Enable auto-gain
+    mag.enableAutoRange(true);
+
+    //Initialise the sensor
+    if(!mag.begin())
+    {
+        //There was a problem detecting the LSM303 ... check your connections
+        Serial.println("Ooops, no LSM303 detected ... Check your wiring!");
+        while(1);
+    }
+
     // see if the card is present and can be initialized:
-    if (!SD.begin(chipSelect)) 
+    if (!SD.begin(chipSelect))
     {
       Serial.println("Card failed, or not present");
       digitalWrite(GPS_RED_LED, HIGH);
@@ -294,7 +328,7 @@ void setup()
       Serial.println("card initialized.\n");
       dataFile = SD.open(GPSfile, FILE_WRITE);
       // if the file is available, write date and time to it:
-      if (dataFile) 
+      if (dataFile)
       {
           dataFile.println(TimeHeader);
           dataFile.println(StartTime);
@@ -303,34 +337,33 @@ void setup()
           dataFile.print(Header);
           dataFile.println(ObstHeader);
           dataFile.close();
-      }  
+      }
     }
     pinMode(CYCLOMETER, INPUT);
     attachInterrupt (5, WheelRev, RISING);
 
 }
-/*---------------------------------------------------------------------------------------*/ 
+/*---------------------------------------------------------------------------------------*/
 void waypoint::SetTime(char *pTime, char * pDate)
 {
-//    GPSfile = "mmddhhmm.CSV";
-     strncpy(GPSfile,   pDate+2, 2);  // month   
-     strncpy(GPSfile+2, pDate, 2);    // day    
-     strncpy(GPSfile+4, pTime,2);     // GMT hour
-     strncpy(GPSfile+6, pTime+2,2);   // minute
-     Serial.println(GPSfile); 
-    
-     strncpy(StartTime,     pDate+4, 2);  // year   
-     strncpy(StartTime+3,   pDate+2, 2);  // month   
-     strncpy(StartTime+6,   pDate, 2);    // day    
-     strncpy(StartTime+9,   pTime,2);     // GMT hour
-     strncpy(StartTime+12,  pTime+2,2);   // minute
-     strncpy(StartTime+15,  pTime+4,2);   // second
-     strncpy(StartTime+18,  pTime+7,3);   // millisecond
-     
+    //GPSfile = "mmddhhmm.CSV";
+    strncpy(GPSfile,   pDate+2, 2);  // month
+    strncpy(GPSfile+2, pDate, 2);    // day
+    strncpy(GPSfile+4, pTime,2);     // GMT hour
+    strncpy(GPSfile+6, pTime+2,2);   // minute
+    Serial.println(GPSfile);
+
+    strncpy(StartTime,     pDate+4, 2);  // year
+    strncpy(StartTime+3,   pDate+2, 2);  // month
+    strncpy(StartTime+6,   pDate, 2);    // day
+    strncpy(StartTime+9,   pTime,2);     // GMT hour
+    strncpy(StartTime+12,  pTime+2,2);   // minute
+    strncpy(StartTime+15,  pTime+4,2);   // second
+    strncpy(StartTime+18,  pTime+7,3);   // millisecond
 }
 
-/*---------------------------------------------------------------------------------------*/ 
-void loop() 
+/*---------------------------------------------------------------------------------------*/
+void loop()
 {
     unsigned long deltaT_ms;
     unsigned long time = millis();
@@ -348,10 +381,10 @@ void loop()
     ReadINU.
     Set attitude.
     Read Hall Odometer;  */
-//   IMU.Read(GPS_reading);   
- 
+//   IMU.Read(GPS_reading);
+
 /*  Read Optical Odometer;
-    Read lane deviation;  
+    Read lane deviation;
     If (message from C4)
     { */
 //      readline(2);  // C4 Path planner on serial 2 get new route and speed
@@ -362,25 +395,39 @@ void loop()
 /*    }
     if (landmarks availabe)
     {  // get the position based on bearing and angle to a known location.
-      ReadLandmarks(C4); 
+      ReadLandmarks(C4);
     }
     // Fuse all position estimates with a Kalman Filter */
     deltaT_ms = GPS_reading.time_ms - estimated_position.time_ms;
     estimated_position.fuse(GPS_reading, deltaT_ms);
     estimated_position.time_ms = GPS_reading.time_ms;
-/*  Serial.print("time, gps, dt_ms = "); 
+/*  Serial.print("time, gps, dt_ms = ");
     Serial.print(time, DEC); Serial.print(", ");
     Serial.print(GPS_reading.time_ms, DEC); Serial.print(", ");
     Serial.println(deltaT_ms, DEC);
-*/ 
-    // Send vehicle state to C3 and C4.   
+*/
+    // Send vehicle state to C3 and C4.
+
+    //Get a new sensor event from the magnitomitor
+    sensors_event_t event;
+    mag.getEvent(&event);
+
+    //Calculate the current heading (angle of the vector y,x)
+    float heading = (atan2(event.magnetic.y, event.magnetic.x) * 180) / M_PI;
+
+    //Normalize the heading
+    if (heading < 0)
+    {
+        heading = 360 + heading;
+    }
+    CurrentHeading = heading;
 
     // open the file. note that only one file can be open at a time,
     // so you have to close this one before opening another.
     dataFile = SD.open(GPSfile, FILE_WRITE);
-  
+
     // if the file is available, write to it:
-    if (GPS_available) 
+    if (GPS_available)
     {
         digitalWrite(GPS_GREEN_LED, HIGH);
         pGPS = GPS_reading.formPointString();
@@ -392,21 +439,21 @@ void loop()
         Serial.print(pData);
         Serial3.print(pData);  // send data to C4 path planner
         pObstacles = obstacleDetect();
-        if (dataFile) 
+        if (dataFile)
         {
           dataFile.print(pObstacles);
         }
         Serial.print(pObstacles);
-    }  
-    else 
+    }
+    else
     {
         digitalWrite(GPS_GREEN_LED, LOW);
         Serial.print("GPS not available");
     }
-    
+
     work_time = millis() - time;
-    PerCentBusy = (100 * work_time) / LoopPeriod; 
-    if (dataFile) 
+    PerCentBusy = (100 * work_time) / LoopPeriod;
+    if (dataFile)
     {
       dataFile.println(PerCentBusy);
     }
@@ -422,7 +469,7 @@ void loop()
         digitalWrite(GPS_RED_LED, HIGH);
  //     Serial.println("error opening file");
     }
-  
+
   // delay, but don't count time in loop
   while (time < endTime)
   {
