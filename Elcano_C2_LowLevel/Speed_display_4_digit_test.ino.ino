@@ -25,6 +25,8 @@ Writes to display must be sent in 4 byte packets.
 
  */
 
+#define s7s Serial3
+
 void testsetup() {
   // Open serial communications and wait for port to open:
   Serial.begin(9600);
@@ -35,14 +37,14 @@ void testsetup() {
   Serial.println("Goodnight moon!");
 
   // set the data rate for the SoftwareSerial port
-  Serial1.begin(9600);
+  s7s.begin(9600);
   //char resety[2] = {0x7F, '2'}; //set baud rate to 9600 on device
   //char dataMode[2] = {0x82, '2'};//set mode to data in EEPROM
   
   //Serial1.print(resety); //clear display
-  Serial1.write("v");
-  Serial1.write(0x79); // Send the Move Cursor Command
-  Serial1.write(0x00); // Move Cursor to left-most digit
+  s7s.write("v");
+  s7s.write(0x79); // Send the Move Cursor Command
+  s7s.write(0x00); // Move Cursor to left-most digit
   //Serial1.print(dataMode); //change mode to data mode
   randomSeed(0);
 }
@@ -55,9 +57,9 @@ void testloop() {
   String temp3 = (String)temp;
   //temp3 = "1234";
   if(Serial.available()){
-    Serial1.write(Serial.read());
+    s7s.write(Serial.read());
   }
-  Serial1.print(temp3);
+  s7s.print(temp3);
   Serial.print(temp3);
   count = random(0,100);
   //count++;
