@@ -87,7 +87,7 @@ VEHICLE_NUMBER to your own new number.
 
 // MIN and MAX ACC set the minimum signal to get the motor going, and maximum allowable acceleration for the motor
 // Values (0-255) represent digital values that get convered into analog pwm signals sent to the motor
-#define MIN_ACC_OUT 40
+#define MIN_ACC_OUT 50
 #define MAX_ACC_OUT 227
 
 // MIN and MAX BRAKE_OUT set values to be sent to the brake actuator that controls the brakes on the front wheels
