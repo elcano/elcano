@@ -47,19 +47,22 @@ extern bool DataAvailable;
 
 void setup() 
 {
+        // These cause some strange characters to print
         pinMode(Rx0, INPUT);
         pinMode(Tx0, OUTPUT);
-        pinMode(C3_LED, OUTPUT); 
-        Serial.begin(9600); 
-        pinMode(DATA_READY, INPUT);
-        DataAvailable = false;
-        attachInterrupt(0, DataReady, FALLING);
-        initialize(); 
-
+        //pinMode(C3_LED, OUTPUT); 
+        Serial.begin(115200); 
+        //pinMode(DATA_READY, INPUT);
+        //DataAvailable = false;
+        //attachInterrupt(0, DataReady, FALLING);
+        //initialize(); 
+        Test::out = &Serial;
 }
 
 void initialize()
 {
+  
+  /*
   //  Read waypoints of mission from C4 on serial line
      for (int i = 0; i < MAX_MISSION; i++)
       {
@@ -84,15 +87,28 @@ void initialize()
       while (!current_position.readPointString(1000, 0) );  
   //  Synchonize time.
   //     offset_ms = current_position.time_ms;
+  */
+}
+bool readPlannerData()
+{
+   return readline(0);
+}
 
+test (readPlannerData)
+{
+  // test that given no data we read nothing and return false;
+   bool temp = readPlannerData();
+   assertFalse(temp);
 }
 
 test(initializeBasicData)
 {
     initialize();
+    //test that we don't crash
+    assertTrue(true);
+    //assertEqual(a,b);
+    //assertNotEqual(a,b);
 }
-
-
 
 void loop() 
 {

@@ -192,6 +192,9 @@ void ProcessMessage (char *IncomingMessage, SerialData *SerialD)
 
 }
 /*------------------------------------------------------------------------------*/ 
+// If there is an issue with missing data the kind might not be correctly set
+// for sending that data.
+
 
 void readSerial(HardwareSerial *SerialN, SerialData *SerialD)
 {
@@ -227,6 +230,8 @@ void writeSerial(HardwareSerial *SerialN, struct SerialData *SerialD )
 {
 // Caution: 64 character limit for Arduino serial. Buffer size is set in the Arduino core.
 // If the message produced is > 64 characters, readSerial will ignore it.
+// writeSerial will only send data that relates to the kind. ex In the Serial data struct 
+//if kind is 0 the only data sent will be kind angle and direction.
     switch (SerialD->kind) 
     {
     case MSG_DRIVE:
