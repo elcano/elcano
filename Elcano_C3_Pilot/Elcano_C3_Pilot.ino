@@ -3,6 +3,7 @@
 #include <IO_C3.h>
 #include <IO_Mega.h>
 #include <Matrix.h>
+#include <Elcano_Serial.h>
 
 /*
 // Elcano Contol Module C3: Pilot.
@@ -50,6 +51,7 @@ extern bool DataAvailable;
 /*
 2: Tx: Estimated state; 
       $ESTIM,<east_mm>,<north_mm>,<speed_mmPs>,<bearing>,<time_ms>*CKSUM
+      
    Rx: Desired course
       $EXPECT,<east_mm>,<north_mm>,<speed_mmPs>,<bearing>,<time_ms>*CKSUM
       // at leat 18 characters
@@ -108,11 +110,10 @@ void setup()
         pinMode(Rx0, INPUT);
         pinMode(Tx0, OUTPUT);
         pinMode(C3_LED, OUTPUT); 
-     	Serial.begin(9600); 
+     	  Serial.begin(9600); 
         pinMode(DATA_READY, INPUT);
         DataAvailable = false;
         attachInterrupt(0, DataReady, FALLING);
-
         initialize();   
 }	
 
@@ -357,6 +358,7 @@ int SetSteering()
 /*---------------------------------------------------------------------------------------*/ 
 void loop() 
 {
+  /*
   int i, k;
   waypoint location;
   static waypoint new_path[MAX_PATH];
@@ -382,7 +384,8 @@ void loop()
        } 
    }
  }
-     WhereAmI(); 
+ 
+    WhereAmI(); 
   //  Read sonar obstacle detectors
     LeftRange_mm =  10 *(analogRead(LEFT) + OFFSET);
     Range_mm =      10 *(analogRead(FRONT) + OFFSET);
@@ -391,8 +394,38 @@ void loop()
 //  Send joystick signals to C2    
     int Speed = SetSpeed();
     int Turn  = SetSteering();
+ */
+    // get newest map data from C4 planner
+    // Using Elcano_Serial.h Using the SerialData struct in the .h file.
+    // Receive a segment from C4. C4 will only ever send segments to C3.
+    // 
+    SerialData instructions;
+    readSerial(&Serial, &instructions);
+
+    //Test Data for instructions. This is an example of a semgment
+    instructions.kind = 4;
+    instructions.number = 1;
+    instructions.speed_cmPs = 100;
+    instructions.bearing_deg = 35;
+    instructions.posE_cm = 400;
+    instructions.posN_cm = 400;
+
+    
+    
 
 }
+
+////////////////////////////////////////////////////////////////////////////
+
+
+
+
+
+
+
+
+
+
 /*---------------------------------------------------------------------------------------*/ 
 /* The format of the command received over the serial line from C6 Navigator is 
   $POINT,<east_m>,<north_m>,<sigma_m>,<time_s>,<speed_mPs>,<Vx>,<Vy>,POSITION*CKSUM
