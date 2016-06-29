@@ -39,8 +39,6 @@
 #define MAX_SPEED_mmPs       4444
 
 bool checksum(char* msg);
-bool readline(int channel);
-void writeline(int channel);
 
 class waypoint // best estimate of position and state
 // used either for a waypoint or a measured navigational fix

@@ -1052,7 +1052,7 @@ void setup()
         DataAvailable = false;
         attachInterrupt(0, DataReady, FALLING);
         
-       initialize();
+        initialize();
        
 
 }
@@ -1078,9 +1078,8 @@ void loop()
     if (DataAvailable)
     {
         // read vehicle position from C6
-        readline(0);
-        // send data to C3
-        writeline(0);
+        //readline(0);
+        
         digitalWrite(C4_DATA_SENT, HIGH);  // transition interrupts the processor
         delay(1);
         digitalWrite(C4_DATA_SENT, LOW);
@@ -1093,6 +1092,7 @@ void loop()
           last = PlanPath (&Start, &mission[++Goal]);
           Path[last].index |= GOAL;
         }
+        // send data to C3
         SendPath(Path, MAX_WAYPOINTS);
         Serial.println();     
     }

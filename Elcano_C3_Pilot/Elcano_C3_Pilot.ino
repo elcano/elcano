@@ -12,6 +12,10 @@ The Pilot program reads a serial line that specifies the desired path and speed
 of the vehicle. It computes the analog signals to control the throttle, brakes 
 and steering and sends these to C2.
 
+Input will be recieved and sent using the functions writeSerial and readSerial in 
+Elcano_Serial. Inputs will be received from C5(sensors) and C4(planner). Output is sent to 
+C2.
+
 In USARSIM simulation, these could be written on the serial line as
 wheel spin speeds and steering angles needed to
 follow the planned path. This would take the form of a DRIVE command to the C1 module over a 
@@ -105,20 +109,7 @@ void initialize()
 
 }
 /*---------------------------------------------------------------------------------------*/ 
-void setup() 
-{ 
-        pinMode(Rx0, INPUT);
-        pinMode(Tx0, OUTPUT);
-        pinMode(C3_LED, OUTPUT); 
-     	  Serial.begin(9600); 
-        pinMode(DATA_READY, INPUT);
-        DataAvailable = false;
-        attachInterrupt(0, DataReady, FALLING);
-        initialize();   
-}	
-
-
-/*---------------------------------------------------------------------------------------*/ 
+ 
 // return value is trackError_mm from this segment
 // trackError is positive if left of centerline and negative if right.
 int distance(int i,   // index into path[]
@@ -355,7 +346,24 @@ int SetSteering()
     return CommandedSteer;  // a value to output to the steer control
 
 }
+
 /*---------------------------------------------------------------------------------------*/ 
+/*
+void setup() 
+{ 
+        //pinMode(Rx0, INPUT);
+        //pinMode(Tx0, OUTPUT);
+        //pinMode(C3_LED, OUTPUT); 
+        Serial1.begin(9600); 
+        //pinMode(DATA_READY, INPUT);
+        //DataAvailable = false;
+        //attachInterrupt(0, DataReady, FALLING);
+        //initialize();   
+} 
+
+*/
+/*---------------------------------------------------------------------------------------*/
+/*
 void loop() 
 {
   /*
@@ -395,15 +403,18 @@ void loop()
     int Speed = SetSpeed();
     int Turn  = SetSteering();
  */
+ /*
     // get newest map data from C4 planner
     // Using Elcano_Serial.h Using the SerialData struct in the .h file.
     // Receive a segment from C4. C4 will only ever send segments to C3.
     // 
     SerialData instructions;
-    readSerial(&Serial, &instructions);
+    readSerial(&Serial1, &instructions);
+    Serial.println("test");
+    Serial.println(instructions.kind);
 
     //Test Data for instructions. This is an example of a semgment
-    instructions.kind = 4;
+    /*instructions.kind = 4;
     instructions.number = 1;
     instructions.speed_cmPs = 100;
     instructions.bearing_deg = 35;
@@ -411,14 +422,59 @@ void loop()
     instructions.posN_cm = 400;
 
     
-    
-
+    */
+/*
+}
+*/
+////////////////////////////////////////////////////////////////////////////
+void setup() 
+{  
+        Serial1.begin(9600);  
 }
 
-////////////////////////////////////////////////////////////////////////////
+void loop() 
+{
+    int steeringAngle = 35;
+    int speedSetting = 300;
+    // get newest map data from C4 planner
+    // Using Elcano_Serial.h Using the SerialData struct in the .h file.
+    // Receive a segment from C4. C4 will only ever send segments to C3.
+    
+    SerialData instructions;
+    readSerial(&Serial1, &instructions);
 
+    //Test of input from C4.
+    //Serial.println("test");
+    //Serial.println(instructions.kind);
 
+    //Send data to low level.
+    SerialData toLowLevel;
+    toLowLevel.kind = MSG_DRIVE;
+    toLowLevel.angle_deg = steeringAngle;
+    toLowLevel.speed_cmPs = speedSetting;
+    writeSerial(&Serial1, &toLowLevel);
 
+    //Test of output to C2.
+    // Outputting to C2 uses the Elcano Serial kind 1 to send a "drive signal to C2"
+    // The drive signal includes angle and speed.
+    //SerialData lowTest;
+    // lowTest.kind = 1;
+    // lowTest.speed_cmPs = 100;
+    // lowTest.angle_deg = 35;
+    //writeSerial(&Serial1, &lowTest);
+    
+    //Test Data for instructions. This is an example of a semgment
+    /*instructions.kind = 4;
+    instructions.number = 1;
+    instructions.speed_cmPs = 100;
+    instructions.bearing_deg = 35;
+    instructions.posE_cm = 400;
+    instructions.posN_cm = 400;
+
+    
+    */
+
+}
 
 
 

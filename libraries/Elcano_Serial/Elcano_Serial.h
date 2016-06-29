@@ -9,6 +9,31 @@
 #define MSG_GOAL 3
 #define MSG_SEG 4
 
+/*
+Drive - 1
+   - speedcmPs
+   - angle_deg
+Sensor - 2
+   - speedcmPs
+   - angle_deg
+   - posE_cm
+   - posN_cm
+   - bearing_deg
+Goal - 3 
+   - number
+   - posE_cm
+   - posN_cm
+   - bearing_deg
+   - probability
+Segment - 4
+   - number
+   - posE_cm
+   - posN_cm
+   - bearing_deg
+   - speed_cmPs
+
+*/
+
 struct SerialData
 {
     int kind;
