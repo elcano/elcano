@@ -7,20 +7,12 @@ namespace elcano
 {
 	void detect_and_draw(Mat &img, CascadeClassifier &cascade, double scale)
 	{
-		std::cout << "Start Detection Function" << std::endl;
-		
 		double fx = 1 / scale;
 		std::vector<Rect> detection;
 		Mat smallImg;
 		
 		resize(img, smallImg, Size(), fx, fx, INTER_LINEAR);
-		equalizeHist(smallImg, smallImg);
-		
-		std::cout << "Finish Initialization; Start Detection" << std::endl;
-		
 		cascade.detectMultiScale(smallImg, detection, 1.1, 2, CASCADE_SCALE_IMAGE, Size(30, 30));
-		
-		std::cout << "Finish Detection" << std::endl;
 		
 		for (Rect r : detection)
 			rectangle(img, cvPoint(cvRound(r.x * scale), cvRound(r.y * scale)),
@@ -28,7 +20,5 @@ namespace elcano
 				Scalar(255, 255, 0), 3, 8, 0);
 		
 		imshow("result", img);
-		
-		std::cout << "End Detection Function" << std::endl;
 	}
 }
