@@ -8,7 +8,7 @@
 const int softwareTx = 10;  // to 7 segment LED display
 const int softwareRx = 7;   // not used
 //SoftwareSerial s7s(softwareRx, softwareTx);
-#define s7s Serial3
+#define s7s Serial2
 
 #define LOOP_TIME_MS 400
 #define ERROR_HISTORY 20
@@ -340,20 +340,21 @@ void Print7 (bool processed, unsigned long results[7])
 }
 void LogData(unsigned long commands[7], SerialData *sensors)  // data for spreadsheet
 {
-     Serial.print(millis()); Serial.print("\t");
-     Serial.print(sensors->speed_cmPs); Serial.print("\t");
-     show7seg(sensors->speed_cmPs);
-     Serial.print(sensors->speed_cmPs*36.0/1000.); Serial.print("\t"); // km/hr
-     Serial.print(HubSpeed_kmPh); Serial.print("\t");
-     Serial.print(sensors->angle_deg); Serial.print("\t");
-     int right = analogRead(A2);
-     int left = analogRead(A3);
-     Serial.print(right); Serial.print("\t");
-     Serial.print(left); Serial.print("\t");
-     Serial.print(throttle_control); Serial.print("\t");
-     Serial.print(brake_control); Serial.print("\t");
-     Serial.print(steer_control); Serial.print("\t");
-     Serial.println(Odometer_m);
+//     Serial.print(millis()); Serial.print("\t");
+//     Serial.print(sensors->speed_cmPs); Serial.print("\t");
+//     
+//     Serial.print(sensors->speed_cmPs*36.0/1000.); Serial.print("\t"); // km/hr
+//     Serial.print(HubSpeed_kmPh); Serial.print("\t");\
+     show7seg(HubSpeed_kmPh);
+//     Serial.print(sensors->angle_deg); Serial.print("\t");
+//     int right = analogRead(A2);
+//     int left = analogRead(A3);
+//     Serial.print(right); Serial.print("\t");
+//     Serial.print(left); Serial.print("\t");
+//     Serial.print(throttle_control); Serial.print("\t");
+//     Serial.print(brake_control); Serial.print("\t");
+//     Serial.print(steer_control); Serial.print("\t");
+//     Serial.println(Odometer_m);
 //     Print7 (true, commands);
 }
 void PrintHeaders (void)
@@ -1128,9 +1129,11 @@ void show7seg(int speed_mmPs)
   // Magical sprintf creates a string for us to send to the s7s.
   //  The %4d option creates a 4-digit integer.
   sprintf(tempString, "%4d", speed_kmPhx10);
-//  Serial.println(tempString);
+  String temp3 = (String)tempString;
+  Serial.println(temp3);
+
   // This will output the tempString to the S7S
-  s7s.print(tempString);
+  s7s.print(temp3);
   setDecimals(0b00000100);  // Sets digit 3 decimal on
 }
 
