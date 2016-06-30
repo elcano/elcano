@@ -164,8 +164,8 @@ const int CruiseThrottle = 15;  // Position of throttle commanded by AI
 
 
 // Values to send over DAC
-const int FullThrottle =  227;   // 3.63 V
-const int MinimumThrottle = 40;  // Throttle has no effect until 1.2 V
+const int FullThrottle =  MAX_ACC_OUT;   // 3.63 V
+const int MinimumThrottle = MIN_ACC_OUT;  // Throttle has no effect until 1.2 V
 // Values to send on PWM to get response of actuators
 // Vehicles #1 and #2 are reversed.
 // On #1. the actuator pushes the brake lever to bake.
@@ -282,8 +282,8 @@ void loop()
 /*---------------------------------------------------------------------------------------*/
 void moveBrake(int i)
 {
-     Serial.print ("Brake "); Serial.print(i);
-     Serial.print (" on ");   Serial.println (DiskBrake);
+//     Serial.print ("Brake "); Serial.print(i);
+//     Serial.print (" on ");   Serial.println (DiskBrake);
      analogWrite(DiskBrake, i);
 }
 /*---------------------------------------------------------------------------------------*/
@@ -303,6 +303,8 @@ void moveVehicle(int counts)
       3.63 V: max          227 counts     
       255 counts = 4.08 V      
       */
+     Serial.print ("Motor "); Serial.print(counts);
+     Serial.print (" on ");   Serial.println (ThrottleChannel);
 #ifdef DAC      
    DAC_Write(ThrottleChannel, counts);
 #endif
