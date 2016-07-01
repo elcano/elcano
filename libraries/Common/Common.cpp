@@ -1,4 +1,3 @@
-
 #include <IO.h>
 #include <Arduino.h>
 #include <Common.h>
@@ -86,6 +85,82 @@ void DataReady()  // called from an interrupt
 {
   DataAvailable = true;
 }
+//---------------------------------------------------------
+void writeline(int channel)
+{
+      switch(channel)
+      {
+      case 1:
+         Serial1.println(buffer);
+         break;
+       case 2:
+         Serial2.println(buffer);
+         break;
+      case 3:
+         Serial3.println(buffer);
+         break;
+      default:
+         Serial.println(buffer);
+         break;
+      }
+
+}
+//---------------------------------------------------------
+// return true if a line was read; false if not
+bool readline(int channel) 
+{
+  // buffer can hold 128 bytes; if not enough there yet, try later.
+  const int MinimumMessage = 14;
+  char c;
+  char buffidx;                // an indexer into the buffer
+  int Available;
+  /* DataAvailable is a flag set in response to an interrpt.
+  After the data has been sent, the sending processor toggles the DATA_READY line.
+  The receiving computer gets interrupted by this signal and sets DataAvailable.
+  */
+  if (!DataAvailable)
+    return false;
+  
+  buffidx = 0; // start at begining
+//  if (Serial3.available() < MinimumMessage)
+//    return false;
+  while (1) 
+  {
+      switch(channel)
+      {
+      case 1:
+         Available = Serial1.available();     
+         c=Serial1.read();
+         break;
+       case 2:
+         Available = Serial2.available();     
+         c=Serial2.read();
+         break;
+      case 3:
+         Available = Serial3.available();     
+         c=Serial3.read();
+         break;
+      default:
+         Available = Serial.available();     
+         c=Serial.read();
+         break;
+      }
+      if (buffidx == 0 && Available < MinimumMessage)
+        return false;
+      if (c == -1)
+        continue;
+      if (c == '\n')
+        continue;
+      if ((buffidx == BUFFSIZ-1) || (c == '\r')) 
+      {
+        buffer[buffidx] = 0;
+        DataAvailable = false;
+        return true;
+      }
+      buffer[buffidx++]= c;
+  }
+}
+
 /* There are more accurate ways to compute distance between two latitude and longitude points.
    We use a simple approximation, since we are interesed in a flat projection over a small area.
    Curvature of the earth is not significant.
@@ -467,4 +542,3 @@ bool waypoint::AcquireGPGGA(unsigned long max_wait_ms)
 }
 
 #endif  // MEGA
-

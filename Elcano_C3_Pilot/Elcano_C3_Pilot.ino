@@ -24,7 +24,7 @@ serial line. The format of the DRIVE command is documented in the C1 code.
 [in] Digital Signal 0: J1 pin 1 (RxD) Serial signal from C4 Path planner, which passes on
 data from C6 Navigator
 */
-
+/*
 #define MAX_PATH 10
 #define SMALL_TRACK_ERROR_mm   1200
 #define MEDIUM_TRACK_ERROR_mm  2700
@@ -60,7 +60,7 @@ extern bool DataAvailable;
       $EXPECT,<east_mm>,<north_mm>,<speed_mmPs>,<bearing>,<time_ms>*CKSUM
       // at leat 18 characters
 */
-
+/*
 //---------------------------------------------------------------------------
 char ObstacleString[BUFFSIZ];
 char* obstacleDetect()
@@ -79,6 +79,7 @@ char* obstacleDetect()
 }
 
 /*---------------------------------------------------------------------------------------*/ 
+/*
 void initialize()
 {
   int i;
@@ -109,7 +110,7 @@ void initialize()
 
 }
 /*---------------------------------------------------------------------------------------*/ 
- 
+ /*
 // return value is trackError_mm from this segment
 // trackError is positive if left of centerline and negative if right.
 int distance(int i,   // index into path[]
@@ -182,6 +183,7 @@ int distance(int i,   // index into path[]
 /*---------------------------------------------------------------------------------------*/ 
 // Given the current_position and path, find the nearest segment of the path and the 
 // relative position in that segment. Compute the desired vector and the actual vector.
+/*
 void WhereAmI()
 {
   int dist_mm = MAX_DISTANCE;
@@ -252,6 +254,7 @@ void WhereAmI()
 }
 
 /*---------------------------------------------------------------------------------------*/ 
+/*
 int SetSpeed()
 {
     int Speed = analogRead(SPEED_IN) * MAX_SPEED_mmPs / 4095;
@@ -265,6 +268,7 @@ int SetSpeed()
     }
 
     /*    Slow down depending how close to obstacle. */
+    /*
     if (Range_mm < 1250)
     {
          CommandedThrottle = 0;
@@ -291,7 +295,7 @@ int SetSpeed()
     return Speed;
  
 }
-/*---------------------------------------------------------------------------------------*/ 
+/*---------------------------------------------------------------------------------------*/ /*
 int SetSteering()
 {
     static int CommandedSteer = 0;
@@ -313,6 +317,7 @@ int SetSteering()
     Prefer to pass with object on left, since cone toucher is on that side.
     Make a more sophisticated choice of steering angle.
     */
+    /*
     if (Range_mm < 5000 &&
        (LeftRange_mm - Range_mm > 500 || RightRange_mm - Range_mm > 500))
     {  // Decide whether to go left or right
@@ -342,6 +347,7 @@ int SetSteering()
       CommandedSteer = 159;
     }
   */  
+  /*
     analogWrite(STEER_CMD, CommandedSteer);
     return CommandedSteer;  // a value to output to the steer control
 
@@ -426,6 +432,11 @@ void loop()
 /*
 }
 */
+void DrivePath(int &northDist, int &eastDist)
+{
+  
+}
+
 ////////////////////////////////////////////////////////////////////////////
 void setup() 
 {  
@@ -439,13 +450,22 @@ void loop()
     // get newest map data from C4 planner
     // Using Elcano_Serial.h Using the SerialData struct in the .h file.
     // Receive a segment from C4. C4 will only ever send segments to C3.
-    
+
+
+    //-----------------------C4 input--------------------------//
     SerialData instructions;
     readSerial(&Serial1, &instructions);
 
     //Test of input from C4.
     //Serial.println("test");
     //Serial.println(instructions.kind);
+  
+    //-----------------------C5 input-------------------------//
+    SerialData sensorData;
+    readSerial(&Serial2, &sensorData);
+    
+
+    //---------------------C2 output-------------------------------//
 
     //Send data to low level.
     SerialData toLowLevel;
@@ -457,13 +477,8 @@ void loop()
     //Test of output to C2.
     // Outputting to C2 uses the Elcano Serial kind 1 to send a "drive signal to C2"
     // The drive signal includes angle and speed.
-    //SerialData lowTest;
-    // lowTest.kind = 1;
-    // lowTest.speed_cmPs = 100;
-    // lowTest.angle_deg = 35;
-    //writeSerial(&Serial1, &lowTest);
     
-    //Test Data for instructions. This is an example of a semgment
+    //Test Data for instructions C4. This is an example of a semgment
     /*instructions.kind = 4;
     instructions.number = 1;
     instructions.speed_cmPs = 100;
@@ -471,14 +486,26 @@ void loop()
     instructions.posE_cm = 400;
     instructions.posN_cm = 400;
 
-    
+    //Test Data for C5 sensor input. This is an example of a sensor signal.
+    /*
+     sensorData.kind = 2;
+     sensorData.speedcmPs = 100;
+     sensorData.angle_deg = 12;
+     sensorData.posE_cm = 50;
+     sensorData.posN_cm = 50;
+     sensorData.bearing_deg = 15;
     */
 
+    //Test Data for C2 drive output. Example drive commands.
+    /*
+    toLowLevel.kind = 1;
+    toLowLevel.speed_cmPs = 400;
+    toLowLevel.angle_deg = 35;
+     */
+    
+    
+
 }
-
-
-
-
 
 
 
