@@ -29,11 +29,11 @@ VEHICLE_NUMBER to your own new number.
 //OUTPUT values -  0 to 255
 #define MIN_ACC_OUT 40
 #define MAX_ACC_OUT 227
-#define MIN_BRAKE_OUT 180
-#define MAX_BRAKE_OUT 250
+#define MIN_BRAKE_OUT 167
+#define MAX_BRAKE_OUT 207
 #define RIGHT_TURN_OUT 146
 #define LEFT_TURN_OUT 230
-#define STRAIGHT_TURN_OUT 180
+#define STRAIGHT_TURN_OUT 188
 // Turn sensors are believed if they are in this range while wheels are straight
 #define RIGHT_MIN_COUNT 80
 #define RIGHT_MAX_COUNT 284
@@ -61,17 +61,6 @@ VEHICLE_NUMBER to your own new number.
 #define RC_RDR  5
 #define RC_RVS  6
 #define NUMBER_CHANNELS 6
-//OUTPUT values -  0 to 255
-#define MIN_ACC_OUT 40
-#define MAX_ACC_OUT 227
-#define MIN_BRAKE_OUT 167
-#define MAX_BRAKE_OUT 207
-#define RIGHT_TURN_OUT 146
-#define LEFT_TURN_OUT 230
-#define STRAIGHT_TURN_OUT 187
-#define DAC_CHANNEL 0
-#define STEER_OUT_PIN 7 // Output to steer actuator
-#define BRAKE_OUT_PIN 6  // output to brake actuator
 
 #endif
 
@@ -81,13 +70,13 @@ VEHICLE_NUMBER to your own new number.
 #undef RC_SPEKTRUM 
 #define  RC_HITEC
 //OUTPUT values -  0 to 255
-#define MIN_ACC_OUT 50
+#define MIN_ACC_OUT 40
 #define MAX_ACC_OUT 227
-#define MIN_BRAKE_OUT 210
-#define MAX_BRAKE_OUT 254
-#define RIGHT_TURN_OUT 160 
-#define LEFT_TURN_OUT 254 
-#define STRAIGHT_TURN_OUT 192
+#define MIN_BRAKE_OUT 167
+#define MAX_BRAKE_OUT 207
+#define RIGHT_TURN_OUT 146
+#define LEFT_TURN_OUT 230
+#define STRAIGHT_TURN_OUT 187
 // Turn sensors are believed if they are in this range while wheels are straight
 #define RIGHT_MIN_COUNT 725
 #define RIGHT_MAX_COUNT 785
@@ -114,17 +103,6 @@ VEHICLE_NUMBER to your own new number.
 #define NUMBER_CHANNELS 5
 // Controller has no channel for RC_AUTO
 #define RC_RVS  6
-//OUTPUT values -  0 to 255
-#define MIN_ACC_OUT 40
-#define MAX_ACC_OUT 227
-#define MIN_BRAKE_OUT 167
-#define MAX_BRAKE_OUT 207
-#define RIGHT_TURN_OUT 146
-#define LEFT_TURN_OUT 230
-#define STRAIGHT_TURN_OUT 187
-#define DAC_CHANNEL 3
-#define STEER_OUT_PIN 7 // Output to steer actuator
-#define BRAKE_OUT_PIN 9  // output to brake actuator
 
 #endif
 
