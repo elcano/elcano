@@ -17,9 +17,9 @@ VEHICLE_NUMBER to your own new number.
 */
 
 // Dr. Folsom's orange trike.
-#define VEHICLE_NUMBER 1
+//#define VEHICLE_NUMBER 1
 // Yellow Catrike at the University of Washington at Bothell.
-//#define VEHICLE_NUMBER 2
+#define VEHICLE_NUMBER 2
 
 #if (VEHICLE_NUMBER == 1)
 
@@ -30,8 +30,8 @@ VEHICLE_NUMBER to your own new number.
 
 // MIN and MAX ACC set the minimum signal to get the motor going, and maximum allowable acceleration for the motor
 // Values (0-255) represent digital values that get convered into analog pwm signals sent to the motor
-#define MIN_ACC_OUT 40  // Throttle has no effect until 1.2 V
-#define MAX_ACC_OUT 227 // 3.63V
+#define MIN_ACC_OUT 40
+#define MAX_ACC_OUT 227
 
 // MIN and MAX BRAKE_OUT set values to be sent to the brake actuator that controls the brakes on the front wheels
 // Values (0-255) represent digital values that get convered into analog pwm signals
@@ -74,7 +74,6 @@ VEHICLE_NUMBER to your own new number.
 #define RC_RDR  5
 #define RC_RVS  6
 #define NUMBER_CHANNELS 6
-#define DAC_CHANNEL 0
 
 #endif
 
@@ -92,12 +91,12 @@ VEHICLE_NUMBER to your own new number.
 
 // MIN and MAX BRAKE_OUT set values to be sent to the brake actuator that controls the brakes on the front wheels
 // Values (0-255) represent digital values that get convered into analog pwm signals
-#define MIN_BRAKE_OUT 210
+#define MIN_BRAKE_OUT 128
 #define MAX_BRAKE_OUT 254
 
 // RIGHT, STRAIGHT, and LEFT TURN_OUT set values to be sent to the steer actuator that changes the direction of the front wheels
 // Values (0-255) represent digital values that get convered into analog pwm signals
-#define RIGHT_TURN_OUT 160 
+#define RIGHT_TURN_OUT 128
 #define LEFT_TURN_OUT 254 
 #define STRAIGHT_TURN_OUT 192
 
@@ -109,7 +108,7 @@ VEHICLE_NUMBER to your own new number.
 #define LEFT_MAX_COUNT  940
 
 // Trike specific Physical perameters and pins/channels
-#define DAC_CHANNEL 3
+#define DAC_CHANNEL 0
 #define STEER_OUT_PIN 7 // Output to steer actuator
 #define BRAKE_OUT_PIN 9  // output to brake actuator
 #define WHEEL_DIAMETER_MM 500
@@ -119,19 +118,20 @@ VEHICLE_NUMBER to your own new number.
 // external PWM output
 #define DISK_BRAKE 9
 // Use DAC D
-#define THROTTLE_CHANNEL 3
+#define THROTTLE_CHANNEL 0
+
 
 // Parameters used by RC_Control_interrupts
-#define RC_AUTO 1
+#define RC_AUTO 1 //
 #define RC_ESTP 2
 #define RC_RDR  3 //rudder, side to side on left stick (not used)
-#define RC_GO   4
+#define RC_GO   4 //
 #define RC_TURN 5
 #define NUMBER_CHANNELS 5
 // Controller has no channel for RC_AUTO
 #define RC_RVS  6 //reverse, not used on vehicle 2
 //OUTPUT values -  0 to 255
-#define DAC_CHANNEL 3
+#define DAC_CHANNEL 0
 
 #endif
 
