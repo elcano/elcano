@@ -51,13 +51,11 @@ const int Tx0 = 1;      // external output
 const int EStop =   2;         // external input
 const int WheelClick = 3;      //  interrupt; Reed switch generates one pulse per rotation.
 
-/*  Actuator A1. Traction motor throttle. */
-const int Throttle =  5;  // external PWM output  DEPRICATED: Use MOSI
 /* Actuator A3: Steering Motor. 
   Turns left or right. Default is wheels locked to a straight ahead position. */
 
-const int Steer =  7;    // external PWM output
-const int DiskBrake = DISK_BRAKE;
+const int Steer =  STEER_OUT_PIN;    // external PWM output
+const int DiskBrake = BRAKE_OUT_PIN;
 const int ThrottleChannel = THROTTLE_CHANNEL;
 
 // D8-13 Connector ----------------------
@@ -170,12 +168,12 @@ const int MinimumThrottle = MIN_ACC_OUT;  // Throttle has no effect until 1.2 V
 // Vehicles #1 and #2 are reversed.
 // On #1. the actuator pushes the brake lever to bake.
 // On #2, the actuator pulls on the brake cable to brake.
-const int FullBrake = 210;//167;  // start with a conservative value; could go as high as 255;  
-const int NoBrake = 244; // 207; // start with a conservative value; could go as low as 127;
+const int FullBrake = MIN_BRAKE_OUT;  
+const int NoBrake = MAX_BRAKE_OUT;
 // Steering
-const int HardLeft = 240; //187; //  could go as high as 255;
-const int Straight = 195;// 187;
-const int HardRight = 150;  //126;
+const int HardLeft = LEFT_TURN_OUT;
+const int Straight = STRAIGHT_TURN_OUT;
+const int HardRight = RIGHT_TURN_OUT;
 
 // set the initial positions
 int ThrottlePosition = MinimumThrottle;
@@ -231,7 +229,6 @@ void setup()
     for (int channel = 0; channel < 4; channel++)
         DAC_Write (channel, 0);   // reset did not clear previous states
  
-    pinMode(Throttle, OUTPUT);
     pinMode(DiskBrake, OUTPUT);
     pinMode(Steer, OUTPUT);
 
@@ -282,13 +279,15 @@ void loop()
 /*---------------------------------------------------------------------------------------*/
 void moveBrake(int i)
 {
-//     Serial.print ("Brake "); Serial.print(i);
-//     Serial.print (" on ");   Serial.println (DiskBrake);
+     Serial.print ("Brake "); Serial.print(i);
+     Serial.print (" on ");   Serial.println (DiskBrake);
      analogWrite(DiskBrake, i);
 }
 /*---------------------------------------------------------------------------------------*/
 void moveSteer(int i)
 {
+     Serial.print ("Steer "); Serial.print(i);
+     Serial.print (" on ");   Serial.println (Steer);
      analogWrite(Steer, i);
 }
 /*---------------------------------------------------------------------------------------*/
