@@ -32,6 +32,7 @@ VEHICLE_NUMBER to your own new number.
 // Values (0-255) represent digital values that get convered into analog pwm signals sent to the motor
 #define MIN_ACC_OUT 40
 #define MAX_ACC_OUT 227
+<<<<<<< HEAD
 
 // MIN and MAX BRAKE_OUT set values to be sent to the brake actuator that controls the brakes on the front wheels
 // Values (0-255) represent digital values that get convered into analog pwm signals
@@ -44,6 +45,13 @@ VEHICLE_NUMBER to your own new number.
 #define LEFT_TURN_OUT 230
 #define STRAIGHT_TURN_OUT 180
 
+=======
+#define MIN_BRAKE_OUT 167
+#define MAX_BRAKE_OUT 207
+#define RIGHT_TURN_OUT 146
+#define LEFT_TURN_OUT 230
+#define STRAIGHT_TURN_OUT 188
+>>>>>>> 223c88c1c7eda80690319c5b6e952afe6e00f1ee
 // Turn sensors are believed if they are in this range while wheels are straight
 // MAX values here are for the safety of the actuator so as not to break/overload it
 #define RIGHT_MIN_COUNT 80
@@ -83,6 +91,7 @@ VEHICLE_NUMBER to your own new number.
 #undef RC_SPEKTRUM 
 #define  RC_HITEC
 //OUTPUT values -  0 to 255
+<<<<<<< HEAD
 
 // MIN and MAX ACC set the minimum signal to get the motor going, and maximum allowable acceleration for the motor
 // Values (0-255) represent digital values that get convered into analog pwm signals sent to the motor
@@ -100,6 +109,15 @@ VEHICLE_NUMBER to your own new number.
 #define LEFT_TURN_OUT 254 
 #define STRAIGHT_TURN_OUT 192
 
+=======
+#define MIN_ACC_OUT 40
+#define MAX_ACC_OUT 227
+#define MIN_BRAKE_OUT 167
+#define MAX_BRAKE_OUT 207
+#define RIGHT_TURN_OUT 146
+#define LEFT_TURN_OUT 230
+#define STRAIGHT_TURN_OUT 187
+>>>>>>> 223c88c1c7eda80690319c5b6e952afe6e00f1ee
 // Turn sensors are believed if they are in this range while wheels are straight
 // MAX values here are for the safety of the actuator so as not to break/overload it
 #define RIGHT_MIN_COUNT 725
@@ -129,9 +147,13 @@ VEHICLE_NUMBER to your own new number.
 #define RC_TURN 5
 #define NUMBER_CHANNELS 5
 // Controller has no channel for RC_AUTO
+<<<<<<< HEAD
 #define RC_RVS  6 //reverse, not used on vehicle 2
 //OUTPUT values -  0 to 255
 #define DAC_CHANNEL 0
+=======
+#define RC_RVS  6
+>>>>>>> 223c88c1c7eda80690319c5b6e952afe6e00f1ee
 
 #endif
 
