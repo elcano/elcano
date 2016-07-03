@@ -8,7 +8,7 @@
 const int softwareTx = 10;  // to 7 segment LED display
 const int softwareRx = 7;   // not used
 //SoftwareSerial s7s(softwareRx, softwareTx);
-#define s7s Serial2
+#define s7s Serial3
 
 #define LOOP_TIME_MS 400
 #define ERROR_HISTORY 20
@@ -105,7 +105,7 @@ unsigned long calibrationTime_ms;
 unsigned long stoppedTime_ms;
 unsigned long straightTime_ms;
 int  throttle_control = MIN_ACC_OUT;
-int  brake_control = MAX_BRAKE_OUT;
+int  brake_control = MIN_BRAKE_OUT;
 int  steer_control = STRAIGHT_TURN_OUT;
 float Odometer_m = 0;
 float HubSpeed_kmPh;
