@@ -22,9 +22,9 @@
 #include <Settings.h>
 
 // Define the tests to do.
-#define BRAKE_RAMP
+//#define BRAKE_RAMP
 #define STEER_RAMP
-#define MOTOR_RAMP
+//#define MOTOR_RAMP
 // If operating with the MegaShieldDB, we can use the Digital Analog Converter to move the vehicle
 #define DAC
 
@@ -56,7 +56,7 @@ const int Throttle =  5;  // external PWM output  DEPRICATED: Use MOSI
 /* Actuator A3: Steering Motor. 
   Turns left or right. Default is wheels locked to a straight ahead position. */
 
-const int Steer =  7;    // external PWM output
+const int Steer =  STEER_OUT_PIN;    // external PWM output
 const int DiskBrake = DISK_BRAKE;
 const int ThrottleChannel = THROTTLE_CHANNEL;
 
@@ -164,12 +164,9 @@ const int CruiseThrottle = 15;  // Position of throttle commanded by AI
 
 
 // Values to send over DAC
-const int FullThrottle =  227;   // 3.63 V
-const int MinimumThrottle = 40;  // Throttle has no effect until 1.2 V
+const int FullThrottle =  MAX_ACC_OUT;   // 3.63 V
+const int MinimumThrottle = MIN_ACC_OUT;  // Throttle has no effect until 1.2 V
 // Values to send on PWM to get response of actuators
-// Vehicles #1 and #2 are reversed.
-// On #1. the actuator pushes the brake lever to bake.
-// On #2, the actuator pulls on the brake cable to brake.
 const int FullBrake = 210;//167;  // start with a conservative value; could go as high as 255;  
 const int NoBrake = 244; // 207; // start with a conservative value; could go as low as 127;
 // Steering
@@ -216,7 +213,7 @@ int ThrottleIncrement = 1;
 void setup()
 {
     //Set up pin modes and interrupts, call serial.begin and call initialize.
-    Serial.begin(9600);
+    Serial.begin(19200);
     
     // SPI: set the slaveSelectPin as an output:
     pinMode (SelectAB, OUTPUT);
@@ -238,7 +235,10 @@ void setup()
     moveBrake(BrakePosition);   // release brake
     moveSteer(SteerPosition);
     moveVehicle(MinimumThrottle); 
-    Serial.println("Initialized");  
+    Serial.println("Initialized");
+    Serial.print("Left\t");   
+    Serial.print("Right\t");
+    Serial.println("Time");   
 }
 /*---------------------------------------------------------------------------------------*/
 void loop()
@@ -274,22 +274,46 @@ void loop()
  // apply steering
 #ifdef STEER_RAMP
     SteerPosition += SteerIncrement;
+//    moveSteer(Straight);   // TCF
     if (SteerPosition > HardLeft || SteerPosition < HardRight)
+    {
         SteerIncrement = -SteerIncrement;
-    moveSteer(SteerPosition);
+        moveSteer(SteerPosition);
+    }
 #endif  // Steer_RAMP
+  outputToSerial();
 }
 /*---------------------------------------------------------------------------------------*/
 void moveBrake(int i)
 {
-     Serial.print ("Brake "); Serial.print(i);
-     Serial.print (" on ");   Serial.println (DiskBrake);
+     Serial.print ("Brake "); Serial.print (i);
+     Serial.print (" on ");   Serial.print (DiskBrake); Serial.print("\t"); 
      analogWrite(DiskBrake, i);
 }
 /*---------------------------------------------------------------------------------------*/
 void moveSteer(int i)
 {
+     Serial.print("Signal "); Serial.print(i); Serial.print(" to pin "); Serial.println(Steer);
      analogWrite(Steer, i);
+}
+/*---------------------------------------------------------------------------------------*/
+void outputToSerial()
+{
+#ifdef MOTOR_RAMP
+  //put output data for motor here
+#endif  // MOTOR_RAMP  
+  
+#ifdef BRAKE_RAMP
+  //put output data for brake here
+#endif  // BRAKE_RAMP
+
+#ifdef STEER_RAMP 
+     int left = analogRead(A2);               //Steer
+     int right = analogRead(A3);
+     Serial.print(left);   Serial.print("\t"); //Left turn sensor
+     Serial.print(right);  Serial.print("\t"); //Right turn sensor
+#endif //STEER_RAMP
+  Serial.println(micros()); //Current time and end line
 }
 /*---------------------------------------------------------------------------------------*/
 void moveVehicle(int counts)
