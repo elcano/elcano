@@ -22,9 +22,9 @@
 #include <Settings.h>
 
 // Define the tests to do.
-#define BRAKE_RAMP
+//#define BRAKE_RAMP
 #define STEER_RAMP
-#define MOTOR_RAMP
+//#define MOTOR_RAMP
 // If operating with the MegaShieldDB, we can use the Digital Analog Converter to move the vehicle
 #define DAC
 
@@ -214,7 +214,7 @@ int ThrottleIncrement = 1;
 void setup()
 {
     //Set up pin modes and interrupts, call serial.begin and call initialize.
-    Serial.begin(9600);
+    Serial.begin(19200);
     
     // SPI: set the slaveSelectPin as an output:
     pinMode (SelectAB, OUTPUT);
@@ -235,7 +235,10 @@ void setup()
     moveBrake(BrakePosition);   // release brake
     moveSteer(SteerPosition);
     moveVehicle(MinimumThrottle); 
-    Serial.println("Initialized");  
+    Serial.println("Initialized");
+    Serial.print("Left\t");   
+    Serial.print("Right\t");
+    Serial.println("Time");   
 }
 /*---------------------------------------------------------------------------------------*/
 void loop()
@@ -271,16 +274,20 @@ void loop()
  // apply steering
 #ifdef STEER_RAMP
     SteerPosition += SteerIncrement;
+//    moveSteer(Straight);   // TCF
     if (SteerPosition > HardLeft || SteerPosition < HardRight)
+    {
         SteerIncrement = -SteerIncrement;
-    moveSteer(SteerPosition);
+        moveSteer(SteerPosition);
+    }
 #endif  // Steer_RAMP
+  outputToSerial();
 }
 /*---------------------------------------------------------------------------------------*/
 void moveBrake(int i)
 {
-     Serial.print ("Brake "); Serial.print(i);
-     Serial.print (" on ");   Serial.println (DiskBrake);
+     Serial.print ("Brake "); Serial.print (i);
+     Serial.print (" on ");   Serial.print (DiskBrake); Serial.print("\t"); 
      analogWrite(DiskBrake, i);
 }
 /*---------------------------------------------------------------------------------------*/
@@ -289,6 +296,25 @@ void moveSteer(int i)
      Serial.print ("Steer "); Serial.print(i);
      Serial.print (" on ");   Serial.println (Steer);
      analogWrite(Steer, i);
+}
+/*---------------------------------------------------------------------------------------*/
+void outputToSerial()
+{
+#ifdef MOTOR_RAMP
+  //put output data for motor here
+#endif  // MOTOR_RAMP  
+  
+#ifdef BRAKE_RAMP
+  //put output data for brake here
+#endif  // BRAKE_RAMP
+
+#ifdef STEER_RAMP 
+     int left = analogRead(A2);               //Steer
+     int right = analogRead(A3);
+     Serial.print(left);   Serial.print("\t"); //Left turn sensor
+     Serial.print(right);  Serial.print("\t"); //Right turn sensor
+#endif //STEER_RAMP
+  Serial.println(micros()); //Current time and end line
 }
 /*---------------------------------------------------------------------------------------*/
 void moveVehicle(int counts)
