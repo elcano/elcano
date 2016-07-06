@@ -22,9 +22,9 @@
 #include <Settings.h>
 
 // Define the tests to do.
-//#define BRAKE_RAMP
+#define BRAKE_RAMP
 #define STEER_RAMP
-//#define MOTOR_RAMP
+#define MOTOR_RAMP
 // If operating with the MegaShieldDB, we can use the Digital Analog Converter to move the vehicle
 #define DAC
 
@@ -51,13 +51,11 @@ const int Tx0 = 1;      // external output
 const int EStop =   2;         // external input
 const int WheelClick = 3;      //  interrupt; Reed switch generates one pulse per rotation.
 
-/*  Actuator A1. Traction motor throttle. */
-const int Throttle =  5;  // external PWM output  DEPRICATED: Use MOSI
 /* Actuator A3: Steering Motor. 
   Turns left or right. Default is wheels locked to a straight ahead position. */
 
 const int Steer =  STEER_OUT_PIN;    // external PWM output
-const int DiskBrake = DISK_BRAKE;
+const int DiskBrake = BRAKE_OUT_PIN;
 const int ThrottleChannel = THROTTLE_CHANNEL;
 
 // D8-13 Connector ----------------------
@@ -167,12 +165,15 @@ const int CruiseThrottle = 15;  // Position of throttle commanded by AI
 const int FullThrottle =  MAX_ACC_OUT;   // 3.63 V
 const int MinimumThrottle = MIN_ACC_OUT;  // Throttle has no effect until 1.2 V
 // Values to send on PWM to get response of actuators
-const int FullBrake = 210;//167;  // start with a conservative value; could go as high as 255;  
-const int NoBrake = 244; // 207; // start with a conservative value; could go as low as 127;
+// Vehicles #1 and #2 are reversed.
+// On #1. the actuator pushes the brake lever to bake.
+// On #2, the actuator pulls on the brake cable to brake.
+const int FullBrake = MIN_BRAKE_OUT;  
+const int NoBrake = MAX_BRAKE_OUT;
 // Steering
-const int HardLeft = 240; //187; //  could go as high as 255;
-const int Straight = 195;// 187;
-const int HardRight = 150;  //126;
+const int HardLeft = LEFT_TURN_OUT;
+const int Straight = STRAIGHT_TURN_OUT;
+const int HardRight = RIGHT_TURN_OUT;
 
 // set the initial positions
 int ThrottlePosition = MinimumThrottle;
@@ -213,7 +214,7 @@ int ThrottleIncrement = 1;
 void setup()
 {
     //Set up pin modes and interrupts, call serial.begin and call initialize.
-    Serial.begin(19200);
+    Serial.begin(9600);
     
     // SPI: set the slaveSelectPin as an output:
     pinMode (SelectAB, OUTPUT);
@@ -228,7 +229,6 @@ void setup()
     for (int channel = 0; channel < 4; channel++)
         DAC_Write (channel, 0);   // reset did not clear previous states
  
-    pinMode(Throttle, OUTPUT);
     pinMode(DiskBrake, OUTPUT);
     pinMode(Steer, OUTPUT);
 
@@ -274,26 +274,24 @@ void loop()
  // apply steering
 #ifdef STEER_RAMP
     SteerPosition += SteerIncrement;
-//    moveSteer(Straight);   // TCF
     if (SteerPosition > HardLeft || SteerPosition < HardRight)
-    {
         SteerIncrement = -SteerIncrement;
-        moveSteer(SteerPosition);
-    }
+    moveSteer(SteerPosition);
 #endif  // Steer_RAMP
   outputToSerial();
 }
 /*---------------------------------------------------------------------------------------*/
 void moveBrake(int i)
 {
-     Serial.print ("Brake "); Serial.print (i);
-     Serial.print (" on ");   Serial.print (DiskBrake); Serial.print("\t"); 
+     Serial.print ("Brake "); Serial.print(i);
+     Serial.print (" on ");   Serial.println (DiskBrake);
      analogWrite(DiskBrake, i);
 }
 /*---------------------------------------------------------------------------------------*/
 void moveSteer(int i)
 {
-     Serial.print("Signal "); Serial.print(i); Serial.print(" to pin "); Serial.println(Steer);
+     Serial.print ("Steer "); Serial.print(i);
+     Serial.print (" on ");   Serial.println (Steer);
      analogWrite(Steer, i);
 }
 /*---------------------------------------------------------------------------------------*/
@@ -327,6 +325,8 @@ void moveVehicle(int counts)
       3.63 V: max          227 counts     
       255 counts = 4.08 V      
       */
+     Serial.print ("Motor "); Serial.print(counts);
+     Serial.print (" on ");   Serial.println (ThrottleChannel);
 #ifdef DAC      
    DAC_Write(ThrottleChannel, counts);
 #endif
@@ -342,13 +342,13 @@ void DAC_Write(int address, int value)
 
 /*
 REGISTER 5-3: WRITE COMMAND REGISTER FOR MCP4802 (8-BIT DAC)
-A/B  â€”  GA  SHDN  D7 D6 D5 D4 D3 D2 D1 D0 x x x x
+A/B  —  GA  SHDN  D7 D6 D5 D4 D3 D2 D1 D0 x x x x
 bit 15                                       bit 0
 
 bit 15   A/B: DACA or DACB Selection bit
          1 = Write to DACB
          0 = Write to DACA
-bit 14   â€” Donâ€™t Care
+bit 14   — Don’t Care
 bit 13   GA: Output Gain Selection bit
          1 = 1x (VOUT = VREF * D/4096)
          0 = 2x (VOUT = 2 * VREF * D/4096), where internal VREF = 2.048V.
@@ -397,5 +397,4 @@ This is as documented; with gain of 2, maximum output is 2 * Vref
   }
 }
 /*---------------------------------------------------------------------------------------*/ 
-
 
