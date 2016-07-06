@@ -5,4 +5,6 @@ add_global_link_arguments('-lraspicam', '-lraspicam_cv', language: 'cpp')
 
 cv = dependency('opencv')
 
-executable('elcano-pi', 'main.cc', 'detect-and-draw.cc', dependencies: cv)
+executable('elcano-pi',
+	sources: ['main.cc', 'detect-and-draw.cc', 'rpi-gpio.cc'],
+	dependencies: cv)
