@@ -22,9 +22,9 @@
 #include <Settings.h>
 
 // Define the tests to do.
-//#define BRAKE_RAMP
+#define BRAKE_RAMP
 #define STEER_RAMP
-//#define MOTOR_RAMP
+#define MOTOR_RAMP
 // If operating with the MegaShieldDB, we can use the Digital Analog Converter to move the vehicle
 #define DAC
 
@@ -214,7 +214,7 @@ int ThrottleIncrement = 1;
 void setup()
 {
     //Set up pin modes and interrupts, call serial.begin and call initialize.
-    Serial.begin(19200);
+    Serial.begin(9600);
     
     // SPI: set the slaveSelectPin as an output:
     pinMode (SelectAB, OUTPUT);
@@ -274,12 +274,9 @@ void loop()
  // apply steering
 #ifdef STEER_RAMP
     SteerPosition += SteerIncrement;
-//    moveSteer(Straight);   // TCF
     if (SteerPosition > HardLeft || SteerPosition < HardRight)
-    {
         SteerIncrement = -SteerIncrement;
-        moveSteer(SteerPosition);
-    }
+    moveSteer(SteerPosition);
 #endif  // Steer_RAMP
   outputToSerial();
 }
@@ -400,5 +397,4 @@ This is as documented; with gain of 2, maximum output is 2 * Vref
   }
 }
 /*---------------------------------------------------------------------------------------*/ 
-
 
