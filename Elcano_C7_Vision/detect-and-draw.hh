@@ -1,6 +1,8 @@
 #pragma once
 
-#include <opencv2/opencv.hpp>
+#include <opencv2/objdetect/objdetect.hpp>
+
+/* Helper function for processing camera input */
 
 namespace elcano
 {
