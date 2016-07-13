@@ -1,7 +1,7 @@
 #include <vector>
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
-#include "detect-and-draw.hh"
+#include "detect.hh"
 
 /* Helper function for processing camera input */
 

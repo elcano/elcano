@@ -1,7 +1,7 @@
 #include <opencv2/opencv.hpp>
 #include <raspicam/raspicam_cv.h>
 #include "args.hh"
-#include "detect-and-draw.hh"
+#include "detect.hh"
 #include <iostream>
 #include <vector>
 #include <signal.h>
