@@ -26,6 +26,7 @@ VEHICLE_NUMBER to your own new number.
 // Parameters used by Elcano_C2_LowLevel
 #define RC_SPEKTRUM 
 #undef  RC_HITEC
+#define TURN_RADIUS 209 //Turning radius in cm.
 //OUTPUT values -  0 to 255
 #define MIN_ACC_OUT 40
 #define MAX_ACC_OUT 227
@@ -69,6 +70,7 @@ VEHICLE_NUMBER to your own new number.
 // Parameters used by Elcano_C2_LowLevel
 #undef RC_SPEKTRUM 
 #define  RC_HITEC
+#define TURN_RADIUS 214 //Turning radius in cm.
 //OUTPUT values -  0 to 255
 #define MIN_ACC_OUT 40
 #define MAX_ACC_OUT 227
@@ -83,7 +85,7 @@ VEHICLE_NUMBER to your own new number.
 #define LEFT_MIN_COUNT  880
 #define LEFT_MAX_COUNT  940
 #define DAC_CHANNEL 3
-#define STEER_OUT_PIN 7 // Output to steer actuator
+#define STEER_OUT_PIN 2 // Output to steer actuator
 #define BRAKE_OUT_PIN 9  // output to brake actuator
 #define WHEEL_DIAMETER_MM 500
 #define MOTOR_POLE_PAIRS 23
