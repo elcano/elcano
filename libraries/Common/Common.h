@@ -15,6 +15,8 @@
 #define BUFFSIZ 120
 #define MAX_MISSION 6
 #define MEG 1000000
+#define MAX_WAYPOINTS 40   // The maximum number of waypoints in each map file.
+
 // setting of index to indicate a navigation fix
 #define POSITION -1
 // A bit flag for index that indicates this waypoint is the last in a sequence.

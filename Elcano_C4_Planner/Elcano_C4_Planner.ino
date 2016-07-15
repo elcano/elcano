@@ -163,7 +163,6 @@ long goal_lon[CONES] = {-122349894, -122352120, -122351987, -122351087, -1223498
 
 
 #define MAX_MAPS 10         // The maximum number of map files stored to SD card.
-#define MAX_WAYPOINTS 40    // The maximum number of waypoints in each map file.
 /*   There are two coordinate systems.
      MDF and RNDF use latitude and longitude.
      C3 and C6 assume that the earth is flat at the scale that they deal with

@@ -1,9 +1,10 @@
 
 #include <Common.h>
-#include <IO_C3.h>
-#include <IO_Mega.h>
+//#include <IO_C3.h>
+//#include <IO_Mega.h>
 #include <Matrix.h>
 #include <Elcano_Serial.h>
+#include <SPI.h>
 
 /*
 // Elcano Contol Module C3: Pilot.
@@ -14,7 +15,7 @@ and steering and sends these to C2.
 
 Input will be recieved and sent using the functions writeSerial and readSerial in 
 Elcano_Serial. Inputs will be received from C5(sensors) and C4(planner). Output is sent to 
-C2.
+C2(Low Level).
 
 In USARSIM simulation, these could be written on the serial line as
 wheel spin speeds and steering angles needed to
@@ -35,17 +36,17 @@ data from C6 Navigator
 waypoint current_position;  // best estimate of where the robot is.
 waypoint mission[MAX_MISSION]; // list of all goal locations
 waypoint path[MAX_PATH];       // suggested path for reaching goal; may be a circular buffer
-int firstPathSegment=0;   // first index of path[]
-int lastPathSegment=0;    // last index of path[]
-int activePathSegment=0;  // path[activePathSegment] is closest to current_position.
-int trackError_mm=0;  // perpendicular distance to intended path segment
+int firstPathTargetLocation=0;   // first index of path[]
+int lastPathTargetLocation=0;    // last index of path[]
+int activePathTargetLocation=0;  // path[activePathTargetLocation] is closest to current_position.
+int trackError_mm=0;  // perpendicular distance to intended path TargetLocation
 //int steerError_deg=0; // departure from intended bearing; positive = right
 int desiredSpeed_mmPs=0;  // Speed suggested by the path planner
 int LeftRange_mm =  7500;
 int Range_mm =      7500;
 int RightRange_mm = 7500;
 char Navigation[BUFFSIZ];  // Holds a serial message giving the current location
-char Plan[BUFFSIZ];    // Holds a serial message giving a segment of the path plan  
+char Plan[BUFFSIZ];    // Holds a serial message giving a TargetLocation of the path plan  
 void DataReady();    // called by an interrupt when there is serial data to read
 extern bool DataAvailable;
 
@@ -90,16 +91,16 @@ void initialize()
         if (mission[i].index & END)
           break;
       }
-  //  Read waypoints of first segment from C4 on serial line
-     firstPathSegment = 0;
-     activePathSegment = 0;
-     lastPathSegment = MAX_PATH - 1;
+  //  Read waypoints of first TargetLocation from C4 on serial line
+     firstPathTargetLocation = 0;
+     activePathTargetLocation = 0;
+     lastPathTargetLocation = MAX_PATH - 1;
      for (i = 0; i < MAX_PATH; i++)
       {
         while (!path[i].readPointString(1000, 0) );
         if (path[i].index & END)
         {
-          lastPathSegment = i;
+          lastPathTargetLocation = i;
           break;
         }
       }
@@ -111,14 +112,14 @@ void initialize()
 }
 /*---------------------------------------------------------------------------------------*/ 
  /*
-// return value is trackError_mm from this segment
+// return value is trackError_mm from this TargetLocation
 // trackError is positive if left of centerline and negative if right.
 int distance(int i,   // index into path[]
-    int* pathCompletion)  // per cent of segment that has been completed
+    int* pathCompletion)  // per cent of TargetLocation that has been completed
 {
   float startX, startY, endX, endY;
   float meX, meY, m;
-  float x, y;  // intersection of path segment and perpendicular to path thru robot position.
+  float x, y;  // intersection of path TargetLocation and perpendicular to path thru robot position.
   int dist_mm;   // track error
   float Dist_mm;
   startX = path[i].east_mm;
@@ -181,8 +182,8 @@ int distance(int i,   // index into path[]
     }
 }
 /*---------------------------------------------------------------------------------------*/ 
-// Given the current_position and path, find the nearest segment of the path and the 
-// relative position in that segment. Compute the desired vector and the actual vector.
+// Given the current_position and path, find the nearest TargetLocation of the path and the 
+// relative position in that TargetLocation. Compute the desired vector and the actual vector.
 /*
 void WhereAmI()
 {
@@ -191,65 +192,65 @@ void WhereAmI()
   int position_mm = 0;
   int i;
   int PerCentDone, done;
-  activePathSegment = firstPathSegment;
+  activePathTargetLocation = firstPathTargetLocation;
   done = 0;
-  if (firstPathSegment <= lastPathSegment)
+  if (firstPathTargetLocation <= lastPathTargetLocation)
   {
-    for( i = firstPathSegment; i <= lastPathSegment; i++)
+    for( i = firstPathTargetLocation; i <= lastPathTargetLocation; i++)
     {
       dist_mm = distance(i,&PerCentDone);
       if (abs(dist_mm) < abs(closest_mm))
       {
         closest_mm = dist_mm;
-        activePathSegment = i;
+        activePathTargetLocation = i;
         done = PerCentDone;
       }
     }
   }
   else
   {
-    for (i = firstPathSegment; i < MAX_PATH; i++)
+    for (i = firstPathTargetLocation; i < MAX_PATH; i++)
     {
       dist_mm = distance(i,&PerCentDone);
       if (abs(dist_mm) < abs(closest_mm))
       {
         closest_mm = dist_mm;
-        activePathSegment = i;
+        activePathTargetLocation = i;
         done = PerCentDone;
       }
     }
-    for (i = 0; i < lastPathSegment; i++)
+    for (i = 0; i < lastPathTargetLocation; i++)
     {
       dist_mm = distance(i,&PerCentDone);
       if (abs(dist_mm) < abs(closest_mm))
       {
         closest_mm = dist_mm;
-        activePathSegment = i;
+        activePathTargetLocation = i;
         done = PerCentDone;
       }
     }
   }
-  if (done >= 100 && activePathSegment != lastPathSegment)
-  {  // have passed end of segment; use the next one
-    if (++activePathSegment>= MAX_PATH)
-        activePathSegment = 0;
-    closest_mm = distance(activePathSegment, &done);
+  if (done >= 100 && activePathTargetLocation != lastPathTargetLocation)
+  {  // have passed end of TargetLocation; use the next one
+    if (++activePathTargetLocation>= MAX_PATH)
+        activePathTargetLocation = 0;
+    closest_mm = distance(activePathTargetLocation, &done);
   }
   // compute errors in track, steer and speed
    trackError_mm = closest_mm;
-   if (activePathSegment == lastPathSegment)
+   if (activePathTargetLocation == lastPathTargetLocation)
    {
-      desiredSpeed_mmPs = path[activePathSegment].speed_mmPs;
+      desiredSpeed_mmPs = path[activePathTargetLocation].speed_mmPs;
    }
    else
    {
      int pathPerCent = min(100, done);
      pathPerCent = max(0,   done);
-     desiredSpeed_mmPs = path[activePathSegment].speed_mmPs + pathPerCent * 
-     (path[(activePathSegment+1)%MAX_PATH].speed_mmPs - path[activePathSegment].speed_mmPs);
+     desiredSpeed_mmPs = path[activePathTargetLocation].speed_mmPs + pathPerCent * 
+     (path[(activePathTargetLocation+1)%MAX_PATH].speed_mmPs - path[activePathTargetLocation].speed_mmPs);
    }
-//   float dotProductM = current_position.Evector_x1000 * path[activePathSegment].Evector_x1000 +
-//    current_position.Nvector_x1000 * path[activePathSegment].Nvector_x1000;
+//   float dotProductM = current_position.Evector_x1000 * path[activePathTargetLocation].Evector_x1000 +
+//    current_position.Nvector_x1000 * path[activePathTargetLocation].Nvector_x1000;
 //   steerError_deg = acos(dotProductM/MEG);
 }
 
@@ -302,13 +303,13 @@ int SetSteering()
     int Steer_error_deg = 0;
     int Steer = analogRead(DIRECTION_IN) / 4;  // Units are circle/256
     float DesiredSteer;
-    if (path[activePathSegment].Nvector_x1000 >= 0)
+    if (path[activePathTargetLocation].Nvector_x1000 >= 0)
     {
-      DesiredSteer = acos((float)path[activePathSegment].Evector_x1000 / 1000.) *128. / PI;
+      DesiredSteer = acos((float)path[activePathTargetLocation].Evector_x1000 / 1000.) *128. / PI;
     }
     else
     {
-      DesiredSteer = 256. - acos((float)path[activePathSegment].Evector_x1000 / 1000.) *128. / PI;
+      DesiredSteer = 256. - acos((float)path[activePathTargetLocation].Evector_x1000 / 1000.) *128. / PI;
     }
     Steer_error_deg = ((Steer - DesiredSteer) * 256) /360;
     /*
@@ -390,7 +391,7 @@ void loop()
        i = location.index & ~END;
        new_path[i] = location; 
        if (location.index & END)
-       {  //  Read waypoints of next segment from C4 on serial line
+       {  //  Read waypoints of next TargetLocation from C4 on serial line
           for (k = 0; k <= i; k++)
           {
              path[k] = new_path[k];
@@ -412,7 +413,7 @@ void loop()
  /*
     // get newest map data from C4 planner
     // Using Elcano_Serial.h Using the SerialData struct in the .h file.
-    // Receive a segment from C4. C4 will only ever send segments to C3.
+    // Receive a TargetLocation from C4. C4 will only ever send TargetLocations to C3.
     // 
     SerialData instructions;
     readSerial(&Serial1, &instructions);
@@ -432,15 +433,293 @@ void loop()
 /*
 }
 */
-void DrivePath(int &northDist, int &eastDist)
+
+
+
+// TargetLocation struct is used to store the data of each TargetLocation of the path given by the planner.
+// We create a new struct becuase the SerialData should only be used to send data.
+struct TargetLocation
+{
+   long int targetSpeed;
+   long int bearing;
+   long int northPos;
+   long int eastPos;
+};
+
+// Process segement assures that we received a valid TargetLocation and not noise.
+// it then stores the data in another struct that holds similar data. This is 
+// done for loose coupling. If we need to change the point data stored locally
+// we don't need to try to change the elcano serial file.
+bool ProcessTargetLocation(TargetLocation *currentTargetLocation, SerialData instructions)
+{
+  // Each statement checks that the data received is not int_max.
+  if(instructions.speed_cmPs == 2147483648)
+  {
+    return false;
+  }
+  else if(instructions.posE_cm == 2147483648)
+  {
+    return false;
+  }
+  else if(instructions.posN_cm == 2147483648)
+  {
+    return false;
+  }
+  else if(instructions.bearing_deg == 2147483648)
+  {
+    return false;
+  }
+  // If none of the data was corrupted then we can store it in the TargetLocation struct provided.
+  currentTargetLocation->targetSpeed = instructions.speed_cmPs;
+  currentTargetLocation->bearing = instructions.bearing_deg;
+  currentTargetLocation->eastPos = instructions.posE_cm;
+  currentTargetLocation->northPos = instructions.posN_cm;
+  return true;
+}
+
+
+bool ReadWaypoints(TargetLocation* TargetLocationArray)
+{
+  //set up variables
+  int count = 0;
+  SerialData dataRead;
+  TargetLocation currentTargetLocation;
+  // loop until we hit the end of the data
+   while(true)
+   {
+    //check if we're done receiveing
+    readSerial(&Serial1,&dataRead);
+    if(dataRead.number == 789 || count == MAX_WAYPOINTS) // bad number there is no more data or end of data
+    {
+      if(count == 0) // nothing was read
+      {
+        return false;
+      }
+      break;
+    }
+    else
+    //process and store if valid. 
+    {
+      if(ProcessTargetLocation(&currentTargetLocation, dataRead))
+      {
+        TargetLocationArray[count] = currentTargetLocation;
+        count++;
+      }
+      // send back acknowledgement
+    }
+   }
+   return true;
+}
+
+//this will be the square test of the first autonomous baby step.
+void Drive(int myAngle, int myX, int myY, int targetAngle, int targetX, int targetY)
 {
   
+}
+
+// This function will rotate the bike to the desired angle. 
+// This includes calculation of the difference in its current heading and the target 
+// angle. Low level commands will be sent to C2 low level controller. 
+void RotateToAngle(int targetAngle, int currentHeading)
+{
+  //We must know full turing angle and lowest speed
+  //calculate angle distance and decide which direction to turn
+
+  //Have we reached our target?
+  if(targetAngle == currentHeading)
+  {
+    return;
+  }
+
+  //if not we set the steering angle and conitune turning.
+  if(shortestAngle(targetAngle, currentHeading))
+  {
+  }
+
+  //was is our max steering angle?
+  
+  //test with turn around twice.   
+}
+
+/* The Float Comparison function allows you to compare floats to any X number 
+ * of decimal places. This allows us to compare two floats without errors
+ * that = comparison will give.
+ */
+
+float ShortestAngle(float currentAngle, float targetAngle)
+{
+     // handle cases of positve past 180 and negative past -180
+     // This simplifies our calulations of smallest angle
+     currentAngle = UniformAngle(currentAngle);
+     targetAngle = UniformAngle(targetAngle);
+
+     //find the lowest angle
+
+     // case of positive positve
+     if( currentAngle >= 0 && targetAngle >= 0)
+     {
+        if(currentAngle > targetAngle)
+        {
+          return (currentAngle - targetAngle) * -1;
+        }
+        else
+        {
+          return (targetAngle - currentAngle);
+        }
+     }
+     
+     // case of negative negative
+     else if( currentAngle <= 0 && targetAngle <= 0)
+     {
+        if(currentAngle > targetAngle)
+        {
+          return (targetAngle - currentAngle);
+        }
+        else
+        {
+          return (currentAngle - targetAngle) * -1;
+        }
+     }
+     
+     // case of positve negative
+     else if( currentAngle >= 0 && targetAngle <= 0)
+     {
+        float retVal = (-currentAngle + targetAngle);
+        if(abs((180 - currentAngle) - (-180 - targetAngle)) < abs(retVal))
+        {
+          retVal = ((180 - currentAngle) - (-180 - targetAngle));
+        }
+        return retVal;
+     }
+     //case of negative positve
+     else if( currentAngle <= 0 && targetAngle >= 0)
+     {
+        float retVal = (-currentAngle + targetAngle);
+        if(abs(-(180 + currentAngle) - (180 - targetAngle)) < abs(retVal))
+        {
+          retVal = (-(180 + currentAngle) - (180 - targetAngle));
+        }
+        return retVal;
+     }
+}
+
+// This function converts any angle we are dealing with to be from 0 to 180 and anything
+// greater than 180 and less than 0 to be represented as a negative angle. Our circle
+// starts with 0 at the top as true north
+//             0
+//       -90         90
+//            180
+float UniformAngle(float angle)
+{
+    if(angle > 180)
+     {
+        angle = -(360 - angle); 
+     }
+     if(angle < -180)
+     {
+        angle = 360 + angle; 
+     }
+     return angle;
+}
+
+// Float comparison allows comparison of floats not using the = operator
+// this will return a boolean of the comparison of a and b to the number
+// of decimal places defined by places. 
+bool FloatComparison(float a, float b, int places)
+{
+  // values are cast to an integer for = comparison of
+  // values.
+  int aVal;
+  int bVal;
+  // each case represents the number of decimal places compared.
+  switch(places)
+  {
+    case 1:
+        aVal = a*10;
+        bVal = b*10;
+        break;
+    case 2:
+        aVal = a*100;
+        bVal = b*100;
+        break;
+    case 3:
+        aVal = a*1000;
+        bVal = b*1000;
+        break;
+    case 4:
+        aVal = a*10000;
+        bVal = b*10000;
+        break;
+
+    default:
+        aVal = a;
+        bVal = b;
+        break;
+  }
+  // return cases.
+  if(aVal == bVal)
+  {
+    return true;
+  }
+  else 
+  {
+    return false;
+  }
+}
+
+
+/* This function calculates the angle from the current point to the target point
+ * in relation to true north.
+ * Quadrants are relative to the current position with y lines pointing true north.
+ * for reference quadrants are:
+ * 2 1
+ * 3 4
+ */
+float NorthOffset(int currentX, int currentY, int targetX, int targetY)
+{
+  // quadrant 4
+  if ((currentX > targetX) && (currentY > targetY))
+  {
+    return (-180 + (atan(float(currentX+targetX)/float(currentY+targetY)) * 57.2957795));
+  }
+  // quadrant 3
+  else if((currentX < targetX) && (currentY > targetY))
+  {
+    return (180 + (atan(float(currentX+targetX)/float(currentY+targetY)) * 57.2957795));
+  }
+  // quadarant 1 or 2
+  else
+  {
+     return (atan(float(currentX+targetX)/float(currentY+targetY)) * 57.2957795);
+  }
+}
+
+// Calculate the hypotenuse side of the triangle passed in.
+int PothagarianDistance(int currentX, int currentY, int targetX, int targetY)
+{
+    return sqrt(sq(abs(currentX - targetX)) + sq(abs(currentY - targetY)));
+}
+
+// Returns if the two points are with in the target range of eachother.
+// Units passed in should be the same for both x, y, and range.
+bool ValidRange(float x1,float y1, float x2,float y2, float range)
+{
+  bool retVal = false;
+  float temp = PothagarianDistance(x1,y1,x2,y2);
+  if(temp < range)
+  {
+    retVal = true; 
+  }
+  return retVal;
 }
 
 ////////////////////////////////////////////////////////////////////////////
 void setup() 
 {  
-        Serial1.begin(9600);  
+        Serial1.begin(9600); 
+        //Serial2.begin(9600);
+        //Serial3.begin(9600); 
+        pinMode(8,OUTPUT);
 }
 
 void loop() 
@@ -449,30 +728,35 @@ void loop()
     int speedSetting = 300;
     // get newest map data from C4 planner
     // Using Elcano_Serial.h Using the SerialData struct in the .h file.
-    // Receive a segment from C4. C4 will only ever send segments to C3.
+    // Receive a TargetLocation from C4. C4 will only ever send TargetLocations to C3.
 
 
     //-----------------------C4 input--------------------------//
     SerialData instructions;
     readSerial(&Serial1, &instructions);
+    TargetLocation currentTargetLocation;
+    ProcessTargetLocation(&currentTargetLocation,instructions);
+    TargetLocation allTargetLocations[MAX_WAYPOINTS];
+    ReadWaypoints(allTargetLocations);
+    
 
     //Test of input from C4.
     //Serial.println("test");
     //Serial.println(instructions.kind);
   
     //-----------------------C5 input-------------------------//
-    SerialData sensorData;
-    readSerial(&Serial2, &sensorData);
+    //SerialData sensorData;
+    //readSerial(&Serial2, &sensorData);
     
 
     //---------------------C2 output-------------------------------//
 
     //Send data to low level.
-    SerialData toLowLevel;
-    toLowLevel.kind = MSG_DRIVE;
-    toLowLevel.angle_deg = steeringAngle;
-    toLowLevel.speed_cmPs = speedSetting;
-    writeSerial(&Serial1, &toLowLevel);
+    //SerialData toLowLevel;
+    //toLowLevel.kind = MSG_DRIVE;
+    //toLowLevel.angle_deg = steeringAngle;
+    //toLowLevel.speed_cmPs = speedSetting;
+    //writeSerial(&Serial3, &toLowLevel);
 
     //Test of output to C2.
     // Outputting to C2 uses the Elcano Serial kind 1 to send a "drive signal to C2"
@@ -503,7 +787,8 @@ void loop()
     toLowLevel.angle_deg = 35;
      */
     
-    
+    //turning test
+    Drive(
 
 }
 
@@ -512,10 +797,10 @@ void loop()
 /*---------------------------------------------------------------------------------------*/ 
 /* The format of the command received over the serial line from C6 Navigator is 
   $POINT,<east_m>,<north_m>,<sigma_m>,<time_s>,<speed_mPs>,<Vx>,<Vy>,POSITION*CKSUM
-The Pilot is provided with a few straight segments and speed profiles that define how
+The Pilot is provided with a few straight TargetLocations and speed profiles that define how
 the vehicle travels over the next few meters.
 
-Segments in the path planner include a few parameters:
+TargetLocations in the path planner include a few parameters:
 Four points specifying a cubic spline as an Hermite curve [Foley et al, Introduction to Computer Graphics]. 
   - Start point.
   - Start velocity.
@@ -523,8 +808,8 @@ Four points specifying a cubic spline as an Hermite curve [Foley et al, Introduc
   - End velocity.
 These points by themselves specify a family of curves. Specifying the parameter t 
 for the speed at which the curve is traversed makes the curve unique. The Pilot 
-deals with staight segments, which are sent by the path planner over the serial line. 
-These segments include the desired speed at the start of each segment.
+deals with staight TargetLocations, which are sent by the path planner over the serial line. 
+These TargetLocations include the desired speed at the start of each TargetLocation.
 The pilot receives the current vehicle position and velocity.
 
 The points are defined on a coordinate system in meters with the X axis east and the 
