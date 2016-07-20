@@ -1,5 +1,9 @@
 #include <vector>
-#include "detect-and-draw.hh"
+#include <opencv2/highgui/highgui.hpp>
+#include <opencv2/imgproc/imgproc.hpp>
+#include "detect.hh"
+
+/* Helper function for processing camera input */
 
 using namespace cv;
 
@@ -12,6 +16,7 @@ namespace elcano
 		Mat smallImg;
 		
 		resize(img, smallImg, Size(), fx, fx, INTER_LINEAR);
+		equalizeHist(smallImg, smallImg);
 		cascade.detectMultiScale(smallImg, detection, 1.1, 2, CASCADE_SCALE_IMAGE, Size(30, 30));
 		
 		for (Rect r : detection)
