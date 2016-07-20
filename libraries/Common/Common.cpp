@@ -1,4 +1,3 @@
-
 #include <IO.h>
 #include <Arduino.h>
 #include <Common.h>
@@ -543,4 +542,3 @@ bool waypoint::AcquireGPGGA(unsigned long max_wait_ms)
 }
 
 #endif  // MEGA
-

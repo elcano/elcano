@@ -9,6 +9,33 @@
 #define MSG_GOAL 3
 #define MSG_SEG 4
 
+// The following list outlines the data that can be sent on the serial lines to the various parts of the
+// system. 
+/*
+Drive - 1 (C3 to C2)
+   - speed_cmPs
+   - angle_deg
+Sensor - 2 (C5 to C3)
+   - speed_cmPs
+   - angle_deg
+   - posE_cm
+   - posN_cm
+   - bearing_deg
+Goal - 3 (C6 to C4)
+   - number
+   - posE_cm
+   - posN_cm
+   - bearing_deg
+   - probability
+Segment - 4 (C4 to C3)
+   - number
+   - posE_cm
+   - posN_cm
+   - bearing_deg
+   - speed_cmPs
+
+*/
+
 struct SerialData
 {
     int kind;

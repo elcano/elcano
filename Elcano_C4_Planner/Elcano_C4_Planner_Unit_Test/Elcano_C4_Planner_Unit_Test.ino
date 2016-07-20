@@ -736,6 +736,10 @@ test(ConstructNetwork_small)
 // Verifies that the distances are correctly updated in the map passed to
 // the function.
 // 113 was the largest number of nodes we could test without the Mega 2560 throwing an error
+
+
+/*
+ * BAD TEST
 test(ConstructNetwork_large) 
 {
   int m = 110;
@@ -774,7 +778,7 @@ test(ConstructNetwork_large)
     }
   }
 }
-
+*/
 
 // Test for empty Map
 test(ConstructNetwork_empty_map) 
@@ -795,6 +799,7 @@ test(ConstructNetwork_empty_map)
 // Test for MapPoints being smaller than the size of the array
 // Verifies that the distances are correctly updated in the map passed to
 // the function.
+
 test(ConstructNetwork_less_mappoints) 
 {
   int m = 1;
@@ -831,6 +836,8 @@ test(ConstructNetwork_less_mappoints)
   }
 }
 
+/*
+ BAD TEST
 // Test for MapPoints being larger than the size of the array
 // Verifies that the distances are correctly updated in the map passed to
 // the function.
@@ -869,7 +876,7 @@ test(ConstructNetwork_more_mappoints)
     }
   }
 }
-
+*/
 // Test for MapPoints being negative
 // Verifies that the distances are correctly updated in the map passed to
 // the function.
@@ -1215,8 +1222,22 @@ test(FindPath_Standard)
   Serial.println(Nodes[4].north_mm);
 
   assertEqual(Open[1].ParentID, start.index);
+
   
+}
   
+test(ok) 
+{
+  int x=3;
+  int y=3;
+  assertEqual(x,y);
+}
+
+test(bad)
+{
+  int x=3;
+  int y=3;
+  assertNotEqual(x,y);
 }
 
 
@@ -1224,8 +1245,8 @@ void setup()
 {
   Serial.begin(115200);
   Test::out = &Serial;   // Output test results to the Serial monitor
-  Test::exclude("*_skip");  // Skips all test with "_skip" at the end of the name
-  Test::exclude("*_large");  // Skips all test with "_large" at the end of the name
+  //Test::exclude("*_skip");  // Skips all test with "_skip" at the end of the name
+  //Test::exclude("*_large");  // Skips all test with "_large" at the end of the name
 
 }
 
