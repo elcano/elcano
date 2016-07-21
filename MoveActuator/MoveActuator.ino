@@ -235,7 +235,10 @@ void setup()
     moveBrake(BrakePosition);   // release brake
     moveSteer(SteerPosition);
     moveVehicle(MinimumThrottle); 
-    Serial.println("Initialized");  
+    Serial.println("Initialized");
+    Serial.print("Left\t");   
+    Serial.print("Right\t");
+    Serial.println("Time");   
 }
 /*---------------------------------------------------------------------------------------*/
 void loop()
@@ -275,12 +278,13 @@ void loop()
         SteerIncrement = -SteerIncrement;
     moveSteer(SteerPosition);
 #endif  // Steer_RAMP
+  outputToSerial();
 }
 /*---------------------------------------------------------------------------------------*/
 void moveBrake(int i)
 {
-     Serial.print ("Brake "); Serial.print(i);
-     Serial.print (" on ");   Serial.println (DiskBrake);
+     Serial.print ("Brake "); Serial.print (i);
+     Serial.print (" on ");   Serial.print (DiskBrake); Serial.print("\t"); 
      analogWrite(DiskBrake, i);
 }
 /*---------------------------------------------------------------------------------------*/
@@ -289,6 +293,25 @@ void moveSteer(int i)
      Serial.print ("Steer "); Serial.print(i);
      Serial.print (" on ");   Serial.println (Steer);
      analogWrite(Steer, i);
+}
+/*---------------------------------------------------------------------------------------*/
+void outputToSerial()
+{
+#ifdef MOTOR_RAMP
+  //put output data for motor here
+#endif  // MOTOR_RAMP  
+  
+#ifdef BRAKE_RAMP
+  //put output data for brake here
+#endif  // BRAKE_RAMP
+
+#ifdef STEER_RAMP 
+     int left = analogRead(A2);               //Steer
+     int right = analogRead(A3);
+     Serial.print(left);   Serial.print("\t"); //Left turn sensor
+     Serial.print(right);  Serial.print("\t"); //Right turn sensor
+#endif //STEER_RAMP
+  Serial.println(micros()); //Current time and end line
 }
 /*---------------------------------------------------------------------------------------*/
 void moveVehicle(int counts)
@@ -374,5 +397,4 @@ This is as documented; with gain of 2, maximum output is 2 * Vref
   }
 }
 /*---------------------------------------------------------------------------------------*/ 
-
 

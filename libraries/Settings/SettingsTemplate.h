@@ -26,32 +26,22 @@ VEHICLE_NUMBER to your own new number.
 // Parameters used by Elcano_C2_LowLevel
 #define RC_SPEKTRUM 
 #undef  RC_HITEC
-//OUTPUT values -  0 to 255
+#define TURN_RADIUS 209 //Turning radius in cm.
 
+//OUTPUT values -  0 to 255
 // MIN and MAX ACC set the minimum signal to get the motor going, and maximum allowable acceleration for the motor
 // Values (0-255) represent digital values that get convered into analog pwm signals sent to the motor
 #define MIN_ACC_OUT 40
 #define MAX_ACC_OUT 227
-<<<<<<< HEAD
-
 // MIN and MAX BRAKE_OUT set values to be sent to the brake actuator that controls the brakes on the front wheels
 // Values (0-255) represent digital values that get convered into analog pwm signals
-#define MIN_BRAKE_OUT 180
-#define MAX_BRAKE_OUT 250
-
-// RIGHT, STRAIGHT, and LEFT TURN_OUT set values to be sent to the steer actuator that changes the direction of the front wheels
-// Values (0-255) represent digital values that get convered into analog pwm signals
-#define RIGHT_TURN_OUT 146
-#define LEFT_TURN_OUT 230
-#define STRAIGHT_TURN_OUT 180
-
-=======
 #define MIN_BRAKE_OUT 167
 #define MAX_BRAKE_OUT 207
-#define RIGHT_TURN_OUT 146
-#define LEFT_TURN_OUT 230
-#define STRAIGHT_TURN_OUT 188
->>>>>>> 223c88c1c7eda80690319c5b6e952afe6e00f1ee
+// RIGHT, STRAIGHT, and LEFT TURN_OUT set values to be sent to the steer actuator that changes the direction of the front wheels
+// Values (0-255) represent digital values that get convered into analog pwm signals
+#define RIGHT_TURN_OUT 150
+#define LEFT_TURN_OUT 240
+#define STRAIGHT_TURN_OUT 195
 // Turn sensors are believed if they are in this range while wheels are straight
 // MAX values here are for the safety of the actuator so as not to break/overload it
 #define RIGHT_MIN_COUNT 80
@@ -90,45 +80,33 @@ VEHICLE_NUMBER to your own new number.
 // Parameters used by Elcano_C2_LowLevel
 #undef RC_SPEKTRUM 
 #define  RC_HITEC
+#define TURN_RADIUS 214 //Turning radius in cm.
+
 //OUTPUT values -  0 to 255
-<<<<<<< HEAD
 
 // MIN and MAX ACC set the minimum signal to get the motor going, and maximum allowable acceleration for the motor
 // Values (0-255) represent digital values that get convered into analog pwm signals sent to the motor
 #define MIN_ACC_OUT 50
 #define MAX_ACC_OUT 227
-
 // MIN and MAX BRAKE_OUT set values to be sent to the brake actuator that controls the brakes on the front wheels
 // Values (0-255) represent digital values that get convered into analog pwm signals
-#define MIN_BRAKE_OUT 128
-#define MAX_BRAKE_OUT 254
-
-// RIGHT, STRAIGHT, and LEFT TURN_OUT set values to be sent to the steer actuator that changes the direction of the front wheels
-// Values (0-255) represent digital values that get convered into analog pwm signals
-#define RIGHT_TURN_OUT 128
-#define LEFT_TURN_OUT 254 
-#define STRAIGHT_TURN_OUT 192
-
-=======
-#define MIN_ACC_OUT 40
-#define MAX_ACC_OUT 227
 #define MIN_BRAKE_OUT 167
 #define MAX_BRAKE_OUT 207
+// RIGHT, STRAIGHT, and LEFT TURN_OUT set values to be sent to the steer actuator that changes the direction of the front wheels
+// Values (0-255) represent digital values that get convered into analog pwm signals
 #define RIGHT_TURN_OUT 146
 #define LEFT_TURN_OUT 230
 #define STRAIGHT_TURN_OUT 187
->>>>>>> 223c88c1c7eda80690319c5b6e952afe6e00f1ee
 // Turn sensors are believed if they are in this range while wheels are straight
 // MAX values here are for the safety of the actuator so as not to break/overload it
 #define RIGHT_MIN_COUNT 725
 #define RIGHT_MAX_COUNT 785
 #define LEFT_MIN_COUNT  880
 #define LEFT_MAX_COUNT  940
-
-// Trike specific Physical perameters and pins/channels
+// Trike-specific physical parameters and pins/channels
 #define DAC_CHANNEL 0
-#define STEER_OUT_PIN 7 // Output to steer actuator
-#define BRAKE_OUT_PIN 9  // output to brake actuator
+#define STEER_OUT_PIN 9 // Output to steer actuator
+#define BRAKE_OUT_PIN 7  // output to brake actuator
 #define WHEEL_DIAMETER_MM 500
 #define MOTOR_POLE_PAIRS 23
 
@@ -145,15 +123,9 @@ VEHICLE_NUMBER to your own new number.
 #define RC_RDR  3 //rudder, side to side on left stick (not used)
 #define RC_GO   4 //
 #define RC_TURN 5
-#define NUMBER_CHANNELS 5
 // Controller has no channel for RC_AUTO
-<<<<<<< HEAD
-#define RC_RVS  6 //reverse, not used on vehicle 2
-//OUTPUT values -  0 to 255
-#define DAC_CHANNEL 0
-=======
 #define RC_RVS  6
->>>>>>> 223c88c1c7eda80690319c5b6e952afe6e00f1ee
+#define NUMBER_CHANNELS 5
 
 #endif
 
