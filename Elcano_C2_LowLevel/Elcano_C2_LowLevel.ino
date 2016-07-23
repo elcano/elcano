@@ -8,7 +8,7 @@
 const int softwareTx = 10;  // to 7 segment LED display
 const int softwareRx = 7;   // not used
 //SoftwareSerial s7s(softwareRx, softwareTx);
-#define s7s Serial3
+#define s7s Serial2
 
 #define LOOP_TIME_MS 400
 #define ERROR_HISTORY 20
@@ -69,13 +69,14 @@ volatile int RC_Done[7] = {0,0,0,0,0,0,0};
 // interrupt number handling a function depends on the RC controller.
 
 #ifdef RC_SPEKTRUM
-const int IRPT_RVS = 0;   // D2  = Int 0 
-const int IRPT_TURN = 2;  // D21 = Int 2 
-const int IRPT_GO = 3;   //  D20 = Int 3 
-const int IRPT_RDR = 4;   // D19 = Int 4
+const int IRPT_RVS = 2;//0;   // D2  = Int 0 
+const int IRPT_TURN = 21;//2;  // D21 = Int 2
+const int IRPT_GO = 20;//3;   //  D20 = Int 3 
+const int IRPT_RDR = 3;//1;   // D3 = Int 1 //want this to be D3, interrupt 1
 // RDR (rudder) is not used. Instead, use this interrupt for the motor phase feedback, which gives speed.
-const int IRPT_ESTOP = 5; // D18 = Int 5
+const int IRPT_ESTOP = 18;//5; // D18 = Int 5
 //RC input values - pulse widths in microseconds
+//THESE MAY NEED TO BE ADJUSTED
 const int DEAD_ZONE = 75;
 const int MIDDLE = 1500;  // was 1322; new stable value = 1510
 // extremes of RC pulse width
@@ -105,17 +106,18 @@ unsigned long calibrationTime_ms;
 unsigned long stoppedTime_ms;
 unsigned long straightTime_ms;
 int  throttle_control = MIN_ACC_OUT;
-int  brake_control = MIN_BRAKE_OUT;
+int  brake_control = MAX_BRAKE_OUT;
 int  steer_control = STRAIGHT_TURN_OUT;
 float Odometer_m = 0;
 float HubSpeed_kmPh;
 const float  HubSpeed2kmPh = 13000000;
 const unsigned long HubAtZero = 1159448;
 //==========================================================================================
+//why do we need rise and fall isrs?
 void ISR_TURN_rise() {
   noInterrupts();
   ProcessRiseOfINT(RC_TURN);
-  attachInterrupt(IRPT_TURN, ISR_TURN_fall, FALLING);
+  attachInterrupt(digitalPinToInterrupt(IRPT_TURN), ISR_TURN_fall, FALLING);
   interrupts();
 }
 
@@ -131,27 +133,33 @@ void ISR_RDR_rise() {
   // The hub supplies 3 Hall Phase sensors; each is a 5V square wave and tells how fast the wheel rotates.
   // The square wave feedback has sone noise, which is cleaned up by an RC low pass filter 
   //  with R = 1K, C = 100 nF 
+  //Serial.println("RDR ACK");
   interrupts();
 }
 
 void ISR_GO_rise() {
   noInterrupts();
   ProcessRiseOfINT(RC_GO);
-  attachInterrupt(IRPT_GO, ISR_GO_fall, FALLING);
+  detachInterrupt(digitalPinToInterrupt(IRPT_GO)); //Trying this
+  attachInterrupt(digitalPinToInterrupt(IRPT_GO), ISR_GO_fall, FALLING);
+  //Serial.println("GO ACK");
   interrupts();
 }
 
 void ISR_ESTOP_rise() {
   noInterrupts();
   ProcessRiseOfINT(RC_ESTP);
-  attachInterrupt(IRPT_ESTOP, ISR_ESTOP_fall, FALLING);
+  detachInterrupt(digitalPinToInterrupt(IRPT_ESTOP));
+  attachInterrupt(digitalPinToInterrupt(IRPT_ESTOP), ISR_ESTOP_fall, FALLING);
+  //Serial.println("ESTOP ACK");
   interrupts();
 }
 
 void ISR_RVS_rise() {
   noInterrupts();
   ProcessRiseOfINT(RC_RVS);
-  attachInterrupt(IRPT_RVS, ISR_RVS_fall, FALLING);
+  attachInterrupt(digitalPinToInterrupt(IRPT_RVS), ISR_RVS_fall, FALLING);
+  //Serial.println("RVS ACK");
   interrupts();
 }
 
@@ -159,7 +167,9 @@ void ISR_TURN_fall() {
   noInterrupts();
   ProcessFallOfINT(RC_TURN);
   RC_Done[RC_TURN] = 1;
-  attachInterrupt(IRPT_TURN, ISR_TURN_rise, RISING);
+  detachInterrupt(digitalPinToInterrupt(IRPT_TURN));
+  attachInterrupt(digitalPinToInterrupt(IRPT_TURN), ISR_TURN_rise, RISING);
+  //Serial.println("TURN ACK");
   interrupts();
 }
 
@@ -167,7 +177,7 @@ void ISR_GO_fall() {
   noInterrupts();
   ProcessFallOfINT(RC_GO);
   RC_Done[RC_GO] = 1;
-  attachInterrupt(IRPT_GO, ISR_GO_rise, RISING);
+  attachInterrupt(digitalPinToInterrupt(IRPT_GO), ISR_GO_rise, RISING);
   interrupts();
 }
 void ISR_ESTOP_fall() {  
@@ -176,7 +186,7 @@ void ISR_ESTOP_fall() {
   RC_Done[RC_ESTP] = 1;
 //  if (RC_elapsed[RC_ESTP] > MIDDLE)
 //     E_Stop();
-  attachInterrupt(IRPT_ESTOP, ISR_ESTOP_rise, RISING);
+  attachInterrupt(digitalPinToInterrupt(IRPT_ESTOP), ISR_ESTOP_rise, RISING);
   interrupts();
 }
 
@@ -184,7 +194,7 @@ void ISR_RVS_fall() {
   noInterrupts();
   ProcessFallOfINT(RC_RVS);
   RC_Done[RC_RVS] = 1;
-  attachInterrupt(IRPT_RVS, ISR_RVS_rise, RISING);
+  attachInterrupt(digitalPinToInterrupt(IRPT_RVS), ISR_RVS_rise, RISING);
   interrupts();
 }
 //----------------------------------------------------------------------------
@@ -206,7 +216,7 @@ void setup()
           DAC_Write (channel, 0); // reset did not clear previous states
       // put vehicle in initial state
       steer(STRAIGHT_TURN_OUT);
-      brake(MAX_BRAKE_OUT);
+      brake(MIN_BRAKE_OUT);
       moveVehicle(MIN_ACC_OUT);
       setup7seg();    // Initialize 7 segment display for speedometer
       delay(500);   // let vehicle stabilize
@@ -225,11 +235,11 @@ void setup()
       setupWheelRev(); // WheelRev4 addition
       CalibrateTurnAngle(32, 20);
       calibrationTime_ms = millis();
-      attachInterrupt(IRPT_TURN,  ISR_TURN_rise,  RISING);
-      attachInterrupt(IRPT_RDR,   ISR_RDR_rise,   RISING);
-      attachInterrupt(IRPT_GO,    ISR_GO_rise,    RISING);
-      attachInterrupt(IRPT_ESTOP, ISR_ESTOP_rise, RISING);
-      attachInterrupt(IRPT_RVS,   ISR_RVS_rise,   RISING);
+      attachInterrupt(digitalPinToInterrupt(IRPT_TURN), ISR_TURN_rise,  RISING);
+      attachInterrupt(digitalPinToInterrupt(IRPT_RDR), ISR_RDR_rise,   RISING);
+      attachInterrupt(digitalPinToInterrupt(IRPT_GO), ISR_GO_rise,    RISING);
+      attachInterrupt(digitalPinToInterrupt(IRPT_ESTOP), ISR_ESTOP_rise, RISING);
+      attachInterrupt(digitalPinToInterrupt(IRPT_RVS), ISR_RVS_rise,   RISING);
 //      Print7headers(false);
       PrintHeaders();
 }
@@ -245,7 +255,7 @@ void loop() {
     startCapturingRCState();
     
     unsigned long local_results[7];
-//  PrintDone();
+    PrintDone();
 
   while (micros() < nextTime &&
     ~((RC_Done[RC_ESTP] == 1) && (RC_Done[RC_GO] == 1) && (RC_Done[RC_TURN] == 1) ))
@@ -345,7 +355,7 @@ void LogData(unsigned long commands[7], SerialData *sensors)  // data for spread
 //     
 //     Serial.print(sensors->speed_cmPs*36.0/1000.); Serial.print("\t"); // km/hr
 //     Serial.print(HubSpeed_kmPh); Serial.print("\t");\
-     show7seg(HubSpeed_kmPh);
+     //show7seg(HubSpeed_kmPh);
 //     Serial.print(sensors->angle_deg); Serial.print("\t");
 //     int right = analogRead(A2);
 //     int left = analogRead(A3);
@@ -1006,7 +1016,7 @@ void Throttle_PID(long error_speed_mmPs)
 /* Use throttle and brakes to keep vehicle at a desired speed.
    A PID controller uses the error in the set point to increase or decrease the juice.
    P = proportional; change based on present error
-   I = integra;  change based on recent sum of errors
+   I = integral;  change based on recent sum of errors
    D = derivative: change based on how error is changing.
    The controller needs to avoid problems of being too sluggish or too skittery.
    A sluggish control (overdamped) takes too long to reach the set-point. 
