@@ -12,6 +12,7 @@ const int softwareRx = 7;   // not used
 
 #define LOOP_TIME_MS 400
 #define ERROR_HISTORY 20
+#define LED_PIN_OUT 16 //pin 16 being used for calibration LED
 
 /*================ReadTurnAngle ================*/
 // Value measured at analog input A2 from right steering column when wheels pointed straight ahead.
@@ -36,6 +37,7 @@ int Right_Max_Count = 808;
 // Indices for information stored in arrays RC_rise, RC_elapsed, local_results,...
 // Right joystick left/right to D21
 //#define RC_TURN 1
+// 
 //#define RC_AUTO 2
 //// Right joystick up/down to D19
 //#define RC_GO   3
@@ -59,12 +61,14 @@ const int SelectCD = 49; // Select IC 3 DAC (channels C and D)
 const int SelectAB = 53; // Select IC 2 DAC (channels A and B)
 
 const unsigned long INVALID_DATA = 0;
+const unsigned long TEN_SECONDS_IN_MICROS = 10000000;
 volatile int rc_index = 0;
 volatile unsigned long RC_rise[7];
 volatile unsigned long RC_elapsed[7];
 volatile boolean synced = false;
 volatile unsigned long last_fallingedge_time = 4294967295; // max long
-volatile int RC_Done[7] = {0,0,0,0,0,0,0};
+unsigned long local_results[7] = {0,0,0,0,0,0,0};
+volatile bool RC_Done[7] = {0,0,0,0,0,0,0};
 
 // interrupt number handling a function depends on the RC controller.
 
@@ -75,13 +79,14 @@ const int IRPT_GO = 20;//3;   //  D20 = Int 3
 const int IRPT_RDR = 3;//1;   // D3 = Int 1 //want this to be D3, interrupt 1
 // RDR (rudder) is not used. Instead, use this interrupt for the motor phase feedback, which gives speed.
 const int IRPT_ESTOP = 18;//5; // D18 = Int 5
+const int IRPT_SWITCH = 19;
 //RC input values - pulse widths in microseconds
 //THESE MAY NEED TO BE ADJUSTED
-const int DEAD_ZONE = 75;
-const int MIDDLE = 1500;  // was 1322; new stable value = 1510
+int DEAD_ZONE = 75;
+int MIDDLE = 1480;  // was 1322; new stable value = 1510
 // extremes of RC pulse width
-const int MIN_RC = 1090;  // was 911;
-const int MAX_RC = 1930; // was 1730;
+int MIN_RC = 1090;  // was 911;
+int MAX_RC = 1930; // was 1730;
 #endif
 
 #ifdef RC_HITEC
@@ -91,12 +96,13 @@ const int IRPT_GO = 3;   //  D20 = Int 3
 const int IRPT_RDR = 5;   // D18 = Int 5
 // RDR (rudder) is not used. Instead, use this interrupt for the motor phase feedback, which gives speed.
 const int IRPT_ESTOP = 4; // D19 = Int 4
+const int IRPT_SWITCH = 19;
 //RC input values - pulse widths in microseconds
-const int DEAD_ZONE = 75;
-const int MIDDLE = 1380; 
+int DEAD_ZONE = 75;
+int MIDDLE = 1380; 
 // extremes of RC pulse width
-const int MIN_RC = 960;
-const int MAX_RC = 1800;
+int MIN_RC = 960;
+int MAX_RC = 1800;
 #endif
 //  D3 = Int 1  Wheel Click
 
@@ -113,7 +119,6 @@ float HubSpeed_kmPh;
 const float  HubSpeed2kmPh = 13000000;
 const unsigned long HubAtZero = 1159448;
 //==========================================================================================
-//why do we need rise and fall isrs?
 void ISR_TURN_rise() {
   noInterrupts();
   ProcessRiseOfINT(RC_TURN);
@@ -140,7 +145,6 @@ void ISR_RDR_rise() {
 void ISR_GO_rise() {
   noInterrupts();
   ProcessRiseOfINT(RC_GO);
-  detachInterrupt(digitalPinToInterrupt(IRPT_GO)); //Trying this
   attachInterrupt(digitalPinToInterrupt(IRPT_GO), ISR_GO_fall, FALLING);
   //Serial.println("GO ACK");
   interrupts();
@@ -149,7 +153,6 @@ void ISR_GO_rise() {
 void ISR_ESTOP_rise() {
   noInterrupts();
   ProcessRiseOfINT(RC_ESTP);
-  detachInterrupt(digitalPinToInterrupt(IRPT_ESTOP));
   attachInterrupt(digitalPinToInterrupt(IRPT_ESTOP), ISR_ESTOP_fall, FALLING);
   //Serial.println("ESTOP ACK");
   interrupts();
@@ -167,7 +170,6 @@ void ISR_TURN_fall() {
   noInterrupts();
   ProcessFallOfINT(RC_TURN);
   RC_Done[RC_TURN] = 1;
-  detachInterrupt(digitalPinToInterrupt(IRPT_TURN));
   attachInterrupt(digitalPinToInterrupt(IRPT_TURN), ISR_TURN_rise, RISING);
   //Serial.println("TURN ACK");
   interrupts();
@@ -178,6 +180,7 @@ void ISR_GO_fall() {
   ProcessFallOfINT(RC_GO);
   RC_Done[RC_GO] = 1;
   attachInterrupt(digitalPinToInterrupt(IRPT_GO), ISR_GO_rise, RISING);
+  //Serial.println("GO ACK");
   interrupts();
 }
 void ISR_ESTOP_fall() {  
@@ -197,6 +200,22 @@ void ISR_RVS_fall() {
   attachInterrupt(digitalPinToInterrupt(IRPT_RVS), ISR_RVS_rise, RISING);
   interrupts();
 }
+
+void ISR_SWITCH_rise() {
+  noInterrupts();
+  RC_elapsed[RC_RDR] = HIGH;
+  attachInterrupt(digitalPinToInterrupt(IRPT_SWITCH), ISR_SWITCH_fall, FALLING);
+  RC_Done[RC_RDR] = 1;
+  interrupts();
+}
+
+void ISR_SWITCH_fall() {
+  noInterrupts();
+  RC_elapsed[RC_RDR] = LOW;
+  attachInterrupt(digitalPinToInterrupt(IRPT_SWITCH), ISR_SWITCH_rise, RISING);
+  RC_Done[RC_RDR] = 1;
+  interrupts();
+}
 //----------------------------------------------------------------------------
 void setup()
 { //Set up pins
@@ -206,6 +225,8 @@ void setup()
       pinMode (SelectAB, OUTPUT);
       pinMode (SelectCD, OUTPUT);
       pinMode (10, OUTPUT);
+      //pinMode (LED_PIN_OUT, OUTPUT);
+      //digitalWrite(LED_PIN_OUT, HIGH);
       SPI.setDataMode( SPI_MODE0);
       SPI.setBitOrder( MSBFIRST);
       // initialize SPI:
@@ -218,7 +239,7 @@ void setup()
       steer(STRAIGHT_TURN_OUT);
       brake(MIN_BRAKE_OUT);
       moveVehicle(MIN_ACC_OUT);
-      setup7seg();    // Initialize 7 segment display for speedometer
+      //setup7seg();    // Initialize 7 segment display for speedometer
       delay(500);   // let vehicle stabilize
       
       Serial.begin(9600);
@@ -240,11 +261,15 @@ void setup()
       attachInterrupt(digitalPinToInterrupt(IRPT_GO), ISR_GO_rise,    RISING);
       attachInterrupt(digitalPinToInterrupt(IRPT_ESTOP), ISR_ESTOP_rise, RISING);
       attachInterrupt(digitalPinToInterrupt(IRPT_RVS), ISR_RVS_rise,   RISING);
+      attachInterrupt(digitalPinToInterrupt(IRPT_SWITCH), ISR_SWITCH_rise,   RISING);
+      //calibrateRC(micros());
+
 //      Print7headers(false);
-      PrintHeaders();
+      //PrintHeaders();
 }
 
 void loop() {
+
     SerialData Results;
 
     // Save start time for performance report.
@@ -252,18 +277,19 @@ void loop() {
     // Get the next loop start time.
     unsigned long nextTime = startTime + LOOP_TIME_MS;
     
-    startCapturingRCState();
+    startCapturingRCState();// I don't like this structure. It should know that RC has been processed as it comes.
     
-    unsigned long local_results[7];
-    PrintDone();
+    
+    //PrintDone();
 
   while (micros() < nextTime &&
     ~((RC_Done[RC_ESTP] == 1) && (RC_Done[RC_GO] == 1) && (RC_Done[RC_TURN] == 1) ))
     ;  //wait
   
     // got data;    
-    for (int i = 0; i < 8; i++)
+    for (int i = 0; i < 8; i++){
         local_results[i] = RC_elapsed[i];
+    }
     Print7( false, local_results);
     processRC(local_results);
     Print7( true, local_results);
@@ -271,7 +297,7 @@ void loop() {
     Results.Clear();
     Results.kind = MSG_SENSOR;
     Results.angle_deg = TurnAngle_degx10() / 10;
-    show_speed (&Results);
+    //show_speed (&Results);
     
     // Report how long the loop took.
     unsigned long endTime = micros();
@@ -279,17 +305,17 @@ void loop() {
     //Serial.print("loop elapsed time = ");
     //Serial.println(elapsedTime);
     
-    LogData(local_results, &Results);  // data for spreadsheet
+    //LogData(local_results, &Results);  // data for spreadsheet
     
     calibrationTime_ms += LOOP_TIME_MS;
     straightTime_ms = (steer_control == STRAIGHT_TURN_OUT)? straightTime_ms + LOOP_TIME_MS: 0;
     stoppedTime_ms = (throttle_control == MIN_ACC_OUT)? stoppedTime_ms + LOOP_TIME_MS: 0;
     if (calibrationTime_ms > 40000 && straightTime_ms > 3000 && stoppedTime_ms > 3000)
     {
-//       int oldBrake = brake_control;
-//       brake(MAX_BRAKE_OUT);  // put on brakes
+         int oldBrake = brake_control;
+         brake(MAX_BRAKE_OUT);  // put on brakes
          CalibrateTurnAngle(16, 10);  // WARNING: No response to controls while calibrating
-//       brake(oldBrake);       // restore brake state
+         brake(oldBrake);       // restore brake state
          calibrationTime_ms = 0;
     }
     
@@ -311,6 +337,17 @@ void PrintDone()
   //Serial.print(" RC_RVS "); Serial.print(RC_Done[RC_RVS]);
   // Not currently using RC_RVS, and it is always zero.
 
+}
+
+void circleRoutine(unsigned long seconds){
+  steer(128);
+  delay(1000);
+  seconds = seconds * 1000;
+  unsigned long loopTime = millis();
+  while(millis() < (loopTime + seconds)){
+    moveVehicle(128);
+  }
+  
 }
 
 void Print7headers (bool processed)
@@ -337,15 +374,19 @@ void Print7headers (bool processed)
 #endif
 }
 void Print7 (bool processed, unsigned long results[7])
-{
-  
-    processed? Serial.print("processed data \t") : Serial.print("received data \t");
-    Serial.print(results[0]); Serial.print("\t");
-    Serial.print(results[1]); Serial.print("\t");
-    Serial.print(results[2]); Serial.print("\t");
-    Serial.print(results[3]); Serial.print("\t");
-    Serial.print(results[4]); Serial.print("\t");
-    Serial.print(results[5]); Serial.print("\t");
+{ 
+    if(processed){
+      Serial.print("processed data \t"); 
+    }
+    else {
+      Serial.print("received dataaa \t");
+    }
+    Serial.print(results[0]);     Serial.print("\t");
+    Serial.print(results[1]);     Serial.print("\t");
+    Serial.print(results[2]);     Serial.print("\t");
+    Serial.print(results[3]);     Serial.print("\t");
+    Serial.print(results[4]);     Serial.print("\t");
+    Serial.print(results[5]);     Serial.print("\t");
     Serial.println(results[6]);
 }
 void LogData(unsigned long commands[7], SerialData *sensors)  // data for spreadsheet
@@ -386,6 +427,46 @@ void startCapturingRCState()
   for (int i = 1; i < 7; i++) {
     RC_Done[i] = 0;
   }
+}
+
+//done in setup, calibrate RC values for MIDDLE, MIN_RC, and MAX_RC at startup
+void calibrateRC(unsigned long mic){
+
+    Serial.print(mic);
+    Serial.println("Calibration Started");
+    //Step 1: Wait for controller to turn on, and leave joysticks in neutral
+//    while (micros() < TEN_SECONDS_IN_MICROS ||
+//    ~((RC_Done[RC_ESTP]) && (RC_Done[RC_GO]) && (RC_Done[RC_TURN]) ))
+    digitalWrite(LED_PIN_OUT, HIGH); //wait for 10 seconds to receive radio signal to Calibrate Neutral Positions on RC controller, otherwise proceed
+
+    //Step 2: Calibrate MIDDLE
+    Serial.println(RC_elapsed[RC_GO]);
+    MIDDLE = RC_elapsed[RC_GO];
+    Serial.print("MIDDLE \t");
+    Serial.println(MIDDLE);
+    mic = micros();
+    
+    //Step 3: Turn on LED and wait for Right joystick DOWN
+    digitalWrite(LED_PIN_OUT, HIGH);
+    while(micros() < (mic + (TEN_SECONDS_IN_MICROS/4)))
+    digitalWrite(LED_PIN_OUT, HIGH);//wait
+    //if
+    digitalWrite(LED_PIN_OUT, LOW);
+    //Set MIN_RC
+    MIN_RC = RC_elapsed[RC_GO];
+    Serial.print("MIN_RC \t");
+    Serial.println(MIN_RC);
+    mic = micros();
+
+    //Step 4:Turn on LED again and wait for Right joystick UP
+    digitalWrite(LED_PIN_OUT, HIGH);
+    while(micros() < (mic + (TEN_SECONDS_IN_MICROS/4)))
+    digitalWrite(LED_PIN_OUT, HIGH);//wait
+
+    MAX_RC = RC_elapsed[RC_GO];
+    Serial.print("MAX_RC \t");
+    Serial.println(MAX_RC);
+    digitalWrite(LED_PIN_OUT, LOW);
 }
 
 // processRC modified by TCF  9/17/15
@@ -459,9 +540,12 @@ void processRC (unsigned long *results)
     else
         HubSpeed_kmPh = HubSpeed2kmPh / results[RC_RDR];
     
-//  Serial.println("");  // New line
+  Serial.println("");  // New line
 
 }
+
+
+
 //Converts RC values to corresponding values for the PWM output
 int convertTurn(int input)
 {
@@ -769,7 +853,7 @@ void setupWheelRev()
     ClickNumber = 0;
     history.oldSpeed_mmPs = history.olderSpeed_mmPs = NO_DATA;
 
-    attachInterrupt (1, WheelRev, RISING);//pin 3 on Mega
+    attachInterrupt (digitalPinToInterrupt(IRPT_RDR), WheelRev, RISING);//pin 3 on Mega
     SerialMonitor.print("TickTime: ");
     SerialMonitor.print(TickTime);
     SerialMonitor.print(" OldTick: ");
