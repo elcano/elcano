@@ -77,6 +77,23 @@ def _global_to_relative(camera_angle,
     converted_to_camera = mc.dot(mb).dot(ma).dot(df)
     return cc.dot(converted_to_camera) + im
 
+# Create a vector from a 2d position within the perspective space
+# x, y = the position we are calculating from
+# h    = the height of the image
+# fovy = the fov along the y-axis of the image
+def _create_vector_from_2d_position(x,
+                                    y,
+                                    h,
+                                    fovy):
+
+    fovy /= 2
+    z = h * m.cos(fovy) / (2 * (m.cos(fovy))**2)
+
+    return np.array([(x),
+                     (y),
+                     (z),
+                     (1)])
+
 # Tiny test suite for the _perspective function
 def _test_perspective():
     print('Testing Perspective Matrix Generation')
