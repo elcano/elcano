@@ -2,6 +2,7 @@
 
 #include <SPI.h>
 #include <Elcano_Serial.h>
+#include <Servo.h>
 
 //#include <SoftwareSerial.h>
 // On Mega, TX must use d10-15, d50-53, or a8-a15 (62-69)
@@ -9,6 +10,8 @@ const int softwareTx = 10;  // to 7 segment LED display
 const int softwareRx = 7;   // not used
 //SoftwareSerial s7s(softwareRx, softwareTx);
 #define s7s Serial2
+Servo STEER_SERVO, BRAKE_SERVO;
+
 
 #define LOOP_TIME_MS 400
 #define ERROR_HISTORY 20
@@ -67,7 +70,6 @@ volatile unsigned long RC_rise[7];
 volatile unsigned long RC_elapsed[7];
 volatile boolean synced = false;
 volatile unsigned long last_fallingedge_time = 4294967295; // max long
-unsigned long local_results[7] = {0,0,0,0,0,0,0};
 volatile bool RC_Done[7] = {0,0,0,0,0,0,0};
 
 // interrupt number handling a function depends on the RC controller.
@@ -84,7 +86,10 @@ const int IRPT_SWITCH = 19;
 //THESE MAY NEED TO BE ADJUSTED
 int DEAD_ZONE = 75;
 int MIDDLE = 1480;  // was 1322; new stable value = 1510
+int MIDDLE_GO = 1152;
 // extremes of RC pulse width
+int MIN_GO = 896;
+int MAX_GO = 1560;
 int MIN_RC = 1090;  // was 911;
 int MAX_RC = 1930; // was 1730;
 #endif
@@ -203,24 +208,25 @@ void ISR_RVS_fall() {
 
 void ISR_SWITCH_rise() {
   noInterrupts();
-  RC_elapsed[RC_RDR] = HIGH;
+  ProcessRiseOfINT(RC_RDR);
   attachInterrupt(digitalPinToInterrupt(IRPT_SWITCH), ISR_SWITCH_fall, FALLING);
-  RC_Done[RC_RDR] = 1;
+  //RC_Done[RC_RDR] = 1;
   interrupts();
 }
 
 void ISR_SWITCH_fall() {
   noInterrupts();
-  RC_elapsed[RC_RDR] = LOW;
-  attachInterrupt(digitalPinToInterrupt(IRPT_SWITCH), ISR_SWITCH_rise, RISING);
+  ProcessFallOfINT(RC_RDR);
   RC_Done[RC_RDR] = 1;
+  attachInterrupt(digitalPinToInterrupt(IRPT_SWITCH), ISR_SWITCH_rise, RISING);
   interrupts();
 }
 //----------------------------------------------------------------------------
 void setup()
 { //Set up pins
-      pinMode(BRAKE_OUT_PIN, OUTPUT);
-      pinMode(STEER_OUT_PIN, OUTPUT);
+      STEER_SERVO.attach(STEER_OUT_PIN);
+      BRAKE_SERVO.attach(BRAKE_OUT_PIN);
+      
       // SPI: set the slaveSelectPin as an output:
       pinMode (SelectAB, OUTPUT);
       pinMode (SelectCD, OUTPUT);
@@ -241,7 +247,7 @@ void setup()
       moveVehicle(MIN_ACC_OUT);
       //setup7seg();    // Initialize 7 segment display for speedometer
       delay(500);   // let vehicle stabilize
-      
+      //brake(MAX_BRAKE_OUT);
       Serial.begin(9600);
       rc_index = 0;
       for (int i = 0; i < 8; i++)
@@ -257,15 +263,16 @@ void setup()
       CalibrateTurnAngle(32, 20);
       calibrationTime_ms = millis();
       attachInterrupt(digitalPinToInterrupt(IRPT_TURN), ISR_TURN_rise,  RISING);
-      attachInterrupt(digitalPinToInterrupt(IRPT_RDR), ISR_RDR_rise,   RISING);
+      //attachInterrupt(digitalPinToInterrupt(IRPT_RDR), ISR_RDR_rise,   RISING);
       attachInterrupt(digitalPinToInterrupt(IRPT_GO), ISR_GO_rise,    RISING);
       attachInterrupt(digitalPinToInterrupt(IRPT_ESTOP), ISR_ESTOP_rise, RISING);
-      attachInterrupt(digitalPinToInterrupt(IRPT_RVS), ISR_RVS_rise,   RISING);
+      //attachInterrupt(digitalPinToInterrupt(IRPT_RVS), ISR_RVS_rise,   RISING);
       attachInterrupt(digitalPinToInterrupt(IRPT_SWITCH), ISR_SWITCH_rise,   RISING);
       //calibrateRC(micros());
 
 //      Print7headers(false);
       //PrintHeaders();
+      //circleRoutine(10);
 }
 
 void loop() {
@@ -279,11 +286,11 @@ void loop() {
     
     startCapturingRCState();// I don't like this structure. It should know that RC has been processed as it comes.
     
-    
+    unsigned long local_results[7];
     //PrintDone();
 
   while (micros() < nextTime &&
-    ~((RC_Done[RC_ESTP] == 1) && (RC_Done[RC_GO] == 1) && (RC_Done[RC_TURN] == 1) ))
+    ~((RC_Done[RC_ESTP] == 1) && (RC_Done[RC_GO] == 1) && (RC_Done[RC_TURN] == 1) && (RC_Done[RC_RDR])))
     ;  //wait
   
     // got data;    
@@ -312,10 +319,10 @@ void loop() {
     stoppedTime_ms = (throttle_control == MIN_ACC_OUT)? stoppedTime_ms + LOOP_TIME_MS: 0;
     if (calibrationTime_ms > 40000 && straightTime_ms > 3000 && stoppedTime_ms > 3000)
     {
-         int oldBrake = brake_control;
-         brake(MAX_BRAKE_OUT);  // put on brakes
+//         int oldBrake = brake_control;
+//         brake(MAX_BRAKE_OUT);  // put on brakes
          CalibrateTurnAngle(16, 10);  // WARNING: No response to controls while calibrating
-         brake(oldBrake);       // restore brake state
+    //     brake(oldBrake);       // restore brake state
          calibrationTime_ms = 0;
     }
     
@@ -340,7 +347,7 @@ void PrintDone()
 }
 
 void circleRoutine(unsigned long seconds){
-  steer(128);
+  steer(LEFT_TURN_OUT);
   delay(1000);
   seconds = seconds * 1000;
   unsigned long loopTime = millis();
@@ -376,18 +383,25 @@ void Print7headers (bool processed)
 void Print7 (bool processed, unsigned long results[7])
 { 
     if(processed){
-      Serial.print("processed data \t"); 
+      Serial.println("processed data \t"); 
     }
     else {
-      Serial.print("received dataaa \t");
+      Serial.println("received data \t");
     }
-    Serial.print(results[0]);     Serial.print("\t");
+
+    Serial.print("Turn");     Serial.print("\t");
+    Serial.print("Go");     Serial.print("\t");
+    Serial.print("EStop");     Serial.print("\t");
+    Serial.print("Switch");   Serial.print("\t");
+    Serial.println();
+    
+//    Serial.print(results[0]);     Serial.print("\t");
     Serial.print(results[1]);     Serial.print("\t");
-    Serial.print(results[2]);     Serial.print("\t");
+    //Serial.print(results[2]);     Serial.print("\t");
     Serial.print(results[3]);     Serial.print("\t");
     Serial.print(results[4]);     Serial.print("\t");
     Serial.print(results[5]);     Serial.print("\t");
-    Serial.println(results[6]);
+    Serial.println();//Serial.println(results[6]);
 }
 void LogData(unsigned long commands[7], SerialData *sensors)  // data for spreadsheet
 {
@@ -474,7 +488,7 @@ void processRC (unsigned long *results)
 {   
     // 1st pulse is aileron (position 5 on receiver; controlled by Right left/right joystick on transmitter)
     //     used for Steering
-    int aileron = results[RC_TURN];
+    unsigned long aileron = results[RC_TURN];
 //    Serial.print("\tTurn input "); Serial.print(aileron);
     results[RC_TURN] = convertTurn(aileron);
 //    Serial.print("\tTurn Cmd "); Serial.println(results[RC_TURN]);   
@@ -493,7 +507,7 @@ void processRC (unsigned long *results)
     {
         E_Stop();  // already done at interrupt level
         if ((results[RC_AUTO] == LOW)  && (NUMBER_CHANNELS > 5)) // under RC control
-            steer(results[RC_TURN]);
+            ;//steer(results[RC_TURN]);
         Serial.println("Exiting processRC due to E-stop.");
         return;
     }
@@ -509,7 +523,7 @@ void processRC (unsigned long *results)
     /*  6th pulse is marked throttle (position 6 on receiver; controlled by Left up/down joystick on transmitter). 
     It will be used for shifting from Drive to Reverse . D40
     */
-    results[RC_RVS] = (results[RC_RVS] > MIDDLE? HIGH: LOW);
+   // results[RC_RVS] = (results[RC_RVS] > MIDDLE? HIGH: LOW);
         
 // TO DO: Select Forward / reverse based on results[RC_RVS]
        
@@ -517,41 +531,43 @@ void processRC (unsigned long *results)
        will be used for throttle/brake: RC_Throttle
     */
     // Braking or Throttle
-    if (liveBrake(results[RC_GO]))
-         convertBrake (&(results[RC_GO]));
-
+    if (liveBrake(results[RC_GO])){
+         Serial.println("Breaking");
+         convertBrake ((results[RC_GO]));
+    }
     //Accelerating
-    else if(liveThrottle(results[RC_GO]))
+    if(liveThrottle(results[RC_RDR]))
     {
-        results[RC_GO] = convertThrottle(results[RC_GO]);
-        moveVehicle(results[RC_GO]);
+        int going = convertThrottle(results[RC_RDR]);
+        //results[RC_GO] = convertThrottle(results[RC_GO]);
+        moveVehicle(going);
     }
     else
-        //moveVehicle(MIN_ACC_OUT);
+        moveVehicle(MIN_ACC_OUT);
         
     steer(results[RC_TURN]); 
     
     /* 5th pulse is rudder (position 3 on receiver; controlled by Left left/right joystick on transmitter) 
     Not used */
 //    results[RC_RDR] = (results[RC_RDR] > MIDDLE? HIGH: LOW);  // could be analog
-    Serial.println(results[RC_RDR]);
-    if (results[RC_RDR] >= HubAtZero)
-        HubSpeed_kmPh = 0;
-    else
-        HubSpeed_kmPh = HubSpeed2kmPh / results[RC_RDR];
-    
-  Serial.println("");  // New line
+//    Serial.println(results[RC_RDR]);
+//    if (results[RC_RDR] >= HubAtZero)
+//        HubSpeed_kmPh = 0;
+//    else
+//        HubSpeed_kmPh = HubSpeed2kmPh / results[RC_RDR];
+//    
+//  Serial.println("");  // New line
 
 }
 
 
 
 //Converts RC values to corresponding values for the PWM output
-int convertTurn(int input)
+unsigned long convertTurn(unsigned long input)
 {
-     long int steerRange, rcRange;
-     long output;
-     int trueOut;
+     unsigned long steerRange, rcRange;
+     unsigned long output;
+     unsigned long trueOut;
 //     Serial.print("\tconvertTurn: input = \t"); Serial.print(input);
      //  Check if Input is in steer dead zone
      if ((input <= MIDDLE + DEAD_ZONE) && (input >= MIDDLE - DEAD_ZONE))
@@ -559,38 +575,41 @@ int convertTurn(int input)
        // On SPEKTRUM, MIN_RC = 1 msec = stick right; MAX_RC = 2 msec = stick left
        // On HI_TEC, MIN_RC = 1 msec = stick left; MAX_RC = 2 msec = stick right
       // LEFT_TURN_OUT > RIGHT_TURN_OUT
+
+      else
+        return input;
 #ifdef RC_HITEC
   input = MAX_RC - (input - MIN_RC);
 #endif
       
-      if (input > MIDDLE + DEAD_ZONE)
-      {  // left turn
-         steerRange = LEFT_TURN_OUT - STRAIGHT_TURN_OUT;
-         rcRange = MAX_RC - (MIDDLE + DEAD_ZONE);
-        input = input - MIDDLE - DEAD_ZONE; // originally input = middle + dead_zone
-        output = STRAIGHT_TURN_OUT + input * steerRange / rcRange;
-        //set max and min values if out of range
-        trueOut = (int)output;
-        if(trueOut > LEFT_TURN_OUT)
-            trueOut = LEFT_TURN_OUT;
-        if(trueOut < STRAIGHT_TURN_OUT)
-            trueOut = STRAIGHT_TURN_OUT;
-        return trueOut;
-    }
-      if (input < MIDDLE - DEAD_ZONE)
-      {  // right turn
-         steerRange = STRAIGHT_TURN_OUT - RIGHT_TURN_OUT;
-         rcRange = MIDDLE - DEAD_ZONE - MIN_RC;
-        input = input - DEAD_ZONE - MIDDLE;  // input is negative
-        output = STRAIGHT_TURN_OUT + input * steerRange / rcRange;
-        //set max and min values if out of range
-        trueOut = (int)output;
-        if(trueOut < RIGHT_TURN_OUT)
-            trueOut = RIGHT_TURN_OUT;
-        if(trueOut > STRAIGHT_TURN_OUT)
-            trueOut = STRAIGHT_TURN_OUT;
-        return trueOut;
-    }
+//      if (input > MIDDLE + DEAD_ZONE)
+//      {  // left turn
+//         steerRange = LEFT_TURN_OUT - STRAIGHT_TURN_OUT;
+//         rcRange = MAX_RC - (MIDDLE + DEAD_ZONE);
+//        input = input - MIDDLE - DEAD_ZONE; // originally input = middle + dead_zone
+//        output = STRAIGHT_TURN_OUT + input * steerRange / rcRange;
+//        //set max and min values if out of range
+//        trueOut = (int)output;
+//        if(trueOut > LEFT_TURN_OUT)
+//            trueOut = LEFT_TURN_OUT;
+//        if(trueOut < STRAIGHT_TURN_OUT)
+//            trueOut = STRAIGHT_TURN_OUT;
+//        return trueOut;
+//    }
+//      if (input < MIDDLE - DEAD_ZONE)
+//      {  // right turn
+//         steerRange = STRAIGHT_TURN_OUT - RIGHT_TURN_OUT;
+//         rcRange = MIDDLE - DEAD_ZONE - MIN_RC;
+//        input = input - DEAD_ZONE - MIDDLE;  // input is negative
+//        output = STRAIGHT_TURN_OUT + input * steerRange / rcRange;
+//        //set max and min values if out of range
+//        trueOut = (int)output;
+//        if(trueOut < RIGHT_TURN_OUT)
+//            trueOut = RIGHT_TURN_OUT;
+//        if(trueOut > STRAIGHT_TURN_OUT)
+//            trueOut = STRAIGHT_TURN_OUT;
+//        return trueOut;
+//    }
 }
 
 int convertThrottle(int input)
@@ -619,38 +638,56 @@ boolean liveThrottle(int acc)
 // Input is not in brake dead zone
 boolean liveBrake(int brake)
 {
-      return (brake < MIDDLE - DEAD_ZONE);
+      return (brake < MIDDLE_GO - DEAD_ZONE);
 }
 
 // Emergency stop
 void E_Stop()
 {
     brake(MAX_BRAKE_OUT);
+    steer(STRAIGHT_TURN_OUT);
     moveVehicle(MIN_ACC_OUT);
+    
     delay (2000);   // inhibit output
     // TO DO: disable 36V power
 }
 
 //Send values to output pin
-void steer(int pos)
+void steer(unsigned long pos)
 {
-      analogWrite(STEER_OUT_PIN, pos);
+      STEER_SERVO.writeMicroseconds(pos);
 //      Serial.print("\tSteering to: \t"); Serial.print(pos);
      steer_control = pos;
 }
-void convertBrake(long unsigned *amount)
+void convertBrake(unsigned long amount)
 {
-      if (*amount < (MIDDLE + MIN_RC)/2)
-          *amount = MAX_BRAKE_OUT;
-      else
-           *amount = MIN_BRAKE_OUT; 
-      brake (*amount);     
+      // (MIDDLE + MIN_RC)/2 is currently 1360
+//      if (amount < (MIDDLE + MIN_RC)/2)
+//          amount = MAX_BRAKE_OUT;
+//      else
+//          amount = MIN_BRAKE_OUT;
+      //*amount = *amount + (MAX_BRAKE_OUT - MIDDLE);
+//      Serial.print("Breaking ");
+//      Serial.println(*amount);
+  if(amount > 800 && amount < 1000){
+          brake (amount + 300);
+  }
+  else ;
+      //brake(MIN_BRAKE_OUT);
 }
-void brake (int amount)
+void brake (unsigned long amount)
 {
-      analogWrite(BRAKE_OUT_PIN, amount);
- //     Serial.print("\tBraking to: \t"); Serial.print(*amount);
-      brake_control = amount;
+    STEER_SERVO.writeMicroseconds(STRAIGHT_TURN_OUT);
+    STEER_SERVO.detach();
+    //BRAKE_SERVO.attach(BRAKE_OUT_PIN);
+    if(amount > 1000)
+      BRAKE_SERVO.write(20);
+    else
+      BRAKE_SERVO.write(160);
+      //BRAKE_SERVO.writeMicroseconds(amount);
+      Serial.print("\tBraking to: \t"); Serial.println(amount);
+    STEER_SERVO.attach(STEER_OUT_PIN);
+      //brake_control = amount;
 }
 /*---------------------------------------------------------------------------------------*/
 /* DAC_Write applies value to address, producing an analog voltage.
