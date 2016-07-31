@@ -4,16 +4,24 @@
 #include <Elcano_Serial.h>
 
 //#include <SoftwareSerial.h>
+// @ToDo: Are these specific to some particular setup or trike? If so,
+// they should be moved to Settings.h.
+// @ToDo: Constants do not need to be stored in memory. They can be #define symbols.
+// It is not clear that the Arduino compiler will optimize away unchanging values
+// even if not marked volatile.
 // On Mega, TX must use d10-15, d50-53, or a8-a15 (62-69)
 const int softwareTx = 10;  // to 7 segment LED display
 const int softwareRx = 7;   // not used
 //SoftwareSerial s7s(softwareRx, softwareTx);
+// @ToDo: This has changed. Is it specific to some particular setup or trike?
+// If so, it should be moved to Settings.h.
 #define s7s Serial2
 
 #define LOOP_TIME_MS 400
 #define ERROR_HISTORY 20 //number of errors to accumulate 
 
 /*================ReadTurnAngle ================*/
+// @ToDo: Are these specific to a particular trike? If so, move them to Settings.h.
 // Value measured at analog input A2 from right steering column when wheels pointed straight ahead.
 // An analog voltage can be 0 to 5V, which correspond to angles from 0 to 360 degrees.
 // Analog input reads this as a value form 0 to 1024.
@@ -32,29 +40,13 @@ int Left_Max_Count = 980;
 int Right_Min_Count = 698; 
 int Right_Max_Count = 808; 
 
-// Channel order differs for different vehicles
-// Indices for information stored in arrays RC_rise, RC_elapsed, local_results,...
-// Right joystick left/right to D21
-//#define RC_TURN 1
-//#define RC_AUTO 2
-//// Right joystick up/down to D19
-//#define RC_GO   3
-//// Red (Gear) Switch to D18
-//#define RC_ESTP 4
-//// Left joystick left/right to D20 
-//#define RC_RDR  5
-//// Left joystick up/down to D2
-//#define RC_RVS  6
-//// There are six channels, but we are limited to five interrupts
-//#define NUMBER_CHANNELS 6
-
 // RC_rise contains the time value collected in the rising edge interrupts.
 // RC_elapsed contains the width of the pulse. The rise and fall interrupts
 // should alternate.
 #define ProcessFallOfINT(Index)  RC_elapsed[Index]=(micros()-RC_rise[Index])
 #define ProcessRiseOfINT(Index) RC_rise[Index]=micros()
 
-
+// @ToDo: Do these differ per trike? If so, move to Settings.h.
 const int SelectCD = 49; // Select IC 3 DAC (channels C and D)
 const int SelectAB = 53; // Select IC 2 DAC (channels A and B)
 
@@ -65,39 +57,6 @@ volatile unsigned long RC_elapsed[7];
 volatile boolean synced = false;
 volatile unsigned long last_fallingedge_time = 4294967295; // max long
 volatile int RC_Done[7] = {0,0,0,0,0,0,0};
-
-// interrupt number handling a function depends on the RC controller.
-
-#ifdef RC_SPEKTRUM
-const int IRPT_RVS = 0;   // D2  = Int 0 
-const int IRPT_TURN = 2;  // D21 = Int 2 
-const int IRPT_GO = 3;   //  D20 = Int 3 
-const int IRPT_RDR = 4;   // D19 = Int 4
-// RDR (rudder) is not used. Instead, use this interrupt for the motor phase feedback, which gives speed.
-const int IRPT_ESTOP = 5; // D18 = Int 5
-//RC input values - pulse widths in microseconds
-const int DEAD_ZONE = 75;
-const int MIDDLE = 1500;  // was 1322; new stable value = 1510
-// extremes of RC pulse width
-const int MIN_RC = 1090;  // was 911;
-const int MAX_RC = 1930; // was 1730;
-#endif
-
-#ifdef RC_HITEC
-const int IRPT_RVS = 0;   // D2  = Int 0 
-const int IRPT_TURN = 2;  // D21 = Int 2 
-const int IRPT_GO = 3;   //  D20 = Int 3 
-const int IRPT_RDR = 5;   // D18 = Int 5
-// RDR (rudder) is not used. Instead, use this interrupt for the motor phase feedback, which gives speed.
-const int IRPT_ESTOP = 4; // D19 = Int 4
-//RC input values - pulse widths in microseconds
-const int DEAD_ZONE = 75;
-const int MIDDLE = 1380; 
-// extremes of RC pulse width
-const int MIN_RC = 960;
-const int MAX_RC = 1800;
-#endif
-//  D3 = Int 1  Wheel Click
 
 long speed_errors[ERROR_HISTORY];
 long old_turn_degx1000;
@@ -262,7 +221,7 @@ void setup()
       //attachInterrupt(IRPT_RVS,   ISR_RVS_rise,   RISING);
       attachInterrupt(IRPT_MOTOR_FEEDBACK, ISR_MOTOR_FEEDBACK_rise, RISING);
       //Print7headers(false);
-      PrintHeaders();
+      //PrintHeaders();
 }
 /*---------------------------------------------------------------------------------------*/
 void loop() {
@@ -302,7 +261,7 @@ void loop() {
     //Serial.print("loop elapsed time = ");
     //Serial.println(elapsedTime);
     
-    LogData(local_results, &Results);  // data for spreadsheet
+    //LogData(local_results, &Results);  // data for spreadsheet
     
     calibrationTime_ms += LOOP_TIME_MS;
     straightTime_ms = (steer_control == STRAIGHT_TURN_OUT)? straightTime_ms + LOOP_TIME_MS: 0;
@@ -426,7 +385,6 @@ void startCapturingRCState()
   }
 }
 /*---------------------------------------------------------------------------------------*/
-// processRC modified by TCF  9/17/15
 byte processRC (unsigned long *results)
 {   
     // 1st pulse is aileron (position 5 on receiver; controlled by Right left/right joystick on transmitter)
@@ -451,14 +409,14 @@ byte processRC (unsigned long *results)
         E_Stop();  // already done at interrupt level
         if ((results[RC_AUTO] == LOW)  && (NUMBER_CHANNELS > 5)) // under RC control
             steer(results[RC_TURN]);
-        Serial.println("Exiting processRC due to E-stop.");
+        //Serial.println("Exiting processRC due to E-stop.");
         return 0x00;
     }
     
     
     if ((results[RC_AUTO] == HIGH)  && (NUMBER_CHANNELS > 5))
     {
-        Serial.println("Calling processHighLevel.");
+//        Serial.println("Calling processHighLevel.");
         return 0x01;  // not under RC control
     } else {
 //        Serial.println("Continuing processRC as under RC control.");
@@ -484,18 +442,20 @@ byte processRC (unsigned long *results)
         moveVehicle(results[RC_GO]);
     }
     else
+    {
         //moveVehicle(MIN_ACC_OUT);
-        
+    }
+
     steer(results[RC_TURN]); 
-    
+
     /* 5th pulse is rudder (position 3 on receiver; controlled by Left left/right joystick on transmitter) 
     Not used */
 //    results[RC_RDR] = (results[RC_RDR] > MIDDLE? HIGH: LOW);  // could be analog
-    Serial.println(results[RC_RDR]);
-    if (results[RC_RDR] >= HubAtZero)
-        HubSpeed_kmPh = 0;
-    else
-        HubSpeed_kmPh = HubSpeed2kmPh / results[RC_RDR];
+//    Serial.println(results[RC_RDR]);
+//    if (results[RC_RDR] >= HubAtZero)
+//        HubSpeed_kmPh = 0;
+//    else
+//        HubSpeed_kmPh = HubSpeed2kmPh / results[RC_RDR];
     
 //  Serial.println("");  // New line
     return 0x00;
@@ -531,6 +491,9 @@ int convertTurn(int input)
        // On SPEKTRUM, MIN_RC = 1 msec = stick right; MAX_RC = 2 msec = stick left
        // On HI_TEC, MIN_RC = 1 msec = stick left; MAX_RC = 2 msec = stick right
       // LEFT_TURN_OUT > RIGHT_TURN_OUT
+// @ToDo: Fix this so it is correct in any case.
+// If a controller requires some value to be reversed, then specify that
+// requirement in Settings.h, and use the setting here.
 #ifdef RC_HITEC
   input = MAX_RC - (input - MIN_RC);
 #endif
@@ -809,8 +772,8 @@ void setupWheelRev()
     MinTick /= MAX_SPEED_mmPs;
 //    SerialMonitor.print (MinTick);
     MinTickTime_ms = MinTick;
-    SerialMonitor.print (" MinTickTime_ms = ");
-    SerialMonitor.println (MinTickTime_ms);
+//    SerialMonitor.print (" MinTickTime_ms = ");
+//    SerialMonitor.println (MinTickTime_ms);
 
 //    SerialMonitor.print (" MIN_SPEED_mPh = ");
 //    SerialMonitor.print (MIN_SPEED_mPh);
@@ -836,12 +799,12 @@ void setupWheelRev()
     history.oldSpeed_mmPs = history.olderSpeed_mmPs = NO_DATA;
 
     attachInterrupt (1, WheelRev, RISING);//pin 3 on Mega
-    SerialMonitor.print("TickTime: ");
-    SerialMonitor.print(TickTime);
-    SerialMonitor.print(" OldTick: ");
-    SerialMonitor.println(OldTick);
+//    SerialMonitor.print("TickTime: ");
+//    SerialMonitor.print(TickTime);
+//    SerialMonitor.print(" OldTick: ");
+//    SerialMonitor.println(OldTick);
      
-    SerialMonitor.println("WheelRev setup complete");
+//    SerialMonitor.println("WheelRev setup complete");
 
 }
 /*---------------------------------------------------------------------------------------*/ 
@@ -1104,6 +1067,7 @@ void Throttle_PID(long error_speed_mmPs)
   long mean_speed_error = 0;
   long extrapolated_error = 0;
   long PID_error;
+  // @ToDo: PID parameters are different per trike, and should be moved to Settings.h.
   const float P_tune = 0.4;
   const float I_tune = 0.5;
   const float D_tune = 0.1;
@@ -1155,11 +1119,11 @@ void Throttle_PID(long error_speed_mmPs)
     brake(brake_control);
   }
   // else maintain current speed
-  Serial.print("\tThrottle Brake \t");  // csv for spreadsheet
-  Serial.print(throttle_control);
-  Serial.print("\t");
-  Serial.print(brake_control);
-  Serial.print("\t");
+//  Serial.print("\tThrottle Brake \t");  // csv for spreadsheet
+//  Serial.print(throttle_control);
+//  Serial.print("\t");
+//  Serial.print(brake_control);
+//  Serial.print("\t");
 //  Serial.print(drive_speed_mmPs);  Serial.print("\t");
 //  Serial.println(sensor_speed_mmPs); 
 }
@@ -1209,7 +1173,7 @@ void show7seg(int speed_mmPs)
   //  The %4d option creates a 4-digit integer.
   sprintf(tempString, "%4d", speed_kmPhx10);
   String temp3 = (String)tempString;
-  Serial.println(temp3);
+//  Serial.println(temp3);
 
   // This will output the tempString to the S7S
   s7s.print(temp3);
