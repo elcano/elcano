@@ -10,7 +10,7 @@ const int softwareTx = 10;  // to 7 segment LED display
 const int softwareRx = 7;   // not used
 //SoftwareSerial s7s(softwareRx, softwareTx);
 #define s7s Serial2
-Servo STEER_SERVO, BRAKE_SERVO;
+Servo STEER_SERVO;//, BRAKE_SERVO;
 
 
 #define LOOP_TIME_MS 400
@@ -225,7 +225,7 @@ void ISR_SWITCH_fall() {
 void setup()
 { //Set up pins
       STEER_SERVO.attach(STEER_OUT_PIN);
-      BRAKE_SERVO.attach(BRAKE_OUT_PIN);
+      //BRAKE_SERVO.attach(BRAKE_OUT_PIN);
       
       // SPI: set the slaveSelectPin as an output:
       pinMode (SelectAB, OUTPUT);
@@ -638,7 +638,7 @@ boolean liveThrottle(int acc)
 // Input is not in brake dead zone
 boolean liveBrake(int brake)
 {
-      return (brake < MIDDLE_GO - DEAD_ZONE);
+      return (brake < MIDDLE - DEAD_ZONE);
 }
 
 // Emergency stop
@@ -677,16 +677,16 @@ void convertBrake(unsigned long amount)
 }
 void brake (unsigned long amount)
 {
-    STEER_SERVO.writeMicroseconds(STRAIGHT_TURN_OUT);
-    STEER_SERVO.detach();
+    //STEER_SERVO.writeMicroseconds(STRAIGHT_TURN_OUT);
+    //STEER_SERVO.detach();
     //BRAKE_SERVO.attach(BRAKE_OUT_PIN);
-    if(amount > 1000)
-      BRAKE_SERVO.write(20);
+    if(amount > (MIDDLE - DEAD_ZONE))
+      analogWrite(BRAKE_OUT_PIN, 240);//BRAKE_SERVO.write(20);
     else
-      BRAKE_SERVO.write(160);
+      analogWrite(BRAKE_OUT_PIN, 140);//BRAKE_SERVO.write(160);
       //BRAKE_SERVO.writeMicroseconds(amount);
       Serial.print("\tBraking to: \t"); Serial.println(amount);
-    STEER_SERVO.attach(STEER_OUT_PIN);
+    //STEER_SERVO.attach(STEER_OUT_PIN);
       //brake_control = amount;
 }
 /*---------------------------------------------------------------------------------------*/
