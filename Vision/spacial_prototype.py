@@ -3,34 +3,6 @@ import math as m
 
 # Prototype code for the image-to-world location system. Requires numpy.
 
-# Generate a frustum matrix for a perspective projection
-# fov = field of view (y axis)
-# aspect = ratio of the image
-# near, far = the distance bounds
-def _perspective(fov,
-                 aspect,
-                 near,
-                 far):
-
-    assert(fov > 0 and aspect != 0)
-    h = 1 / m.tan(fov / 2.0)
-    w = h / aspect
-    q = far / (near - far)
-
-    return np.array([(w, 0, 0      , 0),
-                     (0, h, 0      , 0),
-                     (0, 0, q      , 1),
-                     (0, 0, -q*near, 0)])
-
-# Find the pseudo-inverse of a perspective matrix
-# See _perspective for more information on fov, aspect, near, and far
-def _inverse_perspective(fov,
-                         aspect,
-                         near,
-                         far):
-
-    return np.linalg.pinv(_perspective(fov, aspect, near, far))
-
 # Convert a global coordinate to a relative coordinate
 # (roll, pitch, yaw) = camera_angle
 # (x, y, z) = camera_pos, cone_pos (global coordinates)
@@ -81,30 +53,28 @@ def _global_to_relative(camera_angle,
 # x, y = the position we are calculating from
 # h    = the height of the image
 # fovy = the fov along the y-axis of the image
+#  _  ____________________________________ 
+# /  |                   ____x____        | \
+# |  |                  |         *       |  \
+# |  |                  y       (x, y)    |   \
+# |  |                  |                 |    \
+# h  |        origin -> *                 |     > fovy (in radians)
+# |  |                (0, 0)              |    /  of the camera
+# |  |                                    |   /
+# |  |                                    |  /
+# \_ |____________________________________| /
+#
 def _create_vector_from_2d_position(x,
                                     y,
                                     h,
                                     fovy):
 
-    fovy /= 2
-    z = h * m.cos(fovy) / (2 * (m.cos(fovy))**2)
+    fovy /= 2; h /= 2
+    z = h * m.cos(fovy) / m.sqrt(1 - m.cos(fovy)**2)
 
     return np.array([(x),
                      (y),
-                     (z),
-                     (1)])
-
-# Tiny test suite for the _perspective function
-def _test_perspective():
-    print('Testing Perspective Matrix Generation')
-    print(_perspective(0.5, 1   , 1, 50))
-    print(_perspective(1.2, 0.75, 1, 50))
-
-# Tiny test suite for the _inverse_perspective function
-def _test_inverse_perspective():
-    print('Testing Inverted Perspective Matrix Generation')
-    print(_inverse_perspective(0.5, 1   , 1, 50))
-    print(_inverse_perspective(1.2, 0.75, 1, 50))
+                     (z)])
 
 # Tiny test suite for the _global_to_relative function
 def _test_global_to_relative():
@@ -114,7 +84,13 @@ def _test_global_to_relative():
     print(_global_to_relative((0, 0.3, 0), (0, 0, 0), (10, 2, 0), 0.01, (320, 240), (0.05, 0.05)))
     print(_global_to_relative((0, 0, 0.3), (0, 0, 0), (10, 2, 0), 0.01, (320, 240), (0.05, 0.05)))
 
+# Tiny test suite for the _create_vector_from_2d_position function
+def _test_create_vector_from_2d_position():
+    print('Testing 2D->3D Transformation')
+    print(_create_vector_from_2d_position(100, 100, 480, 90 * m.pi / 180))
+    print(_create_vector_from_2d_position(100, 100, 480, 160 * m.pi / 180))
+    print(_create_vector_from_2d_position(-100, 100, 480, 90 * m.pi / 180))
+
 if __name__ == "__main__":
-    _test_perspective()
-    _test_inverse_perspective()
     _test_global_to_relative()
+    _test_create_vector_from_2d_position()
