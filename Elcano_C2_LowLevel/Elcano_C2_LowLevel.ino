@@ -56,7 +56,7 @@ volatile unsigned long RC_rise[7];
 volatile unsigned long RC_elapsed[7];
 volatile boolean synced = false;
 volatile unsigned long last_fallingedge_time = 4294967295; // max long
-volatile int RC_Done[7] = {0,0,0,0,0,0,0};
+volatile bool RC_Done[7] = {0,0,0,0,0,0,0};
 
 long speed_errors[ERROR_HISTORY];
 long old_turn_degx1000;
@@ -148,6 +148,22 @@ void ISR_RVS_fall() {
   attachInterrupt(IRPT_RVS, ISR_RVS_rise, RISING);
   interrupts();
 }
+
+void ISR_SWITCH_rise() {
+  noInterrupts();
+  ProcessRiseOfINT(RC_RDR);
+  attachInterrupt(digitalPinToInterrupt(IRPT_SWITCH), ISR_SWITCH_fall, FALLING);
+  //RC_Done[RC_RDR] = 1;
+  interrupts();
+}
+
+void ISR_SWITCH_fall() {
+  noInterrupts();
+  ProcessFallOfINT(RC_RDR);
+  RC_Done[RC_RDR] = 1;
+  attachInterrupt(digitalPinToInterrupt(IRPT_SWITCH), ISR_SWITCH_rise, RISING);
+  interrupts();
+}
 /*---------------------------------------------------------------------------------------*/
 // An e-bike hub motor is powered by giving it 3 phase power. This is supplied
 // by the motor controller. The controller needs feeback from the hub.  It
@@ -179,8 +195,9 @@ void ISR_MOTOR_FEEDBACK_rise() {
 //----------------------------------------------------------------------------
 void setup()
 { //Set up pins
+      STEER_SERVO.attach(STEER_OUT_PIN);
       pinMode(BRAKE_OUT_PIN, OUTPUT);
-      pinMode(STEER_OUT_PIN, OUTPUT);
+      
       // SPI: set the slaveSelectPin as an output:
       pinMode (SelectAB, OUTPUT);
       pinMode (SelectCD, OUTPUT);
