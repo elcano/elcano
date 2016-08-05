@@ -17,9 +17,9 @@ VEHICLE_NUMBER to your own new number.
 */
 
 // Dr. Folsom's orange trike.
-//#define VEHICLE_NUMBER 1
+#define VEHICLE_NUMBER 1
 // Yellow Catrike at the University of Washington at Bothell.
-#define VEHICLE_NUMBER 2
+//#define VEHICLE_NUMBER 2
 
 #if (VEHICLE_NUMBER == 1)
 
@@ -30,15 +30,18 @@ VEHICLE_NUMBER to your own new number.
 // Values (0-255) represent digital values that get convered into PWM signals by analogWrite.
 
 // MIN and MAX ACC set the minimum signal to get the motor going, and maximum allowable acceleration for the motor
-#define MIN_ACC_OUT 40
-#define MAX_ACC_OUT 227
+#define MIN_ACC_OUT 50
+#define MAX_ACC_OUT 235
+
 // MIN and MAX BRAKE_OUT set values to be sent to the brake actuator that controls the brakes on the front wheels
 #define MIN_BRAKE_OUT 167
 #define MAX_BRAKE_OUT 207
+
 // RIGHT, STRAIGHT, and LEFT TURN_OUT set values to be sent to the steer actuator that changes the direction of the front wheels
-#define RIGHT_TURN_OUT 150
-#define LEFT_TURN_OUT 240
-#define STRAIGHT_TURN_OUT 195
+#define RIGHT_TURN_OUT 1000
+#define LEFT_TURN_OUT 2000
+#define STRAIGHT_TURN_OUT 1500
+
 // Turn sensors are believed if they are in this range while wheels are straight
 // MAX values here are for the safety of the actuator so as not to break/overload it
 #define RIGHT_MIN_COUNT 80
@@ -46,13 +49,13 @@ VEHICLE_NUMBER to your own new number.
 #define LEFT_MIN_COUNT  80
 #define LEFT_MAX_COUNT  284
 
-// Trike-specific pins/channels
+// Trike specific pins/channels
 #define DAC_CHANNEL 0    // output to motor actuator
 #define STEER_OUT_PIN 7 // Output to steer actuator
 #define BRAKE_OUT_PIN 6  // output to brake actuator
 
 // Trike-specific physical parameters
-#define WHEEL_DIAMETER_MM 397
+#define WHEEL_DIAMETER_MM 482
 #define TURN_RADIUS 209 //Turning radius in cm.
 #define MOTOR_POLE_PAIRS 23
 
@@ -76,17 +79,19 @@ VEHICLE_NUMBER to your own new number.
 // The assignment of interrupts / pins used for inputs from the RC controller
 // might differ depending on the trike.
 // D2  = Int 0
-#define IRPT_RVS 0
+#define IRPT_RVS 2
 // D21 = Int 2
-#define IRPT_TURN 2
+#define IRPT_TURN 21
 // D20 = Int 3 
-#define IRPT_GO 3
+#define IRPT_GO 20
 // D19 = Int 4
-#define IRPT_ESTOP 4
+#define IRPT_ESTOP 18
 // RDR (rudder) is not used. Instead, use this interrupt for the motor
 // phase feedback, which gives speed.
 // D18 = Int 5
-#define IRPT_RDR 5
+#define IRPT_RDR 3
+//
+#define IRPT_SWITCH 19
 
 // Currently different interrupts are used for the motor phase feedback.
 // These are *temporary*.
@@ -106,13 +111,16 @@ VEHICLE_NUMBER to your own new number.
 // MIN and MAX ACC set the minimum signal to get the motor going, and maximum allowable acceleration for the motor
 #define MIN_ACC_OUT 50
 #define MAX_ACC_OUT 227
+
 // MIN and MAX BRAKE_OUT set values to be sent to the brake actuator that controls the brakes on the front wheels
-#define MIN_BRAKE_OUT 167
-#define MAX_BRAKE_OUT 207
+#define MIN_BRAKE_OUT 128
+#define MAX_BRAKE_OUT 254
+
 // RIGHT, STRAIGHT, and LEFT TURN_OUT set values to be sent to the steer actuator that changes the direction of the front wheels
-#define RIGHT_TURN_OUT 146
-#define LEFT_TURN_OUT 230
-#define STRAIGHT_TURN_OUT 187
+#define RIGHT_TURN_OUT 128
+#define LEFT_TURN_OUT 254 
+#define STRAIGHT_TURN_OUT 192
+
 // Turn sensors are believed if they are in this range while wheels are straight
 // MAX values here are for the safety of the actuator so as not to break/overload it
 #define RIGHT_MIN_COUNT 725
@@ -120,21 +128,19 @@ VEHICLE_NUMBER to your own new number.
 #define LEFT_MIN_COUNT  880
 #define LEFT_MAX_COUNT  940
 
-// Trike-specific pins/channels
+// Trike specific pins/channels
 #define DAC_CHANNEL 0
-// ToDo: Verify these. Various sources show STEER_OUT_PIN set to 7
-// or 9, and BRAKE_OUT_PIN set to 7, 8, or 9.
-#define STEER_OUT_PIN 9 // Output to steer actuator
-#define BRAKE_OUT_PIN 7 // output to brake actuator
+#define STEER_OUT_PIN 7 // Output to steer actuator
+#define BRAKE_OUT_PIN 8  // output to brake actuator
 
-// Trike-specific physical parameters
+// Trike specific physical parameters
 #define WHEEL_DIAMETER_MM 500
 #define TURN_RADIUS 214 //Turning radius in cm.
 #define MOTOR_POLE_PAIRS 23
 
 // Parameters used by MoveActuator
 // external PWM output
-// DISK_BRAKE is deprecated, use BRAKE_OUT_PIN
+// DISK_BRAKE is depricated, use BRAKE_OUT_PIN
 // Use DAC D
 #define THROTTLE_CHANNEL 0
 
