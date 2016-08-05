@@ -236,6 +236,7 @@ void setup()
       attachInterrupt(IRPT_GO,    ISR_GO_rise,    RISING);
       attachInterrupt(IRPT_ESTOP, ISR_ESTOP_rise, RISING);
       //attachInterrupt(IRPT_RVS,   ISR_RVS_rise,   RISING);
+      attachInterrupt(digitalPinToInterrupt(IRPT_SWITCH), ISR_SWITCH_rise, RISING);
       attachInterrupt(IRPT_MOTOR_FEEDBACK, ISR_MOTOR_FEEDBACK_rise, RISING);
       //Print7headers(false);
       //PrintHeaders();
@@ -394,6 +395,18 @@ void PrintHeaders (void)
     Serial.print("Steer\t");
     Serial.println("(m) Distance");
 }
+
+/*---------------------------------------------------------------------------------------*/
+//circleRoutine 
+void circleRoutine(unsigned long seconds){
+  steer(LEFT_TURN_OUT);
+  delay(1000);
+  seconds = seconds * 1000;
+  unsigned long loopTime = millis();
+  while(millis() < (loopTime + seconds)){
+    moveVehicle(128);
+  } 
+}
 /*---------------------------------------------------------------------------------------*/
 void startCapturingRCState()
 {
@@ -401,6 +414,48 @@ void startCapturingRCState()
     RC_Done[i] = 0;
   }
 }
+
+/*---------------------------------------------------------------------------------------*/
+//done in setup, calibrate RC values for MIDDLE, MIN_RC, and MAX_RC at startup
+void calibrateRC(unsigned long mic){
+
+    Serial.print(mic);
+    Serial.println("Calibration Started");
+    //Step 1: Wait for controller to turn on, and leave joysticks in neutral
+//    while (micros() < TEN_SECONDS_IN_MICROS ||
+//    ~((RC_Done[RC_ESTP]) && (RC_Done[RC_GO]) && (RC_Done[RC_TURN]) ))
+    digitalWrite(LED_PIN_OUT, HIGH); //wait for 10 seconds to receive radio signal to Calibrate Neutral Positions on RC controller, otherwise proceed
+
+    //Step 2: Calibrate MIDDLE
+    Serial.println(RC_elapsed[RC_GO]);
+    MIDDLE = RC_elapsed[RC_GO];
+    Serial.print("MIDDLE \t");
+    Serial.println(MIDDLE);
+    mic = micros();
+    
+    //Step 3: Turn on LED and wait for Right joystick DOWN
+    digitalWrite(LED_PIN_OUT, HIGH);
+    while(micros() < (mic + (TEN_SECONDS_IN_MICROS/4)))
+    digitalWrite(LED_PIN_OUT, HIGH);//wait
+    //if
+    digitalWrite(LED_PIN_OUT, LOW);
+    //Set MIN_RC
+    MIN_RC = RC_elapsed[RC_GO];
+    Serial.print("MIN_RC \t");
+    Serial.println(MIN_RC);
+    mic = micros();
+
+    //Step 4:Turn on LED again and wait for Right joystick UP
+    digitalWrite(LED_PIN_OUT, HIGH);
+    while(micros() < (mic + (TEN_SECONDS_IN_MICROS/4)))
+    digitalWrite(LED_PIN_OUT, HIGH);//wait
+
+    MAX_RC = RC_elapsed[RC_GO];
+    Serial.print("MAX_RC \t");
+    Serial.println(MAX_RC);
+    digitalWrite(LED_PIN_OUT, LOW);
+}
+
 /*---------------------------------------------------------------------------------------*/
 byte processRC (unsigned long *results)
 {   
@@ -425,7 +480,7 @@ byte processRC (unsigned long *results)
     {
         E_Stop();  // already done at interrupt level
         if ((results[RC_AUTO] == LOW)  && (NUMBER_CHANNELS > 5)) // under RC control
-            steer(results[RC_TURN]);
+            ;//steer(results[RC_TURN]);
         //Serial.println("Exiting processRC due to E-stop.");
         return 0x00;
     }
@@ -441,7 +496,7 @@ byte processRC (unsigned long *results)
     /*  6th pulse is marked throttle (position 6 on receiver; controlled by Left up/down joystick on transmitter). 
     It will be used for shifting from Drive to Reverse . D40
     */
-    results[RC_RVS] = (results[RC_RVS] > MIDDLE? HIGH: LOW);
+    //results[RC_RVS] = (results[RC_RVS] > MIDDLE? HIGH: LOW);
         
 // TO DO: Select Forward / reverse based on results[RC_RVS]
        
@@ -453,14 +508,14 @@ byte processRC (unsigned long *results)
          convertBrake (&(results[RC_GO]));
 
     //Accelerating
-    else if(liveThrottle(results[RC_GO]))
+    if(liveThrottle(results[RC_RDR]))
     {
-        results[RC_GO] = convertThrottle(results[RC_GO]);
-        moveVehicle(results[RC_GO]);
+        int going = convertThrottle(results[RC_RDR]);
+        moveVehicle(going);
     }
     else
     {
-        //moveVehicle(MIN_ACC_OUT);
+        moveVehicle(MIN_ACC_OUT);
     }
 
     steer(results[RC_TURN]); 
@@ -508,6 +563,9 @@ int convertTurn(int input)
        // On SPEKTRUM, MIN_RC = 1 msec = stick right; MAX_RC = 2 msec = stick left
        // On HI_TEC, MIN_RC = 1 msec = stick left; MAX_RC = 2 msec = stick right
       // LEFT_TURN_OUT > RIGHT_TURN_OUT
+      else
+          return input;
+      
 // @ToDo: Fix this so it is correct in any case.
 // If a controller requires some value to be reversed, then specify that
 // requirement in Settings.h, and use the setting here.
@@ -515,34 +573,34 @@ int convertTurn(int input)
   input = MAX_RC - (input - MIN_RC);
 #endif
       
-      if (input > MIDDLE + DEAD_ZONE)
-      {  // left turn
-         steerRange = LEFT_TURN_OUT - STRAIGHT_TURN_OUT;
-         rcRange = MAX_RC - (MIDDLE + DEAD_ZONE);
-        input = input - MIDDLE - DEAD_ZONE; // originally input = middle + dead_zone
-        output = STRAIGHT_TURN_OUT + input * steerRange / rcRange;
-        //set max and min values if out of range
-        trueOut = (int)output;
-        if(trueOut > LEFT_TURN_OUT)
-            trueOut = LEFT_TURN_OUT;
-        if(trueOut < STRAIGHT_TURN_OUT)
-            trueOut = STRAIGHT_TURN_OUT;
-        return trueOut;
-    }
-      if (input < MIDDLE - DEAD_ZONE)
-      {  // right turn
-         steerRange = STRAIGHT_TURN_OUT - RIGHT_TURN_OUT;
-         rcRange = MIDDLE - DEAD_ZONE - MIN_RC;
-        input = input - DEAD_ZONE - MIDDLE;  // input is negative
-        output = STRAIGHT_TURN_OUT + input * steerRange / rcRange;
-        //set max and min values if out of range
-        trueOut = (int)output;
-        if(trueOut < RIGHT_TURN_OUT)
-            trueOut = RIGHT_TURN_OUT;
-        if(trueOut > STRAIGHT_TURN_OUT)
-            trueOut = STRAIGHT_TURN_OUT;
-        return trueOut;
-    }
+//      if (input > MIDDLE + DEAD_ZONE)
+//      {  // left turn
+//         steerRange = LEFT_TURN_OUT - STRAIGHT_TURN_OUT;
+//         rcRange = MAX_RC - (MIDDLE + DEAD_ZONE);
+//        input = input - MIDDLE - DEAD_ZONE; // originally input = middle + dead_zone
+//        output = STRAIGHT_TURN_OUT + input * steerRange / rcRange;
+//        //set max and min values if out of range
+//        trueOut = (int)output;
+//        if(trueOut > LEFT_TURN_OUT)
+//            trueOut = LEFT_TURN_OUT;
+//        if(trueOut < STRAIGHT_TURN_OUT)
+//            trueOut = STRAIGHT_TURN_OUT;
+//        return trueOut;
+//    }
+//      if (input < MIDDLE - DEAD_ZONE)
+//      {  // right turn
+//         steerRange = STRAIGHT_TURN_OUT - RIGHT_TURN_OUT;
+//         rcRange = MIDDLE - DEAD_ZONE - MIN_RC;
+//        input = input - DEAD_ZONE - MIDDLE;  // input is negative
+//        output = STRAIGHT_TURN_OUT + input * steerRange / rcRange;
+//        //set max and min values if out of range
+//        trueOut = (int)output;
+//        if(trueOut < RIGHT_TURN_OUT)
+//            trueOut = RIGHT_TURN_OUT;
+//        if(trueOut > STRAIGHT_TURN_OUT)
+//            trueOut = STRAIGHT_TURN_OUT;
+//        return trueOut;
+//    }
 }
 /*---------------------------------------------------------------------------------------*/
 int convertDeg(int deg)
@@ -593,7 +651,7 @@ void E_Stop()
 //Send values to output pin
 void steer(int pos)
 {
-      analogWrite(STEER_OUT_PIN, pos);
+      STEER_SERVO.writeMicroseconds(pos);
 //      Serial.print("\tSteering to: \t"); Serial.print(pos);
      steer_control = pos;
 }
