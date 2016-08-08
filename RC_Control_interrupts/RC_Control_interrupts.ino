@@ -1,34 +1,38 @@
 #include <SPI.h>
 #include <Settings.h>
 
-//RC input values - pulse widths in microseconds
-const int LONG_DEADZONE_THRESHOLD = 10000; // used for syncing to determine if the last down time was the long down zone
-const int DEAD_ZONE = 75;
-const int MIDDLE = 1510;  // was 1322;
-// extremes of RC pulse width
-const int MIN_RC = 1090;  // was 911;
-const int MAX_RC = 1930; // was 1730;
-const int CYCLE_MAX = 25000;  // Pulses come at 42.27 Hz, every 21155 us
-const int MAX_PULSE = 4000; // Next pulse should be no longer than this time from last.
+// @ToDo: Move all constant values to Settings.h.
 
+//RC input values - pulse widths in microseconds
+// used for syncing to determine if the last down time was the long down zone
+#define LONG_DEADZONE_THRESHOLD 10000
+
+// Pulses come at 42.27 Hz, every 21155 us
+#define CYCLE_MAX 25000
+// Next pulse should be no longer than this time from last.
+#define MAX_PULSE 4000
 
 //ARDUINO PIN SELECTORS
-const int RC_STEER_PIN = 44; // Input from RC // was 2;
-const int RC_CRUISE_PIN = 42;
-const int RC_THROTTLE_PIN = 46; // Input // was 3;
-const int RC_ESTOP_PIN = 38;
-const int RC_RUDDER_PIN = 40;
-const int RC_REVERSE_PIN = 36;
-const int RC_INTERRUPT_PIN = 20;  
-const int RC_INTERRUPT = 3;
-const int PIN_ORDER[8] = {0, RC_STEER_PIN, RC_CRUISE_PIN, RC_THROTTLE_PIN, RC_ESTOP_PIN, RC_RUDDER_PIN, RC_REVERSE_PIN, 0};
-const int SelectCD = 49; // Select IC 3 DAC (channels C and D)
-const int SelectAB = 53; // Select IC 2 DAC (channels A and B)
+// Input from RC // was 2;
+#define RC_STEER_PIN 44
+#define RC_CRUISE_PIN 42
+// Input // was 3;
+#define RC_THROTTLE_PIN 46
+#define RC_ESTOP_PIN 38
+#define RC_RUDDER_PIN 40
+#define RC_REVERSE_PIN 36
+#define RC_INTERRUPT_PIN 20  
+#define RC_INTERRUPT 3
+#define PIN_ORDER[8] = {0, RC_STEER_PIN, RC_CRUISE_PIN, RC_THROTTLE_PIN, RC_ESTOP_PIN, RC_RUDDER_PIN, RC_REVERSE_PIN, 0};
+// Select IC 3 DAC (channels C and D)
+#define SelectCD 49
+// Select IC 2 DAC (channels A and B)
+#define SelectAB 53
 
-const unsigned long INVALID_DATA = 0;
-const int RC_WAIT = 0;  // rc_index is 0, waiting for data
-const int RC_PROCESSING = 1;  // rc_index is 1 to 6
-const int RC_DONE  = 2;   // rc_index is 7
+#define INVALID_DATA 0
+#define RC_WAIT 0  // rc_index is 0, waiting for data
+#define RC_PROCESSING 1  // rc_index is 1 to 6
+#define RC_DONE  2   // rc_index is 7
 volatile int rc_index = 0;
 volatile  unsigned long RC_results[7];
 volatile int rc_state = RC_WAIT;
