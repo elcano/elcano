@@ -2,6 +2,7 @@
 
 #include <SPI.h>
 #include <Elcano_Serial.h>
+#include <Servo.h>
 
 //#include <SoftwareSerial.h>
 // @ToDo: Are these specific to some particular setup or trike? If so,
@@ -16,9 +17,11 @@ const int softwareRx = 7;   // not used
 // @ToDo: This has changed. Is it specific to some particular setup or trike?
 // If so, it should be moved to Settings.h.
 #define s7s Serial2
+Servo STEER_SERVO;
 
 #define LOOP_TIME_MS 400
-#define ERROR_HISTORY 20 //number of errors to accumulate 
+#define ERROR_HISTORY 20 //number of errors to accumulate
+#define TEN_SECONDS_IN_MICROS 10000000
 
 /*================ReadTurnAngle ================*/
 // @ToDo: Are these specific to a particular trike? If so, move them to Settings.h.
@@ -70,6 +73,11 @@ float Odometer_m = 0;
 float HubSpeed_kmPh;
 const float  HubSpeed2kmPh = 13000000;
 const unsigned long HubAtZero = 1159448;
+
+int max_rc = MAX_RC;
+int mid = MIDDLE;
+int min_rc = MIN_RC;
+#define LED_PIN_OUT 
 //==========================================================================================
 void ISR_TURN_rise() {
   noInterrupts();
@@ -424,36 +432,36 @@ void calibrateRC(unsigned long mic){
     //Step 1: Wait for controller to turn on, and leave joysticks in neutral
 //    while (micros() < TEN_SECONDS_IN_MICROS ||
 //    ~((RC_Done[RC_ESTP]) && (RC_Done[RC_GO]) && (RC_Done[RC_TURN]) ))
-    digitalWrite(LED_PIN_OUT, HIGH); //wait for 10 seconds to receive radio signal to Calibrate Neutral Positions on RC controller, otherwise proceed
+//    digitalWrite(LED_PIN_OUT, HIGH); //wait for 10 seconds to receive radio signal to Calibrate Neutral Positions on RC controller, otherwise proceed
 
     //Step 2: Calibrate MIDDLE
     Serial.println(RC_elapsed[RC_GO]);
-    MIDDLE = RC_elapsed[RC_GO];
+    mid = RC_elapsed[RC_GO];
     Serial.print("MIDDLE \t");
-    Serial.println(MIDDLE);
+    Serial.println(mid);
     mic = micros();
     
     //Step 3: Turn on LED and wait for Right joystick DOWN
-    digitalWrite(LED_PIN_OUT, HIGH);
+    //digitalWrite(LED_PIN_OUT, HIGH);
     while(micros() < (mic + (TEN_SECONDS_IN_MICROS/4)))
-    digitalWrite(LED_PIN_OUT, HIGH);//wait
+    //digitalWrite(LED_PIN_OUT, HIGH);//wait
     //if
-    digitalWrite(LED_PIN_OUT, LOW);
+    //digitalWrite(LED_PIN_OUT, LOW);
     //Set MIN_RC
-    MIN_RC = RC_elapsed[RC_GO];
+    min_rc = RC_elapsed[RC_GO];
     Serial.print("MIN_RC \t");
-    Serial.println(MIN_RC);
+    Serial.println(min_rc);
     mic = micros();
 
     //Step 4:Turn on LED again and wait for Right joystick UP
-    digitalWrite(LED_PIN_OUT, HIGH);
+    //digitalWrite(LED_PIN_OUT, HIGH);
     while(micros() < (mic + (TEN_SECONDS_IN_MICROS/4)))
-    digitalWrite(LED_PIN_OUT, HIGH);//wait
+    //digitalWrite(LED_PIN_OUT, HIGH);//wait
 
-    MAX_RC = RC_elapsed[RC_GO];
+    max_rc = RC_elapsed[RC_GO];
     Serial.print("MAX_RC \t");
-    Serial.println(MAX_RC);
-    digitalWrite(LED_PIN_OUT, LOW);
+    Serial.println(max_rc);
+    //digitalWrite(LED_PIN_OUT, LOW);
 }
 
 /*---------------------------------------------------------------------------------------*/
