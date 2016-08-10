@@ -6,6 +6,15 @@
 
 const double M_PI = 3.141592654;
 
+std::ostream&
+operator<<(
+	std::ostream &out,
+	std::tuple<double, double> x
+) {
+	out << "(" << std::get<0>(x) << "," << std::get<1>(x) << ")";
+	return out;
+}
+
 int
 main(
 	int argc,
