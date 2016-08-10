@@ -1,6 +1,6 @@
 #include "transform.hh"
 #include <tgmath.h>
-#include <opencv2/core/mat.hpp>
+#include <opencv2/core/core.hpp>
 
 /* Transform on-camera rectangles into vectors in 3D space */
 
@@ -22,47 +22,48 @@ namespace elcano
 		std::tuple<uint64_t, uint64_t, uint64_t> cam_pos,
 		std::tuple<uint64_t, uint64_t, uint64_t> cone_pos,
 		std::tuple<uint64_t, uint64_t>           img_size,
-		std::tuple<uint64_t, uint64_t>           sensor_size,
-		uint64_t                                 focal_length
+		std::tuple<double, double>               sensor_size,
+		double                                   focal_length
 	) {
-		cv::Mat df = (Mat_<double>(3, 1) <<
+		cv::Mat df = (cv::Mat_<double>(3, 1) <<
 			std::get<0>(cone_pos) - std::get<0>(cam_pos),
 			std::get<1>(cone_pos) - std::get<1>(cam_pos),
 			std::get<2>(cone_pos) - std::get<2>(cam_pos)
 		);
 
-		cv::Mat ma = (Mat_<double>(3, 3) <<
+		cv::Mat ma = (cv::Mat_<double>(3, 3) <<
 			1,  0                          , 0                          ,
 			0,  cos(std::get<0>(cam_angle)), sin(std::get<0>(cam_angle)),
 			0, -sin(std::get<0>(cam_angle)), cos(std::get<0>(cam_angle))
 		);
 
-		cv::Mat mb = (Mat_<double>(3, 3) <<
+		cv::Mat mb = (cv::Mat_<double>(3, 3) <<
 			cos(std::get<1>(cam_angle)), 0, -sin(std::get<1>(cam_angle)),
 			0                          , 1,  0                          ,
 			sin(std::get<1>(cam_angle)), 0,  cos(std::get<1>(cam_angle))
 		);
 
-		cv::Mat mc = (Mat_<double>(3, 3) <<
+		cv::Mat mc = (cv::Mat_<double>(3, 3) <<
 			 cos(std::get<2>(cam_angle)), sin(std::get<2>(cam_angle)), 0,
 			-sin(std::get<2>(cam_angle)), cos(std::get<2>(cam_angle)), 0,
 			 0                          , 0                          , 1
 		);
 
-		double d = (df.t() * df).at(0, 0);
+		cv::Mat dd = df.t() * df;
+		double d = dd.at<double>(0, 0);
 
-		cv::Mat cc = (Mat_<double>(2, 3) <<
+		cv::Mat cc = (cv::Mat_<double>(2, 3) <<
 			0, focal_length * std::get<0>(img_size) / (d * std::get<0>(sensor_size)), 0,
 			0, 0, focal_length * std::get<1>(img_size) / (d * std::get<1>(sensor_size))
 		);
 
-		cv::Mat im = (Mat_<double>(2, 1) <<
-			static_cast<double>(std::get<0>(img_width)) / 2,
-			static_cast<double>(std::get<1>(img_width)) / 2
+		cv::Mat im = (cv::Mat_<double>(2, 1) <<
+			static_cast<double>(std::get<0>(img_size)) / 2,
+			static_cast<double>(std::get<1>(img_size)) / 2
 		);
 
 		cv::Mat res = (cc * mc * mb * ma * df) + im;
-		return std::tuple<double, double>(res.at(0, 0), res.at(1, 0));
+		return std::tuple<double, double>(res.at<double>(0, 0), res.at<double>(1, 0));
 	}
 
 	double
@@ -81,8 +82,8 @@ namespace elcano
 		std::tuple<uint64_t, uint64_t, uint64_t> cam_pos,
 		std::tuple<uint64_t, uint64_t, uint64_t> cone_pos,
 		std::tuple<uint64_t, uint64_t>           img_size,
-		std::tuple<uint64_t, uint64_t>           sensor_size,
-		uint64_t                                 focal_length,
+		std::tuple<double, double>               sensor_size,
+		double                                   focal_length,
 		std::tuple<double, double>               camera_detected
 	) {
 		std::tuple<double, double> locale_detected = global_to_relative(

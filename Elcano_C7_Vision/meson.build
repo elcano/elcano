@@ -23,10 +23,10 @@ executable('elcano-pi',
 
 transform_test = executable('transform-test',
 	sources: [
-		'transform.cc',
-		'test-transform.cc'
+		'test-transform.cc',
+		'transform.cc'
 	],
 	dependencies: cv
 )
 
-test('transform test', tranform_test)
+test('transform test', transform_test)

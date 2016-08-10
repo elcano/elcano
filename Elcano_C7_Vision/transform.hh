@@ -20,7 +20,7 @@ namespace elcano
 		std::tuple<uint64_t, uint64_t, uint64_t> cone_pos,
 		std::tuple<uint64_t, uint64_t>           img_size,
 		std::tuple<double, double>               sensor_size,
-		uint64_t                                 focal_length
+		double                                   focal_length
 	);
 
 	double
@@ -36,7 +36,7 @@ namespace elcano
 		std::tuple<uint64_t, uint64_t, uint64_t> cone_pos,
 		std::tuple<uint64_t, uint64_t>           img_size,
 		std::tuple<double, double>               sensor_size,
-		uint64_t                                 focal_length,
+		double                                   focal_length,
 		std::tuple<double, double>               detected_loc
 	);
 }
