@@ -34,10 +34,25 @@ struct TargetLocation
    long int eastPos;
 };
 
-// Process segement assures that we received a valid TargetLocation and not noise.
-// it then stores the data in another struct that holds similar data. This is 
-// done for loose coupling. If we need to change the point data stored locally
-// we don't need to try to change the elcano serial file.
+struct Cubic
+{
+  float a;
+  float b;
+  float c;
+  float d;
+};
+
+struct Point
+{
+  float x;
+  float y;
+};
+////////////////////////////////////////////////////////////////////////////////
+/* Process segement assures that we received a valid TargetLocation and not 
+ * noise. It then stores the data in another struct that holds similar data. 
+ * This is done for loose coupling. If we need to change the point data stored 
+ * locally, we don't need to try to change the elcano serial file.
+ */
 bool ProcessTargetLocation(TargetLocation *currentTargetLocation, SerialData instructions)
 {
   // Each statement checks that the data received is not int_max.
@@ -65,7 +80,6 @@ bool ProcessTargetLocation(TargetLocation *currentTargetLocation, SerialData ins
   return true;
 }
 
-
 bool ReadWaypoints(TargetLocation* TargetLocationArray)
 {
   //set up variables
@@ -77,7 +91,8 @@ bool ReadWaypoints(TargetLocation* TargetLocationArray)
    {
     //check if we're done receiveing
     readSerial(&Serial1,&dataRead);
-    if(dataRead.number == 789 || count == MAX_WAYPOINTS) // bad number there is no more data or end of data
+    // bad number there is no more data or end of data
+    if(dataRead.number >= 789 || count >= MAX_WAYPOINTS)
     {
       if(count == 0) // nothing was read
       {
@@ -105,9 +120,10 @@ void Drive(int myAngle, int myX, int myY, int targetAngle, int targetX, int targ
   
 }
 
-// This function will rotate the bike to the desired angle. 
-// This includes calculation of the difference in its current heading and the target 
-// angle. Low level commands will be sent to C2 low level controller. 
+/* This function will rotate the bike to the desired angle. 
+ * This includes calculation of the difference in its current heading and the 
+ * target angle. Low level commands will be sent to C2 low level controller. 
+ */
 void RotateToAngle(int targetAngle, int currentHeading)
 {
   //We must know full turing angle and lowest speed
@@ -191,28 +207,31 @@ float ShortestAngle(float currentAngle, float targetAngle)
      }
 }
 
-// This function converts any angle we are dealing with to be from 0 to 180 and anything
-// greater than 180 and less than 0 to be represented as a negative angle. Our circle
-// starts with 0 at the top as true north
-//             0
-//       -90         90
-//            180
+/* This function converts any angle we are dealing with to be from 0 to 180 and 
+ * anything greater than 180 and less than 0 to be represented as a negative 
+ * angle. Our circle starts with 0 at the top as true north.
+ *             0
+ *       -90         90
+ *            180
+ *            
+ */
 float UniformAngle(float angle)
 {
-    if(angle > 180)
+     while(angle > 180)
      {
-        angle = -(360 - angle); 
+        angle -= 360; 
      }
-     if(angle < -180)
+     while(angle < -180)
      {
-        angle = 360 + angle; 
+        angle += 360; 
      }
      return angle;
 }
 
-// Float comparison allows comparison of floats not using the = operator
-// this will return a boolean of the comparison of a and b to the number
-// of decimal places defined by places. 
+/* Float comparison allows comparison of floats not using the = operator
+ * this will return a boolean of the comparison of a and b to the number
+ * of decimal places defined by places. 
+ */
 bool FloatComparison(float a, float b, int places)
 {
   // values are cast to an integer for = comparison of
@@ -256,30 +275,16 @@ bool FloatComparison(float a, float b, int places)
 }
 
 
-/* This function calculates the angle from the current point to the target point
- * in relation to true north.
- * Quadrants are relative to the current position with y lines pointing true north.
- * for reference quadrants are:
+/* This function calculates the angle from the current point to the target 
+ * pointin relation to true north.Quadrants are relative to the current 
+ * position with y lines pointing true north. four reference quadrants are:
  * 2 1
  * 3 4
  */
 float NorthOffset(int currentX, int currentY, int targetX, int targetY)
 {
-  // quadrant 4
-  if ((currentX > targetX) && (currentY > targetY))
-  {
-    return (-180 + (atan(float(currentX+targetX)/float(currentY+targetY)) * 57.2957795));
-  }
-  // quadrant 3
-  else if((currentX < targetX) && (currentY > targetY))
-  {
-    return (180 + (atan(float(currentX+targetX)/float(currentY+targetY)) * 57.2957795));
-  }
-  // quadarant 1 or 2
-  else
-  {
-     return (atan(float(currentX+targetX)/float(currentY+targetY)) * 57.2957795);
-  }
+  return (atan2(currentX+targetX,currentY+targetY) * 
+           57.2957795);
 }
 
 // Calculate the hypotenuse side of the triangle passed in.
@@ -301,7 +306,162 @@ bool ValidRange(float x1,float y1, float x2,float y2, float range)
   return retVal;
 }
 
-////////////////////////////////////////////////////////////////////////////
+//-----------------------Start Hermite Cubic Functions------------------------//
+
+/*
+ * FirstCoefficient calculates the first coefficient of the Hermite cubic 
+ * function. This requires input of the Tanget values adjusted for the arc 
+ * length. the start pointand end point are the map locations we want the bike 
+ * to sit at or start at. This functioncan solve for both the x and y equations.
+ */
+float FirstCoeffiecent(float endTangent, float endValue, float startValue, 
+      float startTangent)
+{
+  float retVal = (endTangent - (2 * endValue) +(2 * startValue) + startTangent);
+  return retVal;
+}
+
+/*
+ * SecondCoefficient calculates the first coefficient of the Hermite cubic 
+ * function This requires input of the Tanget values adjusted for the arc 
+ * lenght. the start point and end point are the map locations we want the 
+ * bike to sit at or start at. This function can solve for both 
+ * the x and y equations.
+ */
+float SecondCoeffiecent(float firstCoeffiecent, float tangentStartValue, 
+      float endValue, float startValue)
+{
+  float retVal = (-firstCoeffiecent-tangentStartValue-startValue+endValue);
+  return retVal;
+}
+
+/*
+ * CalculateCubic will do all the work needed to calculate the cubic function 
+ * it takes in a Cubic by reference and stores the values of a b c d in the 
+ * struct. this requres input of The start point, end point, point of the 
+ * direction of the end tangent adusted by the arc and direction of the start 
+ * point adjusted by the arc.
+ */
+void CalculateCubic(Cubic& function, float startValue, float endValue,
+     float startTangent, float endTangent)
+{
+  function.a = FirstCoeffiecent(endTangent, endValue, startValue,
+      startTangent);
+  function.b = SecondCoeffiecent(function.a, startTangent,
+      endValue, startValue);
+  function.c = startTangent;
+  function.d = startValue;
+}
+
+
+/*
+ *  Calculate start tangent translates angle of the trike to a corresponding 
+ *  point on a line that passes through the origin with the slope and compass
+ *  direction representing the same angle. Example
+ *  angle 0 degress = 0,1 or angle 90 degrees equals 0,1.
+ */
+Point CalculateStartTangentPoint(float angleDegrees)
+{
+  Point retVal;
+  retVal.x= sin((angleDegrees * 0.0174533));
+  retVal.y = cos((angleDegrees * 0.0174533));
+  return retVal;
+}
+
+/*
+ * This function takes 2 points and translates the slope between the two
+ * to a point that is on the equivalent slope line that passes through
+ * the origin this allows us to calculate the tangent for the next point.
+ */
+Point pointSlope(Point a, Point b)
+{
+    float slope = (a.y - b.y) / (a.x - b.x);
+    Point wrtOrigin;
+    wrtOrigin.x = 1;
+    wrtOrigin.y = slope;
+    return wrtOrigin;
+}
+
+/*
+ * This point translates the tangent point value based on the arc length
+ * passed in by the user to allow for different curve profiles which
+ * allows for tighter or wider turns which will also change corner speed.
+ */
+Point TangentArcAdjustment(Point target, float arcLength)
+{
+    Point retVal;
+    retVal.x = (target.x/sqrt(sq(target.x) + sq(target.y))) * arcLength;
+    retVal.y = (target.y/sqrt(sq(target.x) + sq(target.y))) * arcLength;
+    return retVal;
+}
+
+/*
+ * This is a basic 3rd degree to 2nd degree derivative function. This
+ * will be used with the speed calculation.
+ */
+float DerivativeValueAtT(Cubic x, float t)
+{
+  Cubic xPrime;
+  float retVal;
+  xPrime.a = (x.a*(3*sq(t)));
+  xPrime.b = (x.b*(2*t));
+  xPrime.c = (x.c);
+
+  retVal = (xPrime.a + xPrime.b + xPrime.c);
+  return retVal;
+}
+
+/*
+ * Calculation of the speed the trike will need to be traveling at
+ * time t.
+ */
+float SpeedAtT(Cubic x,Cubic y, float t)
+{
+   float yPrime = DerivativeValueAtT(y,t);
+   float xPrime = DerivativeValueAtT(x,t);
+   return sqrt(sq(xPrime) + sq(yPrime));
+}
+
+/*
+ * Calculation of the arc length at time t. This allows us to know
+ * Where we are by how far we have traveled.
+ */
+float ArcLength(Cubic x, Cubic y, float t,float deltaT, float current)
+{
+  if(FloatComparison(t,0.00,2))
+  {
+    return 0;
+  }
+  else
+  {
+    float currentX = ValueAtTime(x,t);
+    float currentY = ValueAtTime(y,t);
+    float previousX = ValueAtTime(x,(t-deltaT));
+    float previousY = ValueAtTime(y,(t-deltaT));
+    
+    return(current + (sqrt(sq(currentX - previousX)+sq(currentY - previousY))));
+  }
+}
+
+/*
+ * Calculation of the current x or y value at the time value passes in.
+ */
+ float ValueAtTime(Cubic x, float t)
+{
+  Cubic cubicAtT;
+  float retVal;
+  cubicAtT.a = (x.a*(pow(t,3)));
+  cubicAtT.b = (x.b*(sq(t)));
+  cubicAtT.c = (x.c * t);
+  cubicAtT.d = x.d;
+
+  retVal = (cubicAtT.a + cubicAtT.b + cubicAtT.c + cubicAtT.d);
+  return retVal;
+}
+
+//----------------------End Hermite Cubic Functions---------------------------//
+
+////////////////////////////////////////////////////////////////////////////////
 void setup() 
 {  
         Serial1.begin(9600); 

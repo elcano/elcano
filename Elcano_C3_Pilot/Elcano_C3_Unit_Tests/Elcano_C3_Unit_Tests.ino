@@ -1,8 +1,6 @@
 
 #include <ArduinoUnit.h>
 #include <Common.h>
-//#include <IO_C3.h>
-//#include <IO_Mega.h>
 #include <Matrix.h>
 #include <Elcano_Serial.h>
 
@@ -12,6 +10,20 @@ struct TargetLocation
    long int bearing;
    long int northPos;
    long int eastPos;
+};
+
+struct Cubic
+{
+  float a;
+  float b;
+  float c;
+  float d;
+};
+
+struct Point
+{
+  float x;
+  float y;
 };
 
 // Process segement assures that we received a valid TargetLocation and not noise.
@@ -103,7 +115,7 @@ bool ReadWaypoints(TargetLocation* TargetLocationArray, SerialData* testData)
    return true;
 }
 
-int PothagarianDistance(int currentX, int currentY, int targetX, int targetY)
+int PothagarianDistance(float currentX, float currentY, float targetX, float targetY)
 {
     return sqrt(sq(abs(currentX - targetX)) + sq(abs(currentY - targetY)));
 }
@@ -117,21 +129,8 @@ int PothagarianDistance(int currentX, int currentY, int targetX, int targetY)
  */
 float NorthOffset(int currentX, int currentY, int targetX, int targetY)
 {
-  // quadrant 4
-  if ((currentX > targetX) && (currentY > targetY))
-  {
-    return (-180 + (atan(float(currentX+targetX)/float(currentY+targetY)) * 57.2957795));
-  }
-  // quadrant 3
-  else if((currentX < targetX) && (currentY > targetY))
-  {
-    return (180 + (atan(float(currentX+targetX)/float(currentY+targetY)) * 57.2957795));
-  }
-  // quadarant 1 or 2
-  else
-  {
-     return (atan(float(currentX+targetX)/float(currentY+targetY)) * 57.2957795);
-  }
+  return (atan2(currentX+targetX,currentY+targetY) * 
+           57.2957795);
 }
 
 /* The Float Comparison function allows you to compare floats to any X number 
@@ -179,7 +178,7 @@ bool FloatComparison(float a, float b, int places)
     return false;
   }
 }
-//**********************************************************************************************
+//******************************************************************************
 float ShortestAngle(float currentAngle, float targetAngle)
 {
      // handle cases of positve past 180 and negative past -180
@@ -236,21 +235,21 @@ float ShortestAngle(float currentAngle, float targetAngle)
         return retVal;
      }
 }
-//*********************************************************************************************
+//******************************************************************************
 
 float UniformAngle(float angle)
 {
-    if(angle > 180)
+     while(angle > 180)
      {
-        angle = -(360 - angle); 
+        angle -= 360; 
      }
-     if(angle < -180)
+     while(angle < -180)
      {
-        angle = 360 + angle; 
+        angle += 360; 
      }
      return angle;
 }
-//*************************************************************************************************
+//******************************************************************************
 
 
 bool ValidRange(float x1,float y1, float x2,float y2, float range)
@@ -263,7 +262,119 @@ bool ValidRange(float x1,float y1, float x2,float y2, float range)
   }
   return retVal;
 }
-//**********************************************************************************************
+
+//******************************************************************************
+
+float FirstCoeffiecent(float endTangent, float endValue, float startValue, float startTangent)
+{
+  float retVal = (endTangent - (2 * endValue) +(2 * startValue) + startTangent);
+  return retVal;
+}
+
+//******************************************************************************
+
+float SecondCoeffiecent(float firstCoeffiecent, float tangentStartValue, float endValue, float startValue)
+{
+  float retVal = (-firstCoeffiecent-tangentStartValue-startValue+endValue);
+  return retVal;
+}
+
+//******************************************************************************
+
+void CalculateCubic(Cubic& function, float startValue, float endValue, float startTangent, float endTangent)
+{
+  function.a = FirstCoeffiecent(endTangent, endValue, startValue, startTangent);
+  function.b = SecondCoeffiecent(function.a, startTangent, endValue, startValue);
+  function.c = startTangent;
+  function.d = startValue;
+}
+
+//******************************************************************************
+
+Point CalculateStartTangentPoint(float angleDegrees)
+{
+  Point retVal;
+  retVal.x= sin((angleDegrees * 0.0174533));
+  retVal.y = cos((angleDegrees * 0.0174533));
+  return retVal;
+}
+
+//******************************************************************************
+
+Point pointSlope(Point a, Point b)
+{
+    float slope = (a.y - b.y) / (a.x - b.x);
+    Point wrtOrigin;
+    wrtOrigin.x = 1;
+    wrtOrigin.y = slope;
+    return wrtOrigin;
+}
+//******************************************************************************
+
+Point TangentArcAdjustment(Point target, float arcLength)
+{
+    Point retVal;
+    retVal.x = (target.x/sqrt(sq(target.x) + sq(target.y))) * arcLength;
+    retVal.y = (target.y/sqrt(sq(target.x) + sq(target.y))) * arcLength;
+    return retVal;
+}
+
+//******************************************************************************
+
+float DerivativeValueAtT(Cubic x, float t)
+{
+  Cubic xPrime;
+  float retVal;
+  xPrime.a = (x.a*(3*sq(t)));
+  xPrime.b = (x.b*(2*t));
+  xPrime.c = (x.c);
+
+  retVal = (xPrime.a + xPrime.b + xPrime.c);
+  return retVal;
+}
+
+//******************************************************************************
+
+float SpeedAtT(Cubic x,Cubic y, float t)
+{
+   float yPrime = DerivativeValueAtT(y,t);
+   float xPrime = DerivativeValueAtT(x,t);
+   return sqrt(sq(xPrime) + sq(yPrime));
+}
+
+//******************************************************************************
+
+float ArcLength(Cubic x, Cubic y, float t,float deltaT, float current)
+{
+  if(FloatComparison(t,0.00,2))
+  {
+    return 0;
+  }
+  else
+  {
+    float currentX = ValueAtTime(x,t);
+    float currentY = ValueAtTime(y,t);
+    float previousX = ValueAtTime(x,(t-deltaT));
+    float previousY = ValueAtTime(y,(t-deltaT));
+    
+    return(current + (sqrt(sq(currentX - previousX)+sq(currentY - previousY))));
+  }
+}
+//******************************************************************************
+float ValueAtTime(Cubic x, float t)
+{
+  Cubic cubicAtT;
+  float retVal;
+  cubicAtT.a = (x.a*(pow(t,3)));
+  cubicAtT.b = (x.b*(sq(t)));
+  cubicAtT.c = (x.c * t);
+  cubicAtT.d = x.d;
+
+  retVal = (cubicAtT.a + cubicAtT.b + cubicAtT.c + cubicAtT.d);
+  return retVal;
+}
+
+//******************************************************************************
 
 // This test creates an array of data to try instead of a serial line so the code is slightly
 // modified we create 3 signals to send and test if valid signals will be received and terminated
@@ -306,10 +417,10 @@ test(Hypotenuse)
 
 test(NorthOffset)
 {
-  assertEqual(FloatComparison(NorthOffset(0,0,3,4),atan(.75)* 57.2957795,2),true);
-  assertEqual(FloatComparison(NorthOffset(0,0,-3,4),atan(-.75)* 57.2957795,2),true);
-  assertEqual(FloatComparison(NorthOffset(0,0,3,-4),(180 + atan(-.75)* 57.2957795),2),true);
-  assertEqual(FloatComparison(NorthOffset(0,0,-3,-4),(-180 - atan(-.75)* 57.2957795),2),true);
+  assertEqual(FloatComparison(NorthOffset(0,0,3,4),atan(.75)* 57.2957795,1),true);
+  assertEqual(FloatComparison(NorthOffset(0,0,-3,4),atan(-.75)* 57.2957795,1),true);
+  assertEqual(FloatComparison(NorthOffset(0,0,3,-4),(180 + atan(-.75)* 57.2957795),1),true);
+  assertEqual(FloatComparison(NorthOffset(0,0,-3,-4),(-180 - atan(-.75)* 57.2957795),1),true);
 }
 
 test(FloatComparison)
@@ -352,7 +463,126 @@ test(BasicRangeTest)
   assertEqual(ValidRange(5,5,3,3,1),false);
 }
 
-////////////////////////////////////////////////////////////////////////////
+test(CurrentFirstCoeffiecentTest)
+{
+  assertTrue(FloatComparison (FirstCoeffiecent(466.69, 80,550,0),1406.6,1));
+  assertTrue(FloatComparison (FirstCoeffiecent(-466.69, 200,25,660),-156.69,2));
+}
+
+test(CurrentSecondCoeffiecentTest)
+{
+  assertTrue(FloatComparison (SecondCoeffiecent(1406.69,0,550,80),-1876.69,2));
+  assertTrue(FloatComparison (SecondCoeffiecent(-156.69,660,25,200),-328.31,2));
+}
+
+test(CalculateCubic)
+{
+  Cubic testCubic;
+  CalculateCubic(testCubic,550,80, 0, 466.69);
+  assertTrue(FloatComparison(testCubic.a,1406.69,1));
+  assertTrue(FloatComparison(testCubic.b,-1876.6,1));
+  assertTrue(FloatComparison(testCubic.c,0,1));
+  assertTrue(FloatComparison(testCubic.d,550,1));
+}
+
+test(CurrentStartPoint)
+{
+  Point startPoint = CalculateStartTangentPoint(135);
+  assertTrue(FloatComparison(startPoint.x,.707,3));
+  assertTrue(FloatComparison(startPoint.y,-.707,3));
+  startPoint = CalculateStartTangentPoint(0);
+  assertTrue(FloatComparison(startPoint.x,0,3));
+  assertTrue(FloatComparison(startPoint.y,1,3));
+}
+
+test(CurrentArcAdjustment)
+{
+  Point testPoint;
+  testPoint.x = 1;
+  testPoint.y = -1;
+  Point returnPoint;
+  returnPoint = TangentArcAdjustment(testPoint,660);
+  assertTrue(FloatComparison(returnPoint.x, 466.6,1));
+  assertTrue(FloatComparison(returnPoint.y, -466.6,1));
+  testPoint.x = 0;
+  testPoint.y = 1;
+  returnPoint = TangentArcAdjustment(testPoint,660);
+  assertTrue(FloatComparison(returnPoint.x, 0,1));
+  assertTrue(FloatComparison(returnPoint.y, 660,1));
+  
+}
+
+test(CurrentPointSlope)
+{
+    Point P_1; 
+    P_1.x = 10;
+    P_1.y = 10;
+    Point P_2;
+    P_2.x = 11;
+    P_2.y = 9;
+    Point R_1 = pointSlope(P_1, P_2);
+    assertEqual((R_1.y/R_1.x),-1);
+}
+
+test(CurrentDerivative)
+{
+  Cubic test;
+  test.a = 1406.69;
+  test.b = -1876.69;
+  test.c = 0;
+  assertTrue(FloatComparison(DerivativeValueAtT(test,.02),-73.38,2));
+  assertTrue(FloatComparison(DerivativeValueAtT(test,.04),-143.38,2));
+  test.a = 156.69;
+  test.b = -328.31;
+  test.c = 660;
+  assertTrue(FloatComparison(DerivativeValueAtT(test,.02),646.68,2));
+}
+
+test(CurrentSpeed)
+{
+  Cubic testX;
+  testX.a = 1406.69;
+  testX.b = -1876.69;
+  testX.c = 0;
+  Cubic testY;
+  testY.a = 156.69;
+  testY.b = -328.31;
+  testY.c = 660;
+  assertTrue(FloatComparison(SpeedAtT(testX, testY, .02),650.83,2));
+}
+
+test(CurrentValueAtT)
+{
+  Cubic testX;
+  testX.a = 1406.69;
+  testX.b = -1876.69;
+  testX.c = 0;
+  testX.d = 550;
+  Cubic testY;
+  testY.a = 156.69;
+  testY.b = -328.31;
+  testY.c = 660;
+  testY.d = 25;
+  assertTrue(FloatComparison(ValueAtTime(testX,.02),549.26,1))
+  assertTrue(FloatComparison(ValueAtTime(testY,.02),38.067,1))
+}
+
+test(CurrentArcLength)
+{
+  Cubic testX;
+  testX.a = 1406.69;
+  testX.b = -1876.69;
+  testX.c = 0;
+  testX.d = 550;
+  Cubic testY;
+  testY.a = 156.69;
+  testY.b = -328.31;
+  testY.c = 660;
+  testY.d = 25;
+  assertTrue(FloatComparison(ArcLength(testX,testY,.02,.02,0),13.0,1));
+}
+
+////////////////////////////////////////////////////////////////////////////////
 void setup() 
 {  
    Serial.begin(9600);
@@ -363,20 +593,6 @@ void loop()
 {
       //Test of process TargetLocation
       Test::run();
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
