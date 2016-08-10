@@ -1,8 +1,8 @@
-Elcano Vision Library
-=====================
+Elcano Vision Subsystem
+=======================
 
-This is a simple project for using OpenCV object detection on a
-Raspberry Pi.
+This is the subcomponent of the Elcano project that uses a Raspberry Pi
+to scan the area for obstacles with OpenCV.
 
 Dependencies
 ------------
@@ -17,7 +17,7 @@ Dependencies
 	- This is included in-tree in `args.hh`
 
 Note that raspicam lacks a pkgconf file, so we manually link inside
-meson.build. If this changes in the future changes it here.
+meson.build. If this changes in the future, change it here.
 
 Build Instructions
 ------------------
@@ -30,14 +30,27 @@ Build Instructions
 Usage
 -----
 
+The main executable file is called `elcano-pi`, and it uses these options:
+
 	--help     -h   Display the help dialouge
 	--scale    -s   The scale of the images
 	--cascade  -c   Location of the cascade classifier file
 	--device   -d   The output device to send to
 	--baudrate -b   The baudrate of the output device to send to
 
-TODO
+Developer Overview
+------------------
+
+- `main.cc`: The driver function
+- `detect.cc`: Uses OpenCV to detect objects with the camera
+- `transform.cc`: Computes transformations between the world and a photo
+- `arduino.cc`: Oversees the communication between the Pi and the arduino(s)
+- `test-*.cc`: Test code for the specified file
+
+Todo
 ----
 
 - Generate a classifier file for a cone
-- Compute the 3D location of detected objects
+- The exact transformation between the input from localization and the output to the driver (`transform.cc`)
+- Parse input/write output in the correct format for `[project root]/libraries/Elcano_Serial`
+- Write test suite for `arduino.cc`
