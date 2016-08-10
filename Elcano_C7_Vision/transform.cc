@@ -18,12 +18,12 @@ namespace elcano
 
 	std::tuple<double, double>
 	global_to_relative(
-		std::tuple<double, double, double>       cam_angle,
-		std::tuple<uint64_t, uint64_t, uint64_t> cam_pos,
-		std::tuple<uint64_t, uint64_t, uint64_t> cone_pos,
-		std::tuple<uint64_t, uint64_t>           img_size,
-		std::tuple<double, double>               sensor_size,
-		double                                   focal_length
+		std::tuple<double, double, double>    cam_angle,
+		std::tuple<int64_t, int64_t, int64_t> cam_pos,
+		std::tuple<int64_t, int64_t, int64_t> cone_pos,
+		std::tuple<uint64_t, uint64_t>        img_size,
+		std::tuple<double, double>            sensor_size,
+		double                                focal_length
 	) {
 		cv::Mat df = (cv::Mat_<double>(3, 1) <<
 			std::get<0>(cone_pos) - std::get<0>(cam_pos),
@@ -50,7 +50,7 @@ namespace elcano
 		);
 
 		cv::Mat dd = df.t() * df;
-		double d = dd.at<double>(0, 0);
+		double d = sqrt(dd.at<double>(0, 0));
 
 		cv::Mat cc = (cv::Mat_<double>(2, 3) <<
 			0, focal_length * std::get<0>(img_size) / (d * std::get<0>(sensor_size)), 0,
@@ -78,13 +78,13 @@ namespace elcano
 
 	double
 	compute_error(
-		std::tuple<double, double, double>       cam_angle,
-		std::tuple<uint64_t, uint64_t, uint64_t> cam_pos,
-		std::tuple<uint64_t, uint64_t, uint64_t> cone_pos,
-		std::tuple<uint64_t, uint64_t>           img_size,
-		std::tuple<double, double>               sensor_size,
-		double                                   focal_length,
-		std::tuple<double, double>               camera_detected
+		std::tuple<double, double, double>    cam_angle,
+		std::tuple<int64_t, int64_t, int64_t> cam_pos,
+		std::tuple<int64_t, int64_t, int64_t> cone_pos,
+		std::tuple<uint64_t, uint64_t>        img_size,
+		std::tuple<double, double>            sensor_size,
+		double                                focal_length,
+		std::tuple<double, double>            camera_detected
 	) {
 		std::tuple<double, double> locale_detected = global_to_relative(
 			cam_angle, cam_pos, cone_pos, img_size, sensor_size, focal_length
