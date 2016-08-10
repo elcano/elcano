@@ -7,15 +7,15 @@
  * where it can be managed with respect to the planned course,
  * destination and location.
  */
-
+/*
 
 // Permanent Sensor Locations
 //(currently no rear facing sonar)
-int* leftSensors = {1,2,3}
-int* forwardSensors = {3,4,5}  
-int* rightSensors = {5,6,7}
+int* leftSensors = {1,2,3};
+int* forwardSensors = {3,4,5};  
+int* rightSensors = {5,6,7};
 
-
+*/
 
 /* obstacleResponse:
  * takes in the rangeData from the sonar board
@@ -31,6 +31,7 @@ int* rightSensors = {5,6,7}
  * 2 : HARD RIGHT
  * 3 : HARD LEFT
  */
+ /*
 int obstacleResponse(int* rangeData, int Speed)
 {
   int threshold = calcThreshold(Speed);
@@ -59,7 +60,7 @@ int obstacleResponse(int* rangeData, int Speed)
   }
   return 0; // NO RESPONSE
 }
-
+*/
 
 /*  calcThreshold:
  *  Calculates the threshold sensor
@@ -67,12 +68,13 @@ int obstacleResponse(int* rangeData, int Speed)
  *  respond while travelling at the
  *  current speed
  */
+ /*
 int calcThreshold(int velocity)
 {
   // Logic unavailable
   return 1500;
 }
-
+*/
 
 /* rangeDetect:
  * Uses a collection of sonar locations and  
@@ -80,6 +82,7 @@ int calcThreshold(int velocity)
  * to a specific direction and return whether
  * any obstacles are within the threshold range
  */
+ /*
 bool rangeDetect(int* rangeData, int* sonars, int threshold)
 {
   //loop through specified sensors in rangeData
@@ -93,6 +96,6 @@ bool rangeDetect(int* rangeData, int* sonars, int threshold)
   }
   return false;
 }
-
+*/
 
 

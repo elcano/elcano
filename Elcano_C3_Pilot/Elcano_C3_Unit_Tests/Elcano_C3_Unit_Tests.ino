@@ -127,23 +127,10 @@ int PothagarianDistance(float currentX, float currentY, float targetX, float tar
  * 2 1
  * 3 4
  */
-float NorthOffset(float currentX, float currentY, float targetX, float targetY)
+float NorthOffset(int currentX, int currentY, int targetX, int targetY)
 {
-  // quadrant 4
-  if ((currentX > targetX) && (currentY > targetY))
-  {
-    return (-180 + (atan(float(currentX+targetX)/float(currentY+targetY)) * 57.2957795));
-  }
-  // quadrant 3
-  else if((currentX < targetX) && (currentY > targetY))
-  {
-    return (180 + (atan(float(currentX+targetX)/float(currentY+targetY)) * 57.2957795));
-  }
-  // quadarant 1 or 2
-  else
-  {
-     return (atan(float(currentX+targetX)/float(currentY+targetY)) * 57.2957795);
-  }
+  return (atan2(currentX+targetX,currentY+targetY) * 
+           57.2957795);
 }
 
 /* The Float Comparison function allows you to compare floats to any X number 
@@ -252,13 +239,13 @@ float ShortestAngle(float currentAngle, float targetAngle)
 
 float UniformAngle(float angle)
 {
-    if(angle > 180)
+     while(angle > 180)
      {
-        angle = -(360 - angle); 
+        angle -= 360; 
      }
-     if(angle < -180)
+     while(angle < -180)
      {
-        angle = 360 + angle; 
+        angle += 360; 
      }
      return angle;
 }
@@ -430,10 +417,10 @@ test(Hypotenuse)
 
 test(NorthOffset)
 {
-  assertEqual(FloatComparison(NorthOffset(0,0,3,4),atan(.75)* 57.2957795,2),true);
-  assertEqual(FloatComparison(NorthOffset(0,0,-3,4),atan(-.75)* 57.2957795,2),true);
-  assertEqual(FloatComparison(NorthOffset(0,0,3,-4),(180 + atan(-.75)* 57.2957795),2),true);
-  assertEqual(FloatComparison(NorthOffset(0,0,-3,-4),(-180 - atan(-.75)* 57.2957795),2),true);
+  assertEqual(FloatComparison(NorthOffset(0,0,3,4),atan(.75)* 57.2957795,1),true);
+  assertEqual(FloatComparison(NorthOffset(0,0,-3,4),atan(-.75)* 57.2957795,1),true);
+  assertEqual(FloatComparison(NorthOffset(0,0,3,-4),(180 + atan(-.75)* 57.2957795),1),true);
+  assertEqual(FloatComparison(NorthOffset(0,0,-3,-4),(-180 - atan(-.75)* 57.2957795),1),true);
 }
 
 test(FloatComparison)
