@@ -92,7 +92,7 @@ bool ReadWaypoints(TargetLocation* TargetLocationArray)
     //check if we're done receiveing
     readSerial(&Serial1,&dataRead);
     // bad number there is no more data or end of data
-    if(dataRead.number == 789 || count == MAX_WAYPOINTS)
+    if(dataRead.number >= 789 || count >= MAX_WAYPOINTS)
     {
       if(count == 0) // nothing was read
       {
@@ -217,13 +217,13 @@ float ShortestAngle(float currentAngle, float targetAngle)
  */
 float UniformAngle(float angle)
 {
-    if(angle > 180)
+     while(angle > 180)
      {
-        angle = -(360 - angle); 
+        angle -= 360; 
      }
-     if(angle < -180)
+     while(angle < -180)
      {
-        angle = 360 + angle; 
+        angle += 360; 
      }
      return angle;
 }
@@ -283,24 +283,8 @@ bool FloatComparison(float a, float b, int places)
  */
 float NorthOffset(int currentX, int currentY, int targetX, int targetY)
 {
-  // quadrant 4
-  if ((currentX > targetX) && (currentY > targetY))
-  {
-    return (-180 + (atan(float(currentX+targetX)/float(currentY+targetY)) *
-           57.2957795));
-  }
-  // quadrant 3
-  else if((currentX < targetX) && (currentY > targetY))
-  {
-    return (180 + (atan(float(currentX+targetX)/float(currentY+targetY)) *
-           57.2957795));
-  }
-  // quadarant 1 or 2
-  else
-  {
-     return (atan(float(currentX+targetX)/float(currentY+targetY)) * 
+  return (atan2(currentX+targetX,currentY+targetY) * 
            57.2957795);
-  }
 }
 
 // Calculate the hypotenuse side of the triangle passed in.
