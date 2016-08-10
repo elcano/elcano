@@ -53,7 +53,7 @@ VEHICLE_NUMBER to your own new number.
 #define DAC_CHANNEL 0    // output to motor actuator
 #define STEER_OUT_PIN 7 // Output to steer actuator
 #define BRAKE_OUT_PIN 6  // output to brake actuator
-#define WHEEL_DIAMETER_MM 397
+#define WHEEL_DIAMETER_MM 482
 #define MOTOR_POLE_PAIRS 23
 
 // Parameters used by MoveActuator
