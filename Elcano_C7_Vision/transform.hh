@@ -15,12 +15,12 @@ namespace elcano
 
 	std::tuple<double, double>
 	global_to_relative(
-		std::tuple<double, double, double>       cam_angle,
-		std::tuple<uint64_t, uint64_t, uint64_t> cam_pos,
-		std::tuple<uint64_t, uint64_t, uint64_t> cone_pos,
-		std::tuple<uint64_t, uint64_t>           img_size,
-		std::tuple<double, double>               sensor_size,
-		double                                   focal_length
+		std::tuple<double, double, double>    cam_angle,
+		std::tuple<int64_t, int64_t, int64_t> cam_pos,
+		std::tuple<int64_t, int64_t, int64_t> cone_pos,
+		std::tuple<uint64_t, uint64_t>        img_size,
+		std::tuple<double, double>            sensor_size,
+		double                                focal_length
 	);
 
 	double
@@ -31,12 +31,12 @@ namespace elcano
 
 	double
 	compute_error(
-		std::tuple<double, double, double>       cam_angle,
-		std::tuple<uint64_t, uint64_t, uint64_t> cam_pos,
-		std::tuple<uint64_t, uint64_t, uint64_t> cone_pos,
-		std::tuple<uint64_t, uint64_t>           img_size,
-		std::tuple<double, double>               sensor_size,
-		double                                   focal_length,
-		std::tuple<double, double>               detected_loc
+		std::tuple<double, double, double>    cam_angle,
+		std::tuple<int64_t, int64_t, int64_t> cam_pos,
+		std::tuple<int64_t, int64_t, int64_t> cone_pos,
+		std::tuple<uint64_t, uint64_t>        img_size,
+		std::tuple<double, double>            sensor_size,
+		double                                focal_length,
+		std::tuple<double, double>            detected_loc
 	);
 }
