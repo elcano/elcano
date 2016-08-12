@@ -7,13 +7,14 @@
  1) Analog 0-4 V signal for traction motor speed
  2) Pulse wave Modulated (PWM) signal for brakes.
  3) PWM signal for steering.
- 
- 7/1/15 TCF: Added ThrottleChannel
- */
+  */
 
 // Input/Output (IO) pin names for the MegaShieldDB printed circuit board (PCB)
 // #include <IOPCB.h>
 /*==========================================================================*/
+// @ToDo: Fix this fix. If there are variant systems, they should be selected
+// in Settings.h, and then IO.h can be included *after* that, and test the
+// selector, or use values defined in Settings.h.
 // Temporary fix 10/7/15:   IOPCB.h is here
 /*==========================================================================*/
 /* IO_PCB.h:  I/O pin assignments for Arduino Mega 2560 on MegaShieldDB
@@ -53,10 +54,6 @@ const int WheelClick = 3;      //  interrupt; Reed switch generates one pulse pe
 
 /* Actuator A3: Steering Motor. 
   Turns left or right. Default is wheels locked to a straight ahead position. */
-
-const int Steer =  STEER_OUT_PIN;    // external PWM output
-const int DiskBrake = BRAKE_OUT_PIN;
-const int ThrottleChannel = THROTTLE_CHANNEL;
 
 // D8-13 Connector ----------------------
 // The shield does not provide a socket for D8-13
@@ -229,8 +226,8 @@ void setup()
     for (int channel = 0; channel < 4; channel++)
         DAC_Write (channel, 0);   // reset did not clear previous states
  
-    pinMode(DiskBrake, OUTPUT);
-    pinMode(Steer, OUTPUT);
+    pinMode(BRAKE_OUT_PIN, OUTPUT);
+    pinMode(STEER_OUT_PIN, OUTPUT);
 
     moveBrake(BrakePosition);   // release brake
     moveSteer(SteerPosition);
@@ -284,15 +281,15 @@ void loop()
 void moveBrake(int i)
 {
      Serial.print ("Brake "); Serial.print (i);
-     Serial.print (" on ");   Serial.print (DiskBrake); Serial.print("\t"); 
-     analogWrite(DiskBrake, i);
+     Serial.print (" on ");   Serial.print (BRAKE_OUT_PIN); Serial.print("\t"); 
+     analogWrite(BRAKE_OUT_PIN, i);
 }
 /*---------------------------------------------------------------------------------------*/
 void moveSteer(int i)
 {
      Serial.print ("Steer "); Serial.print(i);
-     Serial.print (" on ");   Serial.println (Steer);
-     analogWrite(Steer, i);
+     Serial.print (" on ");   Serial.println (STEER_OUT_PIN);
+     analogWrite(STEER_OUT_PIN, i);
 }
 /*---------------------------------------------------------------------------------------*/
 void outputToSerial()
@@ -326,9 +323,9 @@ void moveVehicle(int counts)
       255 counts = 4.08 V      
       */
      Serial.print ("Motor "); Serial.print(counts);
-     Serial.print (" on ");   Serial.println (ThrottleChannel);
+     Serial.print (" on ");   Serial.println (THROTTLE_CHANNEL);
 #ifdef DAC      
-   DAC_Write(ThrottleChannel, counts);
+   DAC_Write(THROTTLE_CHANNEL, counts);
 #endif
 }
 /*---------------------------------------------------------------------------------------*/
