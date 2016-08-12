@@ -1,20 +1,20 @@
 #include <Settings.h>
 #include <Servo.h>
 Servo steer;
-//Servo brake;
 void setup() {
   // put your setup code here, to run once:
-  steer.attach(7);
-  //brake.attach(6);
+  pinMode(BRAKE_OUT_PIN, OUTPUT);
+  steer.attach(STEER_OUT_PIN);
   Serial.begin(9600);
 }
-int sig = 1500;
-void loop(){
+int sig = 1500; //195
+void loop() {
   // put your main code here, to run repeatedly:
-  if(Serial.available()){
+  if(Serial.available())
+  {
     sig = Serial.parseInt();
     Serial.println(sig);
     steer.writeMicroseconds(sig);
-    //brake.writeMicroseconds(1500);
+    //analogWrite(BRAKE_OUT_PIN, sig);
   }
 }
