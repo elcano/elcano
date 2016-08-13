@@ -77,7 +77,7 @@ const unsigned long HubAtZero = 1159448;
 int max_rc = MAX_RC;
 int mid = MIDDLE;
 int min_rc = MIN_RC;
-#define LED_PIN_OUT
+#define LED_PIN_OUT 16
 //==========================================================================================
 void ISR_TURN_rise() {
   noInterrupts();
@@ -99,7 +99,7 @@ void ISR_RDR_rise() {
   // The hub supplies 3 Hall Phase sensors; each is a 5V square wave and tells how fast the wheel rotates.
   // The square wave feedback has sone noise, which is cleaned up by an RC low pass filter
   //  with R = 1K, C = 100 nF
-  Serial.println("RDR");
+  //Serial.println("RDR");
   interrupts();
 }
 /*---------------------------------------------------------------------------------------*/
@@ -128,7 +128,7 @@ void ISR_TURN_fall() {
   noInterrupts();
   ProcessFallOfINT(RC_TURN);
   RC_Done[RC_TURN] = 1;
-  Serial.println("TURN");
+  //Serial.println("TURN");
   attachInterrupt(digitalPinToInterrupt(IRPT_TURN), ISR_TURN_rise, RISING);
   interrupts();
 }
@@ -137,7 +137,7 @@ void ISR_GO_fall() {
   noInterrupts();
   ProcessFallOfINT(RC_GO);
   RC_Done[RC_GO] = 1;
-  Serial.println("GO");
+  //Serial.println("GO");
   attachInterrupt(digitalPinToInterrupt(IRPT_GO), ISR_GO_rise, RISING);
   interrupts();
 }
@@ -148,7 +148,7 @@ void ISR_ESTOP_fall() {
   RC_Done[RC_ESTP] = 1;
   //  if (RC_elapsed[RC_ESTP] > MIDDLE)
   //     E_Stop();
-  Serial.println("ESTOP");
+  //Serial.println("ESTOP");
   attachInterrupt(digitalPinToInterrupt(IRPT_ESTOP), ISR_ESTOP_rise, RISING);
   interrupts();
 }
@@ -201,7 +201,7 @@ void ISR_MOTOR_FEEDBACK_rise() {
   unsigned long old_phase_rise = RC_rise[RC_MOTOR_FEEDBACK];
   ProcessRiseOfINT(RC_MOTOR_FEEDBACK);
   RC_elapsed[RC_MOTOR_FEEDBACK] = RC_rise[RC_MOTOR_FEEDBACK] - old_phase_rise;
-  Serial.println("MOTOR");
+  //Serial.println("MOTOR");
   interrupts();
 }
 /*---------------------------------------------------------------------------------------*/
@@ -270,13 +270,14 @@ void loop() {
   //  PrintDone();
 
   while (micros() < nextTime &&
-         ~((RC_Done[RC_ESTP] == 1) && (RC_Done[RC_GO] == 1) && (RC_Done[RC_TURN] == 1) ))
+         ~((RC_Done[RC_ESTP] == 1) && (RC_Done[RC_GO] == 1) && (RC_Done[RC_TURN] == 1) && (RC_Done[RC_RDR])))
     ;  //wait
 
   // got data;
   for (int i = 0; i < 8; i++)
     local_results[i] = RC_elapsed[i];
   //Print7(false, local_results);
+  
   byte automate = processRC(local_results);
   if (automate == 0x01) //remember to tell Pat to fix this, was = instead of ==
     processHighLevel();
@@ -285,13 +286,13 @@ void loop() {
   Results.Clear();
   Results.kind = MSG_SENSOR;
   Results.angle_deg = TurnAngle_degx10() / 10;
-  show_speed (&Results);
+  //show_speed (&Results);
 
   // Report how long the loop took.
   unsigned long endTime = micros();
   unsigned long elapsedTime = endTime - startTime;
-  Serial.print("loop elapsed time = ");
-  Serial.println(elapsedTime);
+//  Serial.print("loop elapsed time = ");
+//  Serial.println(elapsedTime);
 
   //LogData(local_results, &Results);  // data for spreadsheet
 
@@ -487,7 +488,6 @@ byte processRC (unsigned long *results){
 
   if (results[RC_ESTP] == HIGH)
   {
-    Serial.println("XXX");
     E_Stop();  // already done at interrupt level
     if ((results[RC_AUTO] == LOW)  && (NUMBER_CHANNELS > 5)) // under RC control
       ;//steer(results[RC_TURN]);
@@ -652,7 +652,6 @@ boolean liveThrottle(int acc)
 // Input is not in brake dead zone
 boolean liveBrake(int b)
 {
-  Serial.println("Checking Brake RC");
   if (b < 500) return false;
   return (b < (MIDDLE - DEAD_ZONE));
 }
