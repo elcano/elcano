@@ -16,8 +16,11 @@ Dependencies
 - [taywee/args](https://github.com/taywee/args) (argument parser)
 	- This is included in-tree in `args.hh`
 
-Note that raspicam lacks a pkgconf file, so we manually link inside
-meson.build. If this changes in the future, change it here.
+Note that raspicam lacks a pkgconf file, so we manually create the
+dependency in `meson.build`. Also, the serial dependency has a custom
+`meson.build` file because the original project uses a bizare system
+that I was having problems with. It may be a good idea to try and
+upstream the build file.
 
 Build Instructions
 ------------------
@@ -50,7 +53,7 @@ Developer Overview
 Todo
 ----
 
-- Generate a classifier file for a cone
+- Generate a classifier file for a cone (`detect.cc`)
 - The exact transformation between the input from localization and the output to the driver (`transform.cc`)
 - Parse input/write output in the correct format for `[project root]/libraries/Elcano_Serial`
-- Write test suite for `arduino.cc`
+- Write test suites for `arduino.cc` and `detect.cc`
