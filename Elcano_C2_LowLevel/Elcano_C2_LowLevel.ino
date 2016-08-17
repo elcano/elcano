@@ -60,6 +60,7 @@ volatile unsigned long RC_elapsed[7];
 volatile boolean synced = false;
 volatile unsigned long last_fallingedge_time = 4294967295; // max long
 volatile bool RC_Done[7] = {0, 0, 0, 0, 0, 0, 0};
+volatile bool flipping;
 
 long speed_errors[ERROR_HISTORY];
 long old_turn_degx1000;
@@ -204,6 +205,7 @@ void ISR_MOTOR_FEEDBACK_rise() {
   //Serial.println("MOTOR");
   interrupts();
 }
+
 /*---------------------------------------------------------------------------------------*/
 //----------------------------------------------------------------------------
 void setup()
@@ -242,7 +244,7 @@ void setup()
   {
     speed_errors[i] = 0;
   }
-  setupWheelRev(); // WheelRev4 addition
+  //setupWheelRev(); // WheelRev4 addition
   CalibrateTurnAngle(32, 20);
   calibrationTime_ms = millis();
         attachInterrupt(digitalPinToInterrupt(IRPT_TURN),  ISR_TURN_rise,  RISING);
@@ -413,7 +415,9 @@ void PrintHeaders (void)
 
 /*---------------------------------------------------------------------------------------*/
 //circleRoutine
-void circleRoutine(unsigned long seconds) {
+void circleRoutine(unsigned long seconds, unsigned long &results) {
+  results = HIGH;
+  
   steer(LEFT_TURN_OUT);
   delay(1000);
   seconds = seconds * 1000;
@@ -421,6 +425,7 @@ void circleRoutine(unsigned long seconds) {
   while (millis() < (loopTime + seconds)) {
     moveVehicle(128);
   }
+  results = LOW;
 }
 /*---------------------------------------------------------------------------------------*/
 void startCapturingRCState(){
@@ -520,6 +525,7 @@ byte processRC (unsigned long *results){
 
   
   // Braking or Throttle
+  Serial.println(results[RC_GO]);
   if (liveBrake(results[RC_GO])){
     Serial.print("Braking: "); Serial.println(results[RC_GO]);
     convertBrake ((results[RC_GO]));
@@ -529,6 +535,10 @@ byte processRC (unsigned long *results){
   if (liveThrottle(results[RC_RDR])){
     int going = convertThrottle(results[RC_RDR]);
     moveVehicle(going);
+  }
+  else if(doCircleRoutine(results[RC_RDR])){
+    moveVehicle(MIN_ACC_OUT);
+    circleRoutine(5, results[RC_AUTO]);
   }
   else {
     moveVehicle(MIN_ACC_OUT);
@@ -648,6 +658,11 @@ boolean liveThrottle(int acc)
 {
   return (acc > MIDDLE + DEAD_ZONE);
 }
+boolean doCircleRoutine(int acc){
+  if(acc < 800) return false;
+  return (acc < MIN_RC + DEAD_ZONE);
+}
+
 /*---------------------------------------------------------------------------------------*/
 // Input is not in brake dead zone
 boolean liveBrake(int b)
@@ -823,6 +838,7 @@ static struct hist {
 
 /*---------------------------------------------------------------------------------------*/
 // WheelRev is called by an interrupt.
+// This is all WAY TOO LONG for an interrupt
 void WheelRev()
 {
   static int flip = 0;
@@ -856,7 +872,7 @@ void setupWheelRev()
   //    pinMode(13, OUTPUT); //led
   //    digitalWrite(13, LOW);//turn LED off
   //
-  pinMode(3, INPUT);//pulls input HIGH
+  pinMode(IRPT_WHEEL, INPUT);//pulls input HIGH
   float MinTick = WHEEL_DIAMETER_MM * PI;
   //    SerialMonitor.print (" MinTick = ");
   //    SerialMonitor.println (MinTick);
@@ -890,7 +906,7 @@ void setupWheelRev()
   ClickNumber = 0;
   history.oldSpeed_mmPs = history.olderSpeed_mmPs = NO_DATA;
 
-  attachInterrupt (1, WheelRev, RISING);//pin 3 on Mega
+  attachInterrupt (digitalPinToInterrupt(IRPT_WHEEL), WheelRev, RISING);//pin 3 on Mega
   //    SerialMonitor.print("TickTime: ");
   //    SerialMonitor.print(TickTime);
   //    SerialMonitor.print(" OldTick: ");

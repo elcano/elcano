@@ -34,7 +34,7 @@ VEHICLE_NUMBER to your own new number.
 #define MAX_ACC_OUT 235
 
 // MIN and MAX BRAKE_OUT set values to be sent to the brake actuator that controls the brakes on the front wheels
-#define MIN_BRAKE_OUT 167
+#define MIN_BRAKE_OUT 160
 #define MAX_BRAKE_OUT 207
 
 // RIGHT, STRAIGHT, and LEFT TURN_OUT set values to be sent to the steer actuator that changes the direction of the front wheels
@@ -99,6 +99,8 @@ VEHICLE_NUMBER to your own new number.
 #define IRPT_RDR 3
 //
 #define IRPT_SWITCH 19
+
+#define IRPT_WHEEL 3
 
 // Currently different interrupts are used for the motor phase feedback.
 // These are *temporary*.
@@ -180,6 +182,10 @@ VEHICLE_NUMBER to your own new number.
 #define IRPT_RDR 5
 // D19 = Int 4
 #define IRPT_ESTOP 4
+
+#define IRPT_SWITCH 19
+
+#define IRPT_WHEEL 3
 
 // Currently different interrupts are used for the motor phase feedback.
 // These are *temporary*.
