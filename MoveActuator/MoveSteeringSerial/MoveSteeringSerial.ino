@@ -1,10 +1,10 @@
-#include <Settings.h>
+//#include <Settings.h>
 #include <Servo.h>
 Servo steer;
 void setup() {
   // put your setup code here, to run once:
-  pinMode(BRAKE_OUT_PIN, OUTPUT);
-  steer.attach(STEER_OUT_PIN);
+  //pinMode(BRAKE_OUT_PIN, OUTPUT);
+  steer.attach(7);
   Serial.begin(9600);
 }
 int sig = 1500; //195
