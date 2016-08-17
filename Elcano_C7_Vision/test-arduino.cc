@@ -1,5 +1,3 @@
-#include "arduino.hh"
-
 /* Test suite for arduino.cc */
 
 int
