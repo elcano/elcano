@@ -1,10 +1,9 @@
 #include "transform.hh"
-#include <iostream>
 
 /* Test suite for transform.cc
    Compare with [project path]/Vision/spacial_prototype.py */
 
-const double M_PI = 3.141592654;
+const double pi = 3.141592654;
 
 std::ostream&
 operator<<(
@@ -24,8 +23,8 @@ main(
 
 	std::cout << std::endl << "Testing 2D->3D Z-dist Generation:" << std::endl;
 	std::cout << "(h=height,f=field of view (y-axis))" << std::endl;
-	std::cout << "h=480,f=pi/2: " << elcano::get_z(480, M_PI / 2.0) << std::endl;
-	std::cout << "h=480,f=8pi/9: " << elcano::get_z(480, 8.0 * M_PI / 9.0) << std::endl;
+	std::cout << "h=480,f=pi/2: " << elcano::get_z(480, pi / 2.0) << std::endl;
+	std::cout << "h=480,f=8pi/9: " << elcano::get_z(480, 8.0 * pi / 9.0) << std::endl;
 	
 	std::cout << std::endl << "Testing Global->Relative Transformation" << std::endl;
 	std::cout << "(a=camera angle, c=camera position, p=cone position, i=image size," << std::endl;
