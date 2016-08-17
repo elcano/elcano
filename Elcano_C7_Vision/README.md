@@ -50,7 +50,7 @@ Developer Overview
 Todo
 ----
 
-- Generate a classifier file for a cone
+- Generate a classifier file for a cone (`arduino.cc`)
 - The exact transformation between the input from localization and the output to the driver (`transform.cc`)
 - Parse input/write output in the correct format for `[project root]/libraries/Elcano_Serial`
 - Write test suite for `arduino.cc`
