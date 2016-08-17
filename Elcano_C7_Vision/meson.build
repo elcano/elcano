@@ -3,10 +3,12 @@ project('elcano-vision', 'cpp',
 	default_options: ['cpp_std=c++14']
 )
 
-add_global_link_arguments('-lraspicam', '-lraspicam_cv', language: 'cpp')
-
 subdir('serial-1.2.1')
 cv = dependency('opencv')
+rcam = declare_dependency(
+	link_args: ['-lraspicam', '-lraspicam_cv'],
+	dependencies: cv
+)
 
 executable('elcano-pi',
 	sources: [
@@ -15,7 +17,7 @@ executable('elcano-pi',
 		'arduino.cc',
 		'transform.cc'
 	],
-	dependencies: [cv, serial]
+	dependencies: [cv, serial, rcam]
 )
 
 transform_test = executable('transform-test',
@@ -39,7 +41,7 @@ detect_test = executable('detect-test',
 		'test-detect.cc',
 		'detect.cc'
 	],
-	dependencies: cv
+	dependencies: [cv, rcam]
 )
 
 test('transform test', transform_test)
