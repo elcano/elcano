@@ -50,9 +50,12 @@ VEHICLE_NUMBER to your own new number.
 #define LEFT_MAX_COUNT  284
 
 // Trike specific pins/channels
-#define DAC_CHANNEL 0    // output to motor actuator
-#define STEER_OUT_PIN 7 // Output to steer actuator
-#define BRAKE_OUT_PIN 6  // output to brake actuator
+// Output to motor actuator
+#define DAC_CHANNEL 0
+// Output to steer actuator
+#define STEER_OUT_PIN 7
+// Output to brake actuator
+#define BRAKE_OUT_PIN 6
 
 // Trike-specific physical parameters
 //	Turning
@@ -134,28 +137,33 @@ VEHICLE_NUMBER to your own new number.
 
 // Trike specific pins/channels
 #define DAC_CHANNEL 0
-#define STEER_OUT_PIN 7 // Output to steer actuator
-#define BRAKE_OUT_PIN 8  // output to brake actuator
+// Output to steer actuator
+#define STEER_OUT_PIN 7
+// Output to brake actuator
+#define BRAKE_OUT_PIN 8
 
 // Trike specific physical parameters
 #define WHEEL_DIAMETER_MM 500
-#define TURN_RADIUS 214 //Turning radius in cm.
+//Turning radius in cm.
+#define TURN_RADIUS 214
 #define MOTOR_POLE_PAIRS 23
 
 // Parameters used by MoveActuator
 // external PWM output
-// DISK_BRAKE is depricated, use BRAKE_OUT_PIN
+// DISK_BRAKE is deprecated, use BRAKE_OUT_PIN
 // Use DAC D
 #define THROTTLE_CHANNEL 0
 
 // Parameters used by RC_Control_interrupts
 #define RC_AUTO 1
 #define RC_ESTP 2
-#define RC_RDR  3 //rudder, side to side on left stick (not used)
+//rudder, side to side on left stick (not used as rudder, repurposed for Hall feedback)
+#define RC_RDR  3
 #define RC_GO   4
 #define RC_TURN 5
 // Controller has no channel for RC_AUTO
-#define RC_RVS  6 //reverse, not used on vehicle 2
+// Reverse, not used on vehicle 2
+#define RC_RVS  6
 #define NUMBER_CHANNELS 5
 
 // The assignment of interrupts / pins used for inputs from the RC controller
