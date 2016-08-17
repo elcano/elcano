@@ -55,8 +55,12 @@ VEHICLE_NUMBER to your own new number.
 #define BRAKE_OUT_PIN 6  // output to brake actuator
 
 // Trike-specific physical parameters
+//	Turning
 #define WHEEL_DIAMETER_MM 482
 #define TURN_RADIUS 209 //Turning radius in cm.
+#define TURN_SPEED 29700 //Turning speed in degrees per ms.
+#define TURN_RESOLUTION 60 //Smallest change in turning angle, in millidegrees
+//	Motor
 #define MOTOR_POLE_PAIRS 23
 
 // Parameters used by MoveActuator
