@@ -1,8 +1,5 @@
 #pragma once
 
-#include "types.hh"
-#include <tuple>
-
 /* Transform on-camera rectangles into vectors in 3D space */
 
 namespace elcano

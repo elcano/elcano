@@ -17,7 +17,8 @@ executable('elcano-pi',
 		'arduino.cc',
 		'transform.cc'
 	],
-	dependencies: [cv, serial, rcam]
+	dependencies: [cv, serial, rcam],
+	cpp_pch: 'pch/elcano-pi-pch.hh'
 )
 
 transform_test = executable('transform-test',
@@ -25,7 +26,8 @@ transform_test = executable('transform-test',
 		'test-transform.cc',
 		'transform.cc'
 	],
-	dependencies: cv
+	dependencies: cv,
+	cpp_pch: 'pch/transform-test-pch.hh'
 )
 
 arduino_test = executable('arduino-test',
@@ -33,7 +35,8 @@ arduino_test = executable('arduino-test',
 		'test-arduino.cc',
 		'arduino.cc'
 	],
-	dependencies: serial
+	dependencies: serial,
+	cpp_pch: 'pch/arduino-test-pch.hh'
 )
 
 detect_test = executable('detect-test',
@@ -41,7 +44,8 @@ detect_test = executable('detect-test',
 		'test-detect.cc',
 		'detect.cc'
 	],
-	dependencies: [cv, rcam]
+	dependencies: [cv, rcam],
+	cpp_pch: 'pch/detect-test-pch.hh'
 )
 
 test('transform test', transform_test)

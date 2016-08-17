@@ -1,5 +1,3 @@
-#include "detect.hh"
-
 /* Test suite for detect.cc */
 
 int
