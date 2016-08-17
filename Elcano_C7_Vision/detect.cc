@@ -1,8 +1,3 @@
-#include <vector>
-#include <opencv2/highgui/highgui.hpp>
-#include <opencv2/imgproc/imgproc.hpp>
-#include "detect.hh"
-
 /* Helper function for processing camera input */
 
 using namespace cv;

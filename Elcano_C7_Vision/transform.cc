@@ -1,7 +1,3 @@
-#include "transform.hh"
-#include <tgmath.h>
-#include <opencv2/core/core.hpp>
-
 /* Transform on-camera rectangles into vectors in 3D space */
 
 namespace elcano

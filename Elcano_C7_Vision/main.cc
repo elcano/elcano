@@ -1,11 +1,6 @@
-#include <opencv2/opencv.hpp>
-#include <raspicam/raspicam_cv.h>
-#include "args.hh"
-#include "detect.hh"
-#include <iostream>
-#include <vector>
-#include <signal.h>
 #include <serial/serial.h>
+#include "detect.hh"
+#include "args.hh"
 
 using namespace cv;
 
