@@ -7,8 +7,8 @@ to scan the area for obstacles with OpenCV.
 Dependencies
 ------------
 
-- [meson](http://mesonbuild.com) (building)
-- [ninja](https://ninja-build.org) (building)
+- [meson](http://mesonbuild.com) and [ninja](https://ninja-build.org) (building)
+- [bison](https://gnu.org/software/bison) and [flex](http://flex.sf.net) (generating the serial parser)
 - [opencv](http://opencv.org) (object detection)
 - [raspicam](https://github.com/cedricve/raspicam) (raspberry pi camera interface)
 - [wjwwood/serial](https://github.com/wjwwood/serial) (serialization over usb)
@@ -47,7 +47,11 @@ Developer Overview
 - `main.cc`: The driver function
 - `detect.cc`: Uses OpenCV to detect objects with the camera
 - `transform.cc`: Computes transformations between the world and a photo
-- `arduino.cc`: Oversees the communication between the Pi and the arduino(s)
+- `arduino.*`: Oversees the communication between the Pi and the arduino(s)
+	- `arduino.cc`: Code for writing data
+	- `arduino.l`: Lexical scanner for the Elcano_Serial format
+	- `arduino.y`: Semantic parser for the Elcano_Serial format
+	- `arduino.yy.hh`: Internal header for parsing variables and functions
 - `test-*.cc`: Test code for the specified file
 
 Todo
@@ -55,5 +59,4 @@ Todo
 
 - Generate a classifier file for a cone (`detect.cc`)
 - The exact transformation between the input from localization and the output to the driver (`transform.cc`)
-- Parse input/write output in the correct format for `[project root]/libraries/Elcano_Serial`
 - Write test suites for `arduino.cc` and `detect.cc`
