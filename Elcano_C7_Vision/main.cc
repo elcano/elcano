@@ -33,17 +33,21 @@ int main(int argc, char **argv)
 	CascadeClassifier cascade;
 	if (!cascade.load(args::get(cascade_name))) { std::cerr << "Unable to load cascade classifier file!" << std::endl << parser; return -1; }
 	
+	/* Connect to Output */
+	//serial::Serial output(args::get(output_name), args::get(baudrate), serial::Timeout::simpleTimeout(100));
+	//if (!output.isOpen()) { std::cerr << "Unable to open the output device!" << std::endl << parser; return -1; }
+	
 	/* Connect to Camera */
 	raspicam::RaspiCam_Cv camera;
-	camera.set(CV_CAP_PROP_FORMAT, CV_8UC1);
-	if (!camera.open()) { std::cerr << "Unable to open the camera!" << std::endl; return -1; }
+	camera.set(CV_CAP_PROP_FORMAT, CV_8UC3);
+	if (!camera.open()) { std::cerr << "Unable to open the camera!" << std::endl; return -1; }	
 	
-	/* Connect to Output */
-	serial::Serial output(args::get(output_name), args::get(baudrate), serial::Timeout::simpleTimeout(100));
-	if (!output.isOpen()) { std::cerr << "Unable to open the output device!" << std::endl << parser; return -1; }
+	
+	
+	
 	
 	/* Program Mainloop */
-	Mat img;
+	/*Mat img;
 	int c;
 	for(;;)
 	{
@@ -52,5 +56,29 @@ int main(int argc, char **argv)
 		elcano::detect_and_draw(img, cascade, args::get(scale));
 		c = waitKey(10);
 		if (c == 'q' || c == 'Q' || c == 27 || ctrl_c_pressed) break;
+	}*/
+	
+	Mat original; 
+	while (true) {	
+		camera.grab();
+		camera.retrieve(original); // read a new frame from video
+
+		Mat templ = imread("/home/pi/Desktop/aaron-elcano/Elcano_C7_Vision/Cone.jpg");
+		int thresholds[] = { 0, 20, 90, 255, 60, 255 };
+		//imshow("TemplateFilter", elcano::filterByColor(templ, thresholds, 1));
+		//resize(templ, templ, Size(), 0.5, 0.5, INTER_LINEAR);
+
+		Point matchingLoc = elcano::templateMatchBlobs(original, templ, thresholds, TM_CCORR);
+		//cout << matchingLoc << endl;
+
+		rectangle(original, matchingLoc, Point(matchingLoc.x + templ.cols, matchingLoc.y + templ.rows), Scalar::all(0), 2, 8, 0);
+		//resize(original, original, Size(), 0.5, 0.5, INTER_LINEAR);
+		imshow("Original", original);
+		imshow("Template", templ);
+
+		if (waitKey(30) == 27) {
+			std::cout << "esc key is pressed by user" << std::endl;
+			break;
+		}
 	}
 }
