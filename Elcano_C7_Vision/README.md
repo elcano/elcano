@@ -7,8 +7,8 @@ to scan the area for obstacles with OpenCV.
 Dependencies
 ------------
 
-- [meson](http://mesonbuild.com) (building)
-- [ninja](https://ninja-build.org) (building)
+- [meson](http://mesonbuild.com) and [ninja](https://ninja-build.org) (building)
+- [bison](https://gnu.org/software/bison) and [flex](http://flex.sf.net) (generating the serial parser)
 - [opencv](http://opencv.org) (object detection)
 - [raspicam](https://github.com/cedricve/raspicam) (raspberry pi camera interface)
 - [wjwwood/serial](https://github.com/wjwwood/serial) (serialization over usb)
