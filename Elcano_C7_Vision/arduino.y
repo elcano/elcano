@@ -38,7 +38,7 @@ value:
 	| LBRACKET ANG INT RBRACKET           { elcano::data->angle = $3;       }
 	| LBRACKET BR INT RBRACKET            { elcano::data->bearing = $3;     }
 	| LBRACKET POS INT COMMA INT RBRACKET { elcano::data->posE = $3;
-											elcano::data->posN = $5;        }
+	                                        elcano::data->posN = $5;        }
 	| LBRACKET PROB INT RBRACKET          { elcano::data->probability = $3; } ;
 
 %%
