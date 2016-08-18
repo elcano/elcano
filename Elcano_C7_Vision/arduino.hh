@@ -48,6 +48,12 @@ namespace elcano
 
 	void
 	read(
+		const std::string&, /* Input */
+		SerialData&         /* Info */
+	);
+
+	void
+	read(
 		serial::Serial&,  /* Device */
 		SerialData&       /* Info */
 	);

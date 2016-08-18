@@ -63,11 +63,19 @@ namespace elcano
 	
 	void
 	read(
-		serial::Serial& device,
-		SerialData& info
+		const std::string &in,
+		SerialData &info
 	) {
 		clear(info);
 		/* TODO */
+	}
+	
+	void
+	read(
+		serial::Serial& device,
+		SerialData& info
+	) {
+		read(device.readline(64, "\0"), info);
 	}
 	
 	void
