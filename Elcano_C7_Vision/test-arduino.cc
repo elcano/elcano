@@ -30,6 +30,11 @@ main(
 	std::cout << std::endl << std::endl;
 	
 	std::cout << "Test elcano::read" << std::endl;
+	std::cout << "GOAL {Num 3} {Pos 5,9} {Br 87} {Prob 3468}" << std::endl;
 	elcano::read("GOAL {Num 3} {Pos 5,9} {Br 87} {Prob 3468}", s);
+	std::cout << s << std::endl;
+	
+	std::cout << "SEG {Num 8} {Pos 42,67} {Br 1} {Speed 5}" << std::endl;
+	elcano::read("SEG {Num 8} {Pos 42,67} {Br 1} {Speed 5}", s);
 	std::cout << s << std::endl;
 }

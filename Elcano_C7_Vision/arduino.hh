@@ -69,6 +69,4 @@ namespace elcano
 		serial::Serial&,  /* Device */
 		const SerialData& /* Info */
 	);
-	
-	extern SerialData *data;
 }
