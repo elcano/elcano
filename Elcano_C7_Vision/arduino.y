@@ -8,6 +8,7 @@ extern "C" int yyparse();
 extern "C" FILE *yyin;
 
 void yyerror(const char*);
+namespace elcano { SerialData *data; }
 %}
 
 %union {
@@ -23,21 +24,22 @@ void yyerror(const char*);
 %%
 
 message:
-	type body { printf("Done reading a message\n"); } ;
+	type body ;
 type:
-	DRIVE    { printf("Message->type = drive\n");  }
-	| SENSOR { printf("Message->type = sensor\n"); }
-	| GOAL   { printf("Message->type = goal\n");   }
-	| SEG    { printf("Message->type = seg\n");    } ;
+	DRIVE    { elcano::data->kind = elcano::MsgType::drive;  }
+	| SENSOR { elcano::data->kind = elcano::MsgType::sensor; }
+	| GOAL   { elcano::data->kind = elcano::MsgType::goal;   }
+	| SEG    { elcano::data->kind = elcano::MsgType::seg;    } ;
 body:
 	value body | value ;
 value:
-	LBRACKET NUM INT RBRACKET             { printf("Message->number = %d\n", $3);            }
-	| LBRACKET SPEED INT RBRACKET         { printf("Message->speed = %d\n", $3);             }
-	| LBRACKET ANG INT RBRACKET           { printf("Message->angle = %d\n", $3);             }
-	| LBRACKET BR INT RBRACKET            { printf("Message->bearing = %d\n", $3);           }
-	| LBRACKET POS INT COMMA INT RBRACKET { printf("Message->position = (%d,%d)\n", $3, $5); }
-	| LBRACKET PROB INT RBRACKET          { printf("Message->probability = %d\n", $3);       } ;
+	LBRACKET NUM INT RBRACKET             { elcano::data->number = $3;      }
+	| LBRACKET SPEED INT RBRACKET         { elcano::data->speed = $3;       }
+	| LBRACKET ANG INT RBRACKET           { elcano::data->angle = $3;       }
+	| LBRACKET BR INT RBRACKET            { elcano::data->bearing = $3;     }
+	| LBRACKET POS INT COMMA INT RBRACKET { elcano::data->posE = $3;
+											elcano::data->posN = $5;        }
+	| LBRACKET PROB INT RBRACKET          { elcano::data->probability = $3; } ;
 
 %%
 

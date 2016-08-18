@@ -31,4 +31,5 @@ main(
 	
 	std::cout << "Test elcano::read" << std::endl;
 	elcano::read("GOAL {Num 3} {Pos 5,9} {Br 87} {Prob 3468}", s);
+	std::cout << s << std::endl;
 }
