@@ -1,4 +1,5 @@
 #include "arduino.hh"
+#include "arduino.yy.hh"
 
 /* Send/receive information to an external device */
 
@@ -67,7 +68,9 @@ namespace elcano
 		SerialData &info
 	) {
 		clear(info);
-		/* TODO */
+		YY_BUFFER_STATE buffer = yy_scan_string(in.c_str());
+		yyparse();
+		yy_delete_buffer(buffer);
 	}
 	
 	void

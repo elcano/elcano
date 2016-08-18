@@ -1,0 +1,6 @@
+[Bb]uild/
+*.o
+*.ninja
+*.tab.hh
+*.tab.cc
+*.yy.cc

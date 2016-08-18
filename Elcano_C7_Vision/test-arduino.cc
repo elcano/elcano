@@ -28,4 +28,7 @@ main(
 	std::cout << s << std::endl;
 	elcano::write(std::cout, s);
 	std::cout << std::endl << std::endl;
+	
+	std::cout << "Test elcano::read" << std::endl;
+	elcano::read("GOAL {Num 3} {Pos 5,9} {Br 87} {Prob 3468}", s);
 }
