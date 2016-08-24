@@ -33,6 +33,7 @@ int main(int argc, char **argv)
 	CascadeClassifier cascade;
 	if (!cascade.load(args::get(cascade_name))) { std::cerr << "Unable to load cascade classifier file!" << std::endl << parser; return -1; }
 	
+	/* Connect to Camera */
 	raspicam::RaspiCam_Cv camera;
 	camera.set(CV_CAP_PROP_FORMAT, CV_8UC1);
 	if (!camera.open()) { std::cerr << "Unable to open the camera!" << std::endl; return -1; }
