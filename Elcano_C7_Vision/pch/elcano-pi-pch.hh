@@ -5,3 +5,5 @@
 #include <tuple>
 #include <signal.h>
 #include <tgmath.h>
+#include <stdint.h>
+#include <sstream>
