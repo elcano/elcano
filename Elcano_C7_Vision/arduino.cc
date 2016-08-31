@@ -68,9 +68,8 @@ namespace elcano
 		SerialData &info
 	) {
 		clear(info);
-		data = &info;
 		YY_BUFFER_STATE buffer = yy_scan_string(in.c_str());
-		yyparse();
+		yyparse(&info);
 		yy_delete_buffer(buffer);
 	}
 	

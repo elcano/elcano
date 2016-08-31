@@ -1,18 +1,20 @@
 %{
-#include <stdio.h>
+#include <iostream>
 #include <stdint.h>
 #include "arduino.hh"
 
 extern "C" int yylex();
-extern "C" int yyparse();
+extern int yyparse();
 extern "C" FILE *yyin;
 
-void yyerror(const char*);
-namespace elcano { SerialData *data; }
+void yyerror(elcano::SerialData*, const char*);
 %}
+
+%parse-param { elcano::SerialData *dd }
 
 %union {
 	int32_t ival;
+	elcano::MsgType mval;
 }
 
 %token DRIVE SENSOR GOAL SEG
@@ -20,30 +22,31 @@ namespace elcano { SerialData *data; }
 %token LBRACKET RBRACKET COMMA
 
 %token <ival> INT
+%type <mval> type
 
 %%
 
 message:
-	type body ;
+	type body { dd->kind = $1; } ;
 type:
-	DRIVE    { elcano::data->kind = elcano::MsgType::drive;  }
-	| SENSOR { elcano::data->kind = elcano::MsgType::sensor; }
-	| GOAL   { elcano::data->kind = elcano::MsgType::goal;   }
-	| SEG    { elcano::data->kind = elcano::MsgType::seg;    } ;
+	DRIVE    { $$ = elcano::MsgType::drive;  }
+	| SENSOR { $$ = elcano::MsgType::sensor; }
+	| GOAL   { $$ = elcano::MsgType::goal;   }
+	| SEG    { $$ = elcano::MsgType::seg;    } ;
 body:
 	value body | value ;
 value:
-	LBRACKET NUM INT RBRACKET             { elcano::data->number = $3;      }
-	| LBRACKET SPEED INT RBRACKET         { elcano::data->speed = $3;       }
-	| LBRACKET ANG INT RBRACKET           { elcano::data->angle = $3;       }
-	| LBRACKET BR INT RBRACKET            { elcano::data->bearing = $3;     }
-	| LBRACKET POS INT COMMA INT RBRACKET { elcano::data->posE = $3;
-	                                        elcano::data->posN = $5;        }
-	| LBRACKET PROB INT RBRACKET          { elcano::data->probability = $3; } ;
+	LBRACKET NUM INT RBRACKET             { dd->number = $3;      }
+	| LBRACKET SPEED INT RBRACKET         { dd->speed = $3;       }
+	| LBRACKET ANG INT RBRACKET           { dd->angle = $3;       }
+	| LBRACKET BR INT RBRACKET            { dd->bearing = $3;     }
+	| LBRACKET POS INT COMMA INT RBRACKET { dd->posE = $3;
+	                                        dd->posN = $5;        }
+	| LBRACKET PROB INT RBRACKET          { dd->probability = $3; } ;
 
 %%
 
-void yyerror(const char *s)
+void yyerror(elcano::SerialData *, const char *s)
 {
-	fprintf(stderr, "Parsing error: %s\n", s);
+	std::cerr << "Parsing Error: " << s << std::endl;
 }
