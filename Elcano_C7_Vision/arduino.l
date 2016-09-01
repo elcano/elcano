@@ -2,7 +2,6 @@
 #include <stdlib.h>
 #include "arduino.hh"
 #include "arduino.tab.hh"
-#define YY_DECL extern "C" int yylex()
 %}
 
 %option noyywrap noinput nounput

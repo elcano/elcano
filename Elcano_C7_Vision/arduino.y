@@ -1,7 +1,7 @@
 %{
 #include "arduino.hh"
 
-extern "C" int yylex();
+extern int yylex();
 extern int yyparse();
 extern "C" FILE *yyin;
 

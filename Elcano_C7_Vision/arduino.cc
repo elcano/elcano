@@ -1,7 +1,11 @@
 #include "arduino.hh"
-#include "arduino.yy.hh"
+#include "arduino.tab.hh"
 
 /* Send/receive information to an external device */
+
+typedef struct yy_buffer_state * YY_BUFFER_STATE;
+extern YY_BUFFER_STATE yy_scan_string(const char *);
+extern void yy_delete_buffer(YY_BUFFER_STATE);
 
 namespace elcano
 {
