@@ -1,6 +1,4 @@
 %{
-#include <iostream>
-#include <stdint.h>
 #include "arduino.hh"
 
 extern "C" int yylex();
