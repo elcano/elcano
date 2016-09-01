@@ -841,7 +841,7 @@ static struct hist {
 // This is all WAY TOO LONG for an interrupt
 void WheelRev()
 {
-  static int flip = 0;
+  //static int flip = 0;
   unsigned long tick;
   noInterrupts();
   tick = millis();
@@ -855,12 +855,11 @@ void WheelRev()
     TickTime = tick;
     ++ClickNumber;
   }
-  if (flip)
-    digitalWrite(13, LOW);
-  else
-    digitalWrite(13, HIGH);
-  flip = !flip;
-
+//  if (flip)
+//    digitalWrite(13, LOW);
+//  else
+//    digitalWrite(13, HIGH);
+//  flip = !flip;
   interrupts();
 }
 /*---------------------------------------------------------------------------------------*/
