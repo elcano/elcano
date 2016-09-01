@@ -135,7 +135,7 @@ void ProcessMessage (char *IncomingMessage, SerialData *SerialD)
         data = GetNumber("Speed", Args);
 	  if (data != NaN) 
         {
-            SerialD->speed_cmPs = (long)(data);
+            SerialD->c = (long)(data);
             SerialD->kind = MSG_DRIVE;
         }
         data = GetNumber("Ang", Args);
