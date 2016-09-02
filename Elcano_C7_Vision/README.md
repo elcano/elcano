@@ -51,7 +51,6 @@ Developer Overview
 	- `arduino.cc`: Code for writing data
 	- `arduino.l`: Lexical scanner for the Elcano_Serial format
 	- `arduino.y`: Semantic parser for the Elcano_Serial format
-	- `arduino.yy.hh`: Internal header for parsing variables and functions
 - `test-*.cc`: Test code for the specified file
 
 Todo
@@ -59,4 +58,4 @@ Todo
 
 - Generate a classifier file for a cone (`detect.cc`)
 - The exact transformation between the input from localization and the output to the driver (`transform.cc`)
-- Write test suites for `arduino.cc` and `detect.cc`
+- Write a test suite for `detect.cc`

@@ -1,7 +1,11 @@
 #include "arduino.hh"
-#include "arduino.yy.hh"
+#include "arduino.tab.hh"
 
 /* Send/receive information to an external device */
+
+typedef struct yy_buffer_state * YY_BUFFER_STATE;
+extern YY_BUFFER_STATE yy_scan_string(const char *);
+extern void yy_delete_buffer(YY_BUFFER_STATE);
 
 namespace elcano
 {
@@ -68,10 +72,10 @@ namespace elcano
 		SerialData &info
 	) {
 		clear(info);
-		data = &info;
 		YY_BUFFER_STATE buffer = yy_scan_string(in.c_str());
-		yyparse();
+		int r = yyparse(&info);
 		yy_delete_buffer(buffer);
+		if (r) std::cerr << in << std::endl;
 	}
 	
 	void
@@ -79,7 +83,7 @@ namespace elcano
 		serial::Serial& device,
 		SerialData& info
 	) {
-		read(device.readline(64, "\0"), info);
+		read(device.readline(), info);
 	}
 	
 	void
@@ -90,42 +94,42 @@ namespace elcano
 		switch (info.kind)
 		{
 		case MsgType::drive:
-			ss << "DRIVE";
+			ss << "D";
 			if (info.speed != NaN)
-				ss << " {Speed " << info.speed << "}";
+				ss << " {s " << info.speed << "}";
 			if (info.angle != NaN)
-				ss << " {Ang " << info.angle << "}";
+				ss << " {a " << info.angle << "}";
 			break;
 		case MsgType::sensor:
-			ss << "SENSOR";
+			ss << "S";
 			if (info.speed != NaN)
-				ss << " {Speed " << info.speed << "}";
+				ss << " {s " << info.speed << "}";
 			if (info.angle != NaN)
-				ss << " {Ang " << info.angle << "}";
+				ss << " {a " << info.angle << "}";
 			if (info.posE != NaN && info.posN != NaN)
-				ss << " {Pos " << info.posE << "," << info.posN << "}";
+				ss << " {p " << info.posE << "," << info.posN << "}";
 			break;
 		case MsgType::goal:
-			ss << "GOAL";
+			ss << "G";
 			if (info.number != NaN)
-				ss << " {Num " << info.number << "}";
+				ss << " {n " << info.number << "}";
 			if (info.posE != NaN && info.posN != NaN)
-				ss << " {Pos " << info.posE << "," << info.posN << "}";
+				ss << " {p " << info.posE << "," << info.posN << "}";
 			if (info.bearing != NaN)
-				ss << " {Br " << info.bearing << " }";
+				ss << " {b " << info.bearing << " }";
 			if (info.probability != NaN)
-				ss << " {Prob " << info.probability << "}";
+				ss << " {r " << info.probability << "}";
 			break;
 		case MsgType::seg:
-			ss << "SEG";
+			ss << "X";
 			if (info.number != NaN)
-				ss << " {Num " << info.number << "}";
+				ss << " {n " << info.number << "}";
 			if (info.posE != NaN && info.posN != NaN)
-				ss << " {Pos " << info.posE << "," << info.posN << "}";
+				ss << " {p " << info.posE << "," << info.posN << "}";
 			if (info.bearing != NaN)
-				ss << " {Br " << info.bearing << "}";
+				ss << " {b " << info.bearing << "}";
 			if (info.speed != NaN)
-				ss << " {Speed " << info.speed << "}";
+				ss << " {s " << info.speed << "}";
 			break;
 		case MsgType::none: [[fallthrough]]
 		default:
@@ -140,7 +144,7 @@ namespace elcano
 	) {
 		std::ostringstream ss;
 		write(ss, info);
-		ss << "\0";
+		ss << "\0\n";
 		device.write(ss.str());
 	}
 }
