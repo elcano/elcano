@@ -16,9 +16,8 @@ libraries/Elcano_Serial, and place both Elcano_Serial.cpp and Elcano_Serial.h th
 
 
 /*------------------------------------------------------------------------------*/ 
-
-char * GetWord(char * major, char * str)
-{
+// What does this do?
+char * GetWord(char * major, char * str){
     char * CSp1;
 
     CSp1 = strstr( str, major);
@@ -135,7 +134,7 @@ void ProcessMessage (char *IncomingMessage, SerialData *SerialD)
         data = GetNumber("Speed", Args);
 	  if (data != NaN) 
         {
-            SerialD->c = (long)(data);
+            SerialD->speed_cmPs = (long)(data);
             SerialD->kind = MSG_DRIVE;
         }
         data = GetNumber("Ang", Args);
@@ -198,11 +197,11 @@ void ProcessMessage (char *IncomingMessage, SerialData *SerialD)
 
 void readSerial(HardwareSerial *SerialN, SerialData *SerialD)
 {
-     SerialD->Clear();
-    char IncomingMessage[BUFFER_SIZE];
-    int InIndex=0;  // Input side, current character of SerialDrive message
+    SerialD->Clear();
+    static char IncomingMessage[BUFFER_SIZE];
+    static int InIndex=0;  // Input side, current character of SerialDrive message
     int incomingByte = 0;   // for incoming serial data
-    while (SerialN->available() > 0) 
+    while (SerialN->available())
     {
         // read the incoming byte from C4:
         incomingByte = SerialN->read();
