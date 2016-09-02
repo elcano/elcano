@@ -73,8 +73,9 @@ namespace elcano
 	) {
 		clear(info);
 		YY_BUFFER_STATE buffer = yy_scan_string(in.c_str());
-		yyparse(&info);
+		int r = yyparse(&info);
 		yy_delete_buffer(buffer);
+		if (r) std::cerr << in << std::endl;
 	}
 	
 	void
@@ -82,7 +83,7 @@ namespace elcano
 		serial::Serial& device,
 		SerialData& info
 	) {
-		read(device.readline(64, "\0"), info);
+		read(device.readline(), info);
 	}
 	
 	void
@@ -143,7 +144,7 @@ namespace elcano
 	) {
 		std::ostringstream ss;
 		write(ss, info);
-		ss << "\0";
+		ss << "\0\n";
 		device.write(ss.str());
 	}
 }

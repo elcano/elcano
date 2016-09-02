@@ -12,9 +12,9 @@ main(
 	args::ArgumentParser parser("Test serial connection", "Connect to sockets");
 	args::HelpFlag help(parser, "help", "Display this help menu", {'h', "help"});
 	args::ValueFlag<std::string> in_name(parser, "dev", "The input device", {'i', "input"}, "/dev/ttyACM0");
-	args::ValueFlag<unsigned long> in_rate(parser, "rate", "The input baudrate", {'j', "in-baudrate"}, 122500ul);
+	args::ValueFlag<unsigned long> in_rate(parser, "rate", "The input baudrate", {'j', "in-baudrate"}, 9600ul);
 	args::ValueFlag<std::string> out_name(parser, "dev", "The output device", {'o', "output"}, "/dev/ttyACM0");
-	args::ValueFlag<unsigned long> out_rate(parser, "rate", "The output baudrate", {'p', "out-baudrate"}, 122500ul);
+	args::ValueFlag<unsigned long> out_rate(parser, "rate", "The output baudrate", {'p', "out-baudrate"}, 9600ul);
 	
 	try { parser.ParseCLI(argc, argv); }
 	catch (args::Help) { std::cout << parser; return 0; }
@@ -25,7 +25,7 @@ main(
 		serial::Serial input(args::get(in_name), args::get(in_rate), serial::Timeout::simpleTimeout(100));
 		if (!input.isOpen()) { std::cerr << "Unable to open input!" << std::endl; return 2; }
 		elcano::SerialData data;
-		
+
 		elcano::read(input, data);
 		std::cout << data << std::endl;
 	}
