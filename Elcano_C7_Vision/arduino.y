@@ -15,10 +15,6 @@ void yyerror(elcano::SerialData*, const char*);
 	elcano::MsgType mval;
 }
 
-%token DRIVE SENSOR GOAL SEG
-%token NUM SPEED ANG BR POS PROB
-%token LBRACKET RBRACKET COMMA
-
 %token <ival> INT
 %type <mval> type
 
@@ -27,20 +23,20 @@ void yyerror(elcano::SerialData*, const char*);
 message:
 	type body { dd->kind = $1; } ;
 type:
-	DRIVE    { $$ = elcano::MsgType::drive;  }
-	| SENSOR { $$ = elcano::MsgType::sensor; }
-	| GOAL   { $$ = elcano::MsgType::goal;   }
-	| SEG    { $$ = elcano::MsgType::seg;    } ;
+	'D'   { $$ = elcano::MsgType::drive;  }
+	| 'S' { $$ = elcano::MsgType::sensor; }
+	| 'G' { $$ = elcano::MsgType::goal;   }
+	| 'X' { $$ = elcano::MsgType::seg;    } ;
 body:
 	value body | value ;
 value:
-	LBRACKET NUM INT RBRACKET             { dd->number = $3;      }
-	| LBRACKET SPEED INT RBRACKET         { dd->speed = $3;       }
-	| LBRACKET ANG INT RBRACKET           { dd->angle = $3;       }
-	| LBRACKET BR INT RBRACKET            { dd->bearing = $3;     }
-	| LBRACKET POS INT COMMA INT RBRACKET { dd->posE = $3;
-	                                        dd->posN = $5;        }
-	| LBRACKET PROB INT RBRACKET          { dd->probability = $3; } ;
+	'{' 'n' INT '}'           { dd->number = $3;      }
+	| '{' 's' INT '}'         { dd->speed = $3;       }
+	| '{' 'a' INT '}'         { dd->angle = $3;       }
+	| '{' 'b' INT '}'         { dd->bearing = $3;     }
+	| '{' 'p' INT ',' INT '}' { dd->posE = $3;
+	                            dd->posN = $5;        }
+	| '{' 'r' INT '}'         { dd->probability = $3; } ;
 
 %%
 

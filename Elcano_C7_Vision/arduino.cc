@@ -94,42 +94,42 @@ namespace elcano
 		switch (info.kind)
 		{
 		case MsgType::drive:
-			ss << "DRIVE";
+			ss << "D";
 			if (info.speed != NaN)
-				ss << " {Speed " << info.speed << "}";
+				ss << " {s " << info.speed << "}";
 			if (info.angle != NaN)
-				ss << " {Ang " << info.angle << "}";
+				ss << " {a " << info.angle << "}";
 			break;
 		case MsgType::sensor:
-			ss << "SENSOR";
+			ss << "S";
 			if (info.speed != NaN)
-				ss << " {Speed " << info.speed << "}";
+				ss << " {s " << info.speed << "}";
 			if (info.angle != NaN)
-				ss << " {Ang " << info.angle << "}";
+				ss << " {a " << info.angle << "}";
 			if (info.posE != NaN && info.posN != NaN)
-				ss << " {Pos " << info.posE << "," << info.posN << "}";
+				ss << " {p " << info.posE << "," << info.posN << "}";
 			break;
 		case MsgType::goal:
-			ss << "GOAL";
+			ss << "G";
 			if (info.number != NaN)
-				ss << " {Num " << info.number << "}";
+				ss << " {n " << info.number << "}";
 			if (info.posE != NaN && info.posN != NaN)
-				ss << " {Pos " << info.posE << "," << info.posN << "}";
+				ss << " {p " << info.posE << "," << info.posN << "}";
 			if (info.bearing != NaN)
-				ss << " {Br " << info.bearing << " }";
+				ss << " {b " << info.bearing << " }";
 			if (info.probability != NaN)
-				ss << " {Prob " << info.probability << "}";
+				ss << " {r " << info.probability << "}";
 			break;
 		case MsgType::seg:
-			ss << "SEG";
+			ss << "X";
 			if (info.number != NaN)
-				ss << " {Num " << info.number << "}";
+				ss << " {n " << info.number << "}";
 			if (info.posE != NaN && info.posN != NaN)
-				ss << " {Pos " << info.posE << "," << info.posN << "}";
+				ss << " {p " << info.posE << "," << info.posN << "}";
 			if (info.bearing != NaN)
-				ss << " {Br " << info.bearing << "}";
+				ss << " {b " << info.bearing << "}";
 			if (info.speed != NaN)
-				ss << " {Speed " << info.speed << "}";
+				ss << " {s " << info.speed << "}";
 			break;
 		case MsgType::none: [[fallthrough]]
 		default:
