@@ -631,8 +631,16 @@ int convertTurn(int input)
 /*---------------------------------------------------------------------------------------*/
 int convertDeg(int deg)
 {
-  int result = STRAIGHT_TURN_OUT;
-  result += (deg * 2.25);//magic numbers bad
+  const int actuatorRange = LEFT_TURN_OUT - RIGHT_TURN_OUT;
+  const int degRange = TURN_MAX_DEG * 2;
+  deg += TURN_MAX_DEG;
+  double operand = (double)deg / (double)degRange;
+  operand *= actuatorRange;
+  operand += RIGHT_TURN_OUT;
+  //set max values if out of range
+  int result = (int)operand;
+  if (result > LEFT_TURN_OUT)
+    result = LEFT_TURN_OUT;
   return result;
 }
 /*---------------------------------------------------------------------------------------*/
