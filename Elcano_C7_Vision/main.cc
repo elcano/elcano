@@ -42,23 +42,8 @@ int main(int argc, char **argv)
 	camera.set(CV_CAP_PROP_FORMAT, CV_8UC3);
 	if (!camera.open()) { std::cerr << "Unable to open the camera!" << std::endl; return -1; }	
 	
-	
-	
-	
-	
-	/* Program Mainloop */
-	/*Mat img;
-	int c;
-	for(;;)
-	{
-		camera.grab();
-		camera.retrieve(img);
-		elcano::detect_and_draw(img, cascade, args::get(scale));
-		c = waitKey(10);
-		if (c == 'q' || c == 'Q' || c == 27 || ctrl_c_pressed) break;
-	}*/
-	
-	Mat original; 
+	/* Basic test for finding one and only one cone */
+	/*Mat original; 
 	while (true) {	
 		camera.grab();
 		camera.retrieve(original); // read a new frame from video
@@ -78,6 +63,166 @@ int main(int argc, char **argv)
 
 		if (waitKey(30) == 27) {
 			std::cout << "esc key is pressed by user" << std::endl;
+			break;
+		}
+	}*/
+
+
+	vector<Point3d> allCones;
+	Point3d trikeLocation;
+	int trikeBearing;
+	int CAMERA_OFFSET_X = 0;		//Camera's position relative to
+	int CAMERA_OFFSET_Y = 30;		//trike's point of reference, in cm
+	int CAMERA_OFFSET_Z = 50;
+	int CAMERA_OFFSET_BEARING = 0;	//in degrees
+
+	//Camera specifics
+	int MAX_CAMERA_RANGE = 1000;		//in cm
+	double CAM_FOCAL_LENGTH = 0.36;		//in cm
+	double CAM_SENSOR_WIDTH = 0.3629;	//in cm
+	double CAM_SENSOR_HEIGHT = 0.2722;	//in cm
+	int CAM_PIXEL_WIDTH = 2592;			//num of pixels horizontal
+	int CAM_PIXEL_HEIGHT = 1944;		//num of pixels vertical
+
+	//Target object specifics
+	Mat targetTemplate;							//Template image
+	string TEMPLATE_IMG_FILE = "/home/pi/Desktop/aaron-elcano/Elcano_C7_Vision/Cone.jpg";
+	int TEMPLATE_PIXEL_WIDTH;
+	int TEMPLATE_PIXEL_HEIGHT;
+	double TEMPLATE_REAL_WIDTH = 20;		//real object width in cm
+	double TEMPLATE_REAL_HEIGHT = 60;		//real object height in cm
+	int TEMPLATE_THRESHOLDS[] = {
+		0,		//low hue
+		10,		//high hue
+		90,		//low saturation
+		255,	//high saturation
+		60,		//low value
+		255		//high value
+	};
+
+	//Video image specifics
+	Mat frame;
+	int FRAME_THRESHOLDS[] = {
+		0,		//low hue
+		20,		//high hue
+		90,		//low saturation
+		255,	//high saturation
+		60,		//low value
+		255		//high value
+	};
+
+	//Image processing variables (for template matching)
+	Rect subFrameRect;
+	Mat subFrameTemp;
+	Mat subFrame;
+	Mat subFrameBinary;
+	Mat templResize;
+	Mat templBinary;
+	Point expectedPoint;
+	Point searchPoint;
+	Point foundPoint;
+	Point actualPoint;
+	int TEMPLATE_SEARCH_BOUNDARY = 20;	//how many pixels outside expected location box to search
+	int expectedHeight;					//in pixels
+	double templResizeRatio;
+
+	//Recieve Arduino information, with cone positions
+	//TODO
+
+	//For now, use pixels
+	Point3d cone1;
+	cone1.x = 320;
+	cone1.y = 240;
+	cone1.z = 160;
+	Point3d cone2;
+	cone2.x = 200;
+	cone2.y = 400;
+	cone2.z = 60;
+	allCones.push_back(cone1);
+	allCones.push_back(cone2);
+
+	//Open template image file
+	targetTemplate = imread(TEMPLATE_IMG_FILE);
+	imshow("Template", targetTemplate);
+	TEMPLATE_PIXEL_HEIGHT = targetTemplate.rows;
+	TEMPLATE_PIXEL_WIDTH = targetTemplate.cols;
+
+	while (true) {
+		//Recieve current trike position
+		//TODO
+		trikeLocation.x = 0;
+		trikeLocation.y = 0;
+		trikeLocation.z = 0;
+
+
+		//Capture new image
+		camera.grab();
+		camera.retrieve(frame);
+
+		//For each cone
+		for (int i = 0; i < allCones.size(); i++) {
+			//Compute relative coordinates between trike and cone
+			Point3d relativeToTrike;
+			relativeToTrike.x = allCones[i].x - trikeLocation.x;
+			relativeToTrike.y = allCones[i].y - trikeLocation.y;
+			relativeToTrike.z = allCones[i].z - trikeLocation.z;
+
+			//If distance is out of range, skip this cone
+			/*if (distance_2d() > MAX_CAMERA_RANGE) {
+			continue;
+			}*/
+
+			//Find expected location
+			//expectedPoint = calculation()
+			expectedPoint = Point(allCones[i].x, allCones[i].y);
+			/*if (computedXY outside (image range - width of cone)) {
+			continue;
+			}*/
+
+			//Find expected cone height/width and scale template image
+			//expectedHeight = calculation()
+			expectedHeight = allCones[i].z;
+			templResizeRatio = (double)expectedHeight / TEMPLATE_PIXEL_HEIGHT;
+			//If the ratio is too small, ignore this cone
+			if (templResizeRatio > 0) {
+				resize(targetTemplate, templResize, Size(), templResizeRatio, templResizeRatio, INTER_LINEAR);
+			}
+			else {
+				continue;
+			}
+			imshow("TemplateResize", templResize);
+
+			//Take sub-image of main image
+			searchPoint.x = expectedPoint.x - (0.5 * templResize.cols) - TEMPLATE_SEARCH_BOUNDARY;
+			searchPoint.y = expectedPoint.y - templResize.rows - TEMPLATE_SEARCH_BOUNDARY;
+			subFrameRect = Rect(searchPoint.x, searchPoint.y,
+				templResize.cols + 2 * TEMPLATE_SEARCH_BOUNDARY, templResize.rows + 2 * TEMPLATE_SEARCH_BOUNDARY);
+			subFrameTemp = Mat(frame, subFrameRect);
+			subFrameTemp.copyTo(subFrame);
+
+			imshow("SubFrame", subFrame);
+			rectangle(frame, subFrameRect, Scalar::all(255), 2, 8, 0);
+
+			//Perform image detection
+			templBinary = ImageProcessing::filterByColor(templResize, TEMPLATE_THRESHOLDS, 1);
+			subFrameBinary = ImageProcessing::filterByColor(subFrame, FRAME_THRESHOLDS, 0);
+			foundPoint = ImageProcessing::templateMatch(subFrameBinary, templBinary, TM_CCORR);
+
+			//Find bottom middle of result
+			actualPoint.x = foundPoint.x + searchPoint.x + (0.5 * templBinary.cols);
+			actualPoint.y = foundPoint.y + searchPoint.y + templBinary.rows;
+			cout << actualPoint << endl;
+
+			//Find real location
+
+			//GET CONFIDENCE
+			//Save data for sending to ardunio
+		}
+
+		//send data
+		imshow("Frame", frame);
+		if (waitKey(30) == 27) {
+			cout << "esc key is pressed by user" << endl;
 			break;
 		}
 	}
