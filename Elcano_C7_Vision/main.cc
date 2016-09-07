@@ -204,9 +204,9 @@ int main(int argc, char **argv)
 			rectangle(frame, subFrameRect, Scalar::all(255), 2, 8, 0);
 
 			//Perform image detection
-			templBinary = ImageProcessing::filterByColor(templResize, TEMPLATE_THRESHOLDS, 1);
-			subFrameBinary = ImageProcessing::filterByColor(subFrame, FRAME_THRESHOLDS, 0);
-			foundPoint = ImageProcessing::templateMatch(subFrameBinary, templBinary, TM_CCORR);
+			templBinary = elcano::filterByColor(templResize, TEMPLATE_THRESHOLDS, 1);
+			subFrameBinary = elcano::filterByColor(subFrame, FRAME_THRESHOLDS, 0);
+			foundPoint = elcano::templateMatch(subFrameBinary, templBinary, TM_CCORR);
 
 			//Find bottom middle of result
 			actualPoint.x = foundPoint.x + searchPoint.x + (0.5 * templBinary.cols);
