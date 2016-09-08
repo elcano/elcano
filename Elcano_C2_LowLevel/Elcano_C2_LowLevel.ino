@@ -282,7 +282,7 @@ void loop() {
   
   byte automate = processRC(local_results);
   if (automate == 0x01) //remember to tell Pat to fix this, was = instead of ==
-    processHighLevel();
+    processHighLevel(&Results);
   //    Print7( true, local_results);
 
   Results.Clear();
@@ -559,21 +559,17 @@ byte processRC (unsigned long *results){
   return 0x00;
 }
 /*---------------------------------------------------------------------------------------*/
-void processHighLevel()
+void processHighLevel(SerialData * results)
 {
-  SerialData Results;
-  readSerial(&Serial3, &Results);
-  //Throttle
-
-  //End Throttle
-  //Brake
-
-  //End Brake
+  results->update();
   //Steer
-  int turn_signal = convertDeg(Results.angle_deg);
+  int turn_signal = convertDeg(results->angle_deg);
   steer(turn_signal);
   //End Steer
-  writeSerial(&Serial3, &Results);
+   //Throttle
+  ThrottlePID(10*results->speed_cmPs);
+  //End Throttle
+  writeSerial(&Serial3, &results);
 }
 /*---------------------------------------------------------------------------------------*/
 //Converts RC values to corresponding values for the PWM output
@@ -739,7 +735,7 @@ void DAC_Write(int address, int value)
   This is as documented; with gain of 2, maximum output is 2 * Vref
 */
 {
-  int byte1 = ((value & 0xF0) >> 4) | 0x10; // acitve mode, bits D7-D4
+  int byte1 = ((value & 0xF0) >> 4) | 0x10; // active mode, bits D7-D4
   int byte2 = (value & 0x0F) << 4; // D3-D0
   if (address < 2)
   {
@@ -849,7 +845,7 @@ static struct hist {
 // This is all WAY TOO LONG for an interrupt
 void WheelRev()
 {
-  static int flip = 0;
+  //static int flip = 0;
   unsigned long tick;
   noInterrupts();
   tick = millis();
@@ -863,12 +859,11 @@ void WheelRev()
     TickTime = tick;
     ++ClickNumber;
   }
-  if (flip)
-    digitalWrite(13, LOW);
-  else
-    digitalWrite(13, HIGH);
-  flip = !flip;
-
+//  if (flip)
+//    digitalWrite(13, LOW);
+//  else
+//    digitalWrite(13, HIGH);
+//  flip = !flip;
   interrupts();
 }
 /*---------------------------------------------------------------------------------------*/
@@ -1161,6 +1156,7 @@ int TurnAngle_degx10()
 void Throttle_PID(long error_speed_mmPs)
 
 /* Use throttle and brakes to keep vehicle at a desired speed.
+ * error_speed_mmPs = Desired speed in millimeters per second
    A PID controller uses the error in the set point to increase or decrease the juice.
    P = proportional; change based on present error
    I = integra;  change based on recent sum of errors
