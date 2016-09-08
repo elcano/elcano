@@ -4,7 +4,7 @@
 Servo steer, brake;
 void setup() {
   // put your setup code here, to run once:
-  brake.attach(BRAKE_OUT_PIN);
+  pinMode(BRAKE_OUT_PIN, OUTPUT);
   steer.attach(STEER_OUT_PIN);
   Serial.begin(9600);
 }
