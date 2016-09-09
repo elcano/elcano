@@ -428,6 +428,36 @@ void circleRoutine(unsigned long seconds, unsigned long &results) {
   results = LOW;
 }
 /*---------------------------------------------------------------------------------------*/
+//squareRoutine
+void squareRoutine(unsigned long seconds, unsigned long &results) {
+  results = HIGH;
+  long straightSpeed = 2500;
+  long turnSpeed = 1250;
+  unsigned long startTime = millis();
+  seconds = seconds * 1000; 
+  while(millis() < (startTime + seconds)){
+    //steer(LEFT_TURN_OUT);
+    steer(STRAIGHT_TURN_OUT);
+    delay(1000);
+    
+    unsigned long loopTime = millis();
+    while (millis() < (loopTime + 2000)) {
+      Throttle_PID(straightSpeed);
+    }
+    
+    steer(LEFT_TURN_OUT);
+    delay(1000);
+
+    float turnDist = TURN_RADIUS_CM * PI / 2 * 10; //turnDist == 1/4 turn circumference in mm
+    long turnSec = (long)turnDist / turnSpeed * 1000; //turnSec == time for 90-degree turn at 1250 mm/s
+
+    while (millis() < (loopTime + turnSec)) {
+      Throttle_PID(turnSpeed);
+    }
+  }
+  results = LOW;
+}
+/*---------------------------------------------------------------------------------------*/
 void startCapturingRCState(){
   for (int i = 1; i < 7; i++) {
     RC_Done[i] = 0;
@@ -536,9 +566,9 @@ byte processRC (unsigned long *results){
     int going = convertThrottle(results[RC_RDR]);
     moveVehicle(going);
   }
-  else if(doCircleRoutine(results[RC_RDR])){
+  else if(doRoutine(results[RC_RDR])){
     moveVehicle(MIN_ACC_OUT);
-    circleRoutine(5, results[RC_AUTO]);
+    squareRoutine(20, results[RC_AUTO]);
   }
   else {
     moveVehicle(MIN_ACC_OUT);
@@ -561,13 +591,13 @@ byte processRC (unsigned long *results){
 /*---------------------------------------------------------------------------------------*/
 void processHighLevel(SerialData * results)
 {
-  results->update();
+  //results->update();
   //Steer
   int turn_signal = convertDeg(results->angle_deg);
   steer(turn_signal);
   //End Steer
-   //Throttle
-  ThrottlePID(10*results->speed_cmPs);
+  //Throttle
+  Throttle_PID(10*results->speed_cmPs);
   //End Throttle
   writeSerial(&Serial3, &results);
 }
@@ -662,7 +692,7 @@ boolean liveThrottle(int acc)
 {
   return (acc > MIDDLE + DEAD_ZONE);
 }
-boolean doCircleRoutine(int acc){
+boolean doRoutine(int acc){
   if(acc < 800) return false;
   return (acc < MIN_RC + DEAD_ZONE);
 }
