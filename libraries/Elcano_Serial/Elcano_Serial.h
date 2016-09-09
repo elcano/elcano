@@ -33,7 +33,6 @@ Segment - 4 (C4 to C3)
    - posN_cm
    - bearing_deg
    - speed_cmPs
-
 */
 
 struct SerialData
@@ -50,8 +49,5 @@ struct SerialData
     void Clear();
 };
 
-char * GetWord(char * major, char * str);
-float GetNumber(char *minor, char*Args);
-void ProcessMessage (char *IncomingMessage, SerialData *SerialD);
-void readSerial(HardwareSerial *SerialN, struct SerialData *SerialD );
-void writeSerial(HardwareSerial *SerialN, struct SerialData *SerialD );
+int readSerial(HardwareSerial *SerialN, struct SerialData *SerialD );
+int writeSerial(HardwareSerial *SerialN, struct SerialData *SerialD );
