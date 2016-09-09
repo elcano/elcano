@@ -25,33 +25,32 @@ Writes to display must be sent in 4 byte packets.
 
  */
 
-#define s7s Serial3
+#define s7s Serial2
 
-void testsetup() {
+void setup() {
   // Open serial communications and wait for port to open:
   Serial.begin(9600);
-  while (!Serial) {
-    ; // wait for serial port to connect. Needed for native USB port only
-  }
-  
   Serial.println("Goodnight moon!");
-
   // set the data rate for the SoftwareSerial port
   s7s.begin(9600);
-  //char resety[2] = {0x7F, '2'}; //set baud rate to 9600 on device
-  //char dataMode[2] = {0x82, '2'};//set mode to data in EEPROM
+  char resety[2] = {0x7F, '2'}; //set baud rate to 9600 on device
+  char dataMode[2] = {0x82, '2'};//set mode to data in EEPROM
   
-  //Serial1.print(resety); //clear display
+  Serial1.print(resety); //clear display
   s7s.write("v");
+//  s7s.write(0x7A);  // Set brightness command byte
+//  s7s.write(255);  // brightness data byte
+  
   s7s.write(0x79); // Send the Move Cursor Command
   s7s.write(0x00); // Move Cursor to left-most digit
   //Serial1.print(dataMode); //change mode to data mode
+
   randomSeed(0);
 }
 
 uint16_t count = random(0,100);
 
-void testloop() {
+void loop() {
   char temp[4];
   sprintf(temp, "%4d", count);
   String temp3 = (String)temp;
@@ -67,8 +66,14 @@ void testloop() {
 //    count = 0;
 //  }
   
-
+  //setDecimals(0b00000100);
   Serial.println(count);
   delay(2000);
+}
+
+void setDecimals(byte decimals)
+{
+  s7s.write(0x77);
+  s7s.write(decimals);
 }
 
