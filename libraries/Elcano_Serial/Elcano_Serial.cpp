@@ -11,7 +11,7 @@ static bool contains(char *s, size_t n, char c) {
 static int yylex(HardwareSerial *dev, long *aux) {
 	char c, flip = 0;
 start:
-	while (contains(" \t\r\0", 4, c = dev->read()));
+	c = dev->read();
 	if (c == '\n') return 0;
 	if (c == '-' || (c >= '0' && c <= '9')) {
 		*aux = 0;
@@ -43,7 +43,7 @@ int readSerial(HardwareSerial *dev, SerialData *dt) {
 	case 'S': dt->kind = MSG_SENSOR; break;
 	case 'G': dt->kind = MSG_GOAL;   break;
 	case 'X': dt->kind = MSG_SEG;    break;
-	default:  dt->kind = MSG_NONE;
+	default : return 1;
 	}
 arg:
 	l = LEX;
@@ -116,7 +116,7 @@ int writeSerial(HardwareSerial *dev, SerialData *dt) {
 		dev->print(dt->probability);
 		dev->print("}");
 	}
-	dev->println("\0");
+	dev->print("\n");
 	return 0;
 }
 
