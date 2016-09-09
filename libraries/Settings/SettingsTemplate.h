@@ -58,7 +58,6 @@ VEHICLE_NUMBER to your own new number.
 #define BRAKE_OUT_PIN 6
 
 // Trike-specific physical parameters
-//	Turning
 #define WHEEL_DIAMETER_MM 482
 //		Turning radius in cm.
 #define TURN_RADIUS_CM 209
@@ -164,7 +163,6 @@ VEHICLE_NUMBER to your own new number.
 // Parameters used by RC_Control_interrupts
 #define RC_AUTO 1
 #define RC_ESTP 2
-//rudder, side to side on left stick (not used as rudder, repurposed for Hall feedback)
 #define RC_RDR  3
 #define RC_GO   4
 #define RC_TURN 5
