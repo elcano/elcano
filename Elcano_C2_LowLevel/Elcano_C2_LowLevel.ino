@@ -78,6 +78,7 @@ const unsigned long HubAtZero = 1159448;
 int max_rc = MAX_RC;
 int mid = MIDDLE;
 int min_rc = MIN_RC;
+#define LED_PIN_OUT 16
 //==========================================================================================
 void ISR_TURN_rise() {
   noInterrupts();
@@ -229,7 +230,7 @@ void setup()
   steer(STRAIGHT_TURN_OUT);
   brake(MAX_BRAKE_OUT);
   moveVehicle(MIN_ACC_OUT);
-  setup7seg();    // Initialize 7 segment display for speedometer
+  //setup7seg();    // Initialize 7 segment display for speedometer
   delay(500);   // let vehicle stabilize
   //brake(MIN_BRAKE_OUT);
   Serial.begin(9600);
@@ -243,7 +244,7 @@ void setup()
   {
     speed_errors[i] = 0;
   }
-  setupWheelRev(); // WheelRev4 addition
+  //setupWheelRev(); // WheelRev4 addition
   CalibrateTurnAngle(32, 20);
   calibrationTime_ms = millis();
         attachInterrupt(digitalPinToInterrupt(IRPT_TURN),  ISR_TURN_rise,  RISING);
@@ -284,10 +285,10 @@ void loop() {
     processHighLevel(&Results);
   //    Print7( true, local_results);
 
-//  Results.Clear();
-//  Results.kind = MSG_SENSOR;
-//  Results.angle_deg = TurnAngle_degx10() / 10;
-  show_speed (&Results);
+  Results.Clear();
+  Results.kind = MSG_SENSOR;
+  Results.angle_deg = TurnAngle_degx10() / 10;
+  //show_speed (&Results);
 
   // Report how long the loop took.
   unsigned long endTime = micros();
@@ -429,17 +430,19 @@ void circleRoutine(unsigned long seconds, unsigned long &results) {
 /*---------------------------------------------------------------------------------------*/
 //squareRoutine
 void squareRoutine(unsigned long seconds, unsigned long &results) {
+  Serial.println("Starting square routine...");
   results = HIGH;
   long straightSpeed = 2500;
   long turnSpeed = 1250;
   unsigned long startTime = millis();
+  unsigned long loopTime;
   seconds = seconds * 1000; 
   while(millis() < (startTime + seconds)){
     //steer(LEFT_TURN_OUT);
     steer(STRAIGHT_TURN_OUT);
     delay(1000);
     
-    unsigned long loopTime = millis();
+    loopTime = millis();
     while (millis() < (loopTime + 2000)) {
       Throttle_PID(straightSpeed);
     }
@@ -450,6 +453,7 @@ void squareRoutine(unsigned long seconds, unsigned long &results) {
     float turnDist = TURN_RADIUS_CM * PI / 2 * 10; //turnDist == 1/4 turn circumference in mm
     long turnSec = (long)turnDist / turnSpeed * 1000; //turnSec == time for 90-degree turn at 1250 mm/s
 
+    loopTime = millis();
     while (millis() < (loopTime + turnSec)) {
       Throttle_PID(turnSpeed);
     }
@@ -595,7 +599,7 @@ void processHighLevel(SerialData * results)
   int turn_signal = convertDeg(results->angle_deg);
   steer(turn_signal);
   //End Steer
-   //Throttle
+  //Throttle
   Throttle_PID(10*results->speed_cmPs);
   //End Throttle
   writeSerial(&Serial3, results);
@@ -659,7 +663,7 @@ int convertDeg(int deg)
   const int actuatorRange = LEFT_TURN_OUT - RIGHT_TURN_OUT;
   const int degRange = TURN_MAX_DEG * 2;
   deg += TURN_MAX_DEG;
-  float operand = (float)deg / (float)degRange;
+  double operand = (double)deg / (double)degRange;
   operand *= actuatorRange;
   operand += RIGHT_TURN_OUT;
   //set max values if out of range
@@ -870,7 +874,8 @@ static struct hist {
 } history;
 
 /*---------------------------------------------------------------------------------------*/
-// WheelRev is called by an interrupt pin.
+// WheelRev is called by an interrupt.
+// This is all WAY TOO LONG for an interrupt
 void WheelRev()
 {
   //static int flip = 0;
