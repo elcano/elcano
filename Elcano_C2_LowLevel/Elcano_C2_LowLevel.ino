@@ -429,21 +429,22 @@ void circleRoutine(unsigned long seconds, unsigned long &results) {
 }
 /*---------------------------------------------------------------------------------------*/
 //squareRoutine
-void squareRoutine(unsigned long seconds, unsigned long &results) {
+void squareRoutine(unsigned long sides, unsigned long &results) {
   Serial.println("Starting square routine...");
   results = HIGH;
-  long straightSpeed = 2500;
-  long turnSpeed = 1250;
-  unsigned long startTime = millis();
-  unsigned long loopTime;
-  seconds = seconds * 1000; 
-  while(millis() < (startTime + seconds)){
+  long straightSpeed = 2500;        //mmPs
+  long turnSpeed = 1250;            //mmPs
+  sides = sides * 1000;             //convert side length to mm
+  unsigned long sideSec = sides / straightSpeed;  //calculate seconds per side at set speed
+  sideSec = sideSec * 1000          //convert to ms
+  unsigned long loopTime;           //start time of while loops for throttle
+  for(int i = 0; i < 4; i++){
     //steer(LEFT_TURN_OUT);
     steer(STRAIGHT_TURN_OUT);
     delay(1000);
     
     loopTime = millis();
-    while (millis() < (loopTime + 2000)) {
+    while (millis() < (loopTime + sideSec)) {
       Throttle_PID(straightSpeed);
     }
     
@@ -451,7 +452,7 @@ void squareRoutine(unsigned long seconds, unsigned long &results) {
     delay(1000);
 
     float turnDist = TURN_RADIUS_CM * PI / 2 * 10; //turnDist == 1/4 turn circumference in mm
-    long turnSec = (long)turnDist / turnSpeed * 1000; //turnSec == time for 90-degree turn at 1250 mm/s
+    unsigned long turnSec = (long)turnDist / turnSpeed * 1000; //turnSec == time for 90-degree turn at 1250 mmPs
 
     loopTime = millis();
     while (millis() < (loopTime + turnSec)) {
