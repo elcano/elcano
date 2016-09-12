@@ -259,10 +259,11 @@ void setup()
 }
 /*---------------------------------------------------------------------------------------*/
 void loop() {
+  Serial.println("Start of loop");
   SerialData Results;
 
   // Save start time for performance report.
-  unsigned long startTime = micros();
+  unsigned long startTime = millis();
   // Get the next loop start time.
   unsigned long nextTime = startTime + LOOP_TIME_MS;
 
@@ -271,7 +272,7 @@ void loop() {
   unsigned long local_results[7];
   //  PrintDone();
 
-  while (micros() < nextTime &&
+  while (millis() < nextTime &&
          ~((RC_Done[RC_ESTP] == 1) && (RC_Done[RC_GO] == 1) && (RC_Done[RC_TURN] == 1) && (RC_Done[RC_RDR])))
     ;  //wait
 
@@ -279,19 +280,24 @@ void loop() {
   for (int i = 0; i < 8; i++)
     local_results[i] = RC_elapsed[i];
   //Print7(false, local_results);
-  
+  Serial.println("Processing RC data...");
   byte automate = processRC(local_results);
   if (automate == 0x01) //remember to tell Pat to fix this, was = instead of ==
+  {
+    Serial.println("Processing high-level data");
     processHighLevel(&Results);
+  }
   //    Print7( true, local_results);
 
+  Serial.println(nextTime);
+  Serial.println("Clearing Results");
   Results.Clear();
   Results.kind = MSG_SENSOR;
   Results.angle_deg = TurnAngle_degx10() / 10;
   //show_speed (&Results);
 
   // Report how long the loop took.
-  unsigned long endTime = micros();
+  unsigned long endTime = millis();
   unsigned long elapsedTime = endTime - startTime;
 //  Serial.print("loop elapsed time = ");
 //  Serial.println(elapsedTime);
@@ -312,13 +318,17 @@ void loop() {
 
   // Did we spend long enough in the loop that we should immediately
   // start the next pass?
+  Serial.print("Time: "); Serial.print(endTime); Serial.print(", Next: "); Serial.println(nextTime);
   if (nextTime > endTime) {
     // No, pause til the next loop start time.
+    Serial.print("Delaying: "); Serial.println(nextTime - endTime);
     delay(nextTime - endTime);
   } else {
     // Yes, we overran the expected loop interval. Extend the time.
-    nextTime = endTime + 1000 * LOOP_TIME_MS;
+    nextTime = endTime + LOOP_TIME_MS;
   }
+  
+  Serial.println("End of loop");
 }
 /*---------------------------------------------------------------------------------------*/
 void PrintDone()
@@ -432,31 +442,31 @@ void circleRoutine(unsigned long seconds, unsigned long &results) {
 void squareRoutine(unsigned long sides, unsigned long &results) {
   Serial.println("Starting square routine...");
   results = HIGH;
-  long straightSpeed = 2500;        //mmPs
-  long turnSpeed = 1250;            //mmPs
+  long straightSpeed = 128;        //mmPs
+  long turnSpeed = 64;            //mmPs
   sides = sides * 1000;             //convert side length to mm
   unsigned long sideSec = sides / straightSpeed;  //calculate seconds per side at set speed
-  sideSec = sideSec * 1000          //convert to ms
+  sideSec = sideSec * 1000;         //convert to ms
   unsigned long loopTime;           //start time of while loops for throttle
   for(int i = 0; i < 4; i++){
     //steer(LEFT_TURN_OUT);
     steer(STRAIGHT_TURN_OUT);
-    delay(1000);
+    delay(100);
     
     loopTime = millis();
     while (millis() < (loopTime + sideSec)) {
-      Throttle_PID(straightSpeed);
+      moveVehicle(straightSpeed);
     }
     
     steer(LEFT_TURN_OUT);
-    delay(1000);
+    delay(100);
 
     float turnDist = TURN_RADIUS_CM * PI / 2 * 10; //turnDist == 1/4 turn circumference in mm
     unsigned long turnSec = (long)turnDist / turnSpeed * 1000; //turnSec == time for 90-degree turn at 1250 mmPs
 
     loopTime = millis();
     while (millis() < (loopTime + turnSec)) {
-      Throttle_PID(turnSpeed);
+      moveVehicle(turnSpeed);
     }
   }
   results = LOW;
@@ -537,10 +547,10 @@ byte processRC (unsigned long *results){
 
   if ((results[RC_AUTO] == HIGH)  && (NUMBER_CHANNELS > 5))
   {
-    //        Serial.println("Calling processHighLevel.");
+            Serial.println("Calling processHighLevel.");
     return 0x01;  // not under RC control
   } else {
-         //Serial.println("Continuing processRC as under RC control.");
+         Serial.println("Continuing processRC as under RC control.");
   }
   
   /*  6th pulse is marked throttle (position 6 on receiver; controlled by Left up/down joystick on transmitter).
