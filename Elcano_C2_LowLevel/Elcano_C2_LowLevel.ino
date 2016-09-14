@@ -80,7 +80,7 @@ int mid = MIDDLE;
 int min_rc = MIN_RC;
 #define LED_PIN_OUT 16
 //==========================================================================================
-void ISR_TURN_rise() {
+void ISR_TURN_rise(){
   noInterrupts();
   ProcessRiseOfINT(RC_TURN);
   attachInterrupt(digitalPinToInterrupt(IRPT_TURN), ISR_TURN_fall, FALLING);
@@ -259,7 +259,7 @@ void setup()
 }
 /*---------------------------------------------------------------------------------------*/
 void loop() {
-  Serial.println("Start of loop");
+  //Serial.println("Start of loop");
   SerialData Results;
 
   // Save start time for performance report.
@@ -267,30 +267,37 @@ void loop() {
   // Get the next loop start time.
   unsigned long nextTime = startTime + LOOP_TIME_MS;
 
+  digitalWrite(27, LOW);
+  digitalWrite(33, LOW);
   startCapturingRCState();
 
   unsigned long local_results[7];
   //  PrintDone();
 
   while (millis() < nextTime &&
-         ~((RC_Done[RC_ESTP] == 1) && (RC_Done[RC_GO] == 1) && (RC_Done[RC_TURN] == 1) && (RC_Done[RC_RDR])))
+         ~((RC_Done[RC_ESTP] == 1) && (RC_Done[RC_GO] == 1) && (RC_Done[RC_TURN] == 1) && (RC_Done[RC_RDR] == 1)))
+  {
     ;  //wait
-
+  }
   // got data;
   for (int i = 0; i < 8; i++)
     local_results[i] = RC_elapsed[i];
   //Print7(false, local_results);
-  Serial.println("Processing RC data...");
+  //Serial.println("Processing RC data...");
   byte automate = processRC(local_results);
   if (automate == 0x01) //remember to tell Pat to fix this, was = instead of ==
   {
-    Serial.println("Processing high-level data");
+    //Serial.println("Processing high-level data");
     processHighLevel(&Results);
   }
   //    Print7( true, local_results);
 
-  Serial.println(nextTime);
-  Serial.println("Clearing Results");
+  digitalWrite(27, HIGH);
+  if(nextTime < startTime || nextTime > startTime + LOOP_TIME_MS) {
+    digitalWrite(33, HIGH);
+  }
+  //Serial.println(nextTime); //Old sanity check line; testing new pin output sanity check.
+  //Serial.println("Clearing Results");
   Results.Clear();
   Results.kind = MSG_SENSOR;
   Results.angle_deg = TurnAngle_degx10() / 10;
@@ -298,7 +305,7 @@ void loop() {
 
   // Report how long the loop took.
   unsigned long endTime = millis();
-  unsigned long elapsedTime = endTime - startTime;
+ // unsigned long elapsedTime = endTime - startTime;
 //  Serial.print("loop elapsed time = ");
 //  Serial.println(elapsedTime);
 
@@ -318,17 +325,22 @@ void loop() {
 
   // Did we spend long enough in the loop that we should immediately
   // start the next pass?
-  Serial.print("Time: "); Serial.print(endTime); Serial.print(", Next: "); Serial.println(nextTime);
+  //Serial.print("Time: "); Serial.print(endTime); Serial.print(", Next: "); Serial.println(nextTime);
   if (nextTime > endTime) {
     // No, pause til the next loop start time.
+    Serial.print("Start Sanity: "); Serial.println(startTime);
+    Serial.print("Const Sanity: "); Serial.println(LOOP_TIME_MS);
+    Serial.print("Next Sanity: "); Serial.println(nextTime);
+    Serial.print("End Sanity: "); Serial.println(endTime);
     Serial.print("Delaying: "); Serial.println(nextTime - endTime);
     delay(nextTime - endTime);
-  } else {
-    // Yes, we overran the expected loop interval. Extend the time.
-    nextTime = endTime + LOOP_TIME_MS;
-  }
+  } 
+//  else {
+//    // Yes, we overran the expected loop interval. Extend the time.
+//    nextTime = endTime + LOOP_TIME_MS;
+//  }
   
-  Serial.println("End of loop");
+  //Serial.println("End of loop");
 }
 /*---------------------------------------------------------------------------------------*/
 void PrintDone()
@@ -443,7 +455,7 @@ void squareRoutine(unsigned long sides, unsigned long &results) {
   Serial.println("Starting square routine...");
   results = HIGH;
   long straightSpeed = 128;        //mmPs
-  long turnSpeed = 64;            //mmPs
+  long turnSpeed = 96;            //mmPs
   sides = sides * 1000;             //convert side length to mm
   unsigned long sideSec = sides / straightSpeed;  //calculate seconds per side at set speed
   sideSec = sideSec * 1000;         //convert to ms
@@ -533,10 +545,10 @@ byte processRC (unsigned long *results){
 
   /* 4th pulse is gear (position 2 on receiver; controlled by gear/mode toggle on transmitter)
     will be used for emergency stop. D38 */
+  Serial.println(results[RC_ESTP]);
   results[RC_ESTP] = (results[RC_ESTP] > MIDDLE ? HIGH : LOW);
 
-  if (results[RC_ESTP] == HIGH)
-  {
+  if (results[RC_ESTP] == HIGH){
     E_Stop();  // already done at interrupt level
     if ((results[RC_AUTO] == LOW)  && (NUMBER_CHANNELS > 5)) // under RC control
       ;//steer(results[RC_TURN]);
@@ -572,7 +584,7 @@ byte processRC (unsigned long *results){
   Serial.println(results[RC_GO]);
   if (liveBrake(results[RC_GO])){
     Serial.print("Braking: "); Serial.println(results[RC_GO]);
-    convertBrake ((results[RC_GO]));
+    brake(convertBrake(results[RC_GO]));
   }
 
   //Accelerating
@@ -716,7 +728,7 @@ boolean doRoutine(int acc){
 boolean liveBrake(int b)
 {
   if (b < 500) return false;
-  return (b < (MIDDLE - DEAD_ZONE));
+  return (b > (MIDDLE + DEAD_ZONE));
 }
 /*---------------------------------------------------------------------------------------*/
 // Emergency stop
@@ -736,13 +748,23 @@ void steer(int pos)
   steer_control = pos;
 }
 /*---------------------------------------------------------------------------------------*/
-void convertBrake(unsigned long amount)
-{
-  if(amount < (MIDDLE + MIN_RC) / 2)
-    amount = MAX_BRAKE_OUT;
-  else if (amount > (MAX_RC - DEAD_ZONE))
-    amount = MIN_BRAKE_OUT;
-  brake (amount);
+int convertBrake(unsigned long amount){
+  const int brakeRange = MAX_BRAKE_OUT - MIN_BRAKE_OUT;
+  const int rcRange = MAX_RC - (MIDDLE + DEAD_ZONE);
+  amount -= (MIDDLE + DEAD_ZONE);
+  float operand = (float)amount / (float)rcRange;
+  operand *= brakeRange;
+  operand += MIN_BRAKE_OUT;
+  int result = (int)operand;
+  if(result > MAX_BRAKE_OUT)
+  {
+    result = MAX_BRAKE_OUT;
+  }
+//  if(amount > (MIDDLE + MIN_RC)
+//    amount = MAX_BRAKE_OUT;
+//  else if (amount > (MAX_RC - DEAD_ZONE))
+//    amount = MIN_BRAKE_OUT;
+  return result;
 }
 /*---------------------------------------------------------------------------------------*/
 void brake (int amount)
