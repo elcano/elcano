@@ -36,7 +36,7 @@ namespace elcano
 	}
 
 
-	Point templateMatch(Mat image, Mat target, int matchMethod) {
+	Point templateMatch(Mat image, Mat target, int matchMethod, double &value) {
 		double minVal; double maxVal; Point minLoc; Point maxLoc;
 		Point matchLoc;
 		Mat result;
@@ -56,10 +56,12 @@ namespace elcano
 		if (matchMethod == TM_SQDIFF || matchMethod == TM_SQDIFF_NORMED)
 		{
 			matchLoc = minLoc;
+			value = minVal;
 		}
 		else
 		{
 			matchLoc = maxLoc;
+			value = maxVal;
 		}
 
 		return matchLoc;
