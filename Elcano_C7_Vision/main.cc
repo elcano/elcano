@@ -42,47 +42,29 @@ int main(int argc, char **argv)
 	camera.set(CV_CAP_PROP_FORMAT, CV_8UC3);
 	if (!camera.open()) { std::cerr << "Unable to open the camera!" << std::endl; return -1; }	
 	
-	/* Basic test for finding one and only one cone */
-	/*Mat original; 
-	while (true) {	
-		camera.grab();
-		camera.retrieve(original); // read a new frame from video
-
-		Mat templ = imread("/home/pi/Desktop/aaron-elcano/Elcano_C7_Vision/Cone.jpg");
-		int thresholds[] = { 0, 20, 90, 255, 60, 255 };
-		//imshow("TemplateFilter", elcano::filterByColor(templ, thresholds, 1));
-		//resize(templ, templ, Size(), 0.5, 0.5, INTER_LINEAR);
-
-		Point matchingLoc = elcano::templateMatchBlobs(original, templ, thresholds, TM_CCORR);
-		//cout << matchingLoc << endl;
-
-		rectangle(original, matchingLoc, Point(matchingLoc.x + templ.cols, matchingLoc.y + templ.rows), Scalar::all(0), 2, 8, 0);
-		//resize(original, original, Size(), 0.5, 0.5, INTER_LINEAR);
-		imshow("Original", original);
-		imshow("Template", templ);
-
-		if (waitKey(30) == 27) {
-			std::cout << "esc key is pressed by user" << std::endl;
-			break;
-		}
-	}*/
-
-
-	vector<Point3d> allCones;
-	Point3d trikeLocation;
-	int trikeBearing;
-	int CAMERA_OFFSET_X = 0;		//Camera's position relative to
-	int CAMERA_OFFSET_Y = 30;		//trike's point of reference, in cm
-	int CAMERA_OFFSET_Z = 50;
-	int CAMERA_OFFSET_BEARING = 0;	//in degrees
+	int64_t CAM_OFFSET_POS_X = 0;		//Camera's position relative to
+	int64_t CAM_OFFSET_POS_Y = 0;		//trike's point of reference, in cm
+	int64_t CAM_OFFSET_POS_Z = 0;
+	double CAM_OFFSET_ANGLE_X = 0;	//in degrees
+	double CAM_OFFSET_ANGLE_Y = 0;
+	double CAM_OFFSET_ANGLE_Z = 0;
+	tuple<int64_t, int64_t, int64_t> cam_pos;
+	typedef tuple<int64_t, int64_t, int64_t> target_pos;
+	vector<target_pos> allCones;
+	tuple<double, double, double> cam_angle;
+	tuple<int64_t, int64_t, int64_t> relative_pos;
 
 	//Camera specifics
 	int MAX_CAMERA_RANGE = 1000;		//in cm
 	double CAM_FOCAL_LENGTH = 0.36;		//in cm
 	double CAM_SENSOR_WIDTH = 0.3629;	//in cm
 	double CAM_SENSOR_HEIGHT = 0.2722;	//in cm
-	int CAM_PIXEL_WIDTH = 2592;			//num of pixels horizontal
-	int CAM_PIXEL_HEIGHT = 1944;		//num of pixels vertical
+	//int CAM_PIXEL_WIDTH = 2592;			//num of pixels horizontal
+	//int CAM_PIXEL_HEIGHT = 1944;		//num of pixels vertical
+	int CAM_PIXEL_WIDTH = 640;			//num of pixels horizontal
+	int CAM_PIXEL_HEIGHT = 480;		//num of pixels vertical
+	tuple<uint64_t, uint64_t> IMG_SIZE(CAM_PIXEL_HEIGHT, CAM_PIXEL_WIDTH);
+	tuple<double, double> SENSOR_SIZE(CAM_SENSOR_HEIGHT, CAM_SENSOR_WIDTH);
 
 	//Target object specifics
 	Mat targetTemplate;							//Template image
@@ -102,9 +84,10 @@ int main(int argc, char **argv)
 
 	//Video image specifics
 	Mat frame;
+	//Actual values
 	int FRAME_THRESHOLDS[] = {
 		0,		//low hue
-		20,		//high hue
+		10,		//high hue
 		90,		//low saturation
 		255,	//high saturation
 		60,		//low value
@@ -118,109 +101,194 @@ int main(int argc, char **argv)
 	Mat subFrameBinary;
 	Mat templResize;
 	Mat templBinary;
+	tuple<double, double> expectedPixel;
 	Point expectedPoint;
 	Point searchPoint;
 	Point foundPoint;
 	Point actualPoint;
-	int TEMPLATE_SEARCH_BOUNDARY = 20;	//how many pixels outside expected location box to search
+	double matchValue;
+	int TEMPLATE_SEARCH_BOUNDARY_X = 20;	//how many pixels outside expected location box to search
+	int TEMPLATE_SEARCH_BOUNDARY_Y = 20;
 	int expectedHeight;					//in pixels
 	double templResizeRatio;
+	double MIN_TEMPL_RESIZE_RATIO;
+	double MAX_TEMPL_RESIZE_RATIO;
 
+
+	/* MAIN DRIVER USING EXPECTED LOCATIONS --------------------------------------------- */
 	//Recieve Arduino information, with cone positions
 	//TODO
 
 	//For now, use pixels
-	Point3d cone1;
-	cone1.x = 320;
-	cone1.y = 240;
-	cone1.z = 160;
-	Point3d cone2;
-	cone2.x = 200;
-	cone2.y = 400;
-	cone2.z = 60;
+	/*target_pos cone1(320, 240, 160);
+	target_pos cone2(200, 400, 60);
 	allCones.push_back(cone1);
 	allCones.push_back(cone2);
 
-	//Open template image file
+	//Open template image file, and save appropriate variables
 	targetTemplate = imread(TEMPLATE_IMG_FILE);
 	imshow("Template", targetTemplate);
 	TEMPLATE_PIXEL_HEIGHT = targetTemplate.rows;
 	TEMPLATE_PIXEL_WIDTH = targetTemplate.cols;
 
-	while (true) {
-		//Recieve current trike position
-		//TODO
-		trikeLocation.x = 0;
-		trikeLocation.y = 0;
-		trikeLocation.z = 0;
+	//Convert template image to binary for faster processing
+	templBinary = elcano::filterByColor(targetTemplate, TEMPLATE_THRESHOLDS, 1);
 
+	//Find largest allowable resize ratio
+	MAX_TEMPL_RESIZE_RATIO = (double)CAM_PIXEL_HEIGHT / (TEMPLATE_PIXEL_HEIGHT + 2 * TEMPLATE_SEARCH_BOUNDARY_Y);
+	if ((double)CAM_PIXEL_WIDTH / (TEMPLATE_PIXEL_WIDTH + 2 * TEMPLATE_SEARCH_BOUNDARY_X) < MAX_TEMPL_RESIZE_RATIO) {
+		MAX_TEMPL_RESIZE_RATIO = (double)CAM_PIXEL_WIDTH / (TEMPLATE_PIXEL_WIDTH + 2 * TEMPLATE_SEARCH_BOUNDARY_X);
+	}
+
+	//Find smallest allowable resize ratio based on max distance
+	//TODO
+	//int minHeight = calculation(MAX_CAMERA_RANGE, cameraspecs);
+	//MIN_TEMPL_RESIZE_RATIO = (double)minHeight / TEMPLATE_PIXEL_HEIGHT;
+
+	while (true) {
+		//Recieve current trike position and bearing
+		//TODO - replace 0s with recieved data
+		get<0>(cam_pos) = 0 + CAM_OFFSET_POS_X;
+		get<1>(cam_pos) = 0 + CAM_OFFSET_POS_Y;
+		get<2>(cam_pos) = 0 + CAM_OFFSET_POS_Z;
+
+		//TODO - replace one of these 0s with bearing data,
+		//or multiple angles if that data is available
+		get<0>(cam_angle) = 0.0 + CAM_OFFSET_ANGLE_X;
+		get<1>(cam_angle) = 0.0 + CAM_OFFSET_ANGLE_Y;
+		get<2>(cam_angle) = 0.0 + CAM_OFFSET_ANGLE_Z;
 
 		//Capture new image
 		camera.grab();
 		camera.retrieve(frame);
 
-		//For each cone
+		//Once per target, analyze the image
 		for (int i = 0; i < allCones.size(); i++) {
 			//Compute relative coordinates between trike and cone
-			Point3d relativeToTrike;
-			relativeToTrike.x = allCones[i].x - trikeLocation.x;
-			relativeToTrike.y = allCones[i].y - trikeLocation.y;
-			relativeToTrike.z = allCones[i].z - trikeLocation.z;
+			//get<0>(relative_pos) = get<0>(allCones[i]) - get<0>(cam_pos);
+			//get<1>(relative_pos) = get<1>(allCones[i]) - get<1>(cam_pos);
+			//get<2>(relative_pos) = get<2>(allCones[i]) - get<2>(cam_pos);
 
-			//If distance is out of range, skip this cone
-			/*if (distance_2d() > MAX_CAMERA_RANGE) {
-			continue;
-			}*/
-
-			//Find expected location
-			//expectedPoint = calculation()
-			expectedPoint = Point(allCones[i].x, allCones[i].y);
-			/*if (computedXY outside (image range - width of cone)) {
-			continue;
-			}*/
-
-			//Find expected cone height/width and scale template image
-			//expectedHeight = calculation()
-			expectedHeight = allCones[i].z;
+			//Find expected target height and compute resize ratio
+			//TODO
+			//expectedHeight = calculation(distance between allCones[i] and cam_pos, camspecs)
+			expectedHeight = get<2>(allCones[i]);
 			templResizeRatio = (double)expectedHeight / TEMPLATE_PIXEL_HEIGHT;
-			//If the ratio is too small, ignore this cone
-			if (templResizeRatio > 0) {
-				resize(targetTemplate, templResize, Size(), templResizeRatio, templResizeRatio, INTER_LINEAR);
-			}
-			else {
+
+			//If target is out of range, skip
+			if (templResizeRatio < MIN_TEMPL_RESIZE_RATIO) {
 				continue;
 			}
-			imshow("TemplateResize", templResize);
+			//If target is too close, skip
+			else if (templResizeRatio > MAX_TEMPL_RESIZE_RATIO) {
+				continue;
+			}
 
-			//Take sub-image of main image
-			searchPoint.x = expectedPoint.x - (0.5 * templResize.cols) - TEMPLATE_SEARCH_BOUNDARY;
-			searchPoint.y = expectedPoint.y - templResize.rows - TEMPLATE_SEARCH_BOUNDARY;
+			//Scale template image
+			resize(targetTemplate, templResize, Size(), templResizeRatio, templResizeRatio, INTER_LINEAR);
+
+			//Find expected pixel location of target
+			expectedPixel = elcano::global_to_relative(cam_angle, cam_pos, allCones[i], IMG_SIZE, SENSOR_SIZE, CAM_FOCAL_LENGTH);
+			expectedPoint = Point((int)get<0>(expectedPixel), (int)get<1>(expectedPixel));
+			//TODO
+			//If point is out of frame, or close to it, skip
+			//Implement as, if Point - templateSize < 0 AND Point + templateSize > frameSize
+
+			//Capture sub-image of main image at expected location
+			searchPoint.x = expectedPoint.x - (0.5 * templResize.cols) - TEMPLATE_SEARCH_BOUNDARY_X;
+			searchPoint.y = expectedPoint.y - templResize.rows - TEMPLATE_SEARCH_BOUNDARY_Y;
 			subFrameRect = Rect(searchPoint.x, searchPoint.y,
-				templResize.cols + 2 * TEMPLATE_SEARCH_BOUNDARY, templResize.rows + 2 * TEMPLATE_SEARCH_BOUNDARY);
+				templResize.cols + 2 * TEMPLATE_SEARCH_BOUNDARY_X, templResize.rows + 2 * TEMPLATE_SEARCH_BOUNDARY_Y);
 			subFrameTemp = Mat(frame, subFrameRect);
 			subFrameTemp.copyTo(subFrame);
 
-			imshow("SubFrame", subFrame);
-			rectangle(frame, subFrameRect, Scalar::all(255), 2, 8, 0);
-
 			//Perform image detection
-			templBinary = elcano::filterByColor(templResize, TEMPLATE_THRESHOLDS, 1);
-			subFrameBinary = elcano::filterByColor(subFrame, FRAME_THRESHOLDS, 0);
-			foundPoint = elcano::templateMatch(subFrameBinary, templBinary, TM_CCORR);
+			subFrameBinary = elcano::filterByColor(subFrame, FRAME_THRESHOLDS, 1);
+			foundPoint = elcano::templateMatch(subFrameBinary, templResize, TM_CCORR, matchValue);
 
 			//Find bottom middle of result
 			actualPoint.x = foundPoint.x + searchPoint.x + (0.5 * templBinary.cols);
 			actualPoint.y = foundPoint.y + searchPoint.y + templBinary.rows;
-			cout << actualPoint << endl;
 
 			//Find real location
 
 			//GET CONFIDENCE
 			//Save data for sending to ardunio
+
+			//Debug displaying
+			imshow("SubFrame", subFrame);
+			imshow("TemplateResize", templResize);
+			rectangle(frame, subFrameRect, Scalar::all(255), 2, 8, 0);
+			line(frame, actualPoint, actualPoint, Scalar(0, 0, 255), 4, 8, 0);
 		}
 
 		//send data
 		imshow("Frame", frame);
+		if (waitKey(30) == 27) {
+			cout << "esc key is pressed by user" << endl;
+			break;
+		}
+	}*/
+
+
+	/* MAKERFARE DEMO -------------------------------------------------------- */
+	//Open template image file, and save appropriate variables
+	targetTemplate = imread(TEMPLATE_IMG_FILE);
+	TEMPLATE_PIXEL_HEIGHT = targetTemplate.rows;
+	TEMPLATE_PIXEL_WIDTH = targetTemplate.cols;
+
+	//Convert template image to binary for faster processing
+	templBinary = elcano::filterByColor(targetTemplate, TEMPLATE_THRESHOLDS, 1);
+
+	//Find largest allowable resize ratio for the template
+	MAX_TEMPL_RESIZE_RATIO = (double)CAM_PIXEL_HEIGHT / (TEMPLATE_PIXEL_HEIGHT + 2 * TEMPLATE_SEARCH_BOUNDARY_Y);
+	if ((double)CAM_PIXEL_WIDTH / (TEMPLATE_PIXEL_WIDTH + 2 * TEMPLATE_SEARCH_BOUNDARY_X) < MAX_TEMPL_RESIZE_RATIO) {
+		MAX_TEMPL_RESIZE_RATIO = (double)CAM_PIXEL_WIDTH / (TEMPLATE_PIXEL_WIDTH + 2 * TEMPLATE_SEARCH_BOUNDARY_X);
+	}
+
+	//Find smallest allowable resize ratio based on max distance
+	//TODO
+	//int minHeight = calculation(MAX_CAMERA_RANGE, cameraspecs);
+	//MIN_TEMPL_RESIZE_RATIO = (double)minHeight / TEMPLATE_PIXEL_HEIGHT;
+
+	while (true) {
+		//Get frame from video
+		bool bSuccess = cap.read(frame);
+		if (!bSuccess) {
+			cout << "Cannot read a frame from video stream" << endl;
+			break;
+		}
+
+		//Convert video frame to binary, and do a first pass to find number of positive pixels
+		subFrameBinary = elcano::filterByColor(frame, FRAME_THRESHOLDS, 1);
+		int whitePixelCount = countNonZero(subFrameBinary);
+		if (whitePixelCount < 10) { continue; }
+
+		//Determine expected height of target based on number of positive pixels
+		expectedHeight = 2 * sqrt(whitePixelCount);
+		templResizeRatio = (double)expectedHeight / TEMPLATE_PIXEL_HEIGHT;
+		//If target is out of range, skip
+		if (templResizeRatio < MIN_TEMPL_RESIZE_RATIO) {
+			continue;
+		}
+		//If target is too close, skip
+		else if (templResizeRatio > MAX_TEMPL_RESIZE_RATIO) {
+			continue;
+		}
+
+		//Resize template image
+		resize(templBinary, templResize, Size(), templResizeRatio, templResizeRatio, INTER_LINEAR);
+		foundPoint = elcano::templateMatch(subFrameBinary, templResize, TM_CCORR_NORMED, matchValue);
+
+		//Debug displaying
+		imshow("FrameBinary", subFrameBinary);
+		imshow("TemplateResize", templResize);
+		std::cout << "Found point: " << foundPoint << "   Value: " << matchValue << std::endl;
+		rectangle(frame, foundPoint, Point(foundPoint.x + templResize.cols, foundPoint.y + templResize.rows), Scalar::all(255), 2, 8, 0);
+		line(frame, foundPoint, foundPoint, Scalar(0, 0, 255), 4, 8, 0);
+		imshow("Frame", frame);
+
+		//wait for 'esc' key press for 30ms. If 'esc' key is pressed, break loop
 		if (waitKey(30) == 27) {
 			cout << "esc key is pressed by user" << endl;
 			break;
