@@ -437,8 +437,8 @@ void PrintHeaders (void)
 
 /*---------------------------------------------------------------------------------------*/
 //circleRoutine
-void circleRoutine(unsigned long seconds, unsigned long &results) {
-  results = HIGH;
+void circleRoutine(unsigned long seconds, unsigned long &rcAuto) {
+  rcAuto = HIGH;
   
   steer(LEFT_TURN_OUT);
   delay(1000);
@@ -447,19 +447,21 @@ void circleRoutine(unsigned long seconds, unsigned long &results) {
   while (millis() < (loopTime + seconds)) {
     moveVehicle(128);
   }
-  results = LOW;
+  rcAuto = LOW;
 }
 /*---------------------------------------------------------------------------------------*/
 //squareRoutine
-void squareRoutine(unsigned long sides, unsigned long &results) {
+void squareRoutine(unsigned long sides, unsigned long &rcAuto) {
   Serial.println("Starting square routine...");
-  results = HIGH;
-  long straightSpeed = 128;        //mmPs
-  long turnSpeed = 96;            //mmPs
+  rcAuto = HIGH;
+  long straightSpeed = 2750;        //mmPs
+  long turnSpeed = 1400;            //mmPs
   sides = sides * 1000;             //convert side length to mm
   unsigned long sideSec = sides / straightSpeed;  //calculate seconds per side at set speed
   sideSec = sideSec * 1000;         //convert to ms
   unsigned long loopTime;           //start time of while loops for throttle
+  float turnDist = TURN_RADIUS_CM * PI / 2 * 10; //turnDist == 1/4 turn circumference in mm
+  unsigned long turnSec = (long)turnDist / turnSpeed * 1000; //turnSec == time for 90-degree turn at 1250 mmPs
   for(int i = 0; i < 4; i++){
     //steer(LEFT_TURN_OUT);
     steer(STRAIGHT_TURN_OUT);
@@ -467,21 +469,20 @@ void squareRoutine(unsigned long sides, unsigned long &results) {
     
     loopTime = millis();
     while (millis() < (loopTime + sideSec)) {
-      moveVehicle(straightSpeed);
+      moveVehicle(112);
     }
     
     steer(LEFT_TURN_OUT);
     delay(100);
 
-    float turnDist = TURN_RADIUS_CM * PI / 2 * 10; //turnDist == 1/4 turn circumference in mm
-    unsigned long turnSec = (long)turnDist / turnSpeed * 1000; //turnSec == time for 90-degree turn at 1250 mmPs
+    
 
     loopTime = millis();
     while (millis() < (loopTime + turnSec)) {
-      moveVehicle(turnSpeed);
+      moveVehicle(96);
     }
   }
-  results = LOW;
+  rcAuto = LOW;
 }
 /*---------------------------------------------------------------------------------------*/
 void startCapturingRCState(){
@@ -549,10 +550,10 @@ byte processRC (unsigned long *results){
   results[RC_ESTP] = (results[RC_ESTP] > MIDDLE ? HIGH : LOW);
 
   if (results[RC_ESTP] == HIGH){
+    Serial.println("Exiting processRC due to E-stop.");
     E_Stop();  // already done at interrupt level
     if ((results[RC_AUTO] == LOW)  && (NUMBER_CHANNELS > 5)) // under RC control
       ;//steer(results[RC_TURN]);
-    Serial.println("Exiting processRC due to E-stop.");
     return 0x00;
   }
 
@@ -594,7 +595,7 @@ byte processRC (unsigned long *results){
   }
   else if(doRoutine(results[RC_RDR])){
     moveVehicle(MIN_ACC_OUT);
-    squareRoutine(20, results[RC_AUTO]);
+    squareRoutine(5, results[RC_AUTO]);
   }
   else {
     moveVehicle(MIN_ACC_OUT);
