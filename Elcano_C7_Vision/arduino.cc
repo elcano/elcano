@@ -144,7 +144,7 @@ namespace elcano
 	) {
 		std::ostringstream ss;
 		write(ss, info);
-		ss << "\0\n";
+		ss << "\n";
 		device.write(ss.str());
 	}
 }
