@@ -123,8 +123,8 @@ bool SerialData::write(HardwareSerial *dev) {
 		dev->print(probability);
 		dev->print("}");
 	}
-	dev->println("\0");
-	return 1;
+	dev->print("\n");
+	return 0;
 }
 
 void SerialData::clear() {
