@@ -4,10 +4,6 @@
 
 using namespace cv;
 
-/* Signal Handling Boilerplate */
-bool ctrl_c_pressed = false;
-static void sig_capture(int s) { ctrl_c_pressed = true; }
-
 int main(int argc, char **argv)
 {
 	/* Parse Command-Line Arguments */
@@ -22,13 +18,6 @@ int main(int argc, char **argv)
 	catch (args::Help) { std::cout << parser; return 0; }
 	catch (args::ParseError e) { std::cerr << e.what() << std::endl << parser; return 1; }
 	
-	/* Signal Handling */
-	struct sigaction sig_struct;
-	sig_struct.sa_flags = 0;
-	sig_struct.sa_handler = sig_capture;
-	sigemptyset(&sig_struct.sa_mask);
-	if (sigaction(SIGINT, &sig_struct, nullptr) == -1) { std::cerr << "Unable to establish signal action!" << std::endl; return -1; }
-	
 	/* Load Resources */
 	CascadeClassifier cascade;
 	if (!cascade.load(args::get(cascade_name))) { std::cerr << "Unable to load cascade classifier file!" << std::endl << parser; return -1; }
@@ -40,6 +29,7 @@ int main(int argc, char **argv)
 	/* Connect to Camera */
 	raspicam::RaspiCam_Cv camera;
 	camera.set(CV_CAP_PROP_FORMAT, CV_8UC3);
+	camera.set(CV_CAP_PROP_BRIGHTNESS, 50);
 	if (!camera.open()) { std::cerr << "Unable to open the camera!" << std::endl; return -1; }	
 	
 	int64_t CAM_OFFSET_POS_X = 0;		//Camera's position relative to
@@ -59,14 +49,16 @@ int main(int argc, char **argv)
 	double CAM_FOCAL_LENGTH = 0.36;		//in cm
 	double CAM_SENSOR_WIDTH = 0.3629;	//in cm
 	double CAM_SENSOR_HEIGHT = 0.2722;	//in cm
-	int CAM_PIXEL_WIDTH = 2592;			//num of pixels horizontal
-	int CAM_PIXEL_HEIGHT = 1944;		//num of pixels vertical
+	//int CAM_PIXEL_WIDTH = 2592;			//num of pixels horizontal
+	//int CAM_PIXEL_HEIGHT = 1944;		//num of pixels vertical
+	int CAM_PIXEL_WIDTH;
+	int CAM_PIXEL_HEIGHT;
 	std::tuple<uint64_t, uint64_t> IMG_SIZE(CAM_PIXEL_HEIGHT, CAM_PIXEL_WIDTH);
 	std::tuple<double, double> SENSOR_SIZE(CAM_SENSOR_HEIGHT, CAM_SENSOR_WIDTH);
 
 	//Target object specifics
 	Mat targetTemplate;							//Template image
-	std::string TEMPLATE_IMG_FILE = "/home/pi/Desktop/aaron-elcano/Elcano_C7_Vision/Cone.jpg";
+	std::string TEMPLATE_IMG_FILE = "/home/pi/Documents/aaron-elcano/Elcano_C7_Vision/Cone.jpg";
 	int TEMPLATE_PIXEL_WIDTH;
 	int TEMPLATE_PIXEL_HEIGHT;
 	double TEMPLATE_REAL_WIDTH = 20;		//real object width in cm
@@ -84,8 +76,8 @@ int main(int argc, char **argv)
 	Mat frame;
 	//Actual values
 	int FRAME_THRESHOLDS[] = {
-		0,		//low hue
-		10,		//high hue
+		160,		//low hue
+		180,		//high hue
 		90,		//low saturation
 		255,	//high saturation
 		60,		//low value
@@ -234,7 +226,14 @@ int main(int argc, char **argv)
 	targetTemplate = imread(TEMPLATE_IMG_FILE);
 	TEMPLATE_PIXEL_HEIGHT = targetTemplate.rows;
 	TEMPLATE_PIXEL_WIDTH = targetTemplate.cols;
-
+	
+	//Grab a single frame to get image size
+	camera.grab();
+	camera.retrieve(frame);
+	resize(frame, frame, Size(), args::get(scale), args::get(scale), INTER_LINEAR);
+	CAM_PIXEL_HEIGHT = frame.rows;
+	CAM_PIXEL_WIDTH = frame.cols;
+	
 	//Convert template image to binary for faster processing
 	templBinary = elcano::filterByColor(targetTemplate, TEMPLATE_THRESHOLDS, 1);
 
@@ -243,33 +242,35 @@ int main(int argc, char **argv)
 	if ((double)CAM_PIXEL_WIDTH / (TEMPLATE_PIXEL_WIDTH + 2 * TEMPLATE_SEARCH_BOUNDARY_X) < MAX_TEMPL_RESIZE_RATIO) {
 		MAX_TEMPL_RESIZE_RATIO = (double)CAM_PIXEL_WIDTH / (TEMPLATE_PIXEL_WIDTH + 2 * TEMPLATE_SEARCH_BOUNDARY_X);
 	}
-
-	//Find smallest allowable resize ratio based on max distance
+	
+	//Find smallest allowable resize ratio based on allowable pixel height
 	int minHeight = 20;
 	MIN_TEMPL_RESIZE_RATIO = (double)minHeight / TEMPLATE_PIXEL_HEIGHT;
 
 	while (true) {
 		//Get frame from video
-		bool bSuccess = cap.read(frame);
-		if (!bSuccess) {
-			cout << "Cannot read a frame from video stream" << endl;
-			break;
-		}
+		camera.grab();
+		camera.retrieve(frame);
+		resize(frame, frame, Size(), args::get(scale), args::get(scale), INTER_LINEAR);
+		cvtColor(frame, frame, CV_RGB2BGR);
 
 		//Convert video frame to binary, and do a first pass to find number of positive pixels
 		subFrameBinary = elcano::filterByColor(frame, FRAME_THRESHOLDS, 1);
 		int whitePixelCount = countNonZero(subFrameBinary);
 
 		//Determine expected height of target based on number of positive pixels
-		expectedHeight = 2 * sqrt(whitePixelCount);
+		expectedHeight = 0.025 * whitePixelCount;
 		templResizeRatio = (double)expectedHeight / TEMPLATE_PIXEL_HEIGHT;
+		
 		//If target is out of range, skip
 		if (templResizeRatio < MIN_TEMPL_RESIZE_RATIO) {
 			//Do nothing
+			std::cout << "No visible target" << std::endl;
 		}
 		//If target is too close, skip
 		else if (templResizeRatio > MAX_TEMPL_RESIZE_RATIO) {
 			//Do nothing
+			std::cout << "Target is too close" << std::endl;
 		}
 		//Otherwise, perform computations
 		else { //Resize template image
@@ -279,8 +280,7 @@ int main(int argc, char **argv)
 			actualPoint.y = foundPoint.y + templResize.rows;
 
 			//Debug displaying
-			imshow("FrameBinary", subFrameBinary);
-			imshow("TemplateResize", templResize);
+			//imshow("TemplateResize", templResize);
 			std::cout << "Actual point: " << actualPoint << "   Value: " << matchValue << std::endl;
 			if (matchValue > 0.8) {
 				rectangle(frame, foundPoint, Point(foundPoint.x + templResize.cols, foundPoint.y + templResize.rows), Scalar(0, 255, 0), 2, 8, 0);
@@ -291,9 +291,13 @@ int main(int argc, char **argv)
 			else if (matchValue > 0.4) {
 				rectangle(frame, foundPoint, Point(foundPoint.x + templResize.cols, foundPoint.y + templResize.rows), Scalar(0, 0, 255), 2, 8, 0);
 			}
+			frame.copyTo(frame);
 		}
 
 		//Display video frame
+		//resize(subFrameBinary, subFrameBinary, Size(), 0.25, 0.25, INTER_LINEAR);
+		resize(frame, frame, Size(), 1.25, 1.25, INTER_LINEAR);
+		imshow("FrameBinary", subFrameBinary);
 		imshow("Frame", frame);
 
 		//wait for 'esc' key press for 30ms. If 'esc' key is pressed, break loop

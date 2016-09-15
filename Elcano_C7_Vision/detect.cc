@@ -46,11 +46,11 @@ namespace elcano
 		result.create(resultRows, resultCols, CV_32FC1);
 	
 		matchTemplate(image, target, result, matchMethod);
-		normalize(result, result, 0, 1, NORM_MINMAX, -1, Mat());
+		//normalize(result, result, 0, 1, NORM_MINMAX, -1, Mat());
 		minMaxLoc(result, &minVal, &maxVal, &minLoc, &maxLoc, Mat());
 	
 		//resize(result, result, Size(), 0.5, 0.5, INTER_LINEAR);
-		imshow("TemplateMatch", result);
+		//imshow("TemplateMatch", result);
 
 		/// For SQDIFF and SQDIFF_NORMED, the best matches are lower values. For all the other methods, the higher the better
 		if (matchMethod == TM_SQDIFF || matchMethod == TM_SQDIFF_NORMED)
@@ -68,18 +68,11 @@ namespace elcano
 	}
 
 
-	Point templateMatchBlobs(Mat image, Mat target, int thresholds[], int matchMethod) {
-		/*Mat origBlob = filterByColor(image, thresholds, 0);
+	/*Point templateMatchBlobs(Mat image, Mat target, int thresholds[], int matchMethod) {
+		Mat origBlob = filterByColor(image, thresholds, 0);
 		//resize(origBlob, origBlob, Size(), 0.5, 0.5, INTER_LINEAR);
 		imshow("origBlob", origBlob);
 		Mat targetBlob = filterByColor(target, thresholds, 1);
-		imshow("targetBlob", targetBlob);*/
-		
-		int origThresholds[] = { 160, 180, 90, 255, 60, 255 };
-		Mat origBlob = filterByColor(image, origThresholds, 0);
-		imshow("origBlob", origBlob);
-		int templThresholds[] = { 0, 20, 90, 255, 60, 255 };
-		Mat targetBlob = filterByColor(target, templThresholds, 1);
 		imshow("targetBlob", targetBlob);
 		
 		return templateMatch(origBlob, targetBlob, matchMethod);
@@ -90,6 +83,6 @@ namespace elcano
 		Mat origEdge = convertToEdgeMap(image, lowThresh, highThresh, apertureSize);
 		Mat targetEdge = convertToEdgeMap(target, lowThresh, highThresh, apertureSize);
 		return templateMatch(origEdge, targetEdge, matchMethod);
-	}
+	}*/
 	
 }
