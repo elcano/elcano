@@ -1,127 +1,133 @@
 #include "Elcano_Serial.h"
 
-// Detects if a character (c) is within a string (s) with size (n)
-static bool contains(char *s, size_t n, char c) {
-	for (char *i = s; i < s + n; ++i) if (*i == c) return 1;
-	return 0;
-}
+/*
+** Elcano_Serial.cpp
+** By Dylan Katz
+**
+** Manages our protocal for robust communication of SerialData over serial connections
+*/
 
-// Proceses input from a device (dev) and yields the next token
-// May set an auxillary value (aux) if applicable
-static int yylex(HardwareSerial *dev, long *aux) {
-	char c, flip = 0;
-start:
-	while (contains(" \t\r\0", 4, c = dev->read()));
-	if (c == '\n') return 0;
-	if (c == '-' || (c >= '0' && c <= '9')) {
-		*aux = 0;
-		for (;;) {
-			*aux *= 10;
-			if (c == '-') flip = 1; else *aux += c - '0';
-			c = dev->peek();
-			if (c < '0' || c > '9') break;
-			c = dev->read();
+int8_t ParseState::update(void) {
+	int c = dev->read();
+	if (c == -1) return PSE_UNAVAILABLE;
+	if (c == ' ' || c == '\t' || c == '\0' || c == '\r') return PSE_INCOMPLETE;
+	switch(state) {
+	case 0:
+		// During this state, we begin the processing of a new SerialData
+		// packet and we must receive {D,S,G,X} to state which type of packet
+		// we are working with
+		dt->clear();
+		switch(c) {
+		case 'D': dt->kind = MSG_DRIVE;  break;
+		case 'S': dt->kind = MSG_SENSOR; break;
+		case 'G': dt->kind = MSG_GOAL;   break;
+		case 'X': dt->kind = MSG_SEG;    break;
+		default : return PSE_BAD_TYPE;
 		}
-		if (flip) *aux = -*aux;
-		return '#';
-	}
-	if (contains("DSGXnsabpr,{}", 13, c)) return c;
-	goto start;
-}
-
-// Parses input from a device (dev) and writes out serial data (dt)
-// Returns 0 if successful, -1 otherwise
-int readSerial(HardwareSerial *dev, SerialData *dt) {
-	long aux;
-	dt->Clear();
-	if (dev->available() <= 0) return 1;
-	
-#define LEX yylex(dev, &aux)
-	int l = LEX;
-	switch (l) {
-	case 'D': dt->kind = MSG_DRIVE;  break;
-	case 'S': dt->kind = MSG_SENSOR; break;
-	case 'G': dt->kind = MSG_GOAL;   break;
-	case 'X': dt->kind = MSG_SEG;    break;
-	default:  dt->kind = MSG_NONE;
-	}
-arg:
-	l = LEX;
-	if (l == '{') {
-		int c = LEX;
-		int d = LEX;
-		
-		if (d != '#') return 4;
-		switch (c) {
-		case 'n': dt->number      = aux; break;
-		case 's': dt->speed_cmPs  = aux; break;
-		case 'a': dt->angle_deg   = aux; break;
-		case 'b': dt->bearing_deg = aux; break;
-		case 'r': dt->probability = aux; break;
-		case 'p':
-			dt->posE_cm = aux;
-			if (LEX != ',') return 4;
-			if (LEX != '#') return 5;
-			dt->posN_cm = aux;
-			break;
-		default:  return 3;
+		state = 1;
+		return PSE_INCOMPLETE;
+	case 1:
+		// During this state, we need to find '{' if we are reading the value
+		// for an attribute, or '\n' if we are done with the packet
+		switch(c) {
+		case '\n': state = 0; return PSE_SUCCESS;
+		case '{' : state = 2; return PSE_INCOMPLETE;
+		default  : return PSE_BAD_LCURLY;
 		}
-		
-		if (LEX != '}') return 6;
-		goto arg;
-	} else if (l == '\n') return 0;
-#undef LEX
-	return 2;
+	case 2:
+		// During this state, we begin reading an attribute of the SerialData
+		// and we must recieve {n,s,a,b,r,p} to state _which_ attribute
+		switch(c) {
+		case 'n': state = 3; dt->number      = 0; return PSE_INCOMPLETE;
+		case 's': state = 4; dt->speed_cmPs  = 0; return PSE_INCOMPLETE;
+		case 'a': state = 5; dt->angle_deg   = 0; return PSE_INCOMPLETE;
+		case 'b': state = 6; dt->bearing_deg = 0; return PSE_INCOMPLETE;
+		case 'r': state = 7; dt->probability = 0; return PSE_INCOMPLETE;
+		case 'p': state = 8; dt->posE_cm = 0; dt->posN_cm = 0; return PSE_INCOMPLETE;
+		default : return PSE_BAD_ATTRIB;
+		}
+#define STATES(SS, PS, NS, TERM, HOME, VAR) \
+    case SS:                                \
+        if (c == '-')              {        \
+            state = NS;                     \
+            return PSE_INCOMPLETE; }        \
+        state = PS;                         \
+    case PS:                                \
+        if (c >= '0' && c <= '9')  {        \
+            dt->VAR *= 10;                  \
+            dt->VAR += c - '0';             \
+            return PSE_INCOMPLETE; }        \
+        else if (c == TERM)        {        \
+            state = HOME;                   \
+            return PSE_INCOMPLETE; }        \
+        else                                \
+            return PSE_BAD_NUMBER;          \
+    case NS:                                \
+        if (c >= '0' && c <= '9')  {        \
+            dt->VAR *= 10;                  \
+            dt->VAR -= c - '0';             \
+            return PSE_INCOMPLETE; }        \
+        else if (c == TERM)        {        \
+            state = HOME;                   \
+            return PSE_INCOMPLETE; }        \
+        else                                \
+            return PSE_BAD_NUMBER;
+STATES(3, 13, 23, '}', 1, number)
+STATES(4, 14, 24, '}', 1, speed_cmPs)
+STATES(5, 15, 25, '}', 1, angle_deg)
+STATES(6, 16, 26, '}', 1, bearing_deg)
+STATES(7, 17, 27, '}', 1, probability)
+STATES(8, 18, 28, ',', 9, posE_cm)
+STATES(9, 19, 29, '}', 1, posN_cm)
+#undef STATES
+	}
 }
 
-// Writes a serial data structure (dt) to a device (dev)
-// Returns 0 if successful, -1 otherwise
-int writeSerial(HardwareSerial *dev, SerialData *dt) {
-	switch (dt->kind) {
+bool SerialData::write(HardwareSerial *dev) {
+	switch (kind) {
 	case MSG_DRIVE:  dev->print("D"); break;
 	case MSG_SENSOR: dev->print("S"); break;
 	case MSG_GOAL:   dev->print("G"); break;
 	case MSG_SEG:    dev->print("X"); break;
-	default: return -1;
+	default: return 0;
 	}
-	if (dt->number != NaN && (dt->kind == MSG_GOAL || dt->kind == MSG_SEG)) {
+	if (number != NaN && (kind == MSG_GOAL || kind == MSG_SEG)) {
 		dev->print("{n ");
-		dev->print(dt->number);
+		dev->print(number);
 		dev->print("}");
 	}
-	if (dt->speed_cmPs != NaN && dt->kind != MSG_GOAL) {
+	if (speed_cmPs != NaN && kind != MSG_GOAL) {
 		dev->print("{s ");
-		dev->print(dt->speed_cmPs);
+		dev->print(speed_cmPs);
 		dev->print("}");
 	}
-	if (dt->angle_deg != NaN && (dt->kind == MSG_DRIVE || dt->kind == MSG_SENSOR)) {
+	if (angle_deg != NaN && (kind == MSG_DRIVE || kind == MSG_SENSOR)) {
 		dev->print("{a ");
-		dev->print(dt->angle_deg);
+		dev->print(angle_deg);
 		dev->print("}");
 	}
-	if (dt->bearing_deg != NaN && dt->kind != MSG_DRIVE) {
+	if (bearing_deg != NaN && kind != MSG_DRIVE) {
 		dev->print("{b ");
-		dev->print(dt->bearing_deg);
+		dev->print(bearing_deg);
 		dev->print("}");
 	}
-	if (dt->posE_cm != NaN && dt->posN_cm != NaN && dt->kind != MSG_DRIVE) {
+	if (posE_cm != NaN && posN_cm != NaN && kind != MSG_DRIVE) {
 		dev->print("{p ");
-		dev->print(dt->posE_cm);
+		dev->print(posE_cm);
 		dev->print(",");
-		dev->print(dt->posN_cm);
+		dev->print(posN_cm);
 		dev->print("}");
 	}
-	if (dt->probability != NaN && dt->kind == MSG_GOAL) {
+	if (probability != NaN && kind == MSG_GOAL) {
 		dev->print("{r ");
-		dev->print(dt->probability);
+		dev->print(probability);
 		dev->print("}");
 	}
 	dev->println("\0");
-	return 0;
+	return 1;
 }
 
-// Sets the value of a SerialData struct to the defaults
-void SerialData::Clear() {
+void SerialData::clear() {
     kind = MSG_NONE;
     number = NaN;
     speed_cmPs = NaN;
