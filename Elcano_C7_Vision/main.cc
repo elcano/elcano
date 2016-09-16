@@ -1,8 +1,18 @@
+/* main.cc
+ * 
+ * Authors: Aaron Conrad and Dylan Katz
+ * Last updated: Sept. 16, 2016
+ * 
+ * Main driver for Elcano module C7, the Vision module.
+ * 
+ * Currently runs a demonstration for Seattle Maker Faire that
+ * looks for one target object in view of the camera, and draws
+ * a box around it.
+ */
+
 #include <serial/serial.h>
 #include "detect.hh"
 #include "args.hh"
-
-using namespace cv;
 
 int main(int argc, char **argv)
 {
@@ -17,10 +27,6 @@ int main(int argc, char **argv)
 	try { parser.ParseCLI(argc, argv); }
 	catch (args::Help) { std::cout << parser; return 0; }
 	catch (args::ParseError e) { std::cerr << e.what() << std::endl << parser; return 1; }
-	
-	/* Load Resources */
-	CascadeClassifier cascade;
-	if (!cascade.load(args::get(cascade_name))) { std::cerr << "Unable to load cascade classifier file!" << std::endl << parser; return -1; }
 	
 	/* Connect to Output */
 	//serial::Serial output(args::get(output_name), args::get(baudrate), serial::Timeout::simpleTimeout(100));
@@ -57,7 +63,7 @@ int main(int argc, char **argv)
 	std::tuple<double, double> SENSOR_SIZE(CAM_SENSOR_HEIGHT, CAM_SENSOR_WIDTH);
 
 	//Target object specifics
-	Mat targetTemplate;							//Template image
+	cv::Mat targetTemplate;							//Template image
 	std::string TEMPLATE_IMG_FILE = "/home/pi/Documents/aaron-elcano/Elcano_C7_Vision/Cone.jpg";
 	int TEMPLATE_PIXEL_WIDTH;
 	int TEMPLATE_PIXEL_HEIGHT;
@@ -73,7 +79,7 @@ int main(int argc, char **argv)
 	};
 
 	//Video image specifics
-	Mat frame;
+	cv::Mat frame;
 	//Actual values
 	int FRAME_THRESHOLDS[] = {
 		160,		//low hue
@@ -85,17 +91,17 @@ int main(int argc, char **argv)
 	};
 
 	//Image processing variables (for template matching)
-	Rect subFrameRect;
-	Mat subFrameTemp;
-	Mat subFrame;
-	Mat subFrameBinary;
-	Mat templResize;
-	Mat templBinary;
+	cv::Rect subFrameRect;
+	cv::Mat subFrameTemp;
+	cv::Mat subFrame;
+	cv::Mat subFrameBinary;
+	cv::Mat templResize;
+	cv::Mat templBinary;
 	std::tuple<double, double> expectedPixel;
-	Point expectedPoint;
-	Point searchPoint;
-	Point foundPoint;
-	Point actualPoint;
+	cv::Point expectedPoint;
+	cv::Point searchPoint;
+	cv::Point foundPoint;
+	cv::Point actualPoint;
 	double matchValue;
 	int TEMPLATE_SEARCH_BOUNDARY_X = 20;	//how many pixels outside expected location box to search
 	int TEMPLATE_SEARCH_BOUNDARY_Y = 20;
@@ -223,14 +229,14 @@ int main(int argc, char **argv)
 
 	/* MAKERFARE DEMO -------------------------------------------------------- */
 	//Open template image file, and save appropriate variables
-	targetTemplate = imread(TEMPLATE_IMG_FILE);
+	targetTemplate = cv::imread(TEMPLATE_IMG_FILE);
 	TEMPLATE_PIXEL_HEIGHT = targetTemplate.rows;
 	TEMPLATE_PIXEL_WIDTH = targetTemplate.cols;
 	
 	//Grab a single frame to get image size
 	camera.grab();
 	camera.retrieve(frame);
-	resize(frame, frame, Size(), args::get(scale), args::get(scale), INTER_LINEAR);
+	cv::resize(frame, frame, cv::Size(), args::get(scale), args::get(scale));
 	CAM_PIXEL_HEIGHT = frame.rows;
 	CAM_PIXEL_WIDTH = frame.cols;
 	
@@ -251,57 +257,57 @@ int main(int argc, char **argv)
 		//Get frame from video
 		camera.grab();
 		camera.retrieve(frame);
-		resize(frame, frame, Size(), args::get(scale), args::get(scale), INTER_LINEAR);
-		cvtColor(frame, frame, CV_RGB2BGR);
+		cv::resize(frame, frame, cv::Size(), args::get(scale), args::get(scale));
+		cv::cvtColor(frame, frame, CV_RGB2BGR);
 
 		//Convert video frame to binary, and do a first pass to find number of positive pixels
 		subFrameBinary = elcano::filterByColor(frame, FRAME_THRESHOLDS, 1);
-		int whitePixelCount = countNonZero(subFrameBinary);
+		int whitePixelCount = cv::countNonZero(subFrameBinary);
 
 		//Determine expected height of target based on number of positive pixels
 		expectedHeight = 0.025 * whitePixelCount;
 		templResizeRatio = (double)expectedHeight / TEMPLATE_PIXEL_HEIGHT;
 		
-		//If target is out of range, skip
+		//If target is out of range, skip frame
 		if (templResizeRatio < MIN_TEMPL_RESIZE_RATIO) {
-			//Do nothing
 			std::cout << "No visible target" << std::endl;
 		}
-		//If target is too close, skip
+		//If target is too close, skip frame
 		else if (templResizeRatio > MAX_TEMPL_RESIZE_RATIO) {
-			//Do nothing
 			std::cout << "Target is too close" << std::endl;
 		}
 		//Otherwise, perform computations
-		else { //Resize template image
-			resize(templBinary, templResize, Size(), templResizeRatio, templResizeRatio, INTER_LINEAR);
-			foundPoint = elcano::templateMatch(subFrameBinary, templResize, TM_CCORR_NORMED, matchValue);
+		else {
+			//Resize template image, and template match
+			cv::resize(templBinary, templResize, cv::Size(), templResizeRatio, templResizeRatio);
+			foundPoint = elcano::templateMatch(subFrameBinary, templResize, cv::TM_CCORR_NORMED, matchValue);
+			
+			//Determine where the target's reference point is located
 			actualPoint.x = foundPoint.x + (0.5 * templResize.cols);
 			actualPoint.y = foundPoint.y + templResize.rows;
 
 			//Debug displaying
 			//imshow("TemplateResize", templResize);
-			std::cout << "Actual point: " << actualPoint << "   Value: " << matchValue << std::endl;
+			std::cout << "Actual point: " << actualPoint << "   Correlation: " << matchValue << std::endl;
 			if (matchValue > 0.8) {
-				rectangle(frame, foundPoint, Point(foundPoint.x + templResize.cols, foundPoint.y + templResize.rows), Scalar(0, 255, 0), 2, 8, 0);
+				cv::rectangle(frame, foundPoint, cv::Point(foundPoint.x + templResize.cols, foundPoint.y + templResize.rows), cv::Scalar(0, 255, 0), 2, 8, 0);
 			}
 			else if (matchValue > 0.6) {
-				rectangle(frame, foundPoint, Point(foundPoint.x + templResize.cols, foundPoint.y + templResize.rows), Scalar(0, 255, 255), 2, 8, 0);
+				cv::rectangle(frame, foundPoint, cv::Point(foundPoint.x + templResize.cols, foundPoint.y + templResize.rows), cv::Scalar(0, 255, 255), 2, 8, 0);
 			}
 			else if (matchValue > 0.4) {
-				rectangle(frame, foundPoint, Point(foundPoint.x + templResize.cols, foundPoint.y + templResize.rows), Scalar(0, 0, 255), 2, 8, 0);
+				cv::rectangle(frame, foundPoint, cv::Point(foundPoint.x + templResize.cols, foundPoint.y + templResize.rows), cv::Scalar(0, 0, 255), 2, 8, 0);
 			}
-			frame.copyTo(frame);
 		}
 
 		//Display video frame
-		//resize(subFrameBinary, subFrameBinary, Size(), 0.25, 0.25, INTER_LINEAR);
-		resize(frame, frame, Size(), 1.25, 1.25, INTER_LINEAR);
-		imshow("FrameBinary", subFrameBinary);
-		imshow("Frame", frame);
+		//cv::resize(subFrameBinary, subFrameBinary, Size(), 0.25, 0.25);
+		cv::resize(frame, frame, cv::Size(), 1.25, 1.25);
+		cv::imshow("FrameBinary", subFrameBinary);
+		cv::imshow("Frame", frame);
 
 		//wait for 'esc' key press for 30ms. If 'esc' key is pressed, break loop
-		if (waitKey(30) == 27) {
+		if (cv::waitKey(30) == 27) {
 			std::cout << "esc key is pressed by user" << std::endl;
 			break;
 		}

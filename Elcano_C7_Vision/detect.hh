@@ -1,14 +1,19 @@
 #pragma once
 
-/* Helper function for processing camera input */
-
-using namespace cv;
+/* detect.hh
+ * 
+ * Author: Aaron Conrad
+ * Last modified: Sept. 16, 2016
+ * 
+ * Image processing helper functions for detecting objects.
+ * 
+ * Includes high level function calls for image processing
+ * methods in OpenCV.
+ */
 
 namespace elcano
 {
-	Mat convertToEdgeMap(Mat input, int lowThresh, int highThresh, int apertureSize);
-	Mat filterByColor(Mat input, int thresholds[], int colorType);
-	Point templateMatch(Mat image, Mat target, int matchMedthod, double &value);
-	//Point templateMatchEdges(Mat image, Mat target, int lowThresh, int highThresh, int apertureSize, int matchMethod);
-	//Point templateMatchBlobs(Mat image, Mat target, int thresholds[], int matchMethod);
+	cv::Mat convertToEdgeMap(cv::Mat input, int lowThresh, int highThresh, int apertureSize);
+	cv::Mat filterByColor(cv::Mat input, int thresholds[], int colorType);
+	cv::Point templateMatch(cv::Mat image, cv::Mat target, int matchMedthod, double &value);
 }

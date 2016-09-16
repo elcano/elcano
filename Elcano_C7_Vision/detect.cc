@@ -1,88 +1,68 @@
+/* detect.cc
+ * 
+ * Author: Aaron Conrad
+ * Last modified: Sept. 16, 2016
+ */
+
 #include "detect.hh"
-
-/* Helper function for processing camera input */
-
-using namespace cv;
 
 namespace elcano
 {
-	Mat convertToEdgeMap(Mat input, int lowThresh, int highThresh, int apertureSize) {
-		Mat result;
-		cvtColor(input, result, CV_BGR2GRAY);
+	cv::Mat convertToEdgeMap(cv::Mat input, int lowThresh, int highThresh, int apertureSize) {
+		cv::Mat result;
+		cv::cvtColor(input, result, CV_BGR2GRAY);
 		//Reduce noise with a 3x3 kernel
-		blur(result, result, Size(3, 3));
+		cv::blur(result, result, cv::Size(3, 3));
 		//Detect edges
-		Canny(result, result, lowThresh, highThresh, apertureSize);
+		cv::Canny(result, result, lowThresh, highThresh, apertureSize);
 		return result;
 	}
 	
 	/* colorType 0 is RGB; colorType 1 is BGR */
-	Mat filterByColor(Mat input, int thresholds[], int colorType) {
-		Mat result;
+	cv::Mat filterByColor(cv::Mat input, int thresholds[], int colorType) {
+		cv::Mat result;
 		
 		if (colorType == 0) {
-			cvtColor(input, result, COLOR_RGB2HSV);
+			cv::cvtColor(input, result, cv::COLOR_RGB2HSV);
 		}
 		else if (colorType == 1) {
-			cvtColor(input, result, COLOR_BGR2HSV);
+			cv::cvtColor(input, result, cv::COLOR_BGR2HSV);
 		}
-		inRange(result, Scalar(thresholds[0], thresholds[2], thresholds[4]), Scalar(thresholds[1], thresholds[3], thresholds[5]), result);
+		cv::inRange(result, cv::Scalar(thresholds[0], thresholds[2], thresholds[4]), cv::Scalar(thresholds[1], thresholds[3], thresholds[5]), result);
 	
 		//morphological closing (fill small holes in the foreground)
-		erode(result, result, getStructuringElement(MORPH_ELLIPSE, Size(5, 5)));
-		dilate(result, result, getStructuringElement(MORPH_ELLIPSE, Size(5, 5)));
+		cv::erode(result, result, cv::getStructuringElement(cv::MORPH_ELLIPSE, cv::Size(5, 5)));
+		cv::dilate(result, result, cv::getStructuringElement(cv::MORPH_ELLIPSE, cv::Size(5, 5)));
 	
 		return result;
 	}
 
 
-	Point templateMatch(Mat image, Mat target, int matchMethod, double &value) {
-		double minVal; double maxVal; Point minLoc; Point maxLoc;
-		Point matchLoc;
-		Mat result;
+	cv::Point templateMatch(cv::Mat image, cv::Mat target, int matchMethod, double &value) {
+		double minVal; double maxVal; cv::Point minLoc; cv::Point maxLoc;
+		cv::Point matchLoc;
+		cv::Mat result;
 		int resultCols = image.cols - target.cols + 1;
 		int resultRows = image.rows - target.rows + 1;
 	
 		result.create(resultRows, resultCols, CV_32FC1);
 	
-		matchTemplate(image, target, result, matchMethod);
+		cv::matchTemplate(image, target, result, matchMethod);
 		//normalize(result, result, 0, 1, NORM_MINMAX, -1, Mat());
-		minMaxLoc(result, &minVal, &maxVal, &minLoc, &maxLoc, Mat());
+		cv::minMaxLoc(result, &minVal, &maxVal, &minLoc, &maxLoc, cv::Mat());
 	
-		//resize(result, result, Size(), 0.5, 0.5, INTER_LINEAR);
-		//imshow("TemplateMatch", result);
+		//cv::imshow("TemplateMatch", result);
 
 		/// For SQDIFF and SQDIFF_NORMED, the best matches are lower values. For all the other methods, the higher the better
-		if (matchMethod == TM_SQDIFF || matchMethod == TM_SQDIFF_NORMED)
-		{
+		if (matchMethod == cv::TM_SQDIFF || matchMethod == cv::TM_SQDIFF_NORMED) {
 			matchLoc = minLoc;
 			value = minVal;
 		}
-		else
-		{
+		else {
 			matchLoc = maxLoc;
 			value = maxVal;
 		}
 
 		return matchLoc;
 	}
-
-
-	/*Point templateMatchBlobs(Mat image, Mat target, int thresholds[], int matchMethod) {
-		Mat origBlob = filterByColor(image, thresholds, 0);
-		//resize(origBlob, origBlob, Size(), 0.5, 0.5, INTER_LINEAR);
-		imshow("origBlob", origBlob);
-		Mat targetBlob = filterByColor(target, thresholds, 1);
-		imshow("targetBlob", targetBlob);
-		
-		return templateMatch(origBlob, targetBlob, matchMethod);
-	}
-
-
-	Point templateMatchEdges(Mat image, Mat target, int lowThresh, int highThresh, int apertureSize, int matchMethod) {
-		Mat origEdge = convertToEdgeMap(image, lowThresh, highThresh, apertureSize);
-		Mat targetEdge = convertToEdgeMap(target, lowThresh, highThresh, apertureSize);
-		return templateMatch(origEdge, targetEdge, matchMethod);
-	}*/
-	
 }
