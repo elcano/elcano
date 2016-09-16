@@ -475,7 +475,7 @@ void squareRoutine(unsigned long sides, unsigned long &rcAuto) {
     brake(MAX_BRAKE_OUT);
     delay(1000);
     brake(MIN_BRAKE_OUT);
-    delay(100);
+    
     loopTime = millis();
     while (millis() < (loopTime + sideSec)) {
       moveVehicle(112);
@@ -489,6 +489,41 @@ void squareRoutine(unsigned long sides, unsigned long &rcAuto) {
     delay(100);
     loopTime = millis();
     while (millis() < (loopTime + turnSec)) {
+      moveVehicle(96);
+    }
+  }
+  brake(MAX_BRAKE_OUT);
+  delay(1000);
+  brake(MIN_BRAKE_OUT);
+  rcAuto = LOW;
+}
+/*---------------------------------------------------------------------------------------*/
+//basicRoutine
+void basicRoutine(unsigned long sides, unsigned long &rcAuto) {
+  Serial.println("Starting basic routine...");
+  rcAuto = HIGH;
+  sides = sides * 1000;             //convert side time to ms
+  unsigned long turns = 2000;       //turn time in ms
+  unsigned long loopTime;           //start time of while loops for throttle
+  for(int i = 0; i < 4; i++){
+    //steer(LEFT_TURN_OUT);
+    steer(STRAIGHT_TURN_OUT);
+    brake(MAX_BRAKE_OUT);
+    delay(1000);
+    brake(MIN_BRAKE_OUT);
+    
+    loopTime = millis();
+    while (millis() < (loopTime + sides)) {
+      moveVehicle(112);
+    }
+    
+    steer(LEFT_TURN_OUT);
+    brake(MAX_BRAKE_OUT);
+    delay(1000);
+    brake(MIN_BRAKE_OUT);
+
+    loopTime = millis();
+    while (millis() < (loopTime + turns)) {
       moveVehicle(96);
     }
   }
@@ -611,7 +646,7 @@ byte processRC (unsigned long *results){
   }
   else if(doRoutine(results[RC_RDR])){
     moveVehicle(MIN_ACC_OUT);
-    squareRoutine(5, results[RC_AUTO]);
+    basicRoutine(2, results[RC_AUTO]);
   }
   else {
     moveVehicle(MIN_ACC_OUT);
