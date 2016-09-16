@@ -11,9 +11,8 @@ The Pilot program reads a serial line that specifies the desired path and speed
 of the vehicle. It computes the analog signals to control the throttle, brakes 
 and steering and sends these to C2.
 
-Input will be recieved and sent using the functions writeSerial and readSerial in 
-Elcano_Serial. Inputs will be received from C5(sensors) and C4(planner). Output is sent to 
-C2(Low Level).
+Input will be recieved and sent using Elcano_Serial. Inputs will be received from
+C5(sensors) and C4(planner). Output is sent to C2(Low Level).
 
 In USARSIM simulation, these could be written on the serial line as
 wheel spin speeds and steering angles needed to
@@ -504,7 +503,7 @@ void loop()
     //toLowLevel.kind = MSG_DRIVE;
     //toLowLevel.angle_deg = steeringAngle;
     //toLowLevel.speed_cmPs = speedSetting;
-    //writeSerial(&Serial3, &toLowLevel);
+    //toLowLevel.write(&Serial3);
 
     //Test of output to C2.
     // Outputting to C2 uses the Elcano Serial kind 1 to send a "drive signal to C2"

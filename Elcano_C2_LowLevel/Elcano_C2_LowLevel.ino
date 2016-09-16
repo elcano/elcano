@@ -298,7 +298,7 @@ void loop() {
   }
   //Serial.println(nextTime); //Old sanity check line; testing new pin output sanity check.
   //Serial.println("Clearing Results");
-  Results.Clear();
+  Results.clear();
   Results.kind = MSG_SENSOR;
   Results.angle_deg = TurnAngle_degx10() / 10;
   //show_speed (&Results);
@@ -626,7 +626,7 @@ void processHighLevel(SerialData * results)
   //Throttle
   Throttle_PID(10*results->speed_cmPs);
   //End Throttle
-  writeSerial(&Serial3, results);
+  results->write(&Serial3);
 }
 /*---------------------------------------------------------------------------------------*/
 //Converts RC values to corresponding values for the PWM output
@@ -1101,7 +1101,7 @@ void show_speed(SerialData *Results)
   Odometer_m += (float)(LOOP_TIME_MS * SpeedCyclometer_mmPs) / MEG;
   // Since Results have not been cleared, angle information will also be sent.
   Results->speed_cmPs = SpeedCyclometer_mmPs / 10;
-  writeSerial(&Serial3, Results);  // Send speed to C6
+  Results->write(&Serial3);  // Send speed to C6
 
   show7seg( SpeedCyclometer_mmPs);   // Show speed on 7 segment LEDs
 
