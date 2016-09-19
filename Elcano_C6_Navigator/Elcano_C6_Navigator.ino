@@ -248,7 +248,7 @@ void TestSpeed ( SerialData &data )
   long randNumber = random(3000, 5000);
   
   Serial.println(randNumber);
-  data.Clear();
+  data.clear();
   data.kind = MSG_SENSOR;
   data.speed_cmPs = randNumber;
 }
@@ -495,20 +495,20 @@ void loop()
     // Send vehicle state to C6 and C4.
 
     // Preparing Result struct to send data to C4
-    C4_Results.Clear();
+    C4_Results.clear();
     C4_Results.bearing_deg = CurrentHeading;
     C4_Results.posE_cm = estimated_position.east_mm;
     C4_Results.posN_cm = estimated_position.north_mm;
     C4_Results.kind = MSG_GOAL;
 
     //Sending GPS position from C6 to C2
-    C2_Results.Clear();    
+    C2_Results.clear();    
     C2_Results.posE_cm = estimated_position.east_mm/10;
     C2_Results.posN_cm = estimated_position.north_mm/10;
     C2_Results.kind = MSG_SENSOR;
     
     // Read data from C2 using Elcano_Serial
-    C2_Results.Clear();
+    C2_Results.clear();
     readSerial(&Serial2, &C2_Results);
     TestSpeed(C2_Results);
     displayResults(C2_Results);
@@ -547,8 +547,8 @@ void loop()
 		C4_Results.posN_cm = fuzzy_out.y_Pos;
     }
         
-    writeSerial(&Serial2, &C4_Results);
-    writeSerial(&Serial2, &C2_Results);   
+    C4_Results.write(&Serial2);
+    C2_Results.write(&Serial2);   
     
     Serial.print("time, gps, dt_ms = ");
     Serial.print(time, DEC); Serial.print(", ");

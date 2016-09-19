@@ -42,10 +42,19 @@ struct SerialData {
 
 //! Contains internal state for the SerialData parser.
 struct ParseState {
-	HardwareSerial *dev; //!< Connection to write from
+	HardwareSerial *dev; //!< Connection to read from
 	SerialData *dt; //!< SerialData to write to
 	
 	int8_t update(void); //!< Update the state of the parser based on a single character
 private:
 	uint8_t state = 0; //!< Internal state variable
 };
+
+//! Helper function to avoid API breakage (TODO: update the rest of the codebase to the new API and remove this)
+inline void readSerial(HardwareSerial *hs /**< The connection to read from */,
+                       SerialData *dt /**< The SerialData to read from */) {
+	ParseState ps;
+	ps.dev = hs;
+	ps.dt = dt;
+	while (ps.update() != PSE_SUCCESS);
+}
