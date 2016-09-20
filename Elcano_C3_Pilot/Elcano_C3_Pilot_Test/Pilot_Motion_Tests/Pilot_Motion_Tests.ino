@@ -270,7 +270,7 @@ void loop()
     SerialData lowLevelData;
     lowLevelData.angle_deg = 15;
     lowLevelData.speed_cmPs = 120;
-    writeSerial(&Serial1 ,&lowLevelData);
+    lowLevelData.write(&Serial1);
 
     //Basic test to see if the bike can rotate to an angle
     
