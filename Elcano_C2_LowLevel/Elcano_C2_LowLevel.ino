@@ -19,7 +19,7 @@ const int softwareRx = 7;   // not used
 #define s7s Serial2
 Servo STEER_SERVO;
 
-#define LOOP_TIME_MS 400
+#define LOOP_TIME_US 400
 #define ERROR_HISTORY 20 //number of errors to accumulate
 #define TEN_SECONDS_IN_MICROS 10000000
 
@@ -78,7 +78,7 @@ const unsigned long HubAtZero = 1159448;
 int max_rc = MAX_RC;
 int mid = MIDDLE;
 int min_rc = MIN_RC;
-#define LED_PIN_OUT 16
+
 //==========================================================================================
 void ISR_TURN_rise(){
   noInterrupts();
@@ -265,7 +265,7 @@ void loop() {
   // Save start time for performance report.
   unsigned long startTime = millis();
   // Get the next loop start time.
-  unsigned long nextTime = startTime + LOOP_TIME_MS;
+  unsigned long nextTime = startTime + LOOP_TIME_US;
 
   digitalWrite(27, LOW);
   digitalWrite(33, LOW);
@@ -274,7 +274,11 @@ void loop() {
   unsigned long local_results[7];
   //  PrintDone();
 
+<<<<<<< HEAD
+  while (micros() < nextTime &&
+=======
   while (millis() < nextTime &&
+>>>>>>> 6316ca5b75edf24563f330813c3e999bb17d1a44
          ~((RC_Done[RC_ESTP] == 1) && (RC_Done[RC_GO] == 1) && (RC_Done[RC_TURN] == 1) && (RC_Done[RC_RDR] == 1)))
   {
     ;  //wait
@@ -292,6 +296,19 @@ void loop() {
   }
   //    Print7( true, local_results);
 
+<<<<<<< HEAD
+  
+  //Serial.println(nextTime); //Old sanity check line; testing new pin output sanity check.
+  //Serial.println("Clearing Results");
+//  Results.Clear();
+//  Results.kind = MSG_SENSOR;
+//  Results.angle_deg = TurnAngle_degx10() / 10;
+  //show_speed (&Results);
+
+  // Report how long the loop took.
+  
+ 
+=======
   digitalWrite(27, HIGH);
   if(nextTime < startTime || nextTime > startTime + LOOP_TIME_MS) {
     digitalWrite(33, HIGH);
@@ -308,12 +325,13 @@ void loop() {
  // unsigned long elapsedTime = endTime - startTime;
 //  Serial.print("loop elapsed time = ");
 //  Serial.println(elapsedTime);
+>>>>>>> 6316ca5b75edf24563f330813c3e999bb17d1a44
 
   //LogData(local_results, &Results);  // data for spreadsheet
 
-  calibrationTime_ms += LOOP_TIME_MS;
-  straightTime_ms = (steer_control == STRAIGHT_TURN_OUT) ? straightTime_ms + LOOP_TIME_MS : 0;
-  stoppedTime_ms = (throttle_control == MIN_ACC_OUT) ? stoppedTime_ms + LOOP_TIME_MS : 0;
+  calibrationTime_ms += LOOP_TIME_US;
+  straightTime_ms = (steer_control == STRAIGHT_TURN_OUT) ? straightTime_ms + LOOP_TIME_US : 0;
+  stoppedTime_ms = (throttle_control == MIN_ACC_OUT) ? stoppedTime_ms + LOOP_TIME_US : 0;
   if (calibrationTime_ms > 40000 && straightTime_ms > 3000 && stoppedTime_ms > 3000)
   {
     //       int oldBrake = brake_control;
@@ -322,7 +340,11 @@ void loop() {
     //       brake(oldBrake);       // restore brake state
     calibrationTime_ms = 0;
   }
-
+  
+  unsigned long endTime = micros();
+  // unsigned long elapsedTime = endTime - startTime;
+  // Serial.print("loop elapsed time = ");
+  // Serial.println(elapsedTime);
   // Did we spend long enough in the loop that we should immediately
   // start the next pass?
   //Serial.print("Time: "); Serial.print(endTime); Serial.print(", Next: "); Serial.println(nextTime);
@@ -334,6 +356,12 @@ void loop() {
     Serial.print("End Sanity: "); Serial.println(endTime);
     Serial.print("Delaying: "); Serial.println(nextTime - endTime);
     delay(nextTime - endTime);
+<<<<<<< HEAD
+  } else {
+    // Yes, we overran the expected loop interval. Extend the time.
+    nextTime = endTime + LOOP_TIME_US;
+  }
+=======
   } 
 //  else {
 //    // Yes, we overran the expected loop interval. Extend the time.
@@ -341,6 +369,7 @@ void loop() {
 //  }
   
   //Serial.println("End of loop");
+>>>>>>> 6316ca5b75edf24563f330813c3e999bb17d1a44
 }
 /*---------------------------------------------------------------------------------------*/
 void PrintDone()
@@ -445,7 +474,7 @@ void circleRoutine(unsigned long seconds, unsigned long &rcAuto) {
   seconds = seconds * 1000;
   unsigned long loopTime = millis();
   while (millis() < (loopTime + seconds)) {
-    moveVehicle(128);
+    moveVehicle(112);
   }
   rcAuto = LOW;
 }
@@ -455,7 +484,11 @@ void squareRoutine(unsigned long sides, unsigned long &rcAuto) {
   Serial.println("Starting square routine...");
   rcAuto = HIGH;
   long straightSpeed = 2750;        //mmPs
+<<<<<<< HEAD
+  long turnSpeed = 1800;            //mmPs
+=======
   long turnSpeed = 1400;            //mmPs
+>>>>>>> 6316ca5b75edf24563f330813c3e999bb17d1a44
   sides = sides * 1000;             //convert side length to mm
   unsigned long sideSec = sides / straightSpeed;  //calculate seconds per side at set speed
   sideSec = sideSec * 1000;         //convert to ms
@@ -465,7 +498,13 @@ void squareRoutine(unsigned long sides, unsigned long &rcAuto) {
   for(int i = 0; i < 4; i++){
     //steer(LEFT_TURN_OUT);
     steer(STRAIGHT_TURN_OUT);
+<<<<<<< HEAD
+    brake(MAX_BRAKE_OUT);
+    delay(1000);
+    brake(MIN_BRAKE_OUT);
+=======
     delay(100);
+>>>>>>> 6316ca5b75edf24563f330813c3e999bb17d1a44
     
     loopTime = millis();
     while (millis() < (loopTime + sideSec)) {
@@ -473,8 +512,15 @@ void squareRoutine(unsigned long sides, unsigned long &rcAuto) {
     }
     
     steer(LEFT_TURN_OUT);
+<<<<<<< HEAD
+    brake(MAX_BRAKE_OUT);
+    delay(1000);
+
+    brake(MIN_BRAKE_OUT);
+=======
     delay(100);
 
+>>>>>>> 6316ca5b75edf24563f330813c3e999bb17d1a44
     
 
     loopTime = millis();
@@ -482,6 +528,12 @@ void squareRoutine(unsigned long sides, unsigned long &rcAuto) {
       moveVehicle(96);
     }
   }
+<<<<<<< HEAD
+  brake(MAX_BRAKE_OUT);
+  delay(1000);
+  brake(MIN_BRAKE_OUT);
+=======
+>>>>>>> 6316ca5b75edf24563f330813c3e999bb17d1a44
   rcAuto = LOW;
 }
 /*---------------------------------------------------------------------------------------*/
@@ -586,6 +638,12 @@ byte processRC (unsigned long *results){
   if (liveBrake(results[RC_GO])){
     Serial.print("Braking: "); Serial.println(results[RC_GO]);
     brake(convertBrake(results[RC_GO]));
+<<<<<<< HEAD
+  }
+  else {
+    brake(MIN_BRAKE_OUT);
+=======
+>>>>>>> 6316ca5b75edf24563f330813c3e999bb17d1a44
   }
 
   //Accelerating
@@ -1098,7 +1156,7 @@ void show_speed(SerialData *Results)
   ComputeSpeed (&history);
   //   PrintSpeed(&history);
 
-  Odometer_m += (float)(LOOP_TIME_MS * SpeedCyclometer_mmPs) / MEG;
+  Odometer_m += (float)(LOOP_TIME_US * SpeedCyclometer_mmPs) / MEG;
   // Since Results have not been cleared, angle information will also be sent.
   Results->speed_cmPs = SpeedCyclometer_mmPs / 10;
   Results->write(&Serial3);  // Send speed to C6
