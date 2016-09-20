@@ -4,7 +4,9 @@
 #include <SPI.h>
 #include <SD.h>
 #include <Elcano_Serial.h>
-#define NEW
+
+SerialData dt;
+ParseState ps;
 
 /*  
 Elcano Module C4: Path Planner.
@@ -590,9 +592,6 @@ int PlanPath (waypoint *start, waypoint *destination)
     return last;
  }
 /*---------------------------------------------------------------------------------------*/
-#if (ARDUINO_AVR_UNO || ARDUINO_AVR_NANO)
-#define Serial1 Serial
-#endif
 
 // Transmit the path to C3 Pilot over a serial line.
 void SendPath(waypoint *course, int count)
@@ -601,25 +600,16 @@ void SendPath(waypoint *course, int count)
   SerialData Results;
   for( int i = 0; i < count; i++)
   {
-#ifdef NEW
-     Results.Clear();
+     Results.clear();
      Results.number = i;
      Results.kind = MSG_SEG;
      Results.posE_cm = course->east_mm / 10;
      Results.posN_cm = course->north_mm / 10;
-     // TODO: compute bearing
      float angle = atan2(course->Nvector_x1000, course->Evector_x1000) * 180 / PI + 90.;
      Results.bearing_deg = (long) (-angle);
      Results.speed_cmPs = course->speed_mmPs / 10;
      
-     writeSerial( &Serial1, &Results);
-#else
-    dataString = course[i].formPointString();
-    checksum(dataString);
-    Serial.println(dataString);
-    if (course[i].index & END)
-        break;
-#endif
+     Results.write(&Serial2);
   }
 }
 /*---------------------------------------------------------------------------------------*/
@@ -1041,20 +1031,25 @@ void initialize()
 /*---------------------------------------------------------------------------------------*/ 
 void setup() 
 { 
-        pinMode(Rx0, INPUT);
-        pinMode(Tx0, OUTPUT);
-        pinMode(LED, OUTPUT); 
-     	  Serial.begin(9600); 
-        Serial.flush();
-        Serial.println();
-        Serial.println();
-        pinMode(DATA_READY, INPUT);
-        DataAvailable = false;
-        attachInterrupt(0, DataReady, FALLING);
-        
-        initialize();
-       
+	pinMode(Rx0, INPUT);
+	pinMode(Tx0, OUTPUT);
+	pinMode(LED, OUTPUT); 
+	Serial.begin(9600); 
+	Serial.flush();
+	Serial.println();
+	Serial.println();
+	pinMode(DATA_READY, INPUT);
+	DataAvailable = false;
+	attachInterrupt(0, DataReady, FALLING);
+	
+	initialize();
 
+	dt.clear();
+	ps.dt = &dt;
+	ps.dev = &Serial1;
+	
+	Serial1.begin(9600);
+	Serial2.begin(9600);
 }
 /*---------------------------------------------------------------------------------------*/ 
 void loop() 
