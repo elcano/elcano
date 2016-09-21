@@ -1,4 +1,7 @@
 #include <opencv2/opencv.hpp>
+//#include <opencv2/imgcodecs/imgcodecs.hpp>
+#include <opencv2/highgui/highgui.hpp>
+#include <opencv2/imgproc/imgproc.hpp>
 #include <raspicam/raspicam_cv.h>
 #include <iostream>
 #include <vector>

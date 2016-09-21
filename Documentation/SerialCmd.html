@@ -40,40 +40,40 @@ available, the Gamebots format has been modified:</P>
 <P STYLE="margin-bottom: 0in"><BR>
 </P>
 <P STYLE="margin-bottom: 0in"><FONT FACE="Courier New, monospace">1.
-DRIVE</FONT> <FONT FACE="Courier New, monospace">{Speed</FONT>
-ComandedSpeed<FONT FACE="Courier New, monospace">} {Ang</FONT>
+D</FONT> <FONT FACE="Courier New, monospace">{s</FONT>
+ComandedSpeed<FONT FACE="Courier New, monospace">} {a</FONT>
 ComandedSteerAngle<FONT FACE="Courier New, monospace">}</FONT></P>
 <P STYLE="margin-bottom: 0in"><BR>
 </P>
 <P STYLE="margin-bottom: 0in">Where:</P>
-<P STYLE="margin-bottom: 0in"><FONT FACE="Courier New, monospace">{Speed</FONT>
+<P STYLE="margin-bottom: 0in"><FONT FACE="Courier New, monospace">{s</FONT>
 ComandedSpeed} ComandedSpeed is an intege giving the speed for the
 rear wheel in centimeters per second.</P>
 <P STYLE="margin-bottom: 0in">The value is the speed, in centimeters
 / second.</P>
-<P STYLE="margin-bottom: 0in"><FONT FACE="Courier New, monospace">{Ang
+<P STYLE="margin-bottom: 0in"><FONT FACE="Courier New, monospace">{a
 </FONT>ComandedSteerAngle} ComandedSteerAngle is an integer that
 specifies the steer angle</P>
 <P STYLE="margin-bottom: 0in">of Elcano’s front wheels. The value
 is the absolute steer angle, in degrees.</P>
 <P STYLE="margin-bottom: 0in"><BR>
 </P>
-<P STYLE="margin-bottom: 0in">Example: <FONT FACE="Courier New, monospace">DRIVE
-{Speed 259}{FrontSteer -3}</FONT></P>
+<P STYLE="margin-bottom: 0in">Example: <FONT FACE="Courier New, monospace">D
+{s 259} {a -3}</FONT></P>
 <P STYLE="margin-bottom: 0in"><BR>
 </P>
 <P STYLE="margin-bottom: 0in"><FONT FACE="Verdana, sans-serif"><B>SENSOR</B></FONT></P>
 <P STYLE="margin-bottom: 0in">A similar format will be used for
 sensed information from C6.</P>
 <P STYLE="margin-bottom: 0in"><FONT FACE="Courier New, monospace">2.
-SENSOR {Speed</FONT> ActualSpeed}</P>
+S {s</FONT> ActualSpeed}</P>
 <P STYLE="margin-bottom: 0in">ActualSpeed gives the speed for the
 rear wheel.</P>
 <P STYLE="margin-bottom: 0in">The value is the speed, in centimeters
 per second.</P>
 <P STYLE="margin-bottom: 0in">Other sensors are:</P>
 <P STYLE="margin-bottom: 0in"><FONT FACE="Courier New, monospace">3.
-SENSOR {Ang Deg}</FONT></P>
+S {a Deg}</FONT></P>
 <P STYLE="margin-bottom: 0in"><FONT FACE="Times New Roman, serif">Steering
 angle of the front wheels, in degrees times. </FONT>
 </P>
@@ -83,7 +83,7 @@ right.</FONT></P>
 <P STYLE="margin-bottom: 0in"><FONT FACE="Times New Roman, serif">Negative
 numbers (mod 360) are degrees to the left.</FONT></P>
 <P STYLE="margin-bottom: 0in"><FONT FACE="Courier New, monospace">4.
-SENSOR {Pos EPosMeters,NPosMeters} {Br Deg}</FONT></P>
+S {p EPosMeters,NPosMeters} {b Deg}</FONT></P>
 <P STYLE="margin-bottom: 0in">// Best estimate of vehicle position,
 fused from all sensors.</P>
 <P STYLE="margin-bottom: 0in">The East and North positions are
@@ -94,11 +94,11 @@ pointing.</P>
 </P>
 <P STYLE="margin-bottom: 0in"><FONT FACE="Verdana, sans-serif"><B>OTHER</B></FONT></P>
 <P STYLE="margin-bottom: 0in"><FONT FACE="Courier New, monospace">5.
-GOAL {Num n} {Pos EPosMeters,NPosMeters} {Br Deg}</FONT></P>
+G {n Num} {p EPosMeters,NPosMeters} {b Deg}</FONT></P>
 <P STYLE="margin-bottom: 0in"><FONT FACE="Courier New, monospace">5a.
-GOAL {Num n} {Pos EPosMeters,NPosMeters} {Br Deg} {Prob n}</FONT></P>
+G {n Num} {p EPosMeters,NPosMeters} {b Deg} {r Probability}</FONT></P>
 <P STYLE="margin-bottom: 0in"><FONT FACE="Courier New, monospace">6.
-SEG {Num n} {Pos EPosMeters,NPosMeters} {Br Deg} {Speed SegSpeed}</FONT></P>
+X {n Num} {p EPosMeters,NPosMeters} {b Deg} {s SegSpeed}</FONT></P>
 <P STYLE="margin-bottom: 0in"><FONT FACE="Times New Roman, serif">Goal
 gives the positions of the cones, which may be updated from visual
 information. The next goal is always {Num 1} If a bearing is present,

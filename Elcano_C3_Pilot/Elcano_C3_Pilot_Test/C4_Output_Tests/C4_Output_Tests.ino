@@ -9,7 +9,7 @@ void setup()
 void loop() 
 {
   SerialData testResult;
-  testResult.Clear();
+  testResult.clear();
   //Set the data of the SerialData. Change kind to test vaiables as needed.
   testResult.kind = 1;
   testResult.number = 2;
@@ -21,6 +21,6 @@ void loop()
   testResult.probability = 8;
   testResult.distance_travelled_cm = 9;
   //Write the data over the Serial and print the sent data to the monitor.
-  writeSerial(&Serial, &testResult);
+  testResult.write(&Serial);
   Serial.println(testResult.kind);
 }

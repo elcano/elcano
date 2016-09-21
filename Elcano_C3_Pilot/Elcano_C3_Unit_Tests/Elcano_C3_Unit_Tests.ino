@@ -627,7 +627,7 @@ void loop()
     toLowLevel.kind = MSG_DRIVE;
     toLowLevel.angle_deg = steeringAngle;
     toLowLevel.speed_cmPs = speedSetting;
-    writeSerial(&Serial1, &toLowLevel);
+    toLowLevel.write(&Serial1);
 
     //Test of output to C2.
     // Outputting to C2 uses the Elcano Serial kind 1 to send a "drive signal to C2"
