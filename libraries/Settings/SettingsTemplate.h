@@ -59,6 +59,8 @@ VEHICLE_NUMBER to your own new number.
 
 // Trike-specific physical parameters
 #define WHEEL_DIAMETER_MM 482
+// Wheel Cirumference
+#define WHEEL_CIRCUM_MM WHEEL_DIAMETER_MM * PI
 //		Turning radius in cm.
 #define TURN_RADIUS_CM 209
 //		Turning speed in degrees per ms.
@@ -150,6 +152,8 @@ VEHICLE_NUMBER to your own new number.
 
 // Trike specific physical parameters
 #define WHEEL_DIAMETER_MM 500
+// Wheel Cirumference
+#define WHEEL_CIRCUM_MM WHEEL_DIAMETER_MM * PI
 //Turning radius in cm.
 #define TURN_RADIUS 214
 #define MOTOR_POLE_PAIRS 23
