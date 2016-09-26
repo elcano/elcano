@@ -1,5 +1,6 @@
 #include <Settings.h>
 
+#include <PID_v1.h>
 #include <SPI.h>
 #include <Elcano_Serial.h>
 #include <Servo.h>
@@ -224,7 +225,7 @@ void setup()
   PRR0 &= ~4; // turn off PRR0.PRSPI bit so power isn't off
   SPI.begin();
   for (int channel = 0; channel < 4; channel++){
-    DAC_Write (channel, 0); // reset did not clear previous states
+    DAC_Write(channel, 0); // reset did not clear previous states
   }
   // put vehicle in initial state
   steer(STRAIGHT_TURN_OUT);
@@ -263,7 +264,7 @@ void loop() {
   SerialData Results;
 
   // Save start time for performance report.
-  unsigned long startTime = millis();
+  unsigned long startTime = micros();
   // Get the next loop start time.
   unsigned long nextTime = startTime + LOOP_TIME_US;
 
@@ -274,11 +275,7 @@ void loop() {
   unsigned long local_results[7];
   //  PrintDone();
 
-<<<<<<< HEAD
   while (micros() < nextTime &&
-=======
-  while (millis() < nextTime &&
->>>>>>> 6316ca5b75edf24563f330813c3e999bb17d1a44
          ~((RC_Done[RC_ESTP] == 1) && (RC_Done[RC_GO] == 1) && (RC_Done[RC_TURN] == 1) && (RC_Done[RC_RDR] == 1)))
   {
     ;  //wait
@@ -295,9 +292,7 @@ void loop() {
     processHighLevel(&Results);
   }
   //    Print7( true, local_results);
-
-<<<<<<< HEAD
-  
+    
   //Serial.println(nextTime); //Old sanity check line; testing new pin output sanity check.
   //Serial.println("Clearing Results");
 //  Results.Clear();
@@ -307,25 +302,16 @@ void loop() {
 
   // Report how long the loop took.
   
- 
-=======
   digitalWrite(27, HIGH);
-  if(nextTime < startTime || nextTime > startTime + LOOP_TIME_MS) {
+  if(nextTime < startTime || nextTime > startTime + LOOP_TIME_US) {
     digitalWrite(33, HIGH);
   }
   //Serial.println(nextTime); //Old sanity check line; testing new pin output sanity check.
   //Serial.println("Clearing Results");
-  Results.clear();
+  //Results.clear();
   Results.kind = MSG_SENSOR;
   Results.angle_deg = TurnAngle_degx10() / 10;
   //show_speed (&Results);
-
-  // Report how long the loop took.
-  unsigned long endTime = millis();
- // unsigned long elapsedTime = endTime - startTime;
-//  Serial.print("loop elapsed time = ");
-//  Serial.println(elapsedTime);
->>>>>>> 6316ca5b75edf24563f330813c3e999bb17d1a44
 
   //LogData(local_results, &Results);  // data for spreadsheet
 
@@ -351,25 +337,17 @@ void loop() {
   if (nextTime > endTime) {
     // No, pause til the next loop start time.
     Serial.print("Start Sanity: "); Serial.println(startTime);
-    Serial.print("Const Sanity: "); Serial.println(LOOP_TIME_MS);
+    Serial.print("Const Sanity: "); Serial.println(LOOP_TIME_US);
     Serial.print("Next Sanity: "); Serial.println(nextTime);
     Serial.print("End Sanity: "); Serial.println(endTime);
     Serial.print("Delaying: "); Serial.println(nextTime - endTime);
     delay(nextTime - endTime);
-<<<<<<< HEAD
   } else {
     // Yes, we overran the expected loop interval. Extend the time.
     nextTime = endTime + LOOP_TIME_US;
   }
-=======
-  } 
-//  else {
-//    // Yes, we overran the expected loop interval. Extend the time.
-//    nextTime = endTime + LOOP_TIME_MS;
-//  }
   
   //Serial.println("End of loop");
->>>>>>> 6316ca5b75edf24563f330813c3e999bb17d1a44
 }
 /*---------------------------------------------------------------------------------------*/
 void PrintDone()
@@ -484,11 +462,7 @@ void squareRoutine(unsigned long sides, unsigned long &rcAuto) {
   Serial.println("Starting square routine...");
   rcAuto = HIGH;
   long straightSpeed = 2750;        //mmPs
-<<<<<<< HEAD
   long turnSpeed = 1800;            //mmPs
-=======
-  long turnSpeed = 1400;            //mmPs
->>>>>>> 6316ca5b75edf24563f330813c3e999bb17d1a44
   sides = sides * 1000;             //convert side length to mm
   unsigned long sideSec = sides / straightSpeed;  //calculate seconds per side at set speed
   sideSec = sideSec * 1000;         //convert to ms
@@ -498,42 +472,29 @@ void squareRoutine(unsigned long sides, unsigned long &rcAuto) {
   for(int i = 0; i < 4; i++){
     //steer(LEFT_TURN_OUT);
     steer(STRAIGHT_TURN_OUT);
-<<<<<<< HEAD
     brake(MAX_BRAKE_OUT);
     delay(1000);
     brake(MIN_BRAKE_OUT);
-=======
     delay(100);
->>>>>>> 6316ca5b75edf24563f330813c3e999bb17d1a44
-    
     loopTime = millis();
     while (millis() < (loopTime + sideSec)) {
       moveVehicle(112);
     }
     
     steer(LEFT_TURN_OUT);
-<<<<<<< HEAD
     brake(MAX_BRAKE_OUT);
     delay(1000);
 
     brake(MIN_BRAKE_OUT);
-=======
     delay(100);
-
->>>>>>> 6316ca5b75edf24563f330813c3e999bb17d1a44
-    
-
     loopTime = millis();
     while (millis() < (loopTime + turnSec)) {
       moveVehicle(96);
     }
   }
-<<<<<<< HEAD
   brake(MAX_BRAKE_OUT);
   delay(1000);
   brake(MIN_BRAKE_OUT);
-=======
->>>>>>> 6316ca5b75edf24563f330813c3e999bb17d1a44
   rcAuto = LOW;
 }
 /*---------------------------------------------------------------------------------------*/
@@ -638,12 +599,9 @@ byte processRC (unsigned long *results){
   if (liveBrake(results[RC_GO])){
     Serial.print("Braking: "); Serial.println(results[RC_GO]);
     brake(convertBrake(results[RC_GO]));
-<<<<<<< HEAD
   }
   else {
     brake(MIN_BRAKE_OUT);
-=======
->>>>>>> 6316ca5b75edf24563f330813c3e999bb17d1a44
   }
 
   //Accelerating
@@ -684,7 +642,7 @@ void processHighLevel(SerialData * results)
   //Throttle
   Throttle_PID(10*results->speed_cmPs);
   //End Throttle
-  results->write(&Serial3);
+//  results->write(&Serial3);
 }
 /*---------------------------------------------------------------------------------------*/
 //Converts RC values to corresponding values for the PWM output
@@ -1159,7 +1117,7 @@ void show_speed(SerialData *Results)
   Odometer_m += (float)(LOOP_TIME_US * SpeedCyclometer_mmPs) / MEG;
   // Since Results have not been cleared, angle information will also be sent.
   Results->speed_cmPs = SpeedCyclometer_mmPs / 10;
-  Results->write(&Serial3);  // Send speed to C6
+//  Results->write(&Serial3);  // Send speed to C6
 
   show7seg( SpeedCyclometer_mmPs);   // Show speed on 7 segment LEDs
 
@@ -1278,6 +1236,10 @@ int TurnAngle_degx10()
   return new_turn_degx10;
 }
 /*---------------------------------------------------------------------------------------*/
+void newThrottlePID(){
+  
+}
+
 void Throttle_PID(long error_speed_mmPs)
 
 /* Use throttle and brakes to keep vehicle at a desired speed.
