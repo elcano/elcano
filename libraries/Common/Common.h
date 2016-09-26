@@ -15,6 +15,8 @@
 #define BUFFSIZ 120
 #define MAX_MISSION 6
 #define MEG 1000000
+#define MAX_WAYPOINTS 40   // The maximum number of waypoints in each map file.
+
 // setting of index to indicate a navigation fix
 #define POSITION -1
 // A bit flag for index that indicates this waypoint is the last in a sequence.
@@ -39,8 +41,6 @@
 #define MAX_SPEED_mmPs       4444
 
 bool checksum(char* msg);
-bool readline(int channel);
-void writeline(int channel);
 
 class waypoint // best estimate of position and state
 // used either for a waypoint or a measured navigational fix

@@ -7,13 +7,14 @@
  1) Analog 0-4 V signal for traction motor speed
  2) Pulse wave Modulated (PWM) signal for brakes.
  3) PWM signal for steering.
- 
- 7/1/15 TCF: Added ThrottleChannel
- */
+  */
 
 // Input/Output (IO) pin names for the MegaShieldDB printed circuit board (PCB)
 // #include <IOPCB.h>
 /*==========================================================================*/
+// @ToDo: Fix this fix. If there are variant systems, they should be selected
+// in Settings.h, and then IO.h can be included *after* that, and test the
+// selector, or use values defined in Settings.h.
 // Temporary fix 10/7/15:   IOPCB.h is here
 /*==========================================================================*/
 /* IO_PCB.h:  I/O pin assignments for Arduino Mega 2560 on MegaShieldDB
@@ -51,14 +52,8 @@ const int Tx0 = 1;      // external output
 const int EStop =   2;         // external input
 const int WheelClick = 3;      //  interrupt; Reed switch generates one pulse per rotation.
 
-/*  Actuator A1. Traction motor throttle. */
-const int Throttle =  5;  // external PWM output  DEPRICATED: Use MOSI
 /* Actuator A3: Steering Motor. 
   Turns left or right. Default is wheels locked to a straight ahead position. */
-
-const int Steer =  7;    // external PWM output
-const int DiskBrake = DISK_BRAKE;
-const int ThrottleChannel = THROTTLE_CHANNEL;
 
 // D8-13 Connector ----------------------
 // The shield does not provide a socket for D8-13
@@ -164,18 +159,18 @@ const int CruiseThrottle = 15;  // Position of throttle commanded by AI
 
 
 // Values to send over DAC
-const int FullThrottle =  227;   // 3.63 V
-const int MinimumThrottle = 40;  // Throttle has no effect until 1.2 V
+const int FullThrottle =  MAX_ACC_OUT;   // 3.63 V
+const int MinimumThrottle = MIN_ACC_OUT;  // Throttle has no effect until 1.2 V
 // Values to send on PWM to get response of actuators
 // Vehicles #1 and #2 are reversed.
 // On #1. the actuator pushes the brake lever to bake.
 // On #2, the actuator pulls on the brake cable to brake.
-const int FullBrake = 210;//167;  // start with a conservative value; could go as high as 255;  
-const int NoBrake = 244; // 207; // start with a conservative value; could go as low as 127;
+const int FullBrake = MIN_BRAKE_OUT;  
+const int NoBrake = MAX_BRAKE_OUT;
 // Steering
-const int HardLeft = 240; //187; //  could go as high as 255;
-const int Straight = 195;// 187;
-const int HardRight = 150;  //126;
+const int HardLeft = LEFT_TURN_OUT;
+const int Straight = STRAIGHT_TURN_OUT;
+const int HardRight = RIGHT_TURN_OUT;
 
 // set the initial positions
 int ThrottlePosition = MinimumThrottle;
@@ -231,14 +226,16 @@ void setup()
     for (int channel = 0; channel < 4; channel++)
         DAC_Write (channel, 0);   // reset did not clear previous states
  
-    pinMode(Throttle, OUTPUT);
-    pinMode(DiskBrake, OUTPUT);
-    pinMode(Steer, OUTPUT);
+    pinMode(BRAKE_OUT_PIN, OUTPUT);
+    pinMode(STEER_OUT_PIN, OUTPUT);
 
     moveBrake(BrakePosition);   // release brake
     moveSteer(SteerPosition);
     moveVehicle(MinimumThrottle); 
-    Serial.println("Initialized");  
+    Serial.println("Initialized");
+    Serial.print("Left\t");   
+    Serial.print("Right\t");
+    Serial.println("Time");   
 }
 /*---------------------------------------------------------------------------------------*/
 void loop()
@@ -278,18 +275,40 @@ void loop()
         SteerIncrement = -SteerIncrement;
     moveSteer(SteerPosition);
 #endif  // Steer_RAMP
+  outputToSerial();
 }
 /*---------------------------------------------------------------------------------------*/
 void moveBrake(int i)
 {
-     Serial.print ("Brake "); Serial.print(i);
-     Serial.print (" on ");   Serial.println (DiskBrake);
-     analogWrite(DiskBrake, i);
+     Serial.print ("Brake "); Serial.print (i);
+     Serial.print (" on ");   Serial.print (BRAKE_OUT_PIN); Serial.print("\t"); 
+     analogWrite(BRAKE_OUT_PIN, i);
 }
 /*---------------------------------------------------------------------------------------*/
 void moveSteer(int i)
 {
-     analogWrite(Steer, i);
+     Serial.print ("Steer "); Serial.print(i);
+     Serial.print (" on ");   Serial.println (STEER_OUT_PIN);
+     analogWrite(STEER_OUT_PIN, i);
+}
+/*---------------------------------------------------------------------------------------*/
+void outputToSerial()
+{
+#ifdef MOTOR_RAMP
+  //put output data for motor here
+#endif  // MOTOR_RAMP  
+  
+#ifdef BRAKE_RAMP
+  //put output data for brake here
+#endif  // BRAKE_RAMP
+
+#ifdef STEER_RAMP 
+     int left = analogRead(A2);               //Steer
+     int right = analogRead(A3);
+     Serial.print(left);   Serial.print("\t"); //Left turn sensor
+     Serial.print(right);  Serial.print("\t"); //Right turn sensor
+#endif //STEER_RAMP
+  Serial.println(micros()); //Current time and end line
 }
 /*---------------------------------------------------------------------------------------*/
 void moveVehicle(int counts)
@@ -303,8 +322,10 @@ void moveVehicle(int counts)
       3.63 V: max          227 counts     
       255 counts = 4.08 V      
       */
+     Serial.print ("Motor "); Serial.print(counts);
+     Serial.print (" on ");   Serial.println (THROTTLE_CHANNEL);
 #ifdef DAC      
-   DAC_Write(ThrottleChannel, counts);
+   DAC_Write(THROTTLE_CHANNEL, counts);
 #endif
 }
 /*---------------------------------------------------------------------------------------*/
@@ -373,5 +394,4 @@ This is as documented; with gain of 2, maximum output is 2 * Vref
   }
 }
 /*---------------------------------------------------------------------------------------*/ 
-
 

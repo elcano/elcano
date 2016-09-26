@@ -1,4 +1,4 @@
-#include <GPS.h>
+//#include <GPS.h>
 
 /*
 Elcano Module C6: Navigator.
@@ -82,14 +82,17 @@ Serial lines:
 #include <SD.h>
 #include <IO.h>
 #include <Matrix.h>
+
 #include <Wire.h>
-//#include "Adafruit_Sensor.h"
-//#include "Adafruit_LSM303_U.h"
+//#include <Adafruit_LSM303.h>
+#include <Adafruit_LSM303_U.h>
+#include <Elcano_Serial.h>
+#include <FusionData.h>
 
 /* Assign a unique ID to this sensor at the same time */
 Adafruit_LSM303_Mag mag = Adafruit_LSM303_Mag(1366123);
 
-float CurrentHeading = -1;
+long CurrentHeading = -1;
 
 // On the Ethernet Shield, CS is pin 4. Note that even if it's not
 // used as the CS pin, the hardware CS pin (10 on most Arduino boards,
@@ -140,7 +143,13 @@ const char* RawKF = "Raw GPS data,,,,,,Kalman Filtered data";
 const char* Header = "Latitude,Longitude,East_m,North_m,SigmaE_m,SigmaN_m,Time_s,";
 const char* ObstHeader ="Left,Front,Right,Busy";
 
-#define WHEEL_DIAMETER_MM 397
+// Added by Varsha
+SerialData C2_Results;
+SerialData C4_Results;
+
+
+//#define WHEEL_DIAMETER_MM 397
+
 /* time (micro seconds) for a wheel revolution */
 volatile long Odometer_mm = 0;
 volatile long SpeedCyclometer_mmPs;
@@ -152,6 +161,36 @@ waypoint GPS_reading;
 waypoint estimated_position;
 //instrument IMU;
 const unsigned long LoopPeriod = 100;  // msec
+
+PositionData oldPos, newPos;
+
+
+/* This procedure accepts SerialData structure and prints all the members of the struct to a serial
+   output device. This will be only used for debugging purposes
+   
+   Added by Varsha
+*/
+void displayResults(SerialData &Results)
+{
+    Serial.print("SerialData::Kind :" );
+    Serial.println(Results.kind);
+    Serial.print("SerialData::Number:");    
+    Serial.println(Results.number);    
+    Serial.print("SerialData::speed_cmPs:");
+    Serial.println(Results.speed_cmPs);
+    Serial.print("SerialData::angle_deg:");
+    Serial.println(Results.angle_deg);    // front wheels
+    Serial.print("SerialData::bearing_deg:");
+    Serial.println(Results.bearing_deg);  // compass direction
+    Serial.print("SerialData::posE_cm:");
+    Serial.println(Results.posE_cm);
+    Serial.print("SerialData::posN_cm:");
+    Serial.println(Results.posN_cm);
+    Serial.print("SerialData::probability:");
+    Serial.println(Results.probability);
+    Serial.print("SerialData::distance_travelled_cm:");
+    Serial.println(Results.distance_travelled_cm);
+}
 
 //---------------------------------------------------------------------------
 char* obstacleDetect()
@@ -174,24 +213,50 @@ char* obstacleDetect()
    The odometer processing is part of low level control.
    C2 will send odometer information to C6 over a serial line. */
 
-// WheelRev is called by an interrupt.
-void WheelRev()
+/*---------------------------------------------------------------------------------------*/
+/* Jun 20, 2016. Varsha - Get heading value from LSM303 sensor  */
+long GetHeading(void)
 {
-    static unsigned long OldTick = 0;
-    unsigned long TickTime;
-    unsigned long WheelRevMicros;
-    TickTime = micros();
-    if (OldTick == TickTime)
-        return;
-    if (OldTick <= TickTime)
-        WheelRevMicros = TickTime - OldTick;
-    else // overflow
-        WheelRevMicros = TickTime + ~OldTick;
-    SpeedCyclometer_degPs = (360 * MEG) / WheelRevMicros;
-    SpeedCyclometer_mmPs  = (WHEEL_DIAMETER_MM * MEG * PI) / WheelRevMicros;
-    Odometer_mm += WHEEL_DIAMETER_MM * PI;
-    OldTick = TickTime;
+    //Get a new sensor event from the magnetometer
+    sensors_event_t event;
+    mag.getEvent(&event);
+    
+    Serial.print("X:");
+    Serial.print(event.magnetic.x);
+    Serial.print(" Y:");
+    Serial.print(event.magnetic.y);
+    Serial.println("");
+    
+    //Calculate the current heading (angle of the vector y,x)
+    //Normalize the heading
+    float heading = (atan2(event.magnetic.y, event.magnetic.x) * 180) / M_PI;
+
+    if (heading < 0)
+    {
+        heading = 360 + heading;
+    }
+    // Converting heading to x1000
+    return ((long)(heading * HEADING_PRECISION ));
 }
+
+/*
+ * Test Code to be removed
+ */
+
+void TestSpeed ( SerialData &data )
+{
+  long randNumber = random(3000, 5000);
+  
+  Serial.println(randNumber);
+  data.clear();
+  data.kind = MSG_SENSOR;
+  data.speed_cmPs = randNumber;
+}
+/*
+ * End of Test Code
+*/
+
+
 /*---------------------------------------------------------------------------------------*/
 
 void initialize()
@@ -216,10 +281,8 @@ void initialize()
   checksum(disable);
   Serial3.println(disable);   // no GSA
 
-  if(estimated_position)
-  {
-    GPS_available = estimated_position.AcquireGPRMC(70000);
-  }
+  GPS_available = estimated_position.AcquireGPRMC(70000);
+  
   Serial.println(TimeHeader);
   Serial.println(StartTime);
   Serial.println(RawKF);
@@ -248,20 +311,24 @@ void initialize()
   GPS_reading = estimated_position;
   GPSString = estimated_position.formPointString();
   Serial.println(GPSString);
+
   // Set Odometer to 0.
   // Set lateral deviation to 0.
   // Read compass.
+  // Added by Varsha - To get heading data
+  CurrentHeading=GetHeading();
+  
   // ReadINU.
   // SendState(C4);
     // Wait to get path from C4
 //    while (mission[1].latitude > 90)
     {
-    /* If (message from C4)
-    {
-      ReadState(C4);  // get initial route and speed
-    }
-     Read GPS, compass and IMU and update their estimates.
-   */
+      /* If (message from C4)
+      {
+        ReadState(C4);  // get initial route and speed
+      }
+       Read GPS, compass and IMU and update their estimates.
+     */
     }
     /* disable GPS messages;
     for (char i='0'; i < '6'; i++)
@@ -276,11 +343,17 @@ void initialize()
     // ready to roll
     // Fuse all position estimates.
     // Send vehicle state to C3 and C4.
+    
+    
 }
+
+
 /*---------------------------------------------------------------------------------------*/
 
 void setup()
 {
+  
+randomSeed(analogRead(0));
     pinMode(Rx0, INPUT);
     pinMode(Tx0, OUTPUT);
     pinMode(GPS_RX, INPUT);
@@ -292,6 +365,7 @@ void setup()
     pinMode(GPS_POWER, OUTPUT);
     Serial3.begin(GPSRATE); // GPS
     Serial.begin(9600);
+    Serial2.begin(9600);
     digitalWrite(GPS_POWER, LOW);         // pull low to turn on!
     // make sure that the default chip select pin is set to
     // output, even if you don't use it:
@@ -302,20 +376,26 @@ void setup()
     digitalWrite(GPS_GREEN_LED, LOW);
     digitalWrite(GPS_RED_LED, LOW);
 
-    initialize();
-    //Serial.print("Initializing GPS SD card...");
-
+    /* Initializing old PositionData struct to default values
+     *  Added by Varsha
+     */
+    oldPos.Clear();
+	oldPos.time_ms = millis();
 
     //Enable auto-gain
     mag.enableAutoRange(true);
 
     //Initialise the sensor
+
+    delay(100);
     if(!mag.begin())
     {
         //There was a problem detecting the LSM303 ... check your connections
         Serial.println("Ooops, no LSM303 detected ... Check your wiring!");
         while(1);
     }
+    initialize();
+    Serial.print("Initializing GPS SD card...");
 
     // see if the card is present and can be initialized:
     if (!SD.begin(chipSelect))
@@ -339,8 +419,9 @@ void setup()
           dataFile.close();
       }
     }
-    pinMode(CYCLOMETER, INPUT);
-    attachInterrupt (5, WheelRev, RISING);
+    // Commented by Varsha as low-level routine will be used from C2
+    //pinMode(CYCLOMETER, INPUT);
+    //attachInterrupt (5, WheelRev, RISING);
 
 }
 /*---------------------------------------------------------------------------------------*/
@@ -362,9 +443,11 @@ void waypoint::SetTime(char *pTime, char * pDate)
     strncpy(StartTime+18,  pTime+7,3);   // millisecond
 }
 
+
 /*---------------------------------------------------------------------------------------*/
 void loop()
 {
+    Serial.println("Inside C6 loop");
     unsigned long deltaT_ms;
     unsigned long time = millis();
     unsigned long endTime = time + LoopPeriod;
@@ -373,22 +456,28 @@ void loop()
     char* pData;
     char* pGPS;
     char* pObstacles;
-
-    bool GPS_available = GPS_reading.AcquireGPGGA(300);
+    bool GPS_available = GPS_reading.AcquireGPGGA(300 );
 
     /* Perform dead reckoning from clock and previous state
     Read compass.
     ReadINU.
     Set attitude.
     Read Hall Odometer;  */
-//   IMU.Read(GPS_reading);
 
+   //IMU.Read(GPS_reading);
+
+    // Added by Varsha - to get heading
+    CurrentHeading = GetHeading();
+    Serial.print("CurrentHeading:");
+    Serial.println(CurrentHeading);
+    // End of changes
+    
 /*  Read Optical Odometer;
-    Read lane deviation;
-    If (message from C4)
-    { */
-//      readline(2);  // C4 Path planner on serial 2 get new route and speed
- /*   }
+    Read lane deviation;   
+    If (message from C4)    
+    { */     
+      readline(2);  // C4 Path planner on serial 2 get new route and speed
+ /* }
     If (message from C3)
     { */
 //      readline(2);  // get C3 Pilot commanded wheel spin and steering
@@ -401,26 +490,72 @@ void loop()
     deltaT_ms = GPS_reading.time_ms - estimated_position.time_ms;
     estimated_position.fuse(GPS_reading, deltaT_ms);
     estimated_position.time_ms = GPS_reading.time_ms;
-/*  Serial.print("time, gps, dt_ms = ");
+    
+    // Added by Varsha
+    // Send vehicle state to C6 and C4.
+
+    // Preparing Result struct to send data to C4
+    C4_Results.clear();
+    C4_Results.bearing_deg = CurrentHeading;
+    C4_Results.posE_cm = estimated_position.east_mm;
+    C4_Results.posN_cm = estimated_position.north_mm;
+    C4_Results.kind = MSG_GOAL;
+
+    //Sending GPS position from C6 to C2
+    C2_Results.clear();    
+    C2_Results.posE_cm = estimated_position.east_mm/10;
+    C2_Results.posN_cm = estimated_position.north_mm/10;
+    C2_Results.kind = MSG_SENSOR;
+    
+    // Read data from C2 using Elcano_Serial
+    C2_Results.clear();
+    readSerial(&Serial2, &C2_Results);
+    TestSpeed(C2_Results);
+    displayResults(C2_Results);
+    
+    if ( C2_Results.kind == MSG_SENSOR )
+    {
+        // Updating the C4_Results with the
+        // odometer details from C2
+        C4_Results.speed_cmPs = C2_Results.speed_cmPs;
+      
+	    newPos.speed_cmPs = C2_Results.speed_cmPs;
+	    newPos.bearing_deg = CurrentHeading;
+	    newPos.time_ms = time;
+		
+        ComputePositionWithDR(oldPos, newPos);
+	  
+	    // Populate PositionData struct
+	    PositionData gps, fuzzy_out;
+		
+		gps.x_Pos = estimated_position.latitude;
+		gps.y_Pos = estimated_position.longitude;
+
+	    
+	    // Translate GPS position
+	    TranslateCoordinates(newPos, gps, 1);
+	    RotateCoordinates(gps, newPos.bearing_deg, ROTATE_CLOCKWISE);
+	    FindFuzzyCrossPointXY(gps, newPos.distance_mm, newPos.bearing_deg, fuzzy_out);
+		RotateCoordinates(fuzzy_out, newPos.bearing_deg, ROTATE_COUNTER_CLOCKWISE);
+		TranslateCoordinates(oldPos, fuzzy_out, 1);
+
+	    // Swap data
+	    CopyData(oldPos, newPos);
+
+		// Copy GPS fuzzy output to C4
+		C4_Results.posE_cm = fuzzy_out.x_Pos;
+		C4_Results.posN_cm = fuzzy_out.y_Pos;
+    }
+        
+    C4_Results.write(&Serial2);
+    C2_Results.write(&Serial2);   
+    
+    Serial.print("time, gps, dt_ms = ");
     Serial.print(time, DEC); Serial.print(", ");
     Serial.print(GPS_reading.time_ms, DEC); Serial.print(", ");
     Serial.println(deltaT_ms, DEC);
-*/
+
     // Send vehicle state to C3 and C4.
-
-    //Get a new sensor event from the magnitomitor
-    sensors_event_t event;
-    mag.getEvent(&event);
-
-    //Calculate the current heading (angle of the vector y,x)
-    float heading = (atan2(event.magnetic.y, event.magnetic.x) * 180) / M_PI;
-
-    //Normalize the heading
-    if (heading < 0)
-    {
-        heading = 360 + heading;
-    }
-    CurrentHeading = heading;
 
     // open the file. note that only one file can be open at a time,
     // so you have to close this one before opening another.
@@ -478,17 +613,18 @@ void loop()
 
 }
 
+
 #ifdef SIMULATOR
 } // end namespace
 #else
 void Show(char* x)
 {
-//  Serial.print(x);
+  Serial.print(x);
 }
 void Show(REAL x)
 {
-//  Serial.print(x);
-//  Serial.print(", ");
+  Serial.print(x);
+  Serial.print(", ");
 }
 #endif
 
