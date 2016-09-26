@@ -30,7 +30,7 @@ int8_t ParseState::update(void) {
 		// During this state, we need to find '{' if we are reading the value
 		// for an attribute, or '\n' if we are done with the packet
 		switch(c) {
-		case '\n': state = 0; return PSE_SUCCESS;
+		case '\n': state = 0; return dt->verify() : PSE_SUCCESS ? PSE_INVAL_COMB;
 		case '{' : state = 2; return PSE_INCOMPLETE;
 		default  : return PSE_BAD_LCURLY;
 		}
@@ -89,7 +89,7 @@ bool SerialData::write(HardwareSerial *dev) {
 	case MSG_SENSOR: dev->print("S"); break;
 	case MSG_GOAL:   dev->print("G"); break;
 	case MSG_SEG:    dev->print("X"); break;
-	default: return 0;
+	default:         return false;
 	}
 	if (number != NaN && (kind == MSG_GOAL || kind == MSG_SEG)) {
 		dev->print("{n ");
@@ -124,10 +124,10 @@ bool SerialData::write(HardwareSerial *dev) {
 		dev->print("}");
 	}
 	dev->print("\n");
-	return 0;
+	return true;
 }
 
-void SerialData::clear() {
+void SerialData::clear(void) {
     kind = MSG_NONE;
     number = NaN;
     speed_cmPs = NaN;
@@ -136,4 +136,36 @@ void SerialData::clear() {
     posE_cm = NaN;
     posN_cm = NaN;
     probability = NaN;
+}
+
+bool SerialData::verify(void) {
+	switch (kind) {
+	case MSG_DRIVE:
+		if (speed_cmPs == NaN) return false;
+		if (angle_deg  == NaN) return false;
+		break;
+	case MSG_SENSOR:
+		if (speed_cmPs == NaN)  return false;
+		if (posE_cm == NaN)     return false;
+		if (posN_cm == NaN)     return false;
+		if (bearing_deg == NaN) return false;
+		if (angle_deg == NaN)   return false;
+		break;
+	case MSG_GOAL:
+		if (number == NaN)      return false;
+		if (posE_cm == NaN)     return false;
+		if (posN_cm == NaN)     return false;
+		if (bearing_deg == NaN) return false;
+		break;
+	case MSG_SEG:
+		if (number == NaN)      return false;
+		if (posE_cm == NaN)     return false;
+		if (posN_cm == NaN)     return false;
+		if (bearing_deg == NaN) return false;
+		if (speed_cmPs == NaN)  return false;
+		break;
+	default:
+		return false;
+	}
+	return true;
 }
