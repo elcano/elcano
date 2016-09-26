@@ -17,6 +17,7 @@
 #define MSG_GOAL   3
 #define MSG_SEG    4
 
+#define PSE_INVAL_COMB   2
 #define PSE_SUCCESS      1
 #define PSE_INCOMPLETE   0
 #define PSE_UNAVAILABLE -1
@@ -38,6 +39,7 @@ struct SerialData {
 	
 	void clear(void); //!< Set the values to the defaults
 	bool write(HardwareSerial * /**< Connection to write to */); //!< Write to a serial connection
+	bool verify(void); //!< Check that the types match the values
 };
 
 //! Contains internal state for the SerialData parser.
