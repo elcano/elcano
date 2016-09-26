@@ -17,7 +17,7 @@ unsigned long MaxTickTime_ms;
 
 long SpeedCyclometer_mmPs = 0;
 // Speed in revolutions per second is independent of wheel size.
-float SpeedCyclometer_revPs = 0.0;//revolutions per sec
+//float SpeedCyclometer_revPs = 0.0;//revolutions per sec
 
 #define IRQ_NONE 0
 #define IRQ_FIRST 1
@@ -37,8 +37,7 @@ static struct hist {
   byte oldClickNumber;
   unsigned long oldTime_ms;  // time stamp of old speed
 
-  byte nowClickNumber;  // situation when we want to display the speed
-  //byte InterruptState;
+  byte nowClickNumber;
   unsigned long nowTime_ms;
   unsigned long TickTime_ms;  // Tick times are used to compute speeds
   unsigned long OldTick_ms;   // Tick times may not match time stamps if we don't process
@@ -53,18 +52,19 @@ void setup(){
 }
 
 void loop(){
-  ComputeSpeed(&history, &SpeedCyclometer_mmPs);
+  computeSpeed(&history);
   PrintSpeed(history);
 //  Serial.print("Int State ");
 //  Serial.println(InterruptState);
-  Serial.print("Click ");
-  Serial.println(ClickNumber);
+//  Serial.print("Click ");
+//  Serial.println(ClickNumber);
   delay(10); 
 }
 
 void PrintSpeed(struct hist data)
 {
   Serial.print(SpeedCyclometer_mmPs); Serial.print("\t");
+  Serial.println();
 }
 
 void ISR_RDR_rise() {
@@ -75,6 +75,7 @@ void ISR_RDR_rise() {
     // Need to process 1st two interrupts before results are meaningful.
     InterruptState++;
   }
+  //checks to see if the time between cycles isn't impossibly short.
   if (tick - TickTime > MinTickTime_ms){
     OldTick = TickTime;
     TickTime = tick;
@@ -129,97 +130,116 @@ void setupWheelRev()
 
 }
 
-void ComputeSpeed(struct hist *data, long *speedCyclo)
-{
+/* Ok, let's write the algorithm here:
+ *  
+ * 
+ */
+
+void computeSpeed(struct hist *data){
+  //cyclometer has only done 1 or 2 revolutions
+  
+  //normal procedures begin here
+  unsigned long WheelRev_ms = TickTime - OldTick;
+  float SpeedCyclometer_revPs = 0.0;//revolutions per sec
+
   if (InterruptState == IRQ_NONE || InterruptState == IRQ_FIRST)
   { // No data
-    *speedCyclo = 0;
+    SpeedCyclometer_mmPs = 0;
     SpeedCyclometer_revPs = 0;
     Serial.print("No compute  ");
-    Serial.println(*speedCyclo);
+    //Serial.println(*speedCyclo);
     return;
   }
-  Serial.println("Stepped");
-  float Circum_mm = WHEEL_CIRCUM_MM;
-  long WheelRev_ms = data->TickTime_ms - data->OldTick_ms;
   
-  if (InterruptState == IRQ_SECOND) //&& data->oldSpeed_mmPs == NO_DATA && WheelRev_ms > 0)
+  if (InterruptState == IRQ_SECOND)
   { //  first computed speed
     SpeedCyclometer_revPs = 1000.0 / WheelRev_ms;
-    *speedCyclo  =
-      data->oldSpeed_mmPs = Circum_mm * SpeedCyclometer_revPs;
-    data->oldTime_ms = data->TickTime_ms;  // time stamp for oldSpeed_mmPs
-    data->oldClickNumber = data->nowClickNumber;
+    SpeedCyclometer_mmPs  =
+      data->oldSpeed_mmPs = data->olderSpeed_mmPs = WHEEL_CIRCUM_MM * SpeedCyclometer_revPs;
+    data->oldTime_ms = OldTick;
+    data->nowTime_ms = TickTime;  // time stamp for oldSpeed_mmPs
+    data->oldClickNumber = data->nowClickNumber = ClickNumber;
     Serial.print("First compute  ");
-    Serial.println(*speedCyclo);
+    Serial.println(SpeedCyclometer_mmPs);
     return;
   }
-  if (InterruptState == IRQ_RUNNING && data->olderSpeed_mmPs == NO_DATA && WheelRev_ms > 0
-      && data->nowClickNumber != data->oldClickNumber)
+
+  if (InterruptState == IRQ_RUNNING)
   { //  new data for second computed speed
-    data->olderSpeed_mmPs = data->oldSpeed_mmPs;
-    data->olderTime_ms = data->oldTime_ms;
-
-    SpeedCyclometer_revPs = 1000.0 / WheelRev_ms;
-    *speedCyclo  =
-      data->oldSpeed_mmPs = Circum_mm * SpeedCyclometer_revPs;
-    data->oldTime_ms = data->TickTime_ms;  // time stamp for oldSpeed_mmPs
-    data->oldClickNumber = data->nowClickNumber;
-
-    Serial.print("Nominal compute  ");
-    Serial.println(*speedCyclo);
-    return;
-  }
-  if (InterruptState == IRQ_RUNNING && data->olderSpeed_mmPs != NO_DATA && WheelRev_ms > 0)
-  { // Normal situation after initialization
-    if (data->nowClickNumber == data->oldClickNumber)
-    { // No new information; extrapolate the speed if decelerating; else keep old speed
-      if (data->olderSpeed_mmPs > data->oldSpeed_mmPs)
-      { // decelerrating
-        float deceleration = (float) (data->olderSpeed_mmPs - data->oldSpeed_mmPs) /
-                             (data->oldTime_ms - data->olderTime_ms);
-        *speedCyclo = data->oldSpeed_mmPs - deceleration *
-                               (data->nowTime_ms - data->oldTime_ms);
-        if (*speedCyclo < 0)
-          *speedCyclo = 0;
-        SpeedCyclometer_revPs = *speedCyclo / Circum_mm;
-      }
-      else
-      { // accelerating; should get new data soon
-
-      }
-      if (data->nowTime_ms - data->oldTime_ms > MaxTickTime_ms)
+    
+    if(TickTime == data->nowTime_ms)
+    {//no new data
+        //check to see if stopped first
+      unsigned long timeStamp = millis();
+      if (timeStamp - data->nowTime_ms > MaxTickTime_ms)
       { // too long without getting a tick
-        *speedCyclo = 0;
-        SpeedCyclometer_revPs = 0;
-        if (data->nowTime_ms - data->oldTime_ms > 2 * MaxTickTime_ms)
-        {
+         SpeedCyclometer_mmPs = 0;
+         SpeedCyclometer_revPs = 0;
+         if (timeStamp - data->nowTime_ms > 2 * MaxTickTime_ms)
+         {
           InterruptState = IRQ_FIRST;  //  Invalidate old data
           data->oldSpeed_mmPs = NO_DATA;
           data->olderSpeed_mmPs = NO_DATA;
-        }
-      }
-    }
-    else
-    { // moving; use new data to compute speed
-      data->olderSpeed_mmPs = data->oldSpeed_mmPs;
-      data->olderTime_ms = data->oldTime_ms;
+         }
+         return;
+       }
+        
+       if (data->oldSpeed_mmPs > SpeedCyclometer_mmPs)
+       { // decelerrating, extrapolate new speed using a linear model
+          float deceleration = (float) (data->oldSpeed_mmPs - SpeedCyclometer_mmPs) / (float) (timeStamp - data->nowTime_ms);
 
-      SpeedCyclometer_revPs = 1000.0 / WheelRev_ms;
-      *speedCyclo  =
-        data->oldSpeed_mmPs = Circum_mm * SpeedCyclometer_revPs;
-      data->oldTime_ms = data->TickTime_ms;  // time stamp for oldSpeed_mmPs
-      data->oldClickNumber = data->nowClickNumber;
+          SpeedCyclometer_mmPs = data->oldSpeed_mmPs - deceleration * (timeStamp - data->nowTime_ms);
+          if (SpeedCyclometer_mmPs < 0)
+            SpeedCyclometer_mmPs = 0;
+          SpeedCyclometer_revPs = SpeedCyclometer_mmPs / WHEEL_CIRCUM_MM;
+       }
+       else
+       { // accelerating; should get new data soon
+
+       }
+       return;
     }
+
+    //update time block
+    data->olderTime_ms = data->oldTime_ms;
+    data->oldTime_ms = data->nowTime_ms;
+    data->nowTime_ms = TickTime;
+    data->oldClickNumber = data->nowClickNumber;
+    data->nowClickNumber = ClickNumber;
+
+    //update speed block
+    data->olderSpeed_mmPs = data->oldSpeed_mmPs;
+    data->oldSpeed_mmPs = SpeedCyclometer_mmPs;
+    SpeedCyclometer_revPs = 1000.0 / WheelRev_ms;
+    SpeedCyclometer_mmPs  = WHEEL_CIRCUM_MM * SpeedCyclometer_revPs;
+    
     Serial.print("Nominal compute  ");
-    Serial.println(*speedCyclo);
+    Serial.println(SpeedCyclometer_mmPs);
+    return;
   }
-  if (data->nowTime_ms - data->TickTime_ms > WheelRev_ms)
-  { // at this speed, should have already gotten a tick?; If so, we are slowing.
-    float SpeedSlowing_revPs = 1000.0 / (data->nowTime_ms - data->TickTime_ms);
-    long SpeedSlowing_mmPs  = Circum_mm * SpeedCyclometer_revPs;
-    SpeedCyclometer_revPs = min(SpeedCyclometer_revPs, SpeedSlowing_revPs);
-    *speedCyclo = min(*speedCyclo, SpeedSlowing_mmPs);
-  }
+  
+}
+void ComputeSpeed(struct hist *data, long *speedCyclo)
+{
+  Serial.println("Stepped");
+
+  long SpeedCyclometer_revPs = 0;
+//  if (data->nowTime_ms - data->TickTime_ms > WheelRev_ms)
+//  { // at this speed, should have already gotten a tick?; If so, we are slowing.
+//    float SpeedSlowing_revPs = 1000.0 / (data->nowTime_ms - data->TickTime_ms);
+//    long SpeedSlowing_mmPs  = WHEEL_CIRCUM_MM * SpeedCyclometer_revPs;
+//    SpeedCyclometer_revPs = min(SpeedCyclometer_revPs, SpeedSlowing_revPs);
+//    *speedCyclo = min(*speedCyclo, SpeedSlowing_mmPs);
+//  }
   return;
 }
+
+//function updates what should always be updated in every loop of ComputeSpeed
+void ComputeSpeedHelper(struct hist *data){
+    data->oldTime_ms = data->nowTime_ms;
+    data->nowTime_ms = TickTime;
+    data->oldClickNumber = data->nowClickNumber;
+    data->nowClickNumber = ClickNumber;
+  
+}
+
