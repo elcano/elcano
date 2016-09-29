@@ -30,7 +30,7 @@ int8_t ParseState::update(void) {
 		// During this state, we need to find '{' if we are reading the value
 		// for an attribute, or '\n' if we are done with the packet
 		switch(c) {
-		case '\n': state = 0; return dt->verify() : PSE_SUCCESS ? PSE_INVAL_COMB;
+		case '\n': state = 0; return dt->verify() ? PSE_SUCCESS : PSE_INVAL_COMB;
 		case '{' : state = 2; return PSE_INCOMPLETE;
 		default  : return PSE_BAD_LCURLY;
 		}
