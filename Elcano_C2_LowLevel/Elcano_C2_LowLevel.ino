@@ -5,6 +5,24 @@
 #include <Elcano_Serial.h>
 #include <Servo.h>
 
+/*
+ * C2 is the low-level controller that sends control signals to the hub motor,
+ * brake servo, and steering servo.  It is (or will be) a PID controller, but
+ * may also impose limits on control values for the motor and servos as a safety
+ * measure to protect against incorrect PID settings.
+ *
+ * It receives desired speed and heading from either of two sources, an RC
+ * controller operated by a person, or the C3 pilot module.  These are mutually
+ * exclusive.
+ *
+ * RC commands are received directly as interrupts on a bank of pins.  C3 commands
+ * are received over a serial line using the Elcano Serial protocol.  Heading and
+ * speed commands do not need to be passed through to other modules, but because
+ * the Elcano Serial protocol uses a unidirectional ring structure, C2 may need to
+ * pass through *other* commands that come from C3 but are intended for modules
+ * past C2 on the ring.
+ */
+
 //#include <SoftwareSerial.h>
 // @ToDo: Are these specific to some particular setup or trike? If so,
 // they should be moved to Settings.h.
