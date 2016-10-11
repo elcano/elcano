@@ -15,7 +15,7 @@ unsigned long MaxTickTime_ms;
 // ((WHEEL_DIAMETER_MM * 3142) / MIN_SPEED_mmPs)
 // MinTickTime_ms = 9239 ms = 9 sec
 
-long SpeedCyclometer_mmPs = 0;
+double SpeedCyclometer_mmPs = 0; //Note: doubles on Arduinos are the same thing as floats, 4bytes, single precision
 // Speed in revolutions per second is independent of wheel size.
 //float SpeedCyclometer_revPs = 0.0;//revolutions per sec
 
@@ -44,9 +44,24 @@ static struct hist {
   // results of every interrupt
 } history;
 
-void setup(){
-  Serial.begin(9600);
 
+double PIDThrottleOutput; //used to tell Throttle and Brake what to do as far as acceleration
+double desiredSpeed;
+
+double proportionalConstant = 5;
+double integralConstant = 5;
+double derivativeConstant = 1;
+
+// PID setup block
+PID speedPID(&SpeedCyclometer_mmPs, &PIDThrottleOutput, &desiredSpeed, proportionalConstant, integralConstant, derivativeConstant, DIRECT);
+//speedPID.SetSampleTime(int time); //useful if we want to change the compute period
+
+
+//...................................................................................
+
+void setup(){
+  Serial.begin(9600);  
+  speedPID.SetOutputLimits(MIN_ACC_OUT, MAX_ACC_OUT); //useful if we want to change the limits on what values the output can be set to
   setupWheelRev();
   //attachInterrupt(digitalPinToInterrupt(IRPT_RDR), ISR_RDR_rise, RISING);
 }
@@ -54,6 +69,7 @@ void setup(){
 void loop(){
   computeSpeed(&history);
   PrintSpeed(history);
+  ThrottlePID();
 //  Serial.print("Int State ");
 //  Serial.println(InterruptState);
 //  Serial.print("Click ");
@@ -61,13 +77,31 @@ void loop(){
   delay(10); 
 }
 
+void ThrottlePID(){
+  
+  speedPID.Compute();
+  
+  //moveVehicle(PIDThrottleOutput);
+
+  if(PIDThrottleOutput == MIN_ACC_OUT){
+    //apply brakes
+    //brake(MAX_BRAKE_OUT);
+  }
+  else{
+    //brake(MIN_BRAKE_OUT);
+  }
+  
+  return;
+}
+
+
 void PrintSpeed(struct hist data)
 {
   Serial.print(SpeedCyclometer_mmPs); Serial.print("\t");
   Serial.println();
 }
 
-void ISR_RDR_rise() {
+void ISR_RDR_rise(){
   unsigned long tick;
   noInterrupts();
   tick = millis();
@@ -120,6 +154,8 @@ void setupWheelRev()
   ClickNumber = 0;
   history.oldSpeed_mmPs = history.olderSpeed_mmPs = NO_DATA;
 
+  speedPID.SetMode(AUTOMATIC); //initializes PID controller and allows it to run Compute
+  
   attachInterrupt (digitalPinToInterrupt(IRPT_WHEEL), ISR_RDR_rise, RISING);//pin 3 on Mega
   //    SerialMonitor.print("TickTime: ");
   //    SerialMonitor.print(TickTime);
@@ -128,6 +164,7 @@ void setupWheelRev()
 
   //    SerialMonitor.println("WheelRev setup complete");
 
+  
 }
 
 /* Ok, let's write the algorithm here:
@@ -218,20 +255,6 @@ void computeSpeed(struct hist *data){
     return;
   }
   
-}
-void ComputeSpeed(struct hist *data, long *speedCyclo)
-{
-  Serial.println("Stepped");
-
-  long SpeedCyclometer_revPs = 0;
-//  if (data->nowTime_ms - data->TickTime_ms > WheelRev_ms)
-//  { // at this speed, should have already gotten a tick?; If so, we are slowing.
-//    float SpeedSlowing_revPs = 1000.0 / (data->nowTime_ms - data->TickTime_ms);
-//    long SpeedSlowing_mmPs  = WHEEL_CIRCUM_MM * SpeedCyclometer_revPs;
-//    SpeedCyclometer_revPs = min(SpeedCyclometer_revPs, SpeedSlowing_revPs);
-//    *speedCyclo = min(*speedCyclo, SpeedSlowing_mmPs);
-//  }
-  return;
 }
 
 //function updates what should always be updated in every loop of ComputeSpeed
