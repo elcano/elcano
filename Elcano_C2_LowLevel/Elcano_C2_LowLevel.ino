@@ -651,7 +651,7 @@ byte processRC (unsigned long *results){
     }
   }
 
-  /*  6th pulse is marked throttle (position 6 on receiver; controlled by Left up/down joystick on transmitter).
+  /* Controlled by Left up/down joystick.
     It will be used for shifting from Drive to Reverse . D40
   */
   //if (RC_Done[RC_RVS]) {
@@ -660,7 +660,7 @@ byte processRC (unsigned long *results){
 
   // TO DO: Select Forward / reverse based on results[RC_RVS]
 
-  /*   3rd pulse is elevator (position 4 on receiver; controlled by Right up/down.
+  /* Controlled by Right up/down.
      will be used for throttle/brake: RC_Throttle
   */
   if (RC_Done[RC_TURN]) {
@@ -678,20 +678,33 @@ byte processRC (unsigned long *results){
     }
   }
 
-  //Accelerating
+  // Accelerating
+  // Note: The doRoutine / squareRoutine code will be moved out to run on
+  // a separate module.  For now, for safety, we want a way to stop the
+  // routine, apart from e-stop.  What we require is that the RC controller
+  // is turned on, and the throttle is in a specific position, the extreme
+  // lower right.  If it is released, we want the routine to stop.  This
+  // can then serve as a dead-man switch, as well.
+  // Similarly, when in normal RC operation, we check for the throttle to
+  // be in a "live" position.  Otherwise, (if the throttle is in neither
+  // the "routine" nor "live" positions, we want to stop.
   if (RC_Done[RC_RDR]) {
     if (liveThrottle(results[RC_RDR])){
+      // Here, the throttle is in a "live" position.
       int going = convertThrottle(results[RC_RDR]);
       moveVehicle(going);
     }
     // @ToDo: Move test code out. Will eventually want to have a separate
     // module execute the tests.
     else {
+      // Not "live".
       if (RC_Done[RC_AUTO]) {
         if(doRoutine(results[RC_RDR])){
+          // Here, the throttle is in the "routine" position.
           moveVehicle(MIN_ACC_OUT);
           squareRoutine(5, results[RC_AUTO]);
         } else {
+          // Here, the throttle is neither "live" nor "routine".
           moveVehicle(MIN_ACC_OUT);
         }
       }
