@@ -1,5 +1,10 @@
 #include <PID_v1.h>
 #include <Settings.h>
+#include <SPI.h>
+#include <Servo.h>
+Servo STEER_SERVO;
+
+
 
 #define MEG 1000000
 #define MAX_SPEED_KPH 50
@@ -14,6 +19,9 @@ unsigned long MinTickTime_ms;
 unsigned long MaxTickTime_ms;
 // ((WHEEL_DIAMETER_MM * 3142) / MIN_SPEED_mmPs)
 // MinTickTime_ms = 9239 ms = 9 sec
+
+const int SelectCD = 49; // Select IC 3 DAC (channels C and D)
+const int SelectAB = 53; // Select IC 2 DAC (channels A and B)
 
 double SpeedCyclometer_mmPs = 0; //Note: doubles on Arduinos are the same thing as floats, 4bytes, single precision
 // Speed in revolutions per second is independent of wheel size.
@@ -46,24 +54,29 @@ static struct hist {
 
 
 double PIDThrottleOutput; //used to tell Throttle and Brake what to do as far as acceleration
-double desiredSpeed;
+double desiredSpeed = 2800.0; //aprox 10kph
+#define PID_CALCULATE_TIME 50
 
-double proportionalConstant = 5;
-double integralConstant = 5;
-double derivativeConstant = 1;
+double proportionalConstant = .0175;
+double integralConstant = .0141;
+double derivativeConstant = .00001;
 
 // PID setup block
 PID speedPID(&SpeedCyclometer_mmPs, &PIDThrottleOutput, &desiredSpeed, proportionalConstant, integralConstant, derivativeConstant, DIRECT);
-//speedPID.SetSampleTime(int time); //useful if we want to change the compute period
+
 
 
 //...................................................................................
 
 void setup(){
-  Serial.begin(9600);  
+  Serial.begin(9600);
+  SPI.begin(); 
   speedPID.SetOutputLimits(MIN_ACC_OUT, MAX_ACC_OUT); //useful if we want to change the limits on what values the output can be set to
+  speedPID.SetSampleTime(PID_CALCULATE_TIME); //useful if we want to change the compute period
   setupWheelRev();
   //attachInterrupt(digitalPinToInterrupt(IRPT_RDR), ISR_RDR_rise, RISING);
+  STEER_SERVO.attach(STEER_OUT_PIN);
+  STEER_SERVO.writeMicroseconds(STRAIGHT_TURN_OUT);
 }
 
 void loop(){
@@ -74,14 +87,17 @@ void loop(){
 //  Serial.println(InterruptState);
 //  Serial.print("Click ");
 //  Serial.println(ClickNumber);
-  delay(10); 
+  //delay(50); 
 }
 
 void ThrottlePID(){
   
   speedPID.Compute();
-  
-  //moveVehicle(PIDThrottleOutput);
+
+  Serial.print("Throttle out value ");
+  Serial.println(PIDThrottleOutput);
+  int throttleControl = (int)PIDThrottleOutput;
+  moveVehicle(throttleControl);
 
   if(PIDThrottleOutput == MIN_ACC_OUT){
     //apply brakes
@@ -163,14 +179,8 @@ void setupWheelRev()
   //    SerialMonitor.println(OldTick);
 
   //    SerialMonitor.println("WheelRev setup complete");
-
   
 }
-
-/* Ok, let's write the algorithm here:
- *  
- * 
- */
 
 void computeSpeed(struct hist *data){
   //cyclometer has only done 1 or 2 revolutions
@@ -263,6 +273,83 @@ void ComputeSpeedHelper(struct hist *data){
     data->nowTime_ms = TickTime;
     data->oldClickNumber = data->nowClickNumber;
     data->nowClickNumber = ClickNumber;
-  
 }
 
+void moveVehicle(int acc)
+{
+  /* Observed behavior on ElCano #1 E-bike no load (May 10, 2013, TCF)
+    0.831 V at rest 52 counts
+    1.20 V: nothing 75
+    1.27 V: just starting 79
+    1.40 V: slow, steady 87
+    1.50 V: brisker 94
+    3.63 V: max 227 counts
+    255 counts = 4.08 V
+  */
+
+  Serial.println("Inside moveVehicle");
+  DAC_Write(DAC_CHANNEL, acc);
+  //throttle_control = acc;    // post most recent throttle.
+}
+
+/*---------------------------------------------------------------------------------------*/
+/* DAC_Write applies value to address, producing an analog voltage.
+  // address: 0 for chan A; 1 for chan B; 2 for chan C; 3 for chan D
+  // value: digital value converted to analog voltage
+  // Output goes to mcp 4802 Digital-Analog Converter Chip via SPI
+  // There is no input back from the chip.
+*/
+void DAC_Write(int address, int value)
+/*
+  REGISTER 5-3: WRITE COMMAND REGISTER FOR MCP4802 (8-BIT DAC)
+  A/B — GA SHDN D7 D6 D5 D4 D3 D2 D1 D0 x x x x
+  bit 15 bit 0
+  bit 15 A/B: DACA or DACB Selection bit
+  1 = Write to DACB
+  0 = Write to DACA
+  bit 14 — Don’t Care
+  bit 13 GA: Output Gain Selection bit
+  1 = 1x (VOUT = VREF * D/4096)
+  0 = 2x (VOUT = 2 * VREF * D/4096), where internal VREF = 2.048V.
+  bit 12 SHDN: Output Shutdown Control bit
+  1 = Active mode operation. VOUT is available.
+  0 = Shutdown the selected DAC channel. Analog output is not available at the channel that was shut down.
+  VOUT pin is connected to 500 k (typical)
+  bit 11-0 D11:D0: DAC Input Data bits. Bit x is ignored.
+  With 4.95 V on Vcc, observed output for 255 is 4.08V.
+  This is as documented; with gain of 2, maximum output is 2 * Vref
+*/
+{
+  int byte1 = ((value & 0xF0) >> 4) | 0x10; // active mode, bits D7-D4
+  int byte2 = (value & 0x0F) << 4; // D3-D0
+
+  if (address < 2)
+  {
+    // take the SS pin low to select the chip:
+    digitalWrite(SelectAB, LOW);
+    if (address >= 0)
+    {
+      if (address == 1)
+        byte1 |= 0x80; // second channnel
+      SPI.transfer(byte1);
+      SPI.transfer(byte2);
+    }
+    // take the SS pin high to de-select the chip:
+      Serial.println("Inside SI HIGH");
+    digitalWrite(SelectAB, HIGH);
+  }
+  else
+  {
+    // take the SS pin low to select the chip:
+    digitalWrite(SelectCD, LOW);
+    if (address <= 3)
+    {
+      if (address == 3)
+        byte1 |= 0x80; // second channnel
+      SPI.transfer(byte1);
+      SPI.transfer(byte2);
+    }
+    // take the SS pin high to de-select the chip:
+    digitalWrite(SelectCD, HIGH);
+  }
+}
