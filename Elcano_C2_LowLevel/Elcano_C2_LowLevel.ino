@@ -38,9 +38,11 @@ const int softwareRx = 7;   // not used
 #define s7s Serial2
 Servo STEER_SERVO;
 
-#define LOOP_TIME_US 400
+// 10 milliseconds -- adjust to accomodate the fastest needed response or
+// sensor data capture.
+#define LOOP_TIME_MS 10
 #define ERROR_HISTORY 20 //number of errors to accumulate
-#define TEN_SECONDS_IN_MICROS 10000000
+//#define TEN_SECONDS_IN_MICROS 10000000
 #define ULONG_MAX 4294967295
 
 /*================ReadTurnAngle ================*/
@@ -80,9 +82,6 @@ volatile int rc_index = 0;
 #define RC_NUM_SIGNALS 7
 volatile unsigned long RC_rise[RC_NUM_SIGNALS];
 volatile unsigned long RC_elapsed[RC_NUM_SIGNALS];
-// We'll copy values here before using them in an attempt to have the
-// values change while we're using them.
-unsigned long local_results[RC_NUM_SIGNALS];
 // This tells us when we have started receiving RC data. Until then, we
 // ignore RC_rise and RC_elapsed.
 volatile bool RC_Done[RC_NUM_SIGNALS];
@@ -91,10 +90,9 @@ volatile bool flipping;
 
 long speed_errors[ERROR_HISTORY];
 long old_turn_degx1000;
-// @ToDo: Remove calibration and test code to its own file.
-//unsigned long calibrationTime_ms;
-//unsigned long stoppedTime_ms;
-//unsigned long straightTime_ms;
+unsigned long calibrationTime_ms;
+unsigned long stoppedTime_ms;
+unsigned long straightTime_ms;
 int  throttle_control = MIN_ACC_OUT;
 int  brake_control = MIN_BRAKE_OUT;
 int  steer_control = STRAIGHT_TURN_OUT;
@@ -274,10 +272,9 @@ void setup()
     speed_errors[i] = 0;
   }
 
-  // @ToDo: Remove any test and calibration code.
-  // //setupWheelRev(); // WheelRev4 addition
-  //CalibrateTurnAngle(32, 20);
-  //calibrationTime_ms = millis();
+  //setupWheelRev(); // WheelRev4 addition
+  CalibrateTurnAngle(32, 20);
+  calibrationTime_ms = millis();
 
   attachInterrupt(digitalPinToInterrupt(IRPT_TURN),  ISR_TURN_rise,  RISING);
   //attachInterrupt(digitalPinToInterrupt(IRPT_RDR),   ISR_RDR_rise,   RISING);
@@ -291,8 +288,8 @@ void setup()
 /*---------------------------------------------------------------------------------------*/
 
 // Time at which this loop pass should end in order to maintain a
-// loop period of LOOP_TIME_US.
-unsigned long nextTime = micros();
+// loop period of LOOP_TIME_MS.
+unsigned long nextTime = millis();
 // Time at which we reach the end of loop(), which should be before
 // nextTime if we have set the loop period long enough.
 unsigned long endTime;
@@ -303,24 +300,15 @@ unsigned long delayTime;
 SerialData Results;
 
 void loop() {
-  // Get the next loop start time. Note this (and the micros() counter) will
+  // Get the next loop start time. Note this (and the millis() counter) will
   // roll over back to zero after they exceed the 32-bit size of unsigned long,
-  // which happens after about 70 minues of operation. If the new nextTime
-  // value is <= LOOP_TIME_US, we've rolled over.
-  nextTime = nextTime + LOOP_TIME_US;
+  // which happens after about 1.5 months of operation (should check this).
+  // But leave the overflow computation in place, in case we need to go back to
+  // using the micros() counter.
+  // If the new nextTime value is <= LOOP_TIME_MS, we've rolled over.
+  nextTime = nextTime + LOOP_TIME_MS;
 
-  // ToDo: Verify why this is being copied, e.g. is it to avoid having the
-  // values change while we're using them? Because they can change right here
-  // while we're copying them. Would it help to disable interrupts while we
-  // copy them? or does that just freeze them in some intermediate state?
-  // How about if we just make sure that anytime we exit the interrupt routine,
-  // the RC_elapsed values are in a valid state? Then we don't need to copy
-  // them. (This is all under the assumption that we're copying to avoid
-  // an inconsistent state.)
-  for (int i = 0; i < RC_NUM_SIGNALS; i++)
-    local_results[i] = RC_elapsed[i];
-
-  byte automate = processRC(local_results);
+  byte automate = processRC(RC_elapsed);
   // @ToDo: Verify that this should be conditional. May be moot if it is
   // replaced in the conversion to the new Elcano Serial protocol.
   if (automate == 0x01)
@@ -335,18 +323,17 @@ void loop() {
   // @ToDo: Is this working and should it be uncommented?
   // show_speed (&Results);
 
-  // @ToDo: Remove all test or calibration code. If needed, put it in a separate file.
-  //calibrationTime_ms += LOOP_TIME_US;
-  //straightTime_ms = (steer_control == STRAIGHT_TURN_OUT) ? straightTime_ms + LOOP_TIME_US : 0;
-  //stoppedTime_ms = (throttle_control == MIN_ACC_OUT) ? stoppedTime_ms + LOOP_TIME_US : 0;
-  //if (calibrationTime_ms > 40000 && straightTime_ms > 3000 && stoppedTime_ms > 3000)
-  //{
-  //  //       int oldBrake = brake_control;
-  //  //       brake(MAX_BRAKE_OUT);  // put on brakes
-  //  CalibrateTurnAngle(16, 10);  // WARNING: No response to controls while calibrating
-  //  //       brake(oldBrake);       // restore brake state
-  //  calibrationTime_ms = 0;
-  //}
+  calibrationTime_ms += LOOP_TIME_MS;
+  straightTime_ms = (steer_control == STRAIGHT_TURN_OUT) ? straightTime_ms + LOOP_TIME_MS : 0;
+  stoppedTime_ms = (throttle_control == MIN_ACC_OUT) ? stoppedTime_ms + LOOP_TIME_MS : 0;
+  if (calibrationTime_ms > 40000 && straightTime_ms > 3000 && stoppedTime_ms > 3000)
+  {
+    //       int oldBrake = brake_control;
+    //       brake(MAX_BRAKE_OUT);  // put on brakes
+    CalibrateTurnAngle(16, 10);  // WARNING: No response to controls while calibrating
+    //       brake(oldBrake);       // restore brake state
+    calibrationTime_ms = 0;
+  }
 
   // @ToDo: What information do we need to send to C6? Is that communication already
   // hiding in here somewhere, or does it need to be added?
@@ -356,17 +343,17 @@ void loop() {
   // point, there should be *no* more controller activity -- we want
   // minimal time between now, when we capture the actual loop end time,
   // and when we pause til the desired loop end time.
-  endTime = micros();
+  endTime = millis();
   delayTime = 0L;
 
-  // Did the micros() counter or nextTime overflow and roll over during
+  // Did the millis() counter or nextTime overflow and roll over during
   // this loop pass? Did the loop's processing time overrun the desired
   // loop period? We have different computations for the delay time in
   // various cases:
   if ((nextTime >= endTime) &&
-      (((endTime < LOOP_TIME_US) && (nextTime < LOOP_TIME_US)) ||
-       ((endTime >= LOOP_TIME_US) && (nextTime >= LOOP_TIME_US)))) {
-    // 1) Neither micros() nor nextTime rolled over --or-- micros() rolled
+      (((endTime < LOOP_TIME_MS) && (nextTime < LOOP_TIME_MS)) ||
+       ((endTime >= LOOP_TIME_MS) && (nextTime >= LOOP_TIME_MS)))) {
+    // 1) Neither millis() nor nextTime rolled over --or-- millis() rolled
     // over *and* nextTime rolled over when we incremented it. For this case,
     // endTime and nextTime will be in their usual relationship, with
     // nextTime >= endTime, and both nextTime and endTime are either greater
@@ -379,11 +366,11 @@ void loop() {
     // Negate the first if condition and use DeMorgan's laws...
     // Now pick out the "nextTime rolled over" case. We don't need to test both
     // nextTime and endTime as we know only one rolled over.)
-    if (nextTime < LOOP_TIME_US) {
-      // 2) nextTime rolled over when we incremented it, but the micros() timer
+    if (nextTime < LOOP_TIME_MS) {
+      // 2) nextTime rolled over when we incremented it, but the millis() timer
       // hasn't yet rolled over.
       // In this case, we know we didn't exhaust the loop time, and the time we
-      // need to wait is the remaining time til micros() will roll over, i.e.
+      // need to wait is the remaining time til millis() will roll over, i.e.
       // from endTime until the max long value, plus the time from zero to
       // nextTime.
       delayTime = ULONG_MAX - endTime + nextTime;
@@ -392,10 +379,10 @@ void loop() {
       // nextTime < endTime -or-
       // nextTime >= endTime -and- nextTime did not roll over but endTime did.)
       // What remains are these two cases:
-      // 3) nextTime hasn't rolled over, but micros() has.
-      // In this case, we overran the loop time. Since micros() has rolled over,
+      // 3) nextTime hasn't rolled over, but millis() has.
+      // In this case, we overran the loop time. Since millis() has rolled over,
       // we can just use the normal overrun fixup. So combine this with...
-      // 4) Neither nextTime nor micros rolled over, but we overran the desired
+      // 4) Neither nextTime nor millis rolled over, but we overran the desired
       // loop period.
       // In this case, we have no delay, but instead extend the allowed time for
       // this loop pass to the actual time it took.
@@ -1210,7 +1197,7 @@ void show_speed(SerialData *Results)
   ComputeSpeed (&history);
   //   PrintSpeed(&history);
 
-  Odometer_m += (float)(LOOP_TIME_US * SpeedCyclometer_mmPs) / MEG;
+  Odometer_m += (float)(LOOP_TIME_MS * SpeedCyclometer_mmPs) / 1000.0;
   // Since Results have not been cleared, angle information will also be sent.
   Results->speed_cmPs = SpeedCyclometer_mmPs / 10;
 //  Results->write(&Serial3);  // Send speed to C6
@@ -1220,55 +1207,59 @@ void show_speed(SerialData *Results)
 }
 /*---------------------------------------------------------------------------------------*/
 /*========================CalibrateTurnAngle======================*/
-/*  This routine should only be called when
+/* The Hall angle sensors we are using have been observed to drift,
+   and should periodically be zeroed.
+   This routine should only be called when
           - Wheels are pointed straight ahead, and have been for a while.
           - Trike is not moving, and is stable.
-    Calibration will block any response to controls; there will be no turning or movemnet during calibration.
-    Angle sensors can drift, and should periodically be zeroed.
+   Calibration will block any response to controls; there will be
+   no turning or movement during calibration. This condition should be
+   very brief -- this does not wait nor turn off interrupts -- so should
+   be safe to call during loop().
 */
-//void CalibrateTurnAngle(int count, int pause)
-//{
-//  int totalRight = 0;
-//  int totalLeft = 0;
-//  int i, left, right;
-//  for (i = 0; i < count; i++)
-//  {
-//    totalRight += analogRead(A2);
-//    totalLeft += analogRead(A3);
-//    delay(pause);
-//  }
-//  right = totalRight / count;
-//  left  = totalLeft  / count;
-//  // Only recalibrate when instruments are reasonable
-//  // Do not make garbage readings the new normal.
-//  if (RIGHT_MIN_COUNT <= right && right <= RIGHT_MAX_COUNT)
-//  {
-//    RightStraight_A2 = right;
-//    Right_Min_Count = RightStraight_A2 - 60;   // 60 counts is 20 degrees
-//    Right_Max_Count = RightStraight_A2 + 60;
-//  }
-//  else
-//  {
-//    RightStraight_A2 = RIGHT_MIN_COUNT + (RIGHT_MAX_COUNT - RIGHT_MIN_COUNT) / 2 ;
-//    Right_Min_Count = RIGHT_MIN_COUNT;
-//    Right_Max_Count = RIGHT_MAX_COUNT;
-//  }
-//  if  (LEFT_MIN_COUNT  <= left  && left  <= LEFT_MAX_COUNT)
-//  {
-//    LeftStraight_A3  = left;
-//    Left_Min_Count  = LeftStraight_A3  - 60;
-//    Left_Max_Count  = LeftStraight_A3  + 60;
-//  }
-//  else
-//  {
-//    LeftStraight_A3  = LEFT_MIN_COUNT + (LEFT_MAX_COUNT - LEFT_MIN_COUNT) / 2 ;
-//    Left_Min_Count = LEFT_MIN_COUNT;
-//    Left_Max_Count = LEFT_MAX_COUNT;
-//  }
-//  //    Serial.print("\tCALIBRATE: Left Straight\t"); Serial.print(LeftStraight_A3);
-//  //    Serial.print("\tRight Straight\t"); Serial.println(RightStraight_A2);
-//  old_turn_degx1000 = 0; // straight
-//}
+void CalibrateTurnAngle(int count, int pause)
+{
+  int totalRight = 0;
+  int totalLeft = 0;
+  int i, left, right;
+  for (i = 0; i < count; i++)
+  {
+    totalRight += analogRead(A2);
+    totalLeft += analogRead(A3);
+    delay(pause);
+  }
+  right = totalRight / count;
+  left  = totalLeft  / count;
+  // Only recalibrate when instruments are reasonable
+  // Do not make garbage readings the new normal.
+  if (RIGHT_MIN_COUNT <= right && right <= RIGHT_MAX_COUNT)
+  {
+    RightStraight_A2 = right;
+    Right_Min_Count = RightStraight_A2 - 60;   // 60 counts is 20 degrees
+    Right_Max_Count = RightStraight_A2 + 60;
+  }
+  else
+  {
+    RightStraight_A2 = RIGHT_MIN_COUNT + (RIGHT_MAX_COUNT - RIGHT_MIN_COUNT) / 2 ;
+    Right_Min_Count = RIGHT_MIN_COUNT;
+    Right_Max_Count = RIGHT_MAX_COUNT;
+  }
+  if  (LEFT_MIN_COUNT  <= left  && left  <= LEFT_MAX_COUNT)
+  {
+    LeftStraight_A3  = left;
+    Left_Min_Count  = LeftStraight_A3  - 60;
+    Left_Max_Count  = LeftStraight_A3  + 60;
+  }
+  else
+  {
+    LeftStraight_A3  = LEFT_MIN_COUNT + (LEFT_MAX_COUNT - LEFT_MIN_COUNT) / 2 ;
+    Left_Min_Count = LEFT_MIN_COUNT;
+    Left_Max_Count = LEFT_MAX_COUNT;
+  }
+  //    Serial.print("\tCALIBRATE: Left Straight\t"); Serial.print(LeftStraight_A3);
+  //    Serial.print("\tRight Straight\t"); Serial.println(RightStraight_A2);
+  old_turn_degx1000 = 0; // straight
+}
 /*---------------------------------------------------------------------------------------*/
 /*======================ReadTurnAngle======================*/
 int TurnAngle_degx10()
