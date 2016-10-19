@@ -1,9 +1,5 @@
-
-#include <Common.h>
-#include <Matrix.h>
+#include <Waypoint.h>
 #include <Elcano_Serial.h>
-#include <SPI.h>
-
 /*
 // Elcano Contol Module C3: Pilot.
 

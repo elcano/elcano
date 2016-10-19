@@ -1,3 +1,4 @@
+#pragma once
 // Matrix.h : Matrix class headers.
 //	 C++ implementation of Python code.
 //   From Udacity CS 373 Artificial Intelliegence for Robots.
