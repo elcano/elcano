@@ -1,3 +1,5 @@
+#ifndef GPS_H
+#define GPS_H
 // Common.h - header included for all Elcano modules
 
 // value if latitude, longitude or bearing is missing.
@@ -108,3 +110,4 @@ struct junction
 };
 
 bool readline(int channel);
+#endif

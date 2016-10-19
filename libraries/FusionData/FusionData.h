@@ -1,6 +1,7 @@
+#ifndef FUSIONDATA_H
+#define FUSIONDATA_H
 // FusionData.h - header included for all functions to fuse the 
 // IMU sensor data, speed data and GPS data
-
 
 #define HEADING_PRECISION 1000
 // Hard coded values
@@ -32,5 +33,4 @@ double LineIntercept(double x1, double y1, double m1);
 double CrossPointX(double m1, double c1, double m2, double c2);
 double CrossPointY(double m1, double c1, double m2, double c2);
 void FindFuzzyCrossPointXY(PositionData &gps, long distance, long bearing, PositionData &out);
-
-
+#endif

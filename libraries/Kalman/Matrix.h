@@ -1,3 +1,5 @@
+#ifndef MATRIX_H
+#define MATRIX_H
 // Matrix.h : Matrix class headers.
 //	 C++ implementation of Python code.
 //   From Udacity CS 373 Artificial Intelliegence for Robots.
@@ -57,4 +59,4 @@ public:
 	matrix CholeskyInverse();
         void values(REAL* dest);
 };
-
+#endif
