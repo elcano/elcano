@@ -105,13 +105,15 @@ void ISR_RDR_rise() {
   interrupts();
 }
 /*---------------------------------------------------------------------------------------*/
-void ISR_GO_rise() {
+//Now used for Brakes 
+void ISR_BRAKE_rise() {
   noInterrupts();
-  ProcessRiseOfINT(RC_GO);
-  attachInterrupt(digitalPinToInterrupt(IRPT_GO), ISR_GO_fall, FALLING);
+  ProcessRiseOfINT(RC_BRAKE);
+  attachInterrupt(digitalPinToInterrupt(IRPT_BRAKE), ISR_BRAKE_fall, FALLING);
   interrupts();
 }
 /*---------------------------------------------------------------------------------------*/
+//Should be bound to the red switch
 void ISR_ESTOP_rise() {
   noInterrupts();
   ProcessRiseOfINT(RC_ESTP);
@@ -135,12 +137,12 @@ void ISR_TURN_fall() {
   interrupts();
 }
 /*---------------------------------------------------------------------------------------*/
-void ISR_GO_fall() {
+void ISR_BRAKE_fall() {
   noInterrupts();
-  ProcessFallOfINT(RC_GO);
-  RC_Done[RC_GO] = 1;
+  ProcessFallOfINT(RC_BRAKE);
+  RC_Done[RC_BRAKE] = 1;
   //Serial.println("GO");
-  attachInterrupt(digitalPinToInterrupt(IRPT_GO), ISR_GO_rise, RISING);
+  attachInterrupt(digitalPinToInterrupt(IRPT_BRAKE), ISR_BRAKE_rise, RISING);
   interrupts();
 }
 /*---------------------------------------------------------------------------------------*/
@@ -163,19 +165,19 @@ void ISR_RVS_fall() {
   interrupts();
 }
 
-void ISR_SWITCH_rise() {
+void ISR_GO_rise() {
   noInterrupts();
-  ProcessRiseOfINT(RC_RDR);
-  attachInterrupt(digitalPinToInterrupt(IRPT_SWITCH), ISR_SWITCH_fall, FALLING);
+  ProcessRiseOfINT(RC_GO);
+  attachInterrupt(digitalPinToInterrupt(IRPT_GO), ISR_GO_fall, FALLING);
   //RC_Done[RC_RDR] = 1;
   interrupts();
 }
 
-void ISR_SWITCH_fall() {
+void ISR_GO_fall() {
   noInterrupts();
-  ProcessFallOfINT(RC_RDR);
+  ProcessFallOfINT(RC_GO);
   RC_Done[RC_RDR] = 1;
-  attachInterrupt(digitalPinToInterrupt(IRPT_SWITCH), ISR_SWITCH_rise, RISING);
+  attachInterrupt(digitalPinToInterrupt(IRPT_GO), ISR_GO_rise, RISING);
   interrupts();
 }
 /*---------------------------------------------------------------------------------------*/
@@ -253,7 +255,7 @@ void setup()
         attachInterrupt(digitalPinToInterrupt(IRPT_GO),    ISR_GO_rise,    RISING);
         attachInterrupt(digitalPinToInterrupt(IRPT_ESTOP), ISR_ESTOP_rise, RISING);
         //attachInterrupt(digitalPinToInterrupt(IRPT_RVS),   ISR_RVS_rise,   RISING);
-        attachInterrupt(digitalPinToInterrupt(IRPT_SWITCH), ISR_SWITCH_rise, RISING);
+        attachInterrupt(digitalPinToInterrupt(IRPT_BRAKE), ISR_BRAKE_rise, RISING);
         attachInterrupt(digitalPinToInterrupt(IRPT_MOTOR_FEEDBACK), ISR_MOTOR_FEEDBACK_rise, RISING);
         //Print7headers(false);
   //PrintHeaders();
@@ -595,23 +597,22 @@ byte processRC (unsigned long *results){
 
   
   // Braking or Throttle
-  Serial.println(results[RC_GO]);
-  if (liveBrake(results[RC_GO])){
-    Serial.print("Braking: "); Serial.println(results[RC_GO]);
-    brake(convertBrake(results[RC_GO]));
+  if (liveBrake(results[RC_BRAKE])){
+    //Serial.print("Braking: "); Serial.println(results[RC_BRAKE]);
+    brake(convertBrake(results[RC_BRAKE]));
   }
   else {
     brake(MIN_BRAKE_OUT);
   }
 
   //Accelerating
-  if (liveThrottle(results[RC_RDR])){
-    int going = convertThrottle(results[RC_RDR]);
+  if (liveThrottle(results[RC_GO])){
+    int going = convertThrottle(results[RC_GO]);
     moveVehicle(going);
   }
-  else if(doRoutine(results[RC_RDR])){
+  else if(doRoutine(results[RC_GO])){
     moveVehicle(MIN_ACC_OUT);
-    squareRoutine(5, results[RC_AUTO]);
+    circleRoutine(5, results[RC_AUTO]);
   }
   else {
     moveVehicle(MIN_ACC_OUT);
@@ -916,7 +917,6 @@ static struct hist {
   unsigned long oldTime_ms;  // time stamp of old speed
 
   byte nowClickNumber;  // situation when we want to display the speed
-  byte InterruptState;
   unsigned long nowTime_ms;
   unsigned long TickTime_ms;  // Tick times are used to compute speeds
   unsigned long OldTick_ms;   // Tick times may not match time stamps if we don't process
@@ -932,21 +932,16 @@ void WheelRev()
   unsigned long tick;
   noInterrupts();
   tick = millis();
-  if (InterruptState != IRQ_RUNNING)
+  if (InterruptState != IRQ_RUNNING){
     // Need to process 1st two interrupts before results are meaningful.
     InterruptState++;
-
-  if (tick - TickTime > MinTickTime_ms)
-  {
+  }
+  
+  if (tick - TickTime > MinTickTime_ms){
     OldTick = TickTime;
     TickTime = tick;
     ++ClickNumber;
   }
-//  if (flip)
-//    digitalWrite(13, LOW);
-//  else
-//    digitalWrite(13, HIGH);
-//  flip = !flip;
   interrupts();
 }
 /*---------------------------------------------------------------------------------------*/
@@ -954,12 +949,12 @@ void WheelRev()
 void setupWheelRev()
 {
 
-  //    SerialOdoOut.begin(115200); // C6 to C4
-  //    pinMode(13, OUTPUT); //led
-  //    digitalWrite(13, LOW);//turn LED off
+  //  SerialOdoOut.begin(115200); // C6 to C4
+  //  pinMode(13, OUTPUT); //led
+  //  digitalWrite(13, LOW);//turn LED off
   //
-  pinMode(IRPT_WHEEL, INPUT);//pulls input HIGH
-  float MinTick = WHEEL_DIAMETER_MM * PI;
+  //  pinMode(IRPT_WHEEL, INPUT);//pulls input HIGH
+  float MinTick = WHEEL_CIRCUM_MM;
   //    SerialMonitor.print (" MinTick = ");
   //    SerialMonitor.println (MinTick);
   MinTick *= 1000.0;
@@ -1002,94 +997,95 @@ void setupWheelRev()
 
 }
 /*---------------------------------------------------------------------------------------*/
-void ComputeSpeed( struct hist *data)
-{
-  if (data->InterruptState == IRQ_NONE || data->InterruptState == IRQ_FIRST)
+
+void computeSpeed(struct hist *data){
+  //cyclometer has only done 1 or 2 revolutions
+  
+  //normal procedures begin here
+  unsigned long WheelRev_ms = TickTime - OldTick;
+  float SpeedCyclometer_revPs = 0.0;//revolutions per sec
+
+  if (InterruptState == IRQ_NONE || InterruptState == IRQ_FIRST)
   { // No data
     SpeedCyclometer_mmPs = 0;
     SpeedCyclometer_revPs = 0;
+    Serial.print("No compute  ");
+    //Serial.println(*speedCyclo);
     return;
   }
-  float Circum_mm = (WHEEL_DIAMETER_MM * PI);
-  long WheelRev_ms = data->TickTime_ms - data->OldTick_ms;
-  if (data->InterruptState >= IRQ_SECOND && data->oldSpeed_mmPs == NO_DATA && WheelRev_ms > 0)
+  
+  if (InterruptState == IRQ_SECOND)
   { //  first computed speed
     SpeedCyclometer_revPs = 1000.0 / WheelRev_ms;
     SpeedCyclometer_mmPs  =
-      data->oldSpeed_mmPs = Circum_mm * SpeedCyclometer_revPs;
-    data->oldTime_ms = data->TickTime_ms;  // time stamp for oldSpeed_mmPs
-    data->oldClickNumber = data->nowClickNumber;
+      data->oldSpeed_mmPs = data->olderSpeed_mmPs = WHEEL_CIRCUM_MM * SpeedCyclometer_revPs;
+    data->oldTime_ms = OldTick;
+    data->nowTime_ms = TickTime;  // time stamp for oldSpeed_mmPs
+    data->oldClickNumber = data->nowClickNumber = ClickNumber;
+    Serial.print("First compute  ");
+    Serial.println(SpeedCyclometer_mmPs);
     return;
   }
-  if (data->InterruptState == IRQ_RUNNING && data->olderSpeed_mmPs == NO_DATA && WheelRev_ms > 0
-      && data->nowClickNumber != data->oldClickNumber)
+
+  if (InterruptState == IRQ_RUNNING)
   { //  new data for second computed speed
-    data->olderSpeed_mmPs = data->oldSpeed_mmPs;
-    data->olderTime_ms = data->oldTime_ms;
-
-    SpeedCyclometer_revPs = 1000.0 / WheelRev_ms;
-    SpeedCyclometer_mmPs  =
-      data->oldSpeed_mmPs = Circum_mm * SpeedCyclometer_revPs;
-    data->oldTime_ms = data->TickTime_ms;  // time stamp for oldSpeed_mmPs
-    data->oldClickNumber = data->nowClickNumber;
-    return;
-  }
-  if (data->InterruptState == IRQ_RUNNING && data->olderSpeed_mmPs != NO_DATA && WheelRev_ms > 0)
-  { // Normal situation after initialization
-    if (data->nowClickNumber == data->oldClickNumber)
-    { // No new information; extrapolate the speed if decelerating; else keep old speed
-      if (data->olderSpeed_mmPs > data->oldSpeed_mmPs)
-      { // decelerrating
-        float deceleration = (float) (data->olderSpeed_mmPs - data->oldSpeed_mmPs) /
-                             (data->oldTime_ms - data->olderTime_ms);
-        SpeedCyclometer_mmPs = data->oldSpeed_mmPs - deceleration *
-                               (data->nowTime_ms - data->oldTime_ms);
-        if (SpeedCyclometer_mmPs < 0)
-          SpeedCyclometer_mmPs = 0;
-        SpeedCyclometer_revPs = SpeedCyclometer_mmPs / Circum_mm;
-      }
-      else
-      { // accelerating; should get new data soon
-
-      }
-      if (data->nowTime_ms - data->oldTime_ms > MaxTickTime_ms)
+    
+    if(TickTime == data->nowTime_ms)
+    {//no new data
+        //check to see if stopped first
+      unsigned long timeStamp = millis();
+      if (timeStamp - data->nowTime_ms > MaxTickTime_ms)
       { // too long without getting a tick
-        SpeedCyclometer_mmPs = 0;
-        SpeedCyclometer_revPs = 0;
-        if (data->nowTime_ms - data->oldTime_ms > 2 * MaxTickTime_ms)
-        {
+         SpeedCyclometer_mmPs = 0;
+         SpeedCyclometer_revPs = 0;
+         if (timeStamp - data->nowTime_ms > 2 * MaxTickTime_ms)
+         {
           InterruptState = IRQ_FIRST;  //  Invalidate old data
           data->oldSpeed_mmPs = NO_DATA;
           data->olderSpeed_mmPs = NO_DATA;
-        }
-      }
-    }
-    else
-    { // moving; use new data to compute speed
-      data->olderSpeed_mmPs = data->oldSpeed_mmPs;
-      data->olderTime_ms = data->oldTime_ms;
+         }
+         return;
+       }
+        
+       if (data->oldSpeed_mmPs > SpeedCyclometer_mmPs)
+       { // decelerrating, extrapolate new speed using a linear model
+          float deceleration = (float) (data->oldSpeed_mmPs - SpeedCyclometer_mmPs) / (float) (timeStamp - data->nowTime_ms);
 
-      SpeedCyclometer_revPs = 1000.0 / WheelRev_ms;
-      SpeedCyclometer_mmPs  =
-        data->oldSpeed_mmPs = Circum_mm * SpeedCyclometer_revPs;
-      data->oldTime_ms = data->TickTime_ms;  // time stamp for oldSpeed_mmPs
-      data->oldClickNumber = data->nowClickNumber;
+          SpeedCyclometer_mmPs = data->oldSpeed_mmPs - deceleration * (timeStamp - data->nowTime_ms);
+          if (SpeedCyclometer_mmPs < 0)
+            SpeedCyclometer_mmPs = 0;
+          SpeedCyclometer_revPs = SpeedCyclometer_mmPs / WHEEL_CIRCUM_MM;
+       }
+       else
+       { // accelerating; should get new data soon
+
+       }
+       return;
     }
+
+    //update time block
+    data->olderTime_ms = data->oldTime_ms;
+    data->oldTime_ms = data->nowTime_ms;
+    data->nowTime_ms = TickTime;
+    data->oldClickNumber = data->nowClickNumber;
+    data->nowClickNumber = ClickNumber;
+
+    //update speed block
+    data->olderSpeed_mmPs = data->oldSpeed_mmPs;
+    data->oldSpeed_mmPs = SpeedCyclometer_mmPs;
+    SpeedCyclometer_revPs = 1000.0 / WheelRev_ms;
+    SpeedCyclometer_mmPs  = WHEEL_CIRCUM_MM * SpeedCyclometer_revPs;
+    
+    Serial.print("Nominal compute  ");
+    Serial.println(SpeedCyclometer_mmPs);
+    return;
   }
-  if (data->nowTime_ms - data->TickTime_ms > WheelRev_ms)
-  { // at this speed, should have already gotten a tick?; If so, we are slowing.
-    float SpeedSlowing_revPs = 1000.0 / (data->nowTime_ms - data->TickTime_ms);
-    long SpeedSlowing_mmPs  = Circum_mm * SpeedCyclometer_revPs;
-    SpeedCyclometer_revPs = min(SpeedCyclometer_revPs, SpeedSlowing_revPs);
-    SpeedCyclometer_mmPs  = min(SpeedCyclometer_mmPs, SpeedSlowing_mmPs);
-  }
-  return;
 }
+
 /*---------------------------------------------------------------------------------------*/
 void PrintSpeed( struct hist *data)
 {
   Serial.print(SpeedCyclometer_mmPs); Serial.print("\t");
-  Serial.print(data->InterruptState); Serial.print("\t");
   Serial.print(data->oldSpeed_mmPs); Serial.print("\t");
   Serial.print(data->olderSpeed_mmPs); Serial.print("\t");
   Serial.print(data->oldClickNumber); Serial.print("\t");
@@ -1103,23 +1099,16 @@ void PrintSpeed( struct hist *data)
 /*---------------------------------------------------------------------------------------*/
 void show_speed(SerialData *Results)
 {
-  history.nowTime_ms = millis();
-  noInterrupts();
-  history.TickTime_ms = TickTime;
-  history.OldTick_ms = OldTick;
-  history.nowClickNumber = ClickNumber;
-  history.InterruptState = InterruptState;
-  interrupts();
 
-  ComputeSpeed (&history);
-  //   PrintSpeed(&history);
+  computeSpeed (&history);
+  PrintSpeed(&history);
 
   Odometer_m += (float)(LOOP_TIME_US * SpeedCyclometer_mmPs) / MEG;
   // Since Results have not been cleared, angle information will also be sent.
-  Results->speed_cmPs = SpeedCyclometer_mmPs / 10;
+//  Results->speed_cmPs = SpeedCyclometer_mmPs / 10;
 //  Results->write(&Serial3);  // Send speed to C6
 
-  show7seg( SpeedCyclometer_mmPs);   // Show speed on 7 segment LEDs
+//  show7seg( SpeedCyclometer_mmPs);   // Show speed on 7 segment LEDs
 
 }
 /*---------------------------------------------------------------------------------------*/
@@ -1286,6 +1275,8 @@ void Throttle_PID(long error_speed_mmPs)
   PID_error = P_tune * error_speed_mmPs
               + I_tune * mean_speed_error
               + D_tune * extrapolated_error;
+
+              
   if (PID_error > speed_tolerance_mmPs)
   { // too fast
     long throttle_decrease = (MAX_ACC_OUT - MIN_ACC_OUT) * PID_error / max_error_mmPs;
