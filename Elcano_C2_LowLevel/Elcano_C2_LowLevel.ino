@@ -5,6 +5,24 @@
 #include <Elcano_Serial.h>
 #include <Servo.h>
 
+/*
+ * C2 is the low-level controller that sends control signals to the hub motor,
+ * brake servo, and steering servo.  It is (or will be) a PID controller, but
+ * may also impose limits on control values for the motor and servos as a safety
+ * measure to protect against incorrect PID settings.
+ *
+ * It receives desired speed and heading from either of two sources, an RC
+ * controller operated by a person, or the C3 pilot module.  These are mutually
+ * exclusive.
+ *
+ * RC commands are received directly as interrupts on a bank of pins.  C3 commands
+ * are received over a serial line using the Elcano Serial protocol.  Heading and
+ * speed commands do not need to be passed through to other modules, but because
+ * the Elcano Serial protocol uses a unidirectional ring structure, C2 may need to
+ * pass through *other* commands that come from C3 but are intended for modules
+ * past C2 on the ring.
+ */
+
 //#include <SoftwareSerial.h>
 // @ToDo: Are these specific to some particular setup or trike? If so,
 // they should be moved to Settings.h.
@@ -20,9 +38,12 @@ const int softwareRx = 7;   // not used
 #define s7s Serial2
 Servo STEER_SERVO;
 
-#define LOOP_TIME_US 400
+// 10 milliseconds -- adjust to accomodate the fastest needed response or
+// sensor data capture.
+#define LOOP_TIME_MS 10
 #define ERROR_HISTORY 20 //number of errors to accumulate
-#define TEN_SECONDS_IN_MICROS 10000000
+//#define TEN_SECONDS_IN_MICROS 10000000
+#define ULONG_MAX 4294967295
 
 /*================ReadTurnAngle ================*/
 // @ToDo: Are these specific to a particular trike? If so, move them to Settings.h.
@@ -54,13 +75,17 @@ int Right_Max_Count = 808;
 const int SelectCD = 49; // Select IC 3 DAC (channels C and D)
 const int SelectAB = 53; // Select IC 2 DAC (channels A and B)
 
-const unsigned long INVALID_DATA = 0;
 volatile int rc_index = 0;
-volatile unsigned long RC_rise[7];
-volatile unsigned long RC_elapsed[7];
+// This is a value that the RC controller can't produce.
+#define INVALID_DATA 0L
+// How many RC signals we receive
+#define RC_NUM_SIGNALS 7
+volatile unsigned long RC_rise[RC_NUM_SIGNALS];
+volatile unsigned long RC_elapsed[RC_NUM_SIGNALS];
+// This tells us when we have started receiving RC data. Until then, we
+// ignore RC_rise and RC_elapsed.
+volatile bool RC_Done[RC_NUM_SIGNALS];
 volatile boolean synced = false;
-volatile unsigned long last_fallingedge_time = 4294967295; // max long
-volatile bool RC_Done[7] = {0, 0, 0, 0, 0, 0, 0};
 volatile bool flipping;
 
 long speed_errors[ERROR_HISTORY];
@@ -236,88 +261,71 @@ void setup()
   //brake(MIN_BRAKE_OUT);
   Serial.begin(9600);
   rc_index = 0;
-  for (int i = 0; i < 8; i++)
+  for (int i = 0; i < RC_NUM_SIGNALS; i++)
   {
     RC_rise[i] = INVALID_DATA;
     RC_elapsed[i] = INVALID_DATA;
+    RC_Done[i] = 0;
   }
   for (int i = 0; i < ERROR_HISTORY; i++)
   {
     speed_errors[i] = 0;
   }
+
   //setupWheelRev(); // WheelRev4 addition
   CalibrateTurnAngle(32, 20);
   calibrationTime_ms = millis();
-        attachInterrupt(digitalPinToInterrupt(IRPT_TURN),  ISR_TURN_rise,  RISING);
-        //attachInterrupt(digitalPinToInterrupt(IRPT_RDR),   ISR_RDR_rise,   RISING);
-        attachInterrupt(digitalPinToInterrupt(IRPT_GO),    ISR_GO_rise,    RISING);
-        attachInterrupt(digitalPinToInterrupt(IRPT_ESTOP), ISR_ESTOP_rise, RISING);
-        //attachInterrupt(digitalPinToInterrupt(IRPT_RVS),   ISR_RVS_rise,   RISING);
-        attachInterrupt(digitalPinToInterrupt(IRPT_SWITCH), ISR_SWITCH_rise, RISING);
-        attachInterrupt(digitalPinToInterrupt(IRPT_MOTOR_FEEDBACK), ISR_MOTOR_FEEDBACK_rise, RISING);
-        //Print7headers(false);
-  //PrintHeaders();
+
+  attachInterrupt(digitalPinToInterrupt(IRPT_TURN),  ISR_TURN_rise,  RISING);
+  //attachInterrupt(digitalPinToInterrupt(IRPT_RDR),   ISR_RDR_rise,   RISING);
+  attachInterrupt(digitalPinToInterrupt(IRPT_GO),    ISR_GO_rise,    RISING);
+  attachInterrupt(digitalPinToInterrupt(IRPT_ESTOP), ISR_ESTOP_rise, RISING);
+  //attachInterrupt(digitalPinToInterrupt(IRPT_RVS),   ISR_RVS_rise,   RISING);
+  attachInterrupt(digitalPinToInterrupt(IRPT_SWITCH), ISR_SWITCH_rise, RISING);
+  attachInterrupt(digitalPinToInterrupt(IRPT_MOTOR_FEEDBACK), ISR_MOTOR_FEEDBACK_rise, RISING);
 }
+
 /*---------------------------------------------------------------------------------------*/
+
+// Time at which this loop pass should end in order to maintain a
+// loop period of LOOP_TIME_MS.
+unsigned long nextTime = millis();
+// Time at which we reach the end of loop(), which should be before
+// nextTime if we have set the loop period long enough.
+unsigned long endTime;
+// How much time we need to wait to finish out this loop pass.
+unsigned long delayTime;
+
+// Inter-module communications data.
+SerialData Results;
+
 void loop() {
-  //Serial.println("Start of loop");
-  SerialData Results;
+  // Get the next loop start time. Note this (and the millis() counter) will
+  // roll over back to zero after they exceed the 32-bit size of unsigned long,
+  // which happens after about 1.5 months of operation (should check this).
+  // But leave the overflow computation in place, in case we need to go back to
+  // using the micros() counter.
+  // If the new nextTime value is <= LOOP_TIME_MS, we've rolled over.
+  nextTime = nextTime + LOOP_TIME_MS;
 
-  // Save start time for performance report.
-  unsigned long startTime = micros();
-  // Get the next loop start time.
-  unsigned long nextTime = startTime + LOOP_TIME_US;
-
-  digitalWrite(27, LOW);
-  digitalWrite(33, LOW);
-  startCapturingRCState();
-
-  unsigned long local_results[7];
-  //  PrintDone();
-
-  while (micros() < nextTime &&
-         ~((RC_Done[RC_ESTP] == 1) && (RC_Done[RC_GO] == 1) && (RC_Done[RC_TURN] == 1) && (RC_Done[RC_RDR] == 1)))
+  byte automate = processRC(RC_elapsed);
+  // @ToDo: Verify that this should be conditional. May be moot if it is
+  // replaced in the conversion to the new Elcano Serial protocol.
+  if (automate == 0x01)
   {
-    ;  //wait
-  }
-  // got data;
-  for (int i = 0; i < 8; i++)
-    local_results[i] = RC_elapsed[i];
-  //Print7(false, local_results);
-  //Serial.println("Processing RC data...");
-  byte automate = processRC(local_results);
-  if (automate == 0x01) //remember to tell Pat to fix this, was = instead of ==
-  {
-    //Serial.println("Processing high-level data");
     processHighLevel(&Results);
   }
-  //    Print7( true, local_results);
-    
-  //Serial.println(nextTime); //Old sanity check line; testing new pin output sanity check.
-  //Serial.println("Clearing Results");
-//  Results.Clear();
-//  Results.kind = MSG_SENSOR;
-//  Results.angle_deg = TurnAngle_degx10() / 10;
-  //show_speed (&Results);
 
-  // Report how long the loop took.
-  
-  digitalWrite(27, HIGH);
-  if(nextTime < startTime || nextTime > startTime + LOOP_TIME_US) {
-    digitalWrite(33, HIGH);
-  }
-  //Serial.println(nextTime); //Old sanity check line; testing new pin output sanity check.
-  //Serial.println("Clearing Results");
+  // @ToDo: What is this doing?
   //Results.clear();
   Results.kind = MSG_SENSOR;
   Results.angle_deg = TurnAngle_degx10() / 10;
-  //show_speed (&Results);
+  // @ToDo: Is this working and should it be uncommented?
+  // show_speed (&Results);
 
-  //LogData(local_results, &Results);  // data for spreadsheet
-
-  calibrationTime_ms += LOOP_TIME_US;
-  straightTime_ms = (steer_control == STRAIGHT_TURN_OUT) ? straightTime_ms + LOOP_TIME_US : 0;
-  stoppedTime_ms = (throttle_control == MIN_ACC_OUT) ? stoppedTime_ms + LOOP_TIME_US : 0;
+  calibrationTime_ms += LOOP_TIME_MS;
+  straightTime_ms = (steer_control == STRAIGHT_TURN_OUT) ? straightTime_ms + LOOP_TIME_MS : 0;
+  stoppedTime_ms = (throttle_control == MIN_ACC_OUT) ? stoppedTime_ms + LOOP_TIME_MS : 0;
   if (calibrationTime_ms > 40000 && straightTime_ms > 3000 && stoppedTime_ms > 3000)
   {
     //       int oldBrake = brake_control;
@@ -326,29 +334,72 @@ void loop() {
     //       brake(oldBrake);       // restore brake state
     calibrationTime_ms = 0;
   }
-  
-  unsigned long endTime = micros();
-  // unsigned long elapsedTime = endTime - startTime;
-  // Serial.print("loop elapsed time = ");
-  // Serial.println(elapsedTime);
-  // Did we spend long enough in the loop that we should immediately
-  // start the next pass?
-  //Serial.print("Time: "); Serial.print(endTime); Serial.print(", Next: "); Serial.println(nextTime);
-  if (nextTime > endTime) {
-    // No, pause til the next loop start time.
-    Serial.print("Start Sanity: "); Serial.println(startTime);
-    Serial.print("Const Sanity: "); Serial.println(LOOP_TIME_US);
-    Serial.print("Next Sanity: "); Serial.println(nextTime);
-    Serial.print("End Sanity: "); Serial.println(endTime);
-    Serial.print("Delaying: "); Serial.println(nextTime - endTime);
-    delay(nextTime - endTime);
+
+  // @ToDo: What information do we need to send to C6? Is that communication already
+  // hiding in here somewhere, or does it need to be added?
+
+  // Figure out how long we need to wait to reach the desired end time
+  // for this loop pass. First, get the actual end time. Note: Beyond this
+  // point, there should be *no* more controller activity -- we want
+  // minimal time between now, when we capture the actual loop end time,
+  // and when we pause til the desired loop end time.
+  endTime = millis();
+  delayTime = 0L;
+
+  // Did the millis() counter or nextTime overflow and roll over during
+  // this loop pass? Did the loop's processing time overrun the desired
+  // loop period? We have different computations for the delay time in
+  // various cases:
+  if ((nextTime >= endTime) &&
+      (((endTime < LOOP_TIME_MS) && (nextTime < LOOP_TIME_MS)) ||
+       ((endTime >= LOOP_TIME_MS) && (nextTime >= LOOP_TIME_MS)))) {
+    // 1) Neither millis() nor nextTime rolled over --or-- millis() rolled
+    // over *and* nextTime rolled over when we incremented it. For this case,
+    // endTime and nextTime will be in their usual relationship, with
+    // nextTime >= endTime, and both nextTime and endTime are either greater
+    // than the desired loop period, or both are smaller than that.
+    // In this case, we want a delayTime of nextTime - endTime here.
+    delayTime = nextTime - endTime;
   } else {
-    // Yes, we overran the expected loop interval. Extend the time.
-    nextTime = endTime + LOOP_TIME_US;
+    // (We get here if:
+    // nextTime < endTime -or- exactly one of nextTime or endTime rolled over.
+    // Negate the first if condition and use DeMorgan's laws...
+    // Now pick out the "nextTime rolled over" case. We don't need to test both
+    // nextTime and endTime as we know only one rolled over.)
+    if (nextTime < LOOP_TIME_MS) {
+      // 2) nextTime rolled over when we incremented it, but the millis() timer
+      // hasn't yet rolled over.
+      // In this case, we know we didn't exhaust the loop time, and the time we
+      // need to wait is the remaining time til millis() will roll over, i.e.
+      // from endTime until the max long value, plus the time from zero to
+      // nextTime.
+      delayTime = ULONG_MAX - endTime + nextTime;
+    } else {
+      // (We get here if:
+      // nextTime < endTime -or-
+      // nextTime >= endTime -and- nextTime did not roll over but endTime did.)
+      // What remains are these two cases:
+      // 3) nextTime hasn't rolled over, but millis() has.
+      // In this case, we overran the loop time. Since millis() has rolled over,
+      // we can just use the normal overrun fixup. So combine this with...
+      // 4) Neither nextTime nor millis rolled over, but we overran the desired
+      // loop period.
+      // In this case, we have no delay, but instead extend the allowed time for
+      // this loop pass to the actual time it took.
+      nextTime = endTime;
+      delayTime = 0L;
+    }
   }
   
-  //Serial.println("End of loop");
+  // Did we spend long enough in the loop that we should immediately start
+  // the next pass?
+  if (delayTime > 0L) {
+    // No, pause til the next loop start time.
+    delay(delayTime);
+  }
 }
+
+// @ToDo: Can we remove all or most of this print code?
 /*---------------------------------------------------------------------------------------*/
 void PrintDone()
 {
@@ -442,6 +493,11 @@ void PrintHeaders (void)
   Serial.println("(m) Distance");
 }
 
+// @ToDo: Remove all code that does not directly pertain to the actual
+// operation of the low-level controller. If we want to execute a pattern
+// of movement as a test, put this in a separate module, running on a
+// separate Arduino, and have that *send in commands* over the serial line
+// just as C3 will do.
 /*---------------------------------------------------------------------------------------*/
 //circleRoutine
 void circleRoutine(unsigned long seconds, unsigned long &rcAuto) {
@@ -497,13 +553,8 @@ void squareRoutine(unsigned long sides, unsigned long &rcAuto) {
   brake(MIN_BRAKE_OUT);
   rcAuto = LOW;
 }
-/*---------------------------------------------------------------------------------------*/
-void startCapturingRCState(){
-  for (int i = 1; i < 7; i++) {
-    RC_Done[i] = 0;
-  }
-}
 
+// @ToDo: Remove all obsolete code.
 ///*---------------------------------------------------------------------------------------*/
 ////done in setup, calibrate RC values for MIDDLE, MIN_RC, and MAX_RC at startup
 //void calibrateRC(unsigned long mic) {
@@ -545,90 +596,122 @@ void startCapturingRCState(){
 //  //digitalWrite(LED_PIN_OUT, LOW);
 //}
 
+// @ToDo: Q: What do the expressions "1st pulse", etc. mean? Is this a
+// leftover from trying to combine the RC controls into a single stream?
 /*---------------------------------------------------------------------------------------*/
 byte processRC (unsigned long *results){
+  // Each use of a particular results element is guarded by a check of RC_Done
+  // for that element, to see if we have begun receiving any data for that element.
   // 1st pulse is aileron (position 5 on receiver; controlled by Right left/right joystick on transmitter)
   //     used for Steering
-    //    Serial.print("\tTurn Cmd "); Serial.println(results[RC_TURN]);
   /* 2nd pulse is aux (position 1 on receiver; controlled by flap/gyro toggle on transmitter)
      will be used for selecting remote control or autonomous control. */
-  //    Serial.print("In processRC, received results[RC_AUTO] = "); Serial.println(results[RC_AUTO]);
-  if (NUMBER_CHANNELS > 5)
-    results[RC_AUTO] = (results[RC_AUTO] > MIDDLE ? HIGH : LOW);
-  //    Serial.print("processed results[RC_AUTO] = "); Serial.println(results[RC_AUTO]);
+  if (RC_Done[RC_AUTO]) {
+    if (NUMBER_CHANNELS > 5) {
+      results[RC_AUTO] = (results[RC_AUTO] > MIDDLE ? HIGH : LOW);
+    }
+  }
 
   /* 4th pulse is gear (position 2 on receiver; controlled by gear/mode toggle on transmitter)
     will be used for emergency stop. D38 */
-  Serial.println(results[RC_ESTP]);
-  results[RC_ESTP] = (results[RC_ESTP] > MIDDLE ? HIGH : LOW);
+  if (RC_Done[RC_ESTP]) {
+    results[RC_ESTP] = (results[RC_ESTP] > MIDDLE ? HIGH : LOW);
 
-  if (results[RC_ESTP] == HIGH){
-    Serial.println("Exiting processRC due to E-stop.");
-    E_Stop();  // already done at interrupt level
-    if ((results[RC_AUTO] == LOW)  && (NUMBER_CHANNELS > 5)) // under RC control
-      ;//steer(results[RC_TURN]);
-    return 0x00;
+    if (results[RC_ESTP] == HIGH){
+      // Serial.println("Exiting processRC due to E-stop.");
+      E_Stop();  // already done at interrupt level
+      if (RC_Done[RC_AUTO]) {
+      // if ((results[RC_AUTO] == LOW)  && (NUMBER_CHANNELS > 5)) // under RC control
+      //   {
+      //     ;//steer(results[RC_TURN]);
+      //   }
+      // }
+      }
+      return 0x00;
+    }
   }
 
-
-  if ((results[RC_AUTO] == HIGH)  && (NUMBER_CHANNELS > 5))
-  {
-            Serial.println("Calling processHighLevel.");
-    return 0x01;  // not under RC control
-  } else {
-         Serial.println("Continuing processRC as under RC control.");
+  if (RC_Done[RC_AUTO]) {
+    if ((results[RC_AUTO] == HIGH)  && (NUMBER_CHANNELS > 5))
+    {
+      return 0x01;  // not under RC control
+    }
   }
-  
-  /*  6th pulse is marked throttle (position 6 on receiver; controlled by Left up/down joystick on transmitter).
+
+  /* Controlled by Left up/down joystick.
     It will be used for shifting from Drive to Reverse . D40
   */
-  //results[RC_RVS] = (results[RC_RVS] > MIDDLE? HIGH: LOW);
+  //if (RC_Done[RC_RVS]) {
+  //  //results[RC_RVS] = (results[RC_RVS] > MIDDLE? HIGH: LOW);
+  //}
 
   // TO DO: Select Forward / reverse based on results[RC_RVS]
 
-  /*   3rd pulse is elevator (position 4 on receiver; controlled by Right up/down.
+  /* Controlled by Right up/down.
      will be used for throttle/brake: RC_Throttle
   */
-  int aileron = results[RC_TURN];
-  //    Serial.print("\tTurn input "); Serial.print(aileron);
-  results[RC_TURN] = convertTurn(aileron);
+  if (RC_Done[RC_TURN]) {
+    results[RC_TURN] = convertTurn(results[RC_TURN]);
+  }
 
   
   // Braking or Throttle
-  Serial.println(results[RC_GO]);
-  if (liveBrake(results[RC_GO])){
-    Serial.print("Braking: "); Serial.println(results[RC_GO]);
-    brake(convertBrake(results[RC_GO]));
-  }
-  else {
-    brake(MIN_BRAKE_OUT);
-  }
-
-  //Accelerating
-  if (liveThrottle(results[RC_RDR])){
-    int going = convertThrottle(results[RC_RDR]);
-    moveVehicle(going);
-  }
-  else if(doRoutine(results[RC_RDR])){
-    moveVehicle(MIN_ACC_OUT);
-    squareRoutine(5, results[RC_AUTO]);
-  }
-  else {
-    moveVehicle(MIN_ACC_OUT);
+  if (RC_Done[RC_GO]) {
+    if (liveBrake(results[RC_GO])){
+      brake(convertBrake(results[RC_GO]));
+    }
+    else {
+      brake(MIN_BRAKE_OUT);
+    }
   }
 
-  steer(results[RC_TURN]);
+  // Accelerating
+  // Note: The doRoutine / squareRoutine code will be moved out to run on
+  // a separate module.  For now, for safety, we want a way to stop the
+  // routine, apart from e-stop.  What we require is that the RC controller
+  // is turned on, and the throttle is in a specific position, the extreme
+  // lower right.  If it is released, we want the routine to stop.  This
+  // can then serve as a dead-man switch, as well.
+  // Similarly, when in normal RC operation, we check for the throttle to
+  // be in a "live" position.  Otherwise, (if the throttle is in neither
+  // the "routine" nor "live" positions, we want to stop.
+  if (RC_Done[RC_RDR]) {
+    if (liveThrottle(results[RC_RDR])){
+      // Here, the throttle is in a "live" position.
+      int going = convertThrottle(results[RC_RDR]);
+      moveVehicle(going);
+    }
+    // @ToDo: Move test code out. Will eventually want to have a separate
+    // module execute the tests.
+    else {
+      // Not "live".
+      if (RC_Done[RC_AUTO]) {
+        if(doRoutine(results[RC_RDR])){
+          // Here, the throttle is in the "routine" position.
+          moveVehicle(MIN_ACC_OUT);
+          squareRoutine(5, results[RC_AUTO]);
+        } else {
+          // Here, the throttle is neither "live" nor "routine".
+          moveVehicle(MIN_ACC_OUT);
+        }
+      }
+    }
+  }
+
+  if (RC_Done[RC_TURN]) {
+    steer(results[RC_TURN]);
+  }
 
   /* 5th pulse is rudder (position 3 on receiver; controlled by Left left/right joystick on transmitter)
     Not used */
-  //    results[RC_RDR] = (results[RC_RDR] > MIDDLE? HIGH: LOW);  // could be analog
-  //    Serial.println(results[RC_RDR]);
-  //    if (results[RC_RDR] >= HubAtZero)
-  //        HubSpeed_kmPh = 0;
-  //    else
-  //        HubSpeed_kmPh = HubSpeed2kmPh / results[RC_RDR];
+  // if (RC_Done[RC_RDR]) {
+  //   results[RC_RDR] = (results[RC_RDR] > MIDDLE? HIGH: LOW);  // could be analog
+  //   if (results[RC_RDR] >= HubAtZero)
+  //     HubSpeed_kmPh = 0;
+  //   else
+  //     HubSpeed_kmPh = HubSpeed2kmPh / results[RC_RDR];
+  // }
 
-  //  Serial.println("");  // New line
   return 0x00;
 }
 /*---------------------------------------------------------------------------------------*/
@@ -1114,7 +1197,7 @@ void show_speed(SerialData *Results)
   ComputeSpeed (&history);
   //   PrintSpeed(&history);
 
-  Odometer_m += (float)(LOOP_TIME_US * SpeedCyclometer_mmPs) / MEG;
+  Odometer_m += (float)(LOOP_TIME_MS * SpeedCyclometer_mmPs) / 1000.0;
   // Since Results have not been cleared, angle information will also be sent.
   Results->speed_cmPs = SpeedCyclometer_mmPs / 10;
 //  Results->write(&Serial3);  // Send speed to C6
@@ -1124,11 +1207,15 @@ void show_speed(SerialData *Results)
 }
 /*---------------------------------------------------------------------------------------*/
 /*========================CalibrateTurnAngle======================*/
-/*  This routine should only be called when
+/* The Hall angle sensors we are using have been observed to drift,
+   and should periodically be zeroed.
+   This routine should only be called when
           - Wheels are pointed straight ahead, and have been for a while.
           - Trike is not moving, and is stable.
-    Calibration will block any response to controls; there will be no turning or movemnet during calibration.
-    Angle sensors can drift, and should periodically be zeroed.
+   Calibration will block any response to controls; there will be
+   no turning or movement during calibration. This condition should be
+   very brief -- this does not wait nor turn off interrupts -- so should
+   be safe to call during loop().
 */
 void CalibrateTurnAngle(int count, int pause)
 {
@@ -1236,6 +1323,7 @@ int TurnAngle_degx10()
   return new_turn_degx10;
 }
 /*---------------------------------------------------------------------------------------*/
+// @ToDo: Is this a work in progress?
 void newThrottlePID(){
   
 }
