@@ -1,3 +1,4 @@
+#pragma once
 // Common.h - header included for all Elcano modules
 
 // value if latitude, longitude or bearing is missing.

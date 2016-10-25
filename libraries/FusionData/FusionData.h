@@ -1,6 +1,6 @@
+#pragma once
 // FusionData.h - header included for all functions to fuse the 
 // IMU sensor data, speed data and GPS data
-
 
 #define HEADING_PRECISION 1000
 // Hard coded values

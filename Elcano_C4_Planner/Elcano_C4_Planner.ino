@@ -1,4 +1,4 @@
-#include <Common.h>
+#include <Waypoint.h>
 #include <IO.h>
 
 #include <SPI.h>

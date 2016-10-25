@@ -75,9 +75,7 @@ Serial lines:
 */
 
 /*---------------------------------------------------------------------------------------*/
-
-#define MEGA
-#include <Common.h>
+#include <Waypoint.h>
 #include <SPI.h>
 #include <SD.h>
 #include <IO.h>
