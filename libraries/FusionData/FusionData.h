@@ -2,14 +2,16 @@
 // IMU sensor data, speed data and GPS data
 
 
-#define HEADING_PRECISION 1000
+#define HEADING_PRECISION 1000000.0
 // Hard coded values
-#define COMPASS_ERROR ((double) 2)
-#define DISTANCE_ERROR ((double) 0.04)
-#define GPS_ERROR ((long) 4236)
+#define COMPASS_ERROR ((double) 2.0)
+#define DISTANCE_ERROR ((double) 0.04) //percentage error = 4%
 
 #define ROTATE_CLOCKWISE 0
 #define ROTATE_COUNTER_CLOCKWISE 1
+
+#define SUBTRACT_FROM_ORIGIN	1
+#define ADD_TO_ORIGIN			0
 
 /* This struct will be used to store the sensor or GPS data for location position */
 struct PositionData {
@@ -21,6 +23,7 @@ struct PositionData {
 	long distance_mm;
 	long sigma_mm;
 	void Clear();
+	void Display();
 };
 
 void ComputePositionWithDR(PositionData &oldData, PositionData &newData);
