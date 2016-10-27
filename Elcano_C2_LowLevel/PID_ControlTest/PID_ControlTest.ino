@@ -1,4 +1,4 @@
-#include <PID_v1.h>
+                                       #include <PID_v1.h>
 #include <Settings.h>
 #include <SPI.h>
 #include <Servo.h>
@@ -54,7 +54,7 @@ static struct hist {
 
 
 double PIDThrottleOutput; //used to tell Throttle and Brake what to do as far as acceleration
-double desiredSpeed = 2800.0; //aprox 10kph
+double desiredSpeed = 2000.0; //aprox 10kph
 #define PID_CALCULATE_TIME 50
 
 double proportionalConstant = .0175;
@@ -80,6 +80,14 @@ void setup(){
 }
 
 void loop(){
+
+  
+//pass in speed variable in mm per second, range from 1000-7500.
+  if (Serial.available() > 0) {
+    // get incoming byte:
+    desiredSpeed = Serial.parseInt();
+    Serial.println(desiredSpeed);
+  }
   computeSpeed(&history);
   PrintSpeed(history);
   ThrottlePID();
@@ -287,7 +295,6 @@ void moveVehicle(int acc)
     255 counts = 4.08 V
   */
 
-  Serial.println("Inside moveVehicle");
   DAC_Write(DAC_CHANNEL, acc);
   //throttle_control = acc;    // post most recent throttle.
 }
@@ -335,7 +342,6 @@ void DAC_Write(int address, int value)
       SPI.transfer(byte2);
     }
     // take the SS pin high to de-select the chip:
-      Serial.println("Inside SI HIGH");
     digitalWrite(SelectAB, HIGH);
   }
   else
@@ -350,6 +356,5 @@ void DAC_Write(int address, int value)
       SPI.transfer(byte2);
     }
     // take the SS pin high to de-select the chip:
-    digitalWrite(SelectCD, HIGH);
   }
 }
