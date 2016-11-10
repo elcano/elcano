@@ -235,7 +235,6 @@ void ISR_MOTOR_FEEDBACK_rise() {
 }
 
 /*---------------------------------------------------------------------------------------*/
-//----------------------------------------------------------------------------
 void setup()
 { //Set up pins
   STEER_SERVO.attach(STEER_OUT_PIN);
@@ -277,7 +276,7 @@ void setup()
   //setupWheelRev(); // WheelRev4 addition
   CalibrateTurnAngle(32, 20);
   calibrationTime_ms = millis();
-<<<<<<< HEAD
+  
         attachInterrupt(digitalPinToInterrupt(IRPT_TURN),  ISR_TURN_rise,  RISING);
         //attachInterrupt(digitalPinToInterrupt(IRPT_RDR),   ISR_RDR_rise,   RISING);
         attachInterrupt(digitalPinToInterrupt(IRPT_GO),    ISR_GO_rise,    RISING);
@@ -285,18 +284,6 @@ void setup()
         //attachInterrupt(digitalPinToInterrupt(IRPT_RVS),   ISR_RVS_rise,   RISING);
         attachInterrupt(digitalPinToInterrupt(IRPT_BRAKE), ISR_BRAKE_rise, RISING);
         attachInterrupt(digitalPinToInterrupt(IRPT_MOTOR_FEEDBACK), ISR_MOTOR_FEEDBACK_rise, RISING);
-        //Print7headers(false);
-  //PrintHeaders();
-=======
-
-  attachInterrupt(digitalPinToInterrupt(IRPT_TURN),  ISR_TURN_rise,  RISING);
-  //attachInterrupt(digitalPinToInterrupt(IRPT_RDR),   ISR_RDR_rise,   RISING);
-  attachInterrupt(digitalPinToInterrupt(IRPT_GO),    ISR_GO_rise,    RISING);
-  attachInterrupt(digitalPinToInterrupt(IRPT_ESTOP), ISR_ESTOP_rise, RISING);
-  //attachInterrupt(digitalPinToInterrupt(IRPT_RVS),   ISR_RVS_rise,   RISING);
-  attachInterrupt(digitalPinToInterrupt(IRPT_SWITCH), ISR_SWITCH_rise, RISING);
-  attachInterrupt(digitalPinToInterrupt(IRPT_MOTOR_FEEDBACK), ISR_MOTOR_FEEDBACK_rise, RISING);
->>>>>>> f57804c5b75f9d91582d61f2cffa43f92831b691
 }
 
 /*---------------------------------------------------------------------------------------*/
@@ -322,7 +309,7 @@ void loop() {
   // If the new nextTime value is <= LOOP_TIME_MS, we've rolled over.
   nextTime = nextTime + LOOP_TIME_MS;
 
-  byte automate = processRC(RC_elapsed);
+  byte automate = processRC();
   // @ToDo: Verify that this should be conditional. May be moot if it is
   // replaced in the conversion to the new Elcano Serial protocol.
   if (automate == 0x01)
@@ -613,7 +600,7 @@ void squareRoutine(unsigned long sides, unsigned long &rcAuto) {
 // @ToDo: Q: What do the expressions "1st pulse", etc. mean? Is this a
 // leftover from trying to combine the RC controls into a single stream?
 /*---------------------------------------------------------------------------------------*/
-byte processRC (unsigned long *results){
+byte processRC (){
   // Each use of a particular results element is guarded by a check of RC_Done
   // for that element, to see if we have begun receiving any data for that element.
   // 1st pulse is aileron (position 5 on receiver; controlled by Right left/right joystick on transmitter)
@@ -622,22 +609,22 @@ byte processRC (unsigned long *results){
      will be used for selecting remote control or autonomous control. */
   if (RC_Done[RC_AUTO]) {
     if (NUMBER_CHANNELS > 5) {
-      results[RC_AUTO] = (results[RC_AUTO] > MIDDLE ? HIGH : LOW);
+      RC_elapsed[RC_AUTO] = (RC_elapsed[RC_AUTO] > MIDDLE ? HIGH : LOW);
     }
   }
 
   /* 4th pulse is gear (position 2 on receiver; controlled by gear/mode toggle on transmitter)
     will be used for emergency stop. D38 */
   if (RC_Done[RC_ESTP]) {
-    results[RC_ESTP] = (results[RC_ESTP] > MIDDLE ? HIGH : LOW);
+    RC_elapsed[RC_ESTP] = (RC_elapsed[RC_ESTP] > MIDDLE ? HIGH : LOW);
 
-    if (results[RC_ESTP] == HIGH){
+    if (RC_elapsed[RC_ESTP] == HIGH){
       // Serial.println("Exiting processRC due to E-stop.");
       E_Stop();  // already done at interrupt level
       if (RC_Done[RC_AUTO]) {
-      // if ((results[RC_AUTO] == LOW)  && (NUMBER_CHANNELS > 5)) // under RC control
+      // if ((RC_elapsed[RC_AUTO] == LOW)  && (NUMBER_CHANNELS > 5)) // under RC control
       //   {
-      //     ;//steer(results[RC_TURN]);
+      //     ;//steer(RC_elapsed[RC_TURN]);
       //   }
       // }
       }
@@ -646,7 +633,7 @@ byte processRC (unsigned long *results){
   }
 
   if (RC_Done[RC_AUTO]) {
-    if ((results[RC_AUTO] == HIGH)  && (NUMBER_CHANNELS > 5))
+    if ((RC_elapsed[RC_AUTO] == HIGH)  && (NUMBER_CHANNELS > 5))
     {
       return 0x01;  // not under RC control
     }
@@ -656,48 +643,26 @@ byte processRC (unsigned long *results){
     It will be used for shifting from Drive to Reverse . D40
   */
   //if (RC_Done[RC_RVS]) {
-  //  //results[RC_RVS] = (results[RC_RVS] > MIDDLE? HIGH: LOW);
+  //  //RC_elapsed[RC_RVS] = (RC_elapsed[RC_RVS] > MIDDLE? HIGH: LOW);
   //}
 
-  // TO DO: Select Forward / reverse based on results[RC_RVS]
+  // TO DO: Select Forward / reverse based on RC_elapsed[RC_RVS]
 
   /* Controlled by Right up/down.
      will be used for throttle/brake: RC_Throttle
   */
   if (RC_Done[RC_TURN]) {
-    results[RC_TURN] = convertTurn(results[RC_TURN]);
+    RC_elapsed[RC_TURN] = convertTurn(RC_elapsed[RC_TURN]);
   }
 
   
   // Braking or Throttle
-<<<<<<< HEAD
-  if (liveBrake(results[RC_BRAKE])){
-    //Serial.print("Braking: "); Serial.println(results[RC_BRAKE]);
-    brake(convertBrake(results[RC_BRAKE]));
+  if (liveBrake(RC_elapsed[RC_BRAKE])){
+    //Serial.print("Braking: "); Serial.println(RC_elapsed[RC_BRAKE]);
+    brake(convertBrake(RC_elapsed[RC_BRAKE]));
   }
   else {
     brake(MIN_BRAKE_OUT);
-  }
-
-  //Accelerating
-  if (liveThrottle(results[RC_GO])){
-    int going = convertThrottle(results[RC_GO]);
-    moveVehicle(going);
-  }
-  else if(doRoutine(results[RC_GO])){
-    moveVehicle(MIN_ACC_OUT);
-    circleRoutine(5, results[RC_AUTO]);
-  }
-  else {
-    moveVehicle(MIN_ACC_OUT);
-=======
-  if (RC_Done[RC_GO]) {
-    if (liveBrake(results[RC_GO])){
-      brake(convertBrake(results[RC_GO]));
-    }
-    else {
-      brake(MIN_BRAKE_OUT);
-    }
   }
 
   // Accelerating
@@ -710,42 +675,33 @@ byte processRC (unsigned long *results){
   // Similarly, when in normal RC operation, we check for the throttle to
   // be in a "live" position.  Otherwise, (if the throttle is in neither
   // the "routine" nor "live" positions, we want to stop.
-  if (RC_Done[RC_RDR]) {
-    if (liveThrottle(results[RC_RDR])){
-      // Here, the throttle is in a "live" position.
-      int going = convertThrottle(results[RC_RDR]);
-      moveVehicle(going);
-    }
-    // @ToDo: Move test code out. Will eventually want to have a separate
-    // module execute the tests.
-    else {
-      // Not "live".
-      if (RC_Done[RC_AUTO]) {
-        if(doRoutine(results[RC_RDR])){
-          // Here, the throttle is in the "routine" position.
-          moveVehicle(MIN_ACC_OUT);
-          squareRoutine(5, results[RC_AUTO]);
-        } else {
-          // Here, the throttle is neither "live" nor "routine".
-          moveVehicle(MIN_ACC_OUT);
-        }
-      }
-    }
->>>>>>> f57804c5b75f9d91582d61f2cffa43f92831b691
+  if (liveThrottle(RC_elapsed[RC_GO])){
+    // Here, the throttle is in a "live" position.
+    int going = convertThrottle(RC_elapsed[RC_GO]);
+    moveVehicle(going);
   }
+  else if(doRoutine(RC_elapsed[RC_GO])){
+    moveVehicle(MIN_ACC_OUT);
+    unsigned long autoB = RC_elapsed[RC_AUTO];
+    circleRoutine(5, autoB);
+    RC_elapsed[RC_AUTO] = autoB;
+  }
+  else {
+    moveVehicle(MIN_ACC_OUT);
+    }
 
   if (RC_Done[RC_TURN]) {
-    steer(results[RC_TURN]);
+    steer(RC_elapsed[RC_TURN]);
   }
 
   /* 5th pulse is rudder (position 3 on receiver; controlled by Left left/right joystick on transmitter)
     Not used */
   // if (RC_Done[RC_RDR]) {
-  //   results[RC_RDR] = (results[RC_RDR] > MIDDLE? HIGH: LOW);  // could be analog
-  //   if (results[RC_RDR] >= HubAtZero)
+  //   RC_elapsed[RC_RDR] = (RC_elapsed[RC_RDR] > MIDDLE? HIGH: LOW);  // could be analog
+  //   if (RC_elapsed[RC_RDR] >= HubAtZero)
   //     HubSpeed_kmPh = 0;
   //   else
-  //     HubSpeed_kmPh = HubSpeed2kmPh / results[RC_RDR];
+  //     HubSpeed_kmPh = HubSpeed2kmPh / RC_elapsed[RC_RDR];
   // }
 
   return 0x00;
