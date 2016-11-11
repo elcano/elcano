@@ -24,9 +24,9 @@
 #include <Servo.h>
 
 // Define the tests to do.
-#define BRAKE_RAMP
+//#define BRAKE_RAMP
 #define STEER_RAMP
-#define MOTOR_RAMP
+//#define MOTOR_RAMP
 // If operating with the MegaShieldDB, we can use the Digital Analog Converter to move the vehicle
 #define DAC
 
@@ -231,13 +231,20 @@ void setup()
     pinMode(BRAKE_OUT_PIN, OUTPUT);
     STEER_SERVO.attach(STEER_OUT_PIN);
 
+#ifdef BRAKE_RAMP
     moveBrake(BrakePosition);   // release brake
+#endif  // BRAKE_RAMP
+#ifdef STEER_RAMP
     moveSteer(SteerPosition);
+#endif  // Steer_RAMP
+#ifdef MOTOR_RAMP
     moveVehicle(MinimumThrottle); 
-    Serial.println("Initialized");
-    Serial.print("Left\t");   
-    Serial.print("Right\t");
-    Serial.println("Time");   
+#endif  // MOTOR_RAMP
+
+//    Serial.println("Initialized");
+//    Serial.print("Left\t");   
+//    Serial.print("Right\t");
+//    Serial.println("Time");   
 }
 /*---------------------------------------------------------------------------------------*/
 void loop()
@@ -268,14 +275,14 @@ void loop()
     if (BrakePosition > NoBrake || BrakePosition < FullBrake)
         BrakeIncrement = -BrakeIncrement;
     moveBrake(BrakePosition);
-#endif  // BRAKE_RAMP  
+#endif  // BRAKE_RAMP
   
  // apply steering
 #ifdef STEER_RAMP
     SteerPosition += SteerIncrement;
     if (SteerPosition > HardLeft || SteerPosition < HardRight)
     {
-        Serial.println("Hard Angle");
+        //Serial.println("Hard Angle");
         SteerIncrement = -SteerIncrement;
     }
     moveSteer(SteerPosition);
@@ -292,8 +299,11 @@ void moveBrake(int i)
 /*---------------------------------------------------------------------------------------*/
 void moveSteer(int i)
 {
-     Serial.print ("Steer "); Serial.print(i);
-     Serial.print (" on ");   Serial.print (STEER_OUT_PIN); Serial.print("\t");
+//     Serial.print ("Steer ");
+     Serial.print(i);
+//     Serial.print (" on ");   
+//     Serial.print (STEER_OUT_PIN);
+     Serial.print("\t");
      STEER_SERVO.writeMicroseconds(i);
 }
 /*---------------------------------------------------------------------------------------*/
