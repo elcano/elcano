@@ -282,7 +282,7 @@ void loop()
     SteerPosition += SteerIncrement;
     if (SteerPosition > HardLeft || SteerPosition < HardRight)
     {
-        //Serial.println("Hard Angle");
+        Serial.println("Hard Angle");
         SteerIncrement = -SteerIncrement;
     }
     moveSteer(SteerPosition);
@@ -299,11 +299,8 @@ void moveBrake(int i)
 /*---------------------------------------------------------------------------------------*/
 void moveSteer(int i)
 {
-//     Serial.print ("Steer ");
-     Serial.print(i);
-//     Serial.print (" on ");   
-//     Serial.print (STEER_OUT_PIN);
-     Serial.print("\t");
+     Serial.print ("Steer "); Serial.print(i);
+     Serial.print (" on ");   Serial.print (STEER_OUT_PIN); Serial.print("\t");
      STEER_SERVO.writeMicroseconds(i);
 }
 /*---------------------------------------------------------------------------------------*/
