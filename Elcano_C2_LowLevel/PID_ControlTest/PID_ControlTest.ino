@@ -4,29 +4,26 @@
 #include <Servo.h>
 Servo STEER_SERVO;
 
-
-
+/*---------------------------------------------------------------------------------------*/
+//Definitions section: Constants and variables specific to sketch, used between methods
 #define MEG 1000000
 #define MAX_SPEED_KPH 50
+// MAX_SPEED_mmPs = 13,888 mm/s = 13.888 m/s
 #define MAX_SPEED_mmPs   ((MAX_SPEED_KPH * MEG) / 3600)
 
-// MAX_SPEED_mmPs = 13,888 mm/s = 13.888 m/s
 unsigned long MinTickTime_ms;
-// ((WHEEL_DIAMETER_MM * 3142) / MAX_SPEED_mmPs)
-// MinTickTime_ms = 89 ms
+// A speed of less than 0.3 KPH resets timer before revolution completes.
 #define MIN_SPEED_mPh 3000
-// A speed of less than 0.3 KPH is zero.
 unsigned long MaxTickTime_ms;
-// ((WHEEL_DIAMETER_MM * 3142) / MIN_SPEED_mmPs)
-// MinTickTime_ms = 9239 ms = 9 sec
 
-const int SelectCD = 49; // Select IC 3 DAC (channels C and D)
-const int SelectAB = 53; // Select IC 2 DAC (channels A and B)
+// Select IC 3 DAC (channels C and D)
+#define SelectCD 49 
+// Select IC 2 DAC (channels A and B)
+#define SelectAB 53
 
 double SpeedCyclometer_mmPs = 0; //Note: doubles on Arduinos are the same thing as floats, 4bytes, single precision
-// Speed in revolutions per second is independent of wheel size.
-//float SpeedCyclometer_revPs = 0.0;//revolutions per sec
 
+//ISR variables for external cyclometer Interrupt Service Routine
 #define IRQ_NONE 0
 #define IRQ_FIRST 1
 #define IRQ_SECOND 2
@@ -47,14 +44,13 @@ static struct hist {
 
   byte nowClickNumber;
   unsigned long nowTime_ms;
-  unsigned long TickTime_ms;  // Tick times are used to compute speeds
-  unsigned long OldTick_ms;   // Tick times may not match time stamps if we don't process
-  // results of every interrupt
 } history;
 
 
 double PIDThrottleOutput; //used to tell Throttle and Brake what to do as far as acceleration
 double desiredSpeed = 2000.0; //aprox 10kph
+
+//PID update frequency in milliseconds
 #define PID_CALCULATE_TIME 50
 
 double proportionalConstant = .0180;
@@ -73,39 +69,37 @@ void setup(){
   SPI.begin(); 
   speedPID.SetOutputLimits(MIN_ACC_OUT, MAX_ACC_OUT); //useful if we want to change the limits on what values the output can be set to
   speedPID.SetSampleTime(PID_CALCULATE_TIME); //useful if we want to change the compute period
+  
   setupWheelRev();
-  //attachInterrupt(digitalPinToInterrupt(IRPT_RDR), ISR_RDR_rise, RISING);
   STEER_SERVO.attach(STEER_OUT_PIN);
   STEER_SERVO.writeMicroseconds(STRAIGHT_TURN_OUT);
 }
 
 void loop(){
-
-  
-//pass in speed variable in mm per second, range from 1000-7500.
+//pass in desired speed variable in mm per second, range from 1000-7500.
   if (Serial.available() > 0) {
     // get incoming byte:
     desiredSpeed = Serial.parseInt();
     Serial.println(desiredSpeed);
   }
   computeSpeed(&history);
-  PrintSpeed(history);
+  PrintSpeed();
   ThrottlePID();
 //  Serial.print("Int State ");
 //  Serial.println(InterruptState);
 //  Serial.print("Click ");
 //  Serial.println(ClickNumber);
-  //delay(50); 
 }
 
 void ThrottlePID(){
   
   speedPID.Compute();
 
-//  Serial.print("Throttle out value ");
-  Serial.print(PIDThrottleOutput);
-  Serial.print("\r\n");
+  Serial.print("Throttle out value ");
+  Serial.println(PIDThrottleOutput);
   int throttleControl = (int)PIDThrottleOutput;
+
+  //apply control value to vehicle
   moveVehicle(throttleControl);
 
   if(PIDThrottleOutput == MIN_ACC_OUT){
@@ -120,13 +114,13 @@ void ThrottlePID(){
 }
 
 
-void PrintSpeed(struct hist data)
-{
-  Serial.print(desiredSpeed); Serial.print("\t");
+void PrintSpeed(){
   Serial.print(SpeedCyclometer_mmPs); Serial.print("\t");
 //  Serial.println();
 }
 
+//ISR for cyclometer
+//Reads in pulse on interrupt pin, computes time from last pulse
 void ISR_RDR_rise(){
   unsigned long tick;
   noInterrupts();
@@ -135,7 +129,7 @@ void ISR_RDR_rise(){
     // Need to process 1st two interrupts before results are meaningful.
     InterruptState++;
   }
-  //checks to see if the time between cycles isn't impossibly short.
+  //checks to see if the time between cycles isn't shorter than max speed.
   if (tick - TickTime > MinTickTime_ms){
     OldTick = TickTime;
     TickTime = tick;
@@ -146,35 +140,23 @@ void ISR_RDR_rise(){
 
 void setupWheelRev()
 {
- // pinMode(IRPT_WHEEL, INPUT);//pulls input HIGH
   float MinTick = WHEEL_CIRCUM_MM;
-  //    SerialMonitor.print (" MinTick = ");
-  //    SerialMonitor.println (MinTick);
   MinTick *= 1000.0;
   MinTick /= MAX_SPEED_mmPs;
   //    SerialMonitor.print (MinTick);
   MinTickTime_ms = MinTick;
-  //    SerialMonitor.print (" MinTickTime_ms = ");
-  //    SerialMonitor.println (MinTickTime_ms);
 
-  //    SerialMonitor.print (" MIN_SPEED_mPh = ");
-  //    SerialMonitor.print (MIN_SPEED_mPh);
-  float MIN_SPEED_mmPs =  ((MIN_SPEED_mPh * 1000.0) / 3600.0);
   //    MIN_SPEED_mmPs = 135 mm/s
-  //    SerialMonitor.print (" MIN_SPEED_mmPs = ");
-  //    SerialMonitor.print (MIN_SPEED_mmPs);
+  float MIN_SPEED_mmPs =  ((MIN_SPEED_mPh * 1000.0) / 3600.0);
+
   float MaxTick = (WHEEL_DIAMETER_MM * PI * 1000.0) / MIN_SPEED_mmPs;
-  //    SerialMonitor.print (" MaxTick = ");
-  //    SerialMonitor.print (MaxTick);
+  
   MaxTickTime_ms = MaxTick;
-  //    SerialMonitor.print (" MaxTickTime = ");
-  //    SerialMonitor.println (MaxTickTime_ms);
+  
   TickTime = millis();
   // OldTick will normally be less than TickTime.
   // When it is greater, TickTime - OldTick is a large positive number,
   // indicating that we have not moved.
-  // TickTime would overflow after days of continuous operation, causing a glitch of
-  // a display of zero speed.  It is unlikely that we have enough battery power to ever see this.
   OldTick = TickTime;
   InterruptState = IRQ_NONE;
   ClickNumber = 0;
@@ -189,13 +171,10 @@ void setupWheelRev()
   //    SerialMonitor.println(OldTick);
 
   //    SerialMonitor.println("WheelRev setup complete");
-  
 }
 
 void computeSpeed(struct hist *data){
-  //cyclometer has only done 1 or 2 revolutions
   
-  //normal procedures begin here
   unsigned long WheelRev_ms = TickTime - OldTick;
   float SpeedCyclometer_revPs = 0.0;//revolutions per sec
 
@@ -203,16 +182,14 @@ void computeSpeed(struct hist *data){
   { // No data
     SpeedCyclometer_mmPs = 0;
     SpeedCyclometer_revPs = 0;
-//    Serial.print("No compute  ");
-    //Serial.println(*speedCyclo);
+    Serial.print("No compute  ");
     return;
   }
   
   if (InterruptState == IRQ_SECOND)
   { //  first computed speed
     SpeedCyclometer_revPs = 1000.0 / WheelRev_ms;
-    SpeedCyclometer_mmPs  =
-      data->oldSpeed_mmPs = data->olderSpeed_mmPs = WHEEL_CIRCUM_MM * SpeedCyclometer_revPs;
+    SpeedCyclometer_mmPs  = data->oldSpeed_mmPs = data->olderSpeed_mmPs = WHEEL_CIRCUM_MM * SpeedCyclometer_revPs;
     data->oldTime_ms = OldTick;
     data->nowTime_ms = TickTime;  // time stamp for oldSpeed_mmPs
     data->oldClickNumber = data->nowClickNumber = ClickNumber;
@@ -223,7 +200,6 @@ void computeSpeed(struct hist *data){
 
   if (InterruptState == IRQ_RUNNING)
   { //  new data for second computed speed
-    
     if(TickTime == data->nowTime_ms)
     {//no new data
         //check to see if stopped first
@@ -278,12 +254,12 @@ void computeSpeed(struct hist *data){
 }
 
 //function updates what should always be updated in every loop of ComputeSpeed
-void ComputeSpeedHelper(struct hist *data){
-    data->oldTime_ms = data->nowTime_ms;
-    data->nowTime_ms = TickTime;
-    data->oldClickNumber = data->nowClickNumber;
-    data->nowClickNumber = ClickNumber;
-}
+//void ComputeSpeedHelper(struct hist *data){
+//    data->oldTime_ms = data->nowTime_ms;
+//    data->nowTime_ms = TickTime;
+//    data->oldClickNumber = data->nowClickNumber;
+//    data->nowClickNumber = ClickNumber;
+//}
 
 void moveVehicle(int acc)
 {
