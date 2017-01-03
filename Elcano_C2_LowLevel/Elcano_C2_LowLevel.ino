@@ -91,6 +91,7 @@ volatile bool flipping;
 long speed_errors[ERROR_HISTORY];
 long old_turn_degx1000;
 unsigned long calibrationTime_ms;
+
 unsigned long stoppedTime_ms;
 unsigned long straightTime_ms;
 int  throttle_control = MIN_ACC_OUT;
@@ -1382,6 +1383,10 @@ float mapThrottle(int value){
   }
   else
     return map(value, MIDDLE-DEAD_ZONE, MIN_RC, 0, MAX_SPEED);
+}
+
+void set_Speed_kph(float speed_kph){
+  
 }
 
 void Throttle_PID(long error_speed_mmPs)
