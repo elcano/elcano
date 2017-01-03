@@ -626,7 +626,6 @@ byte processRC()
   //RC_TURN, RC_ESTOP, RC_BRAKE, RC_AUTO
   boolean autoMode = false; // Once RC_AUTO is implemented, this will default to false
   //update autoMode based on RC_AUTO (flaps/gyro switch)
-
     //ESTOP
   if (RC_Done[RC_ESTP]) 
   {
@@ -655,16 +654,7 @@ byte processRC()
   //THROTTLE
     //TODO: if less than the middle, reverse, otherwise forward
     if(RC_Done[RC_GO]){
-      Serial.println(RC_elapsed[RC_GO]);
-      if(RC_elapsed[RC_GO] < 1400)
-      {
-        
-        moveVehicle(convertThrottle(RC_elapsed[RC_GO]));
-      }
-      else
-      {
-        //apply brakes or reverse;
-      }
+      Serial.println(mapThrottle(RC_elapsed[RC_GO]));
     }
 
   //TURN
@@ -1384,9 +1374,14 @@ int TurnAngle_degx10()
   return new_turn_degx10;
 }
 /*---------------------------------------------------------------------------------------*/
-// @ToDo: Is this a work in progress?
-void newThrottlePID(){
-  
+float mapThrottle(int value){
+  Serial.print(String(value) + ", ");
+  if(value > MIDDLE - DEAD_ZONE)
+  {
+    return 0;// in future, add reverse
+  }
+  else
+    return map(value, MIDDLE-DEAD_ZONE, MIN_RC, 0, MAX_SPEED);
 }
 
 void Throttle_PID(long error_speed_mmPs)
