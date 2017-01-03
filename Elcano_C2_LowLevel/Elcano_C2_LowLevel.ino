@@ -4,7 +4,7 @@
 #include <SPI.h>
 #include <Elcano_Serial.h>
 #include <Servo.h>
-
+using namespace elcano;
 /*
  * C2 is the low-level controller that sends control signals to the hub motor,
  * brake servo, and steering servo.  It is (or will be) a PID controller, but
@@ -117,9 +117,11 @@ void ISR_TURN_rise(){
 void ISR_RDR_rise() {
   // RDR (rudder) is not used. Instead, use this interrupt for the motor phase feedback, which gives speed.
   noInterrupts();
-  unsigned long old_phase_rise = RC_rise[RC_RDR];
+//  unsigned long old_phase_rise = RC_rise[RC_RDR];
+//  ProcessRiseOfINT(RC_RDR);
+//  RC_elapsed[RC_RDR] = RC_rise[RC_RDR] - old_phase_rise;
   ProcessRiseOfINT(RC_RDR);
-  RC_elapsed[RC_RDR] = RC_rise[RC_RDR] - old_phase_rise;
+  attachInterrupt(digitalPinToInterrupt(IRPT_RDR), ISR_RDR_fall, FALLING);
   // The phase frequency is proportional to wheel rotation.
   // An e-bike hub is powered by giving it 3 phased 36 V lines
   // The e-bike controller needs feeback from the hub.
@@ -129,6 +131,16 @@ void ISR_RDR_rise() {
   //Serial.println("RDR");
   interrupts();
 }
+
+void ISR_RDR_fall() {
+  noInterrupts();
+  ProcessFallOfINT(RC_RDR);
+  RC_Done[RC_TURN] = 1;
+  //Serial.println("TURN");
+  attachInterrupt(digitalPinToInterrupt(IRPT_RDR), ISR_RDR_rise, RISING);
+  interrupts();
+}
+
 /*---------------------------------------------------------------------------------------*/
 //Now used for Brakes 
 void ISR_BRAKE_rise() {
@@ -277,13 +289,14 @@ void setup()
   CalibrateTurnAngle(32, 20);
   calibrationTime_ms = millis();
   
-        attachInterrupt(digitalPinToInterrupt(IRPT_TURN),  ISR_TURN_rise,  RISING);
-        //attachInterrupt(digitalPinToInterrupt(IRPT_RDR),   ISR_RDR_rise,   RISING);
-        attachInterrupt(digitalPinToInterrupt(IRPT_GO),    ISR_GO_rise,    RISING);
-        attachInterrupt(digitalPinToInterrupt(IRPT_ESTOP), ISR_ESTOP_rise, RISING);
-        //attachInterrupt(digitalPinToInterrupt(IRPT_RVS),   ISR_RVS_rise,   RISING);
-        attachInterrupt(digitalPinToInterrupt(IRPT_BRAKE), ISR_BRAKE_rise, RISING);
-        attachInterrupt(digitalPinToInterrupt(IRPT_MOTOR_FEEDBACK), ISR_MOTOR_FEEDBACK_rise, RISING);
+        attachInterrupt(digitalPinToInterrupt(IRPT_TURN),  ISR_TURN_rise,  RISING);//turn right stick l/r turn
+//        attachInterrupt(digitalPinToInterrupt(IRPT_RDR),   ISR_RDR_rise,   RISING);
+        attachInterrupt(digitalPinToInterrupt(IRPT_GO),    ISR_GO_rise,    RISING);//left stick l/r
+        attachInterrupt(digitalPinToInterrupt(IRPT_ESTOP), ISR_ESTOP_rise, RISING);//ebrake
+//        attachInterrupt(digitalPinToInterrupt(IRPT_RVS),   ISR_RVS_rise,   RISING);//
+
+        attachInterrupt(digitalPinToInterrupt(IRPT_BRAKE), ISR_BRAKE_rise, RISING);//left stick u/d mode select
+//        attachInterrupt(digitalPinToInterrupt(IRPT_MOTOR_FEEDBACK), ISR_MOTOR_FEEDBACK_rise, RISING);
 }
 
 /*---------------------------------------------------------------------------------------*/
@@ -308,7 +321,6 @@ void loop() {
   // using the micros() counter.
   // If the new nextTime value is <= LOOP_TIME_MS, we've rolled over.
   nextTime = nextTime + LOOP_TIME_MS;
-
   byte automate = processRC();
   // @ToDo: Verify that this should be conditional. May be moot if it is
   // replaced in the conversion to the new Elcano Serial protocol.
@@ -319,7 +331,7 @@ void loop() {
 
   // @ToDo: What is this doing?
   //Results.clear();
-  Results.kind = MSG_SENSOR;
+  Results.kind = MsgType::sensor;
   Results.angle_deg = TurnAngle_degx10() / 10;
   // @ToDo: Is this working and should it be uncommented?
   // show_speed (&Results);
@@ -503,14 +515,23 @@ void PrintHeaders (void)
 //circleRoutine
 void circleRoutine(unsigned long seconds, unsigned long &rcAuto) {
   rcAuto = HIGH;
-  
-  steer(LEFT_TURN_OUT);
-  delay(1000);
-  seconds = seconds * 1000;
-  unsigned long loopTime = millis();
-  while (millis() < (loopTime + seconds)) {
-    moveVehicle(112);
-  }
+
+  SerialData command;
+  command.kind = MsgType::drive;
+  command.speed_cmPs = 100;
+  command.angle_deg = TURN_MAX_DEG;
+  processHighLevel(&command);
+//  command.speed_cmPs = 0;
+//  command.angle_deg = 0;
+//  processHighLevel(&command);
+//  
+//  steer(LEFT_TURN_OUT);
+//  delay(1000);
+//  seconds = seconds * 1000;
+//  unsigned long loopTime = millis();
+//  while (millis() < (loopTime + seconds)) {
+//    moveVehicle(112);
+//  }
   rcAuto = LOW;
 }
 /*---------------------------------------------------------------------------------------*/
@@ -600,112 +621,167 @@ void squareRoutine(unsigned long sides, unsigned long &rcAuto) {
 // @ToDo: Q: What do the expressions "1st pulse", etc. mean? Is this a
 // leftover from trying to combine the RC controls into a single stream?
 /*---------------------------------------------------------------------------------------*/
-byte processRC (){
-  // Each use of a particular results element is guarded by a check of RC_Done
-  // for that element, to see if we have begun receiving any data for that element.
-  // 1st pulse is aileron (position 5 on receiver; controlled by Right left/right joystick on transmitter)
-  //     used for Steering
-  /* 2nd pulse is aux (position 1 on receiver; controlled by flap/gyro toggle on transmitter)
-     will be used for selecting remote control or autonomous control. */
-  if (RC_Done[RC_AUTO]) {
-    if (NUMBER_CHANNELS > 5) {
-      RC_elapsed[RC_AUTO] = (RC_elapsed[RC_AUTO] > MIDDLE ? HIGH : LOW);
-    }
-  }
+byte processRC()
+{
+  //RC_TURN, RC_ESTOP, RC_BRAKE, RC_AUTO
+  boolean autoMode = false; // Once RC_AUTO is implemented, this will default to false
+  //update autoMode based on RC_AUTO (flaps/gyro switch)
 
-  /* 4th pulse is gear (position 2 on receiver; controlled by gear/mode toggle on transmitter)
-    will be used for emergency stop. D38 */
-  if (RC_Done[RC_ESTP]) {
+    //ESTOP
+  if (RC_Done[RC_ESTP]) 
+  {
     RC_elapsed[RC_ESTP] = (RC_elapsed[RC_ESTP] > MIDDLE ? HIGH : LOW);
-
-    if (RC_elapsed[RC_ESTP] == HIGH){
-      // Serial.println("Exiting processRC due to E-stop.");
+  
+    if (RC_elapsed[RC_ESTP] == HIGH)
+    {
       E_Stop();  // already done at interrupt level
-      if (RC_Done[RC_AUTO]) {
-      // if ((RC_elapsed[RC_AUTO] == LOW)  && (NUMBER_CHANNELS > 5)) // under RC control
-      //   {
-      //     ;//steer(RC_elapsed[RC_TURN]);
-      //   }
-      // }
-      }
       return 0x00;
     }
   }
-
-  if (RC_Done[RC_AUTO]) {
-    if ((RC_elapsed[RC_AUTO] == HIGH)  && (NUMBER_CHANNELS > 5))
+  if(autoMode)
+  {
+    //THROTTLE
+    if(RC_Done[RC_BRAKE])
     {
-      return 0x01;  // not under RC control
+      if(RC_elapsed[RC_BRAKE] > 1800)
+      {
+        long unsigned state = 0;
+        circleRoutine(1, state);
+      }
     }
   }
-
-  /* Controlled by Left up/down joystick.
-    It will be used for shifting from Drive to Reverse . D40
-  */
-  //if (RC_Done[RC_RVS]) {
-  //  //RC_elapsed[RC_RVS] = (RC_elapsed[RC_RVS] > MIDDLE? HIGH: LOW);
-  //}
-
-  // TO DO: Select Forward / reverse based on RC_elapsed[RC_RVS]
-
-  /* Controlled by Right up/down.
-     will be used for throttle/brake: RC_Throttle
-  */
-  if (RC_Done[RC_TURN]) {
-    RC_elapsed[RC_TURN] = convertTurn(RC_elapsed[RC_TURN]);
-  }
-
-  
-  // Braking or Throttle
-  if (liveBrake(RC_elapsed[RC_BRAKE])){
-    //Serial.print("Braking: "); Serial.println(RC_elapsed[RC_BRAKE]);
-    brake(convertBrake(RC_elapsed[RC_BRAKE]));
-  }
-  else {
-    brake(MIN_BRAKE_OUT);
-  }
-
-  // Accelerating
-  // Note: The doRoutine / squareRoutine code will be moved out to run on
-  // a separate module.  For now, for safety, we want a way to stop the
-  // routine, apart from e-stop.  What we require is that the RC controller
-  // is turned on, and the throttle is in a specific position, the extreme
-  // lower right.  If it is released, we want the routine to stop.  This
-  // can then serve as a dead-man switch, as well.
-  // Similarly, when in normal RC operation, we check for the throttle to
-  // be in a "live" position.  Otherwise, (if the throttle is in neither
-  // the "routine" nor "live" positions, we want to stop.
-  if (liveThrottle(RC_elapsed[RC_GO])){
-    // Here, the throttle is in a "live" position.
-    int going = convertThrottle(RC_elapsed[RC_GO]);
-    moveVehicle(going);
-  }
-  else if(doRoutine(RC_elapsed[RC_GO])){
-    moveVehicle(MIN_ACC_OUT);
-    unsigned long autoB = RC_elapsed[RC_AUTO];
-    circleRoutine(5, autoB);
-    RC_elapsed[RC_AUTO] = autoB;
-  }
-  else {
-    moveVehicle(MIN_ACC_OUT);
+  else // not in autonomous mode
+  {
+  //THROTTLE
+    //TODO: if less than the middle, reverse, otherwise forward
+    if(RC_Done[RC_GO]){
+      Serial.println(RC_elapsed[RC_GO]);
+      if(RC_elapsed[RC_GO] < 1400)
+      {
+        
+        moveVehicle(convertThrottle(RC_elapsed[RC_GO]));
+      }
+      else
+      {
+        //apply brakes or reverse;
+      }
     }
 
-  if (RC_Done[RC_TURN]) {
-    steer(RC_elapsed[RC_TURN]);
+  //TURN
+    if (RC_Done[RC_TURN]) 
+    {
+      steer(RC_elapsed[RC_TURN]);
+    }
+    
   }
-
-  /* 5th pulse is rudder (position 3 on receiver; controlled by Left left/right joystick on transmitter)
-    Not used */
-  // if (RC_Done[RC_RDR]) {
-  //   RC_elapsed[RC_RDR] = (RC_elapsed[RC_RDR] > MIDDLE? HIGH: LOW);  // could be analog
-  //   if (RC_elapsed[RC_RDR] >= HubAtZero)
-  //     HubSpeed_kmPh = 0;
-  //   else
-  //     HubSpeed_kmPh = HubSpeed2kmPh / RC_elapsed[RC_RDR];
-  // }
-
   return 0x00;
 }
+//byte processRC (){
+//  // Each use of a particular results element is guarded by a check of RC_Done
+//  // for that element, to see if we have begun receiving any data for that element.
+//  // 1st pulse is aileron (position 5 on receiver; controlled by Right left/right joystick on transmitter)
+//  //     used for Steering
+//  /* 2nd pulse is aux (position 1 on receiver; controlled by flap/gyro toggle on transmitter)
+//     will be used for selecting remote control or autonomous control. */
+//  if (RC_Done[RC_AUTO]) {
+//    if (NUMBER_CHANNELS > 5) {
+//      RC_elapsed[RC_AUTO] = (RC_elapsed[RC_AUTO] > MIDDLE ? HIGH : LOW);
+//    }
+//  }
+//
+//  /* 4th pulse is gear (position 2 on receiver; controlled by gear/mode toggle on transmitter)
+//    will be used for emergency stop. D38 */
+//  if (RC_Done[RC_ESTP]) {
+//    RC_elapsed[RC_ESTP] = (RC_elapsed[RC_ESTP] > MIDDLE ? HIGH : LOW);
+//
+//    if (RC_elapsed[RC_ESTP] == HIGH){
+//      // Serial.println("Exiting processRC due to E-stop.");
+//      E_Stop();  // already done at interrupt level
+//      if (RC_Done[RC_AUTO]) {
+//      // if ((RC_elapsed[RC_AUTO] == LOW)  && (NUMBER_CHANNELS > 5)) // under RC control
+//      //   {
+//      //     ;//steer(RC_elapsed[RC_TURN]);
+//      //   }
+//      // }
+//      }
+//      return 0x00;
+//    }
+//  }
+//
+//  if (RC_Done[RC_AUTO]) {
+//    if ((RC_elapsed[RC_AUTO] == HIGH)  && (NUMBER_CHANNELS > 5))
+//    {
+//      return 0x01;  // not under RC control
+//    }
+//  }
+//
+//  /* Controlled by Left up/down joystick.
+//    It will be used for shifting from Drive to Reverse . D40
+//  */
+//  //if (RC_Done[RC_RVS]) {
+//  //  //RC_elapsed[RC_RVS] = (RC_elapsed[RC_RVS] > MIDDLE? HIGH: LOW);
+//  //}
+//
+//  // TO DO: Select Forward / reverse based on RC_elapsed[RC_RVS]
+//
+//  /* Controlled by Right up/down.
+//     will be used for throttle/brake: RC_Throttle
+//  */
+//  if (RC_Done[RC_TURN]) {
+//    RC_elapsed[RC_TURN] = convertTurn(RC_elapsed[RC_TURN]);
+//  }
+//
+//  
+//  // Braking or Throttle
+//  if (liveBrake(RC_elapsed[RC_BRAKE])){
+//    //Serial.print("Braking: "); Serial.println(RC_elapsed[RC_BRAKE]);
+//    brake(convertBrake(RC_elapsed[RC_BRAKE]));
+//  }
+//  else {
+//    brake(MIN_BRAKE_OUT);
+//  }
+//
+//  // Accelerating
+//  // Note: The doRoutine / squareRoutine code will be moved out to run on
+//  // a separate module.  For now, for safety, we want a way to stop the
+//  // routine, apart from e-stop.  What we require is that the RC controller
+//  // is turned on, and the throttle is in a specific position, the extreme
+//  // lower right.  If it is released, we want the routine to stop.  This
+//  // can then serve as a dead-man switch, as well.
+//  // Similarly, when in normal RC operation, we check for the throttle to
+//  // be in a "live" position.  Otherwise, (if the throttle is in neither
+//  // the "routine" nor "live" positions, we want to stop.
+//  if (liveThrottle(RC_elapsed[RC_GO])){
+//    // Here, the throttle is in a "live" position.
+//    int going = convertThrottle(RC_elapsed[RC_GO]);
+//    moveVehicle(going);
+//  }
+//  else if(doRoutine(RC_elapsed[RC_GO])){
+//    moveVehicle(MIN_ACC_OUT);
+//    unsigned long autoB = RC_elapsed[RC_AUTO];
+//    //circleRoutine(5, autoB);
+//    RC_elapsed[RC_AUTO] = autoB;
+//  }
+//  else {
+//    moveVehicle(MIN_ACC_OUT);
+//    }
+//
+//  if (RC_Done[RC_TURN]) {
+//    steer(RC_elapsed[RC_TURN]);
+//  }
+//
+//  /* 5th pulse is rudder (position 3 on receiver; controlled by Left left/right joystick on transmitter)
+//    Not used */
+//  // if (RC_Done[RC_RDR]) {
+//  //   RC_elapsed[RC_RDR] = (RC_elapsed[RC_RDR] > MIDDLE? HIGH: LOW);  // could be analog
+//  //   if (RC_elapsed[RC_RDR] >= HubAtZero)
+//  //     HubSpeed_kmPh = 0;
+//  //   else
+//  //     HubSpeed_kmPh = HubSpeed2kmPh / RC_elapsed[RC_RDR];
+//  // }
+//
+//  return 0x00;
+//}
 /*---------------------------------------------------------------------------------------*/
 void processHighLevel(SerialData * results)
 {
@@ -715,7 +791,7 @@ void processHighLevel(SerialData * results)
   steer(turn_signal);
   //End Steer
   //Throttle
-  Throttle_PID(10*results->speed_cmPs);
+  Throttle_PID(/*calculatedSpeed - */ 10*results->speed_cmPs);
   //End Throttle
 //  results->write(&Serial3);
 }
@@ -790,18 +866,23 @@ int convertDeg(int deg)
 /*---------------------------------------------------------------------------------------*/
 int convertThrottle(int input)
 {
-  //full throttle = 227, min = 40
-  const int dacRange = MAX_ACC_OUT - MIN_ACC_OUT;
-  const int rcRange = MAX_RC - (MIDDLE + DEAD_ZONE);
-  input -= (MIDDLE + DEAD_ZONE);
-  double output = (double)input / (double)rcRange;
-  output *= dacRange;
-  output += MIN_ACC_OUT;
-  //set max values if out of range
-  int trueOut = (int)output;
-  if (trueOut > MAX_ACC_OUT)
-    trueOut = MAX_ACC_OUT;
-  return trueOut;
+//  //full throttle = 235, min = 50
+//  const int dacRange = MAX_ACC_OUT - MIN_ACC_OUT;
+//  const int rcRange = MAX_RC - (MIDDLE + DEAD_ZONE);
+//  input -= (MIDDLE + DEAD_ZONE);
+//  double output = (double)input / (double)rcRange;
+//  output *= dacRange;
+//  output += MIN_ACC_OUT;
+//
+//  //set max values if out of range
+//  int trueOut = (int)output;
+//  if(trueOut >= 0){
+//    trueOut =  (abs(trueOut)/233.0)*150;
+//  }
+//  if(trueOut < 0){
+//    trueOut = 110 - (abs(trueOut)/233.0)*110;
+//  }
+  return map(input, 1400, 1000, 80, 140);
 }
 /*---------------------------------------------------------------------------------------*/
 //Tests for inputs
@@ -927,6 +1008,7 @@ void DAC_Write(int address, int value)
 /*---------------------------------------------------------------------------------------*/
 void moveVehicle(int acc)
 {
+//  Serial.println(acc);  
   /* Observed behavior on ElCano #1 E-bike no load (May 10, 2013, TCF)
     0.831 V at rest 52 counts
     1.20 V: nothing 75
@@ -947,7 +1029,6 @@ void moveVehicle(int acc)
 /* Wheel Revolution Interrupt routine
    Ben Spencer 10/21/13
    Modified by Tyler Folsom 3/16/14; 3/3/16
-
    A cyclometer gives a click once per revolution.
    This routine computes the speed.
 */
@@ -1404,16 +1485,12 @@ void Throttle_PID(long error_speed_mmPs)
      SparkFun Electronics
    date: November 27, 2012
    license: This code is public domain.
-
    This example code shows how you could use software serial
    Arduino library to interface with a Serial 7-Segment Display.
-
    There are example functions for setting the display's
    brightness, decimals and clearing the display.
-
    The print function is used with the SoftwareSerial library
    to send display data to the S7S.
-
    Circuit:
    Arduino -------------- Serial 7-Segment
      3.3V   --------------------  VCC
@@ -1477,3 +1554,4 @@ void setDecimals(byte decimals)
   s7s.write(0x77);
   s7s.write(decimals);
 }
+
