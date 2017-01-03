@@ -74,6 +74,14 @@ VEHICLE_NUMBER to your own new number.
 // maximum allowed speed
 #define MAX_SPEED 15
 
+// Autonomous ticks
+#define TICK1 1624
+#define TICK2 1764
+#define TICK3 1900
+
+// Inaccuracy
+#define TICK_DEADZONE 4
+
 // Parameters used by MoveActuator
 // external PWM output
 // DISK_BRAKE is deprecated, use BRAKE_OUT_PIN
