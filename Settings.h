@@ -80,7 +80,7 @@ VEHICLE_NUMBER to your own new number.
 #define TICK3 1900
 
 // Inaccuracy
-#define TICK_DEADZONE 4
+#define TICK_DEADZONE 40
 
 // Parameters used by MoveActuator
 // external PWM output
