@@ -5,6 +5,10 @@
 #include <Elcano_Serial.h>
 #include <Servo.h>
 
+// Set up state variables for the Elcano_Serial parsing ring
+elcano::ParseState ps;
+elcano::SerialData dt;
+
 //#include <SoftwareSerial.h>
 // @ToDo: Are these specific to some particular setup or trike? If so,
 // they should be moved to Settings.h.
@@ -235,6 +239,9 @@ void setup()
   delay(500);   // let vehicle stabilize
   //brake(MIN_BRAKE_OUT);
   Serial.begin(9600);
+  Serial1.begin(9600);
+  Serial2.begin(9600);
+  Serial3.begin(9600);
   rc_index = 0;
   for (int i = 0; i < 8; i++)
   {
@@ -257,12 +264,36 @@ void setup()
         attachInterrupt(digitalPinToInterrupt(IRPT_MOTOR_FEEDBACK), ISR_MOTOR_FEEDBACK_rise, RISING);
         //Print7headers(false);
   //PrintHeaders();
+  
+  // Set up Elcano_Serial parsing ring
+  ps.dt = &dt;
+  ps.dev = &Serial1;
+  dt.clear();
 }
 /*---------------------------------------------------------------------------------------*/
-void loop() {
-  //Serial.println("Start of loop");
-  SerialData Results;
+void loop1() {
+    elcano::SerialData results;
+    results.kind = elcano::MsgType::sensor;
+    results.angle_deg = TurnAngle_degx10() / 10;
+}
 
+void loop2() {
+    
+}
+
+void loop() {
+    elcano::ParseStateError r = ps.update();
+    if (r == elcano::ParseStateError::success) {
+        if (dt.kind == elcano::MsgType::drive) {
+            loop1();
+        } else {
+            dt.write(&Serial2);
+        }
+    }
+    loop2();
+}
+#if 0
+void loop() {
   // Save start time for performance report.
   unsigned long startTime = micros();
   // Get the next loop start time.
@@ -349,6 +380,7 @@ void loop() {
   
   //Serial.println("End of loop");
 }
+#endif
 /*---------------------------------------------------------------------------------------*/
 void PrintDone()
 {
@@ -397,7 +429,7 @@ void Print7 (bool processed, unsigned long results[7])
   Serial.println(results[6]);
 }
 /*---------------------------------------------------------------------------------------*/
-void LogData(unsigned long commands[7], SerialData *sensors)  // data for spreadsheet
+void LogData(unsigned long commands[7], elcano::SerialData *sensors)  // data for spreadsheet
 {
   show7seg(HubSpeed_kmPh);
   /*Serial.print("(ms) Time\t");
@@ -632,7 +664,7 @@ byte processRC (unsigned long *results){
   return 0x00;
 }
 /*---------------------------------------------------------------------------------------*/
-void processHighLevel(SerialData * results)
+void processHighLevel(elcano::SerialData * results)
 {
   //results->update();
   //Steer
@@ -1101,7 +1133,7 @@ void PrintSpeed( struct hist *data)
   Serial.println(data->OldTick_ms);
 }
 /*---------------------------------------------------------------------------------------*/
-void show_speed(SerialData *Results)
+void show_speed(elcano::SerialData *Results)
 {
   history.nowTime_ms = millis();
   noInterrupts();
