@@ -646,7 +646,7 @@ byte processRC()
   }
   else // not in autonomous mode
   {
-    manualMovement();
+    doManualMovement();
   }
   return 0x00;
 }
@@ -680,14 +680,15 @@ void doAutoMovement(){
 void doManualMovement(){
   //THROTTLE
     //TODO: if less than the middle, reverse, otherwise forward
+    Serial.println("Manual Movement");
     if(RC_Done[RC_GO]){
-      //Serial.println(mapThrottle(RC_elapsed[RC_GO]));
+      Serial.println(mapThrottle(RC_elapsed[RC_GO]));
     }
   //TURN
     if (RC_Done[RC_TURN]) 
     {
-      Serial.println(String(convertTurn(RC_elapsed[RC_TURN])));
-      steer(convertTurn(RC_elapsed[RC_TURN]));
+      Serial.println(String(RC_elapsed[RC_TURN]) + " " + String(convertTurn(RC_elapsed[RC_TURN])));
+      //steer(convertTurn(RC_elapsed[RC_TURN]));
     }
 }
 //byte processRC (){
@@ -824,7 +825,7 @@ int convertTurn(int input)
   // On HI_TEC, MIN_RC = 1 msec = stick left; MAX_RC = 2 msec = stick right
   // LEFT_TURN_OUT > RIGHT_TURN_OUT
   else
-    return input;
+    return map(input, MIN_RC, MAX_RC, LEFT_TURN_OUT, RIGHT_TURN_OUT);
 
   // @ToDo: Fix this so it is correct in any case.
   // If a controller requires some value to be reversed, then specify that
