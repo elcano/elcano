@@ -638,24 +638,18 @@ byte processRC()
       return 0x00;
     }
   }
-  if(autoMode)
-  {
+  
+  autoMode = isAutomatic();
     //THROTTLE
-    if(RC_Done[RC_BRAKE])
-    {
-      if(RC_elapsed[RC_BRAKE] > 1800)
-      {
-        long unsigned state = 0;
-        circleRoutine(1, state);
-      }
-    }
+  if(autoMode){
+    doAutoMovement();
   }
   else // not in autonomous mode
   {
   //THROTTLE
     //TODO: if less than the middle, reverse, otherwise forward
     if(RC_Done[RC_GO]){
-      Serial.println(mapThrottle(RC_elapsed[RC_GO]));
+      //Serial.println(mapThrottle(RC_elapsed[RC_GO]));
     }
 
   //TURN
@@ -667,6 +661,33 @@ byte processRC()
   }
   return 0x00;
 }
+
+boolean isAutomatic(){
+    if(RC_Done[RC_BRAKE]){
+      if(RC_elapsed[RC_BRAKE] > MIDDLE + TICK_DEADZONE){
+        return true;           // It is manual control and not autonomous control
+      }
+    }
+    return false;
+}
+
+void doAutoMovement(){
+  if(RC_elapsed[RC_BRAKE] > TICK1 - TICK_DEADZONE && RC_elapsed[RC_BRAKE] < TICK1 + TICK_DEADZONE)
+  {
+    long unsigned state = 0;
+    Serial.println("AT TICK 1");
+    circleRoutine(1, state);
+  }
+  else if(RC_elapsed[RC_BRAKE] > TICK2 - TICK_DEADZONE && RC_elapsed[RC_BRAKE] < TICK2 + TICK_DEADZONE){
+    //square Routine
+    Serial.println("AT TICK 2");
+  }
+  else if(RC_elapsed[RC_BRAKE] > TICK3 - TICK_DEADZONE && RC_elapsed[RC_BRAKE] < TICK3 + TICK_DEADZONE){
+    //another routine
+    Serial.println("AT TICK 3");
+  }
+}
+
 //byte processRC (){
 //  // Each use of a particular results element is guarded by a check of RC_Done
 //  // for that element, to see if we have begun receiving any data for that element.
