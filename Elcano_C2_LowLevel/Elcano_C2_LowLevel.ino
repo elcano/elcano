@@ -640,24 +640,13 @@ byte processRC()
   }
   
   autoMode = isAutomatic();
-    //THROTTLE
+  
   if(autoMode){
     doAutoMovement();
   }
   else // not in autonomous mode
   {
-  //THROTTLE
-    //TODO: if less than the middle, reverse, otherwise forward
-    if(RC_Done[RC_GO]){
-      //Serial.println(mapThrottle(RC_elapsed[RC_GO]));
-    }
-
-  //TURN
-    if (RC_Done[RC_TURN]) 
-    {
-      steer(RC_elapsed[RC_TURN]);
-    }
-    
+    manualMovement();
   }
   return 0x00;
 }
@@ -688,6 +677,19 @@ void doAutoMovement(){
   }
 }
 
+void doManualMovement(){
+  //THROTTLE
+    //TODO: if less than the middle, reverse, otherwise forward
+    if(RC_Done[RC_GO]){
+      //Serial.println(mapThrottle(RC_elapsed[RC_GO]));
+    }
+  //TURN
+    if (RC_Done[RC_TURN]) 
+    {
+      Serial.println(String(convertTurn(RC_elapsed[RC_TURN])));
+      steer(convertTurn(RC_elapsed[RC_TURN]));
+    }
+}
 //byte processRC (){
 //  // Each use of a particular results element is guarded by a check of RC_Done
 //  // for that element, to see if we have begun receiving any data for that element.
