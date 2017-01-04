@@ -57,7 +57,7 @@ void setup() {
 }
 
 void loop() {
-  int i = RC_GO;
+  int i = RC_TURN;
   Serial.println(RC_elapsed[i]);
   delay(200);
 }
