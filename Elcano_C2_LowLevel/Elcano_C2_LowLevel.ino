@@ -23,6 +23,23 @@ using namespace elcano;
  * past C2 on the ring.
  */
 
+
+static struct hist {
+  long olderSpeed_mmPs;  // older data
+  unsigned long olderTime_ms;   // time stamp of older speed
+
+  long oldSpeed_mmPs;  // last data from the interrupt
+  byte oldClickNumber;
+  unsigned long oldTime_ms;  // time stamp of old speed
+
+  byte nowClickNumber;  // situation when we want to display the speed
+  unsigned long nowTime_ms;
+  unsigned long TickTime_ms;  // Tick times are used to compute speeds
+  unsigned long OldTick_ms;   // Tick times may not match time stamps if we don't process
+  // results of every interrupt
+} history;
+ 
+
 //#include <SoftwareSerial.h>
 // @ToDo: Are these specific to some particular setup or trike? If so,
 // they should be moved to Settings.h.
@@ -315,6 +332,10 @@ unsigned long delayTime;
 SerialData Results;
 
 void loop() {
+
+  hist * history;
+  computeSpeed(history);
+  Serial.println(history->TickTime_ms/1.59);
   // Get the next loop start time. Note this (and the millis() counter) will
   // roll over back to zero after they exceed the 32-bit size of unsigned long,
   // which happens after about 1.5 months of operation (should check this).
@@ -1054,20 +1075,6 @@ volatile byte ClickNumber = 0;         // Used to distinguish old data from new.
 volatile unsigned long TickTime = 0;  // Time from one wheel rotation to the next gives speed.
 volatile unsigned long OldTick = 0;
 
-static struct hist {
-  long olderSpeed_mmPs;  // older data
-  unsigned long olderTime_ms;   // time stamp of older speed
-
-  long oldSpeed_mmPs;  // last data from the interrupt
-  byte oldClickNumber;
-  unsigned long oldTime_ms;  // time stamp of old speed
-
-  byte nowClickNumber;  // situation when we want to display the speed
-  unsigned long nowTime_ms;
-  unsigned long TickTime_ms;  // Tick times are used to compute speeds
-  unsigned long OldTick_ms;   // Tick times may not match time stamps if we don't process
-  // results of every interrupt
-} history;
 
 /*---------------------------------------------------------------------------------------*/
 // WheelRev is called by an interrupt.
