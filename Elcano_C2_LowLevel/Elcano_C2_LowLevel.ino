@@ -1180,10 +1180,6 @@ void Throttle_PID(long error_speed_mmPs)
   long mean_speed_error = 0;
   long extrapolated_error = 0;
   long PID_error;
-  // @ToDo: PID parameters are different per trike, and should be moved to Settings.h.
-  const float P_tune = 0.4;
-  const float I_tune = 0.5;
-  const float D_tune = 0.1;
   const long speed_tolerance_mmPs = 75;  // about 0.2 mph
   // setting the max_error affacts control: anything bigger gets maximum response
   const long max_error_mmPs = 2500; // about 5.6 mph
@@ -1197,9 +1193,9 @@ void Throttle_PID(long error_speed_mmPs)
   if (++error_index >= ERROR_HISTORY)
     error_index = 0;
   extrapolated_error = 2 * error_speed_mmPs - speed_errors[i];
-  PID_error = P_tune * error_speed_mmPs
-              + I_tune * mean_speed_error
-              + D_tune * extrapolated_error;
+  PID_error = P_TUNE * error_speed_mmPs
+              + I_TUNE * mean_speed_error
+              + D_TUNE * extrapolated_error;
 
               
   if (PID_error > speed_tolerance_mmPs)
