@@ -1144,6 +1144,17 @@ int TurnAngle_degx10()
   return new_turn_degx10;
 }
 /*---------------------------------------------------------------------------------------*/
+/*
+ * Maps pulse width to km/h. 
+ * Maximum speed = 15 km/h 
+ * Minimum speed = 0 km/h
+ * Precondition: 
+ *              value > 1000 && value < 2000
+ * Postcondition:
+ *              value < MIDDLE - DEAD_ZONE reverses the trike
+ *              otherwise the trike moves forward
+ * Reverse capabilities not implemented yet
+ */
 float mapThrottle(int value){
   Serial.print(String(value) + ", ");
   if(value > MIDDLE - DEAD_ZONE)
