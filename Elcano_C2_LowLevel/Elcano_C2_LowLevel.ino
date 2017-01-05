@@ -326,6 +326,7 @@ void loop() {
   // using the micros() counter.
   // If the new nextTime value is <= LOOP_TIME_MS, we've rolled over.
   nextTime = nextTime + LOOP_TIME_MS;
+  Throttle_PID(14 - history.currentSpeed_kmPh);
   byte automate = processRC();
   // @ToDo: Verify that this should be conditional. May be moot if it is
   // replaced in the conversion to the new Elcano Serial protocol.
@@ -1201,7 +1202,7 @@ void Throttle_PID(long error_speed_mmPs)
               + I_tune * mean_speed_error
               + D_tune * extrapolated_error;
 
-              
+//  Serial.println("PID_error = " + String(PID_error) + " speed_tolerance_mmPs = " + String(speed_tolerance_mmPs));
   if (PID_error > speed_tolerance_mmPs)
   { // too fast
     long throttle_decrease = (MAX_ACC_OUT - MIN_ACC_OUT) * PID_error / max_error_mmPs;
