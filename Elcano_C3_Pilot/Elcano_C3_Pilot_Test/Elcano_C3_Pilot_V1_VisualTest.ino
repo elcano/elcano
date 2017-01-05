@@ -3,7 +3,7 @@
 #include <Matrix.h>
 #include <Elcano_Serial.h>
 #define STARTSEG 0
-#define ENDSEG 1000
+#define ENDSEG 1000 
 #define STARTSPLINE 5
 
 //#include <SPI.h>
@@ -11,26 +11,26 @@
 /*
 // Elcano Contol Module C3: Pilot.
 
-The Pilot program reads a serial line that specifies the desired path
-and speed of the vehicle. It computes the analog signals to control
+The Pilot program reads a serial line that specifies the desired path 
+and speed of the vehicle. It computes the analog signals to control 
 the throttle, brakes and steering and sends these to C2.
 
-Input will be recieved and sent using the functions writeSerial and
+Input will be recieved and sent using the functions writeSerial and 
 readSerial in Elcano_Serial. Inputs will be received from C5(sensors)
 and C4(planner). Output is sent to C2(Low Level).
 
 In USARSIM simulation, these could be written on the serial line as
 wheel spin speeds and steering angles needed to
-follow the planned path. This would take the form of a DRIVE command to the
-C1 module over a serial line. The format of the DRIVE command is documented
+follow the planned path. This would take the form of a DRIVE command to the 
+C1 module over a serial line. The format of the DRIVE command is documented 
 in the C1 code.
 
-[in] Digital Signal 0: J1 pin 1 (RxD) Serial signal from C4 Path planner,
+[in] Digital Signal 0: J1 pin 1 (RxD) Serial signal from C4 Path planner, 
 which passes on data from C6 Navigator
 */
 
-/* TargetLocation struct is used to store the data of each TargetLocation of
- * the path given by the planner. We create a new struct becuase the
+/* TargetLocation struct is used to store the data of each TargetLocation of 
+ * the path given by the planner. We create a new struct becuase the 
  * SerialData should only be used to send data.
  */
 struct TargetLocation
@@ -84,7 +84,7 @@ float ShortestAngle(float currentAngle, float targetAngle)
           return (targetAngle - currentAngle);
         }
      }
-
+     
      // case of negative negative
      else if( currentAngle <= 0 && targetAngle <= 0)
      {
@@ -97,7 +97,7 @@ float ShortestAngle(float currentAngle, float targetAngle)
           return (currentAngle - targetAngle) * -1;
         }
      }
-
+     
      // case of positve negative
      else if( currentAngle >= 0 && targetAngle <= 0)
      {
@@ -120,30 +120,30 @@ float ShortestAngle(float currentAngle, float targetAngle)
      }
 }
 
-/* This function converts any angle we are dealing with to be from 0 to 180 and
- * anything greater than 180 and less than 0 to be represented as a negative
+/* This function converts any angle we are dealing with to be from 0 to 180 and 
+ * anything greater than 180 and less than 0 to be represented as a negative 
  * angle. Our circle starts with 0 at the top as true north.
  *             0
  *       -90         90
  *            180
- *
+ *            
  */
 float UniformAngle(float angle)
 {
      while(angle > 180)
      {
-        angle -= 360;
+        angle -= 360; 
      }
      while(angle < -180)
      {
-        angle += 360;
+        angle += 360; 
      }
      return angle;
 }
 
 /* Float comparison allows comparison of floats not using the = operator
  * this will return a boolean of the comparison of a and b to the number
- * of decimal places defined by places.
+ * of decimal places defined by places. 
  */
 bool FloatComparison(float a, float b, int places)
 {
@@ -181,22 +181,22 @@ bool FloatComparison(float a, float b, int places)
   {
     return true;
   }
-  else
+  else 
   {
     return false;
   }
 }
 
 
-/* This function calculates the angle from the current point to the target
- * pointin relation to true north.Quadrants are relative to the current
+/* This function calculates the angle from the current point to the target 
+ * pointin relation to true north.Quadrants are relative to the current 
  * position with y lines pointing true north. four reference quadrants are:
  * 2 1
  * 3 4
  */
 float NorthOffset(int currentX, int currentY, int targetX, int targetY)
 {
-  return (atan2(currentX+targetX,currentY+targetY) *
+  return (atan2(currentX+targetX,currentY+targetY) * 
            57.2957795);
 }
 
@@ -214,7 +214,7 @@ bool ValidRange(float x1,float y1, float x2,float y2, float range)
   float temp = PothagarianDistance(x1,y1,x2,y2);
   if(temp < range)
   {
-    retVal = true;
+    retVal = true; 
   }
   return retVal;
 }
@@ -222,12 +222,12 @@ bool ValidRange(float x1,float y1, float x2,float y2, float range)
 //-----------------------Start Hermite Cubic Functions------------------------//
 
 /*
- * FirstCoefficient calculates the first coefficient of the Hermite cubic
- * function. This requires input of the Tanget values adjusted for the arc
- * length. the start pointand end point are the map locations we want the bike
+ * FirstCoefficient calculates the first coefficient of the Hermite cubic 
+ * function. This requires input of the Tanget values adjusted for the arc 
+ * length. the start pointand end point are the map locations we want the bike 
  * to sit at or start at. This functioncan solve for both the x and y equations.
  */
-float FirstCoeffiecent(float endTangent, float endValue, float startValue,
+float FirstCoeffiecent(float endTangent, float endValue, float startValue, 
       float startTangent)
 {
   float retVal = (endTangent - (2 * endValue) +(2 * startValue) + startTangent);
@@ -235,13 +235,13 @@ float FirstCoeffiecent(float endTangent, float endValue, float startValue,
 }
 
 /*
- * SecondCoefficient calculates the first coefficient of the Hermite cubic
- * function This requires input of the Tanget values adjusted for the arc
- * lenght. the start point and end point are the map locations we want the
- * bike to sit at or start at. This function can solve for both
+ * SecondCoefficient calculates the first coefficient of the Hermite cubic 
+ * function This requires input of the Tanget values adjusted for the arc 
+ * lenght. the start point and end point are the map locations we want the 
+ * bike to sit at or start at. This function can solve for both 
  * the x and y equations.
  */
-float SecondCoeffiecent(float firstCoeffiecent, float tangentStartValue,
+float SecondCoeffiecent(float firstCoeffiecent, float tangentStartValue, 
       float endValue, float startValue)
 {
   float retVal = (-firstCoeffiecent-tangentStartValue-startValue+endValue);
@@ -249,10 +249,10 @@ float SecondCoeffiecent(float firstCoeffiecent, float tangentStartValue,
 }
 
 /*
- * CalculateCubic will do all the work needed to calculate the cubic function
- * it takes in a Cubic by reference and stores the values of a b c d in the
- * struct. this requres input of The start point, end point, point of the
- * direction of the end tangent adusted by the arc and direction of the start
+ * CalculateCubic will do all the work needed to calculate the cubic function 
+ * it takes in a Cubic by reference and stores the values of a b c d in the 
+ * struct. this requres input of The start point, end point, point of the 
+ * direction of the end tangent adusted by the arc and direction of the start 
  * point adjusted by the arc.
  */
 void CalculateCubic(Cubic& function, float startValue, float endValue,
@@ -268,7 +268,7 @@ void CalculateCubic(Cubic& function, float startValue, float endValue,
 
 
 /*
- *  Calculate start tangent translates angle of the trike to a corresponding
+ *  Calculate start tangent translates angle of the trike to a corresponding 
  *  point on a line that passes through the origin with the slope and compass
  *  direction representing the same angle. Example
  *  angle 0 degress = 0,1 or angle 90 degrees equals 0,1.
@@ -351,7 +351,7 @@ float ArcLength(Cubic x, Cubic y, float t,float deltaT, float current)
     float currentY = ValueAtTime(y,t);
     float previousX = ValueAtTime(x,(t-deltaT));
     float previousY = ValueAtTime(y,(t-deltaT));
-
+    
     return(current + (sqrt(sq(currentX - previousX)+sq(currentY - previousY))));
   }
 }
@@ -374,7 +374,7 @@ float ArcLength(Cubic x, Cubic y, float t,float deltaT, float current)
 
 //----------------------End Hermite Cubic Functions---------------------------//
 
-/* Instruction will divide the curve between each waypoint into peices the size
+/* Instruction will divide the curve between each waypoint into peices the size 
  * passed in
  */
 Instruction* InstructionsForWaypoints(int slices, TargetLocation *allTargetLocations, int numWaypoints)
@@ -387,7 +387,7 @@ Instruction* InstructionsForWaypoints(int slices, TargetLocation *allTargetLocat
   float currentTurningAngle = 0;
   float angleDelta;
   int count = 0;
-
+  
   Point startTan;
   Point startPoint;
   Point endPoint;
@@ -395,7 +395,7 @@ Instruction* InstructionsForWaypoints(int slices, TargetLocation *allTargetLocat
   Point nextPoint;
   Point previousPoint;
 
-
+  
   for( int i = 0; i <= (numWaypoints-1); i++)
   {
     // Calculate cubic
@@ -437,7 +437,7 @@ Instruction* InstructionsForWaypoints(int slices, TargetLocation *allTargetLocat
       float arclength = 600;
       TangentArcAdjustment(startTan,arclength);
       TangentArcAdjustment(endTan,arclength);
-
+      
       Cubic segmentYCubic;
       Cubic segmentXCubic;
       CalculateCubic(segmentYCubic, startPoint.y, endPoint.y,
@@ -449,25 +449,38 @@ Instruction* InstructionsForWaypoints(int slices, TargetLocation *allTargetLocat
       Serial.print(segmentYCubic.c);
       Serial.print(segmentYCubic.d);
       Serial.println("");
-
+      
     // Slice cubic
     // If we get an angle we cannot achieve we need to throw an error and re calcuate the cubic with
     // a larger arc length
     // we must track what our current steering angle is. also speed limits
     // must be sliced into a time that can be feed out to the the writer
-
+    
     for( float j = 0; j <= 1; j+=t)
     {
        Serial.println(j);
        Instruction temp;
        temp.targetSpeed = SpeedAtT(segmentXCubic, segmentYCubic, j);
-
+       
        //check if valid speed if not throw error go slower.
        currentSpeed = temp.targetSpeed;
+       //lowLevelData[count] = temp;
 
        //calculate angle
-       if(j > 0){
-
+       if(j >0){
+         //Serial.println(ValueAtTime(segmentXCubic,j-t));
+         //Serial.println(ValueAtTime(segmentYCubic,j-t));
+         //Serial.println(ValueAtTime(segmentXCubic,j));
+         //Serial.println(ValueAtTime(segmentYCubic,j));
+         //}
+         //Serial.println(NorthOffset(ValueAtTime(segmentXCubic,j-t),ValueAtTime(segmentYCubic,j-t),
+         //ValueAtTime(segmentXCubic,j), ValueAtTime(segmentYCubic,j)));
+         //Serial.println(lowLevelData[count-1].targetSteeringAngle);
+         //}
+         //Serial.println(ShortestAngle(40.70,41.26));
+         //Serial.println(lowLevelData[count-1].targetSteeringAngle);
+         //Serial.println(NorthOffset(ValueAtTime(segmentXCubic,j-t),ValueAtTime(segmentYCubic,j-t),
+         //            ValueAtTime(segmentXCubic,j), ValueAtTime(segmentYCubic,j)));
          if(count == 0){
             temp.targetSteeringAngle = ShortestAngle(0,NorthOffset(ValueAtTime(segmentXCubic,j-t),ValueAtTime(segmentYCubic,j-t),
             ValueAtTime(segmentXCubic,j), ValueAtTime(segmentYCubic,j)));
@@ -477,6 +490,12 @@ Instruction* InstructionsForWaypoints(int slices, TargetLocation *allTargetLocat
             ValueAtTime(segmentXCubic,j), ValueAtTime(segmentYCubic,j)));
          }
        }
+       /*
+       angleDelta = ShortestAngle(currentTurningAngle,NorthOffset(startPoint.x,startPoint.y,
+       endPoint.x, endPoint.y));
+       currentTurningAngle += angleDelta;
+       temp.targetSteeringAngle = angleDelta;
+       */
        lowLevelData[count] = temp;
        count++;
        Serial.println(temp.targetSpeed);
@@ -488,9 +507,12 @@ Instruction* InstructionsForWaypoints(int slices, TargetLocation *allTargetLocat
 
 ////////////////////////////////////////////////////////////////////////////////
 
-elcano:: ParseState ps;
-elcano:: SerialData dt;
-elcano:: SerialData sd;
+//elcano::
+ParseState ps;
+//elcano::
+SerialData dt;
+//elcano::
+SerialData sd;
 int32_t currentSegment = 0;
 int tail = 0;
 int head = 0;
@@ -507,7 +529,8 @@ Instruction dataForLowLevel[MAX_WAYPOINTS * 10];
 void SendData()
 {
     dt.clear();
-    dt.kind = elcano::MsgType::drive;
+    dt.kind = //elcano::MsgType::drive;
+    MSG_DRIVE;
     dt.speed_cmPs = dataForLowLevel[head].targetSpeed;
     dt.angle_deg = dataForLowLevel[head].targetSteeringAngle;
     head++;
@@ -515,34 +538,56 @@ void SendData()
 }
 
 void setup()
-{
+{  
         Serial.begin(9600);
-        Serial1.begin(9600);
+        Serial1.begin(9600); 
         dt.clear();
         ps.dt = &dt;
-        ps.dev = &Serial1;
+        ps.dev = &Serial1; 
         Timer1.initialize(100000);
         complete = false;
 
-}
+        /*tests
+         */
+        TargetLocation temp;
+        temp.bearing = 45;
+        temp.eastPosMm = 0; 
+        temp.northPosMm = 0;
+        currentLocations[0] = temp;
+        temp.eastPosMm = 100; 
+        temp.northPosMm = 100;
+        currentLocations[1] = temp;
+        temp.eastPosMm = 150; 
+        temp.northPosMm = 150;
+        currentLocations[2] = temp;
+        temp.eastPosMm = 300; 
+        temp.northPosMm = 300;
+        currentLocations[3] = temp;
+        temp.eastPosMm = 400; 
+        temp.northPosMm = 400;
+        currentLocations[4] = temp;
+        totalSegments = 5;
+        }
 
-void loop()
+void loop() 
 {
     /* get newest map data from C4 planner
      * Using Elcano_Serial.h Using the SerialData struct in the .h file.
-     * Receive a TargetLocation from C4. C4 will only ever send TargetLocations
+     * Receive a TargetLocation from C4. C4 will only ever send TargetLocations 
      * to C3.
      */
-
+   
 
     //-----------------------C4 input--------------------------//
     TargetLocation target;
     noInterrupts();
     int r = ps.update();
     interrupts();
-    if(r == elcano::ParseStateError::success)
+    if(r == //elcano::ParseStateError::success)
+     PSE_SUCCESS)
     {
-      if(dt.kind ==  elcano::MsgType::seg)
+      if(dt.kind ==  MSG_SEG )
+      //elcano::MsgType::seg)
       {
         //we're getting a new map
         if(dt.number == STARTSEG)
@@ -557,11 +602,11 @@ void loop()
         {
           complete = true;
         }
-        // append the segments to the list
+        // append the segments to the
         else
         {
-          target.eastPosMm = 0;
-          target.northPosMm = 0;
+          target.eastPosMm = 0; 
+          target.northPosMm = 0; 
           currentLocations[totalSegments] = target;
           totalSegments++;
         }
@@ -571,17 +616,19 @@ void loop()
         dt.write(&Serial2);
       }
     }
-
     //Add the data to the array of target points.
+    /*
     target.northPosMm = dt.posN_cm;
     target.eastPosMm = dt.posE_cm;
     target.targetSpeedMmps;
     currentLocations[currentSegment] = target;
+    */
 
     //We have enough data to start a new spline so we arent running off old data
     if(totalSegments >= STARTSPLINE && currentSegment <= totalSegments)
     {
-      dataForLowLevel[tail] = InstructionsForWaypoints(10, currentLocations, totalSegments);
+      //dataForLowLevel = 
+      InstructionsForWaypoints(10, currentLocations, totalSegments);
       tail++;
       insrtructionsReady = true;
     }
@@ -595,3 +642,5 @@ void loop()
       Timer1.stop();
     }
 }
+
+
