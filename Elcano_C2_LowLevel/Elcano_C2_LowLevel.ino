@@ -325,6 +325,7 @@ void loop() {
   // But leave the overflow computation in place, in case we need to go back to
   // using the micros() counter.
   // If the new nextTime value is <= LOOP_TIME_MS, we've rolled over.
+  Throttle_PID(25);
   nextTime = nextTime + LOOP_TIME_MS;
   byte automate = processRC();
   // @ToDo: Verify that this should be conditional. May be moot if it is
@@ -1234,6 +1235,7 @@ void Throttle_PID(long error_speed_mmPs)
       brake_control = MIN_BRAKE_OUT;
     brake(brake_control);
   }
+  //error_index = (error_index + 1) % ERROR_HISTORY;
   // else maintain current speed
 }
 
