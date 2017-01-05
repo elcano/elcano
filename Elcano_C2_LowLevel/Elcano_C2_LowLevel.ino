@@ -23,22 +23,22 @@ using namespace elcano;
  * past C2 on the ring.
  */
 
-
 static struct hist {
   long olderSpeed_mmPs;  // older data
   unsigned long olderTime_ms;   // time stamp of older speed
-
+  float currentSpeed_kmPh;
   long oldSpeed_mmPs;  // last data from the interrupt
   byte oldClickNumber;
   unsigned long oldTime_ms;  // time stamp of old speed
-
+  long tickMillis;
+  long oldTickMillis;
   byte nowClickNumber;  // situation when we want to display the speed
   unsigned long nowTime_ms;
   unsigned long TickTime_ms;  // Tick times are used to compute speeds
   unsigned long OldTick_ms;   // Tick times may not match time stamps if we don't process
   // results of every interrupt
 } history;
- 
+
 
 //#include <SoftwareSerial.h>
 // @ToDo: Are these specific to some particular setup or trike? If so,
@@ -135,9 +135,6 @@ void ISR_TURN_rise(){
 void ISR_RDR_rise() {
   // RDR (rudder) is not used. Instead, use this interrupt for the motor phase feedback, which gives speed.
   noInterrupts();
-//  unsigned long old_phase_rise = RC_rise[RC_RDR];
-//  ProcessRiseOfINT(RC_RDR);
-//  RC_elapsed[RC_RDR] = RC_rise[RC_RDR] - old_phase_rise;
   ProcessRiseOfINT(RC_RDR);
   attachInterrupt(digitalPinToInterrupt(IRPT_RDR), ISR_RDR_fall, FALLING);
   // The phase frequency is proportional to wheel rotation.
@@ -146,7 +143,6 @@ void ISR_RDR_rise() {
   // The hub supplies 3 Hall Phase sensors; each is a 5V square wave and tells how fast the wheel rotates.
   // The square wave feedback has sone noise, which is cleaned up by an RC low pass filter
   //  with R = 1K, C = 100 nF
-  //Serial.println("RDR");
   interrupts();
 }
 
@@ -187,7 +183,6 @@ void ISR_TURN_fall() {
   noInterrupts();
   ProcessFallOfINT(RC_TURN);
   RC_Done[RC_TURN] = 1;
-  //Serial.println("TURN");
   attachInterrupt(digitalPinToInterrupt(IRPT_TURN), ISR_TURN_rise, RISING);
   interrupts();
 }
@@ -196,7 +191,6 @@ void ISR_BRAKE_fall() {
   noInterrupts();
   ProcessFallOfINT(RC_BRAKE);
   RC_Done[RC_BRAKE] = 1;
-  //Serial.println("GO");
   attachInterrupt(digitalPinToInterrupt(IRPT_BRAKE), ISR_BRAKE_rise, RISING);
   interrupts();
 }
@@ -205,9 +199,6 @@ void ISR_ESTOP_fall() {
   noInterrupts();
   ProcessFallOfINT(RC_ESTP);
   RC_Done[RC_ESTP] = 1;
-  //  if (RC_elapsed[RC_ESTP] > MIDDLE)
-  //     E_Stop();
-  //Serial.println("ESTOP");
   attachInterrupt(digitalPinToInterrupt(IRPT_ESTOP), ISR_ESTOP_rise, RISING);
   interrupts();
 }
@@ -224,7 +215,6 @@ void ISR_GO_rise() {
   noInterrupts();
   ProcessRiseOfINT(RC_GO);
   attachInterrupt(digitalPinToInterrupt(IRPT_GO), ISR_GO_fall, FALLING);
-  //RC_Done[RC_RDR] = 1;
   interrupts();
 }
 
@@ -260,7 +250,6 @@ void ISR_MOTOR_FEEDBACK_rise() {
   unsigned long old_phase_rise = RC_rise[RC_MOTOR_FEEDBACK];
   ProcessRiseOfINT(RC_MOTOR_FEEDBACK);
   RC_elapsed[RC_MOTOR_FEEDBACK] = RC_rise[RC_MOTOR_FEEDBACK] - old_phase_rise;
-  //Serial.println("MOTOR");
   interrupts();
 }
 
@@ -287,9 +276,7 @@ void setup()
   steer(STRAIGHT_TURN_OUT);
   brake(MAX_BRAKE_OUT);
   moveVehicle(MIN_ACC_OUT);
-  //setup7seg();    // Initialize 7 segment display for speedometer
   delay(500);   // let vehicle stabilize
-  //brake(MIN_BRAKE_OUT);
   Serial.begin(9600);
   rc_index = 0;
   for (int i = 0; i < RC_NUM_SIGNALS; i++)
@@ -303,16 +290,13 @@ void setup()
     speed_errors[i] = 0;
   }
 
-  //setupWheelRev(); // WheelRev4 addition
+  setupWheelRev(); // WheelRev4 addition
   CalibrateTurnAngle(32, 20);
   calibrationTime_ms = millis();
   
         attachInterrupt(digitalPinToInterrupt(IRPT_TURN),  ISR_TURN_rise,  RISING);//turn right stick l/r turn
-//        attachInterrupt(digitalPinToInterrupt(IRPT_RDR),   ISR_RDR_rise,   RISING);
         attachInterrupt(digitalPinToInterrupt(IRPT_GO),    ISR_GO_rise,    RISING);//left stick l/r
         attachInterrupt(digitalPinToInterrupt(IRPT_ESTOP), ISR_ESTOP_rise, RISING);//ebrake
-//        attachInterrupt(digitalPinToInterrupt(IRPT_RVS),   ISR_RVS_rise,   RISING);//
-
         attachInterrupt(digitalPinToInterrupt(IRPT_BRAKE), ISR_BRAKE_rise, RISING);//left stick u/d mode select
 //        attachInterrupt(digitalPinToInterrupt(IRPT_MOTOR_FEEDBACK), ISR_MOTOR_FEEDBACK_rise, RISING);
 }
@@ -333,9 +317,8 @@ SerialData Results;
 
 void loop() {
 
-  hist * history;
-  computeSpeed(history);
-  Serial.println(history->TickTime_ms/1.59);
+  computeSpeed(&history);
+  
   // Get the next loop start time. Note this (and the millis() counter) will
   // roll over back to zero after they exceed the 32-bit size of unsigned long,
   // which happens after about 1.5 months of operation (should check this).
@@ -352,21 +335,16 @@ void loop() {
   }
 
   // @ToDo: What is this doing?
-  //Results.clear();
   Results.kind = MsgType::sensor;
   Results.angle_deg = TurnAngle_degx10() / 10;
   // @ToDo: Is this working and should it be uncommented?
-  // show_speed (&Results);
-
+  
   calibrationTime_ms += LOOP_TIME_MS;
   straightTime_ms = (steer_control == STRAIGHT_TURN_OUT) ? straightTime_ms + LOOP_TIME_MS : 0;
   stoppedTime_ms = (throttle_control == MIN_ACC_OUT) ? stoppedTime_ms + LOOP_TIME_MS : 0;
   if (calibrationTime_ms > 40000 && straightTime_ms > 3000 && stoppedTime_ms > 3000)
   {
-    //       int oldBrake = brake_control;
-    //       brake(MAX_BRAKE_OUT);  // put on brakes
     CalibrateTurnAngle(16, 10);  // WARNING: No response to controls while calibrating
-    //       brake(oldBrake);       // restore brake state
     calibrationTime_ms = 0;
   }
 
@@ -486,17 +464,6 @@ void Print7 (bool processed, unsigned long results[7])
 void LogData(unsigned long commands[7], SerialData *sensors)  // data for spreadsheet
 {
   show7seg(HubSpeed_kmPh);
-  /*Serial.print("(ms) Time\t");
-    Serial.print("(cm/s) Speed\t");
-    Serial.print("(km/h) Speed\t");
-    Serial.print("(km/h) Hub Speed\t");
-    Serial.print("(deg) Angle\t");
-    Serial.print("Right\t");
-    Serial.print("Left\t");
-    Serial.print("Throttle\t");
-    Serial.print("Brake\t");
-    Serial.print("Steer\t");
-    Serial.println("(m) Distance");*/
   Serial.print(millis()); Serial.print("\t");                        //(ms) Time
   Serial.print(sensors->speed_cmPs); Serial.print("\t");             //(cm/s) Speed
   Serial.print(sensors->speed_cmPs * 36.0 / 1000.); Serial.print("\t"); //(km/h) Speed
@@ -510,7 +477,6 @@ void LogData(unsigned long commands[7], SerialData *sensors)  // data for spread
   Serial.print(brake_control); Serial.print("\t");                   //Brake
   Serial.print(steer_control); Serial.print("\t");                   //Steer
   Serial.println(Odometer_m);                                        //(m) Distance
-  //     Print7 (true, commands);
 }
 /*---------------------------------------------------------------------------------------*/
 void PrintHeaders (void)
@@ -543,17 +509,6 @@ void circleRoutine(unsigned long seconds, unsigned long &rcAuto) {
   command.speed_cmPs = 100;
   command.angle_deg = TURN_MAX_DEG;
   processHighLevel(&command);
-//  command.speed_cmPs = 0;
-//  command.angle_deg = 0;
-//  processHighLevel(&command);
-//  
-//  steer(LEFT_TURN_OUT);
-//  delay(1000);
-//  seconds = seconds * 1000;
-//  unsigned long loopTime = millis();
-//  while (millis() < (loopTime + seconds)) {
-//    moveVehicle(112);
-//  }
   rcAuto = LOW;
 }
 /*---------------------------------------------------------------------------------------*/
@@ -570,7 +525,6 @@ void squareRoutine(unsigned long sides, unsigned long &rcAuto) {
   float turnDist = TURN_RADIUS_CM * PI / 2 * 10; //turnDist == 1/4 turn circumference in mm
   unsigned long turnSec = (long)turnDist / turnSpeed * 1000; //turnSec == time for 90-degree turn at 1250 mmPs
   for(int i = 0; i < 4; i++){
-    //steer(LEFT_TURN_OUT);
     steer(STRAIGHT_TURN_OUT);
     brake(MAX_BRAKE_OUT);
     delay(1000);
@@ -598,48 +552,6 @@ void squareRoutine(unsigned long sides, unsigned long &rcAuto) {
   rcAuto = LOW;
 }
 
-// @ToDo: Remove all obsolete code.
-///*---------------------------------------------------------------------------------------*/
-////done in setup, calibrate RC values for MIDDLE, MIN_RC, and MAX_RC at startup
-//void calibrateRC(unsigned long mic) {
-//
-//  Serial.print(mic);
-//  Serial.println("Calibration Started");
-//  //Step 1: Wait for controller to turn on, and leave joysticks in neutral
-//  //    while (micros() < TEN_SECONDS_IN_MICROS ||
-//  //    ~((RC_Done[RC_ESTP]) && (RC_Done[RC_GO]) && (RC_Done[RC_TURN]) ))
-//  //    digitalWrite(LED_PIN_OUT, HIGH); //wait for 10 seconds to receive radio signal to Calibrate Neutral Positions on RC controller, otherwise proceed
-//
-//  //Step 2: Calibrate MIDDLE
-//  Serial.println(RC_elapsed[RC_GO]);
-//  mid = RC_elapsed[RC_GO];
-//  Serial.print("MIDDLE \t");
-//  Serial.println(mid);
-//  mic = micros();
-//
-//  //Step 3: Turn on LED and wait for Right joystick DOWN
-//  //digitalWrite(LED_PIN_OUT, HIGH);
-//  while (micros() < (mic + (TEN_SECONDS_IN_MICROS / 4)))
-//    //digitalWrite(LED_PIN_OUT, HIGH);//wait
-//    //if
-//    //digitalWrite(LED_PIN_OUT, LOW);
-//    //Set MIN_RC
-//    min_rc = RC_elapsed[RC_GO];
-//  Serial.print("MIN_RC \t");
-//  Serial.println(min_rc);
-//  mic = micros();
-//
-//  //Step 4:Turn on LED again and wait for Right joystick UP
-//  //digitalWrite(LED_PIN_OUT, HIGH);
-//  while (micros() < (mic + (TEN_SECONDS_IN_MICROS / 4)))
-//    //digitalWrite(LED_PIN_OUT, HIGH);//wait
-//
-//    max_rc = RC_elapsed[RC_GO];
-//  Serial.print("MAX_RC \t");
-//  Serial.println(max_rc);
-//  //digitalWrite(LED_PIN_OUT, LOW);
-//}
-
 // @ToDo: Q: What do the expressions "1st pulse", etc. mean? Is this a
 // leftover from trying to combine the RC controls into a single stream?
 /*---------------------------------------------------------------------------------------*/
@@ -659,207 +571,122 @@ byte processRC()
       return 0x00;
     }
   }
-  if(autoMode)
-  {
-    //THROTTLE
-    if(RC_Done[RC_BRAKE])
-    {
-      if(RC_elapsed[RC_BRAKE] > 1800)
-      {
-        long unsigned state = 0;
-        circleRoutine(1, state);
-      }
-    }
+  
+  autoMode = isAutomatic();
+  
+  if(autoMode){
+    doAutoMovement();
   }
   else // not in autonomous mode
   {
-  //THROTTLE
-    //TODO: if less than the middle, reverse, otherwise forward
-    if(RC_Done[RC_GO]){
-      Serial.println(mapThrottle(RC_elapsed[RC_GO]));
-    }
-
-  //TURN
-    if (RC_Done[RC_TURN]) 
-    {
-      steer(RC_elapsed[RC_TURN]);
-    }
-    
+    doManualMovement();
   }
   return 0x00;
 }
-//byte processRC (){
-//  // Each use of a particular results element is guarded by a check of RC_Done
-//  // for that element, to see if we have begun receiving any data for that element.
-//  // 1st pulse is aileron (position 5 on receiver; controlled by Right left/right joystick on transmitter)
-//  //     used for Steering
-//  /* 2nd pulse is aux (position 1 on receiver; controlled by flap/gyro toggle on transmitter)
-//     will be used for selecting remote control or autonomous control. */
-//  if (RC_Done[RC_AUTO]) {
-//    if (NUMBER_CHANNELS > 5) {
-//      RC_elapsed[RC_AUTO] = (RC_elapsed[RC_AUTO] > MIDDLE ? HIGH : LOW);
-//    }
-//  }
-//
-//  /* 4th pulse is gear (position 2 on receiver; controlled by gear/mode toggle on transmitter)
-//    will be used for emergency stop. D38 */
-//  if (RC_Done[RC_ESTP]) {
-//    RC_elapsed[RC_ESTP] = (RC_elapsed[RC_ESTP] > MIDDLE ? HIGH : LOW);
-//
-//    if (RC_elapsed[RC_ESTP] == HIGH){
-//      // Serial.println("Exiting processRC due to E-stop.");
-//      E_Stop();  // already done at interrupt level
-//      if (RC_Done[RC_AUTO]) {
-//      // if ((RC_elapsed[RC_AUTO] == LOW)  && (NUMBER_CHANNELS > 5)) // under RC control
-//      //   {
-//      //     ;//steer(RC_elapsed[RC_TURN]);
-//      //   }
-//      // }
-//      }
-//      return 0x00;
-//    }
-//  }
-//
-//  if (RC_Done[RC_AUTO]) {
-//    if ((RC_elapsed[RC_AUTO] == HIGH)  && (NUMBER_CHANNELS > 5))
+
+boolean isAutomatic(){
+    if(RC_Done[RC_BRAKE]){
+      if(RC_elapsed[RC_BRAKE] > MIDDLE + TICK_DEADZONE){
+        return true;           // It is manual control and not autonomous control
+      }
+    }
+    return false;
+}
+
+void doAutoMovement(){
+  if(RC_elapsed[RC_BRAKE] > TICK1 - TICK_DEADZONE && RC_elapsed[RC_BRAKE] < TICK1 + TICK_DEADZONE)
+  {
+    long unsigned state = 0;
+    Serial.println("AT TICK 1");
+    delay(1000); // delay and if statement ensure that the remote wasn't simply going past the tick
+    if(RC_elapsed[RC_BRAKE] > TICK1 - TICK_DEADZONE && RC_elapsed[RC_BRAKE] < TICK1 + TICK_DEADZONE)
+    {
+      circleRoutine(1, state);
+    }
+  }
+  else if(RC_elapsed[RC_BRAKE] > TICK2 - TICK_DEADZONE && RC_elapsed[RC_BRAKE] < TICK2 + TICK_DEADZONE){
+    
+    Serial.println("AT TICK 2");
+    delay(1000); // delay and if statement ensure that the remote wasn't simply going past the tick
+    if(RC_elapsed[RC_BRAKE] > TICK2 - TICK_DEADZONE && RC_elapsed[RC_BRAKE] < TICK2 + TICK_DEADZONE)
+    {
+      //square Routine
+    }
+  }
+  else if(RC_elapsed[RC_BRAKE] > TICK3 - TICK_DEADZONE && RC_elapsed[RC_BRAKE] < TICK3 + TICK_DEADZONE){
+    //another routine
+    Serial.println("AT TICK 3");
+    delay(1000); // delay and if statement ensure that the remote wasn't simply going past the tick
+    if(RC_elapsed[RC_BRAKE] > TICK3 - TICK_DEADZONE && RC_elapsed[RC_BRAKE] < TICK3 + TICK_DEADZONE)
+    {
+      //AMAZING Routine
+    }
+  }
+}
+
+void applySpeed(float speed_kph)
+{
+//  Throttle_
+}
+
+void doManualMovement(){
+  //THROTTLE
+    //TODO: if less than the middle, reverse, otherwise forward
+    if(RC_Done[RC_GO])
+    {
+        moveVehicle(convertThrottle(RC_elapsed[RC_GO]));
+    }
+  //TURN
+//    if (RC_Done[RC_TURN]) 
 //    {
-//      return 0x01;  // not under RC control
+//      Serial.println(String(convertTurn(RC_elapsed[RC_TURN])));
+//      steer(convertTurn(RC_elapsed[RC_TURN]));
 //    }
-//  }
-//
-//  /* Controlled by Left up/down joystick.
-//    It will be used for shifting from Drive to Reverse . D40
-//  */
-//  //if (RC_Done[RC_RVS]) {
-//  //  //RC_elapsed[RC_RVS] = (RC_elapsed[RC_RVS] > MIDDLE? HIGH: LOW);
-//  //}
-//
-//  // TO DO: Select Forward / reverse based on RC_elapsed[RC_RVS]
-//
-//  /* Controlled by Right up/down.
-//     will be used for throttle/brake: RC_Throttle
-//  */
-//  if (RC_Done[RC_TURN]) {
-//    RC_elapsed[RC_TURN] = convertTurn(RC_elapsed[RC_TURN]);
-//  }
-//
-//  
-//  // Braking or Throttle
-//  if (liveBrake(RC_elapsed[RC_BRAKE])){
-//    //Serial.print("Braking: "); Serial.println(RC_elapsed[RC_BRAKE]);
-//    brake(convertBrake(RC_elapsed[RC_BRAKE]));
-//  }
-//  else {
-//    brake(MIN_BRAKE_OUT);
-//  }
-//
-//  // Accelerating
-//  // Note: The doRoutine / squareRoutine code will be moved out to run on
-//  // a separate module.  For now, for safety, we want a way to stop the
-//  // routine, apart from e-stop.  What we require is that the RC controller
-//  // is turned on, and the throttle is in a specific position, the extreme
-//  // lower right.  If it is released, we want the routine to stop.  This
-//  // can then serve as a dead-man switch, as well.
-//  // Similarly, when in normal RC operation, we check for the throttle to
-//  // be in a "live" position.  Otherwise, (if the throttle is in neither
-//  // the "routine" nor "live" positions, we want to stop.
-//  if (liveThrottle(RC_elapsed[RC_GO])){
-//    // Here, the throttle is in a "live" position.
-//    int going = convertThrottle(RC_elapsed[RC_GO]);
-//    moveVehicle(going);
-//  }
-//  else if(doRoutine(RC_elapsed[RC_GO])){
-//    moveVehicle(MIN_ACC_OUT);
-//    unsigned long autoB = RC_elapsed[RC_AUTO];
-//    //circleRoutine(5, autoB);
-//    RC_elapsed[RC_AUTO] = autoB;
-//  }
-//  else {
-//    moveVehicle(MIN_ACC_OUT);
-//    }
-//
-//  if (RC_Done[RC_TURN]) {
-//    steer(RC_elapsed[RC_TURN]);
-//  }
-//
-//  /* 5th pulse is rudder (position 3 on receiver; controlled by Left left/right joystick on transmitter)
-//    Not used */
-//  // if (RC_Done[RC_RDR]) {
-//  //   RC_elapsed[RC_RDR] = (RC_elapsed[RC_RDR] > MIDDLE? HIGH: LOW);  // could be analog
-//  //   if (RC_elapsed[RC_RDR] >= HubAtZero)
-//  //     HubSpeed_kmPh = 0;
-//  //   else
-//  //     HubSpeed_kmPh = HubSpeed2kmPh / RC_elapsed[RC_RDR];
-//  // }
-//
-//  return 0x00;
-//}
+}
+
 /*---------------------------------------------------------------------------------------*/
 void processHighLevel(SerialData * results)
 {
-  //results->update();
   //Steer
   int turn_signal = convertDeg(results->angle_deg);
   steer(turn_signal);
   //End Steer
   //Throttle
-  Throttle_PID(/*calculatedSpeed - */ 10*results->speed_cmPs);
+  long kmPh_to_mms = 277.778;
+  long currentSpeed = history.currentSpeed_kmPh * kmPh_to_mms;
+  long desiredSpeed = 10*results->speed_cmPs;
+  Serial.println("currentSpeed = " + String(currentSpeed) + " desired speed = " + String(desiredSpeed));
+  Throttle_PID(desiredSpeed - currentSpeed);
   //End Throttle
-//  results->write(&Serial3);
 }
 /*---------------------------------------------------------------------------------------*/
 //Converts RC values to corresponding values for the PWM output
 int convertTurn(int input)
 {
+  
   long int steerRange, rcRange;
   long output;
   int trueOut;
-  //     Serial.print("\tconvertTurn: input = \t"); Serial.print(input);
   //  Check if Input is in steer dead zone
   if ((input <= MIDDLE + DEAD_ZONE) && (input >= MIDDLE - DEAD_ZONE))
+  {
     return STRAIGHT_TURN_OUT;
+  }
   // On SPEKTRUM, MIN_RC = 1 msec = stick right; MAX_RC = 2 msec = stick left
   // On HI_TEC, MIN_RC = 1 msec = stick left; MAX_RC = 2 msec = stick right
   // LEFT_TURN_OUT > RIGHT_TURN_OUT
   else
-    return input;
-
+  {
+    return map(input, MIN_RC, MAX_RC, RIGHT_TURN_OUT, LEFT_TURN_OUT);
+  }
   // @ToDo: Fix this so it is correct in any case.
   // If a controller requires some value to be reversed, then specify that
   // requirement in Settings.h, and use the setting here.
 #ifdef RC_HITEC
   input = MAX_RC - (input - MIN_RC);
 #endif
-
-  //      if (input > MIDDLE + DEAD_ZONE)
-  //      {  // left turn
-  //         steerRange = LEFT_TURN_OUT - STRAIGHT_TURN_OUT;
-  //         rcRange = MAX_RC - (MIDDLE + DEAD_ZONE);
-  //        input = input - MIDDLE - DEAD_ZONE; // originally input = middle + dead_zone
-  //        output = STRAIGHT_TURN_OUT + input * steerRange / rcRange;
-  //        //set max and min values if out of range
-  //        trueOut = (int)output;
-  //        if(trueOut > LEFT_TURN_OUT)
-  //            trueOut = LEFT_TURN_OUT;
-  //        if(trueOut < STRAIGHT_TURN_OUT)
-  //            trueOut = STRAIGHT_TURN_OUT;
-  //        return trueOut;
-  //    }
-  //      if (input < MIDDLE - DEAD_ZONE)
-  //      {  // right turn
-  //         steerRange = STRAIGHT_TURN_OUT - RIGHT_TURN_OUT;
-  //         rcRange = MIDDLE - DEAD_ZONE - MIN_RC;
-  //        input = input - DEAD_ZONE - MIDDLE;  // input is negative
-  //        output = STRAIGHT_TURN_OUT + input * steerRange / rcRange;
-  //        //set max and min values if out of range
-  //        trueOut = (int)output;
-  //        if(trueOut < RIGHT_TURN_OUT)
-  //            trueOut = RIGHT_TURN_OUT;
-  //        if(trueOut > STRAIGHT_TURN_OUT)
-  //            trueOut = STRAIGHT_TURN_OUT;
-  //        return trueOut;
-  //    }
 }
+
 /*---------------------------------------------------------------------------------------*/
 int convertDeg(int deg)
 {
@@ -878,24 +705,9 @@ int convertDeg(int deg)
 /*---------------------------------------------------------------------------------------*/
 int convertThrottle(int input)
 {
-//  //full throttle = 235, min = 50
-//  const int dacRange = MAX_ACC_OUT - MIN_ACC_OUT;
-//  const int rcRange = MAX_RC - (MIDDLE + DEAD_ZONE);
-//  input -= (MIDDLE + DEAD_ZONE);
-//  double output = (double)input / (double)rcRange;
-//  output *= dacRange;
-//  output += MIN_ACC_OUT;
-//
-//  //set max values if out of range
-//  int trueOut = (int)output;
-//  if(trueOut >= 0){
-//    trueOut =  (abs(trueOut)/233.0)*150;
-//  }
-//  if(trueOut < 0){
-//    trueOut = 110 - (abs(trueOut)/233.0)*110;
-//  }
   return map(input, 1400, 1000, 80, 140);
 }
+
 /*---------------------------------------------------------------------------------------*/
 //Tests for inputs
 // Input not in throttle dead zone
@@ -903,6 +715,7 @@ boolean liveThrottle(int acc)
 {
   return (acc > MIDDLE + DEAD_ZONE);
 }
+
 boolean doRoutine(int acc){
   if(acc < 800) return false;
   return (acc < MIN_RC + DEAD_ZONE);
@@ -929,7 +742,6 @@ void E_Stop()
 void steer(int pos)
 {
   STEER_SERVO.writeMicroseconds(pos);
-  //      Serial.print("\tSteering to: \t"); Serial.print(pos);
   steer_control = pos;
 }
 /*---------------------------------------------------------------------------------------*/
@@ -945,17 +757,12 @@ int convertBrake(unsigned long amount){
   {
     result = MAX_BRAKE_OUT;
   }
-//  if(amount > (MIDDLE + MIN_RC)
-//    amount = MAX_BRAKE_OUT;
-//  else if (amount > (MAX_RC - DEAD_ZONE))
-//    amount = MIN_BRAKE_OUT;
   return result;
 }
 /*---------------------------------------------------------------------------------------*/
 void brake (int amount)
 {
   analogWrite(BRAKE_OUT_PIN, amount);
-  //     Serial.print("\tBraking to: \t"); Serial.print(*amount);
   brake_control = amount;
 }
 /*---------------------------------------------------------------------------------------*/
@@ -1053,12 +860,10 @@ void moveVehicle(int acc)
 #define MAX_SPEED_mmPs   ((MAX_SPEED_KPH * MEG) / 3600)
 // MAX_SPEED_mmPs = 13,888 mm/s = 13.888 m/s
 unsigned long MinTickTime_ms;
-// ((WHEEL_DIAMETER_MM * 3142) / MAX_SPEED_mmPs)
 // MinTickTime_ms = 89 ms
 #define MIN_SPEED_mPh 3000
 // A speed of less than 0.3 KPH is zero.
 unsigned long MaxTickTime_ms;
-// ((WHEEL_DIAMETER_MM * 3142) / MIN_SPEED_mmPs)
 // MinTickTime_ms = 9239 ms = 9 sec
 
 long SpeedCyclometer_mmPs = 0;
@@ -1074,7 +879,6 @@ volatile byte InterruptState = IRQ_NONE;  // Tells us if we have initialized.
 volatile byte ClickNumber = 0;         // Used to distinguish old data from new.
 volatile unsigned long TickTime = 0;  // Time from one wheel rotation to the next gives speed.
 volatile unsigned long OldTick = 0;
-
 
 /*---------------------------------------------------------------------------------------*/
 // WheelRev is called by an interrupt.
@@ -1101,34 +905,13 @@ void WheelRev()
 
 void setupWheelRev()
 {
-
-  //  SerialOdoOut.begin(115200); // C6 to C4
-  //  pinMode(13, OUTPUT); //led
-  //  digitalWrite(13, LOW);//turn LED off
-  //
-  //  pinMode(IRPT_WHEEL, INPUT);//pulls input HIGH
   float MinTick = WHEEL_CIRCUM_MM;
-  //    SerialMonitor.print (" MinTick = ");
-  //    SerialMonitor.println (MinTick);
   MinTick *= 1000.0;
   MinTick /= MAX_SPEED_mmPs;
-  //    SerialMonitor.print (MinTick);
   MinTickTime_ms = MinTick;
-  //    SerialMonitor.print (" MinTickTime_ms = ");
-  //    SerialMonitor.println (MinTickTime_ms);
-
-  //    SerialMonitor.print (" MIN_SPEED_mPh = ");
-  //    SerialMonitor.print (MIN_SPEED_mPh);
   float MIN_SPEED_mmPs =  ((MIN_SPEED_mPh * 1000.0) / 3600.0);
-  // MIN_SPEED_mmPs = 135 mm/s
-  //    SerialMonitor.print (" MIN_SPEED_mmPs = ");
-  //    SerialMonitor.print (MIN_SPEED_mmPs);
   float MaxTick = (WHEEL_DIAMETER_MM * PI * 1000.0) / MIN_SPEED_mmPs;
-  //    SerialMonitor.print (" MaxTick = ");
-  //    SerialMonitor.print (MaxTick);
   MaxTickTime_ms = MaxTick;
-  //    SerialMonitor.print (" MaxTickTime = ");
-  //    SerialMonitor.println (MaxTickTime_ms);
   TickTime = millis();
   // OldTick will normally be less than TickTime.
   // When it is greater, TickTime - OldTick is a large positive number,
@@ -1141,29 +924,18 @@ void setupWheelRev()
   history.oldSpeed_mmPs = history.olderSpeed_mmPs = NO_DATA;
 
   attachInterrupt (digitalPinToInterrupt(IRPT_WHEEL), WheelRev, RISING);//pin 3 on Mega
-  //    SerialMonitor.print("TickTime: ");
-  //    SerialMonitor.print(TickTime);
-  //    SerialMonitor.print(" OldTick: ");
-  //    SerialMonitor.println(OldTick);
-
-  //    SerialMonitor.println("WheelRev setup complete");
-
 }
 /*---------------------------------------------------------------------------------------*/
 
 void computeSpeed(struct hist *data){
   //cyclometer has only done 1 or 2 revolutions
-  
   //normal procedures begin here
   unsigned long WheelRev_ms = TickTime - OldTick;
   float SpeedCyclometer_revPs = 0.0;//revolutions per sec
-
   if (InterruptState == IRQ_NONE || InterruptState == IRQ_FIRST)
   { // No data
     SpeedCyclometer_mmPs = 0;
     SpeedCyclometer_revPs = 0;
-    Serial.print("No compute  ");
-    //Serial.println(*speedCyclo);
     return;
   }
   
@@ -1175,8 +947,6 @@ void computeSpeed(struct hist *data){
     data->oldTime_ms = OldTick;
     data->nowTime_ms = TickTime;  // time stamp for oldSpeed_mmPs
     data->oldClickNumber = data->nowClickNumber = ClickNumber;
-    Serial.print("First compute  ");
-    Serial.println(SpeedCyclometer_mmPs);
     return;
   }
 
@@ -1228,9 +998,13 @@ void computeSpeed(struct hist *data){
     data->oldSpeed_mmPs = SpeedCyclometer_mmPs;
     SpeedCyclometer_revPs = 1000.0 / WheelRev_ms;
     SpeedCyclometer_mmPs  = WHEEL_CIRCUM_MM * SpeedCyclometer_revPs;
+
+    data->oldTickMillis = data->tickMillis;
+    data->tickMillis = millis();
     
-    Serial.print("Nominal compute  ");
-    Serial.println(SpeedCyclometer_mmPs);
+    data->currentSpeed_kmPh = SpeedCyclometer_mmPs/260.0;
+    Serial.println(String(data->currentSpeed_kmPh));
+    if(data->TickTime_ms-data->OldTick_ms > 1000) data->currentSpeed_kmPh = 0;
     return;
   }
 }
@@ -1252,17 +1026,11 @@ void PrintSpeed( struct hist *data)
 /*---------------------------------------------------------------------------------------*/
 void show_speed(SerialData *Results)
 {
-
   computeSpeed (&history);
   PrintSpeed(&history);
 
   Odometer_m += (float)(LOOP_TIME_MS * SpeedCyclometer_mmPs) / 1000.0;
   // Since Results have not been cleared, angle information will also be sent.
-//  Results->speed_cmPs = SpeedCyclometer_mmPs / 10;
-//  Results->write(&Serial3);  // Send speed to C6
-
-//  show7seg( SpeedCyclometer_mmPs);   // Show speed on 7 segment LEDs
-
 }
 /*---------------------------------------------------------------------------------------*/
 /*========================CalibrateTurnAngle======================*/
@@ -1315,8 +1083,6 @@ void CalibrateTurnAngle(int count, int pause)
     Left_Min_Count = LEFT_MIN_COUNT;
     Left_Max_Count = LEFT_MAX_COUNT;
   }
-  //    Serial.print("\tCALIBRATE: Left Straight\t"); Serial.print(LeftStraight_A3);
-  //    Serial.print("\tRight Straight\t"); Serial.println(RightStraight_A2);
   old_turn_degx1000 = 0; // straight
 }
 /*---------------------------------------------------------------------------------------*/
@@ -1331,10 +1097,6 @@ int TurnAngle_degx10()
   bool OK_left = false;
   int right = analogRead(A2);
   int left = analogRead(A3);
-  //    Serial.print("Left"); Serial.print("\t"); Serial.print(left);
-  //    Serial.print("\tRight"); Serial.print("\t"); Serial.print(right);
-  //    Serial.print("LeftStraight_A3"); Serial.print("\t"); Serial.print(LeftStraight_A3);
-  //    Serial.print("\tRightStraight_A2"); Serial.print("\t"); Serial.print(RightStraight_A2);
   if ((Right_Min_Count <= right) && (right <= Right_Max_Count))
     OK_right = true;
   if ((Left_Min_Count <= left) && (left <= Left_Max_Count))
@@ -1378,7 +1140,6 @@ int TurnAngle_degx10()
   }
   new_turn_degx10 = (int) (new_turn_degx1000 / 100);
   old_turn_degx1000 = new_turn_degx1000;
-  //  Serial.print("\tnew_turn_degx10"); Serial.print("\t"); Serial.println(new_turn_degx10);
   return new_turn_degx10;
 }
 /*---------------------------------------------------------------------------------------*/
@@ -1453,7 +1214,6 @@ void Throttle_PID(long error_speed_mmPs)
     moveVehicle(throttle_control);
 
     long brake_increase = (MAX_BRAKE_OUT - MIN_BRAKE_OUT) * PID_error / max_error_mmPs;
-    // MIN_BRAKE_OUT = 180; MAX_BRAKE_OUT = 250;
     brake_control -= brake_increase;
     if (brake_control > MAX_BRAKE_OUT)
       brake_control = MAX_BRAKE_OUT;
@@ -1469,20 +1229,12 @@ void Throttle_PID(long error_speed_mmPs)
 
     // release brakes
     long brake_decrease = (MAX_BRAKE_OUT - MIN_BRAKE_OUT) * PID_error / max_error_mmPs;
-    // MIN_BRAKE_OUT = 180; MAX_BRAKE_OUT = 250;
     brake_control += brake_decrease;
     if (brake_control < MIN_BRAKE_OUT)
       brake_control = MIN_BRAKE_OUT;
     brake(brake_control);
   }
   // else maintain current speed
-  //  Serial.print("\tThrottle Brake \t");  // csv for spreadsheet
-  //  Serial.print(throttle_control);
-  //  Serial.print("\t");
-  //  Serial.print(brake_control);
-  //  Serial.print("\t");
-  //  Serial.print(drive_speed_mmPs);  Serial.print("\t");
-  //  Serial.println(sensor_speed_mmPs);
 }
 
 /*---------------------------------------------------------------------------------------*/
@@ -1513,7 +1265,6 @@ void setup7seg()
 
   // Clear the display, and then turn on all segments and decimals
   clearDisplay();  // Clears display, resets cursor
-  //  setBrightness(127);  // Medium brightness
   setBrightness(255);  // High brightness
 }
 /*---------------------------------------------------------------------------------------*/
@@ -1526,8 +1277,6 @@ void show7seg(int speed_mmPs)
   //  The %4d option creates a 4-digit integer.
   sprintf(tempString, "%4d", speed_kmPhx10);
   String temp3 = (String)tempString;
-  //  Serial.println(temp3);
-
   // This will output the tempString to the S7S
   s7s.print(temp3);
   setDecimals(0b00000100);  // Sets digit 3 decimal on
