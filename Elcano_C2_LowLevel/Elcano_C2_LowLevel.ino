@@ -412,17 +412,7 @@ void loop() {
   }
 }
 
-// @ToDo: Can we remove all or most of this print code?
-/*---------------------------------------------------------------------------------------*/
-void PrintDone()
-{
-  Serial.print("RC_Done values: RC_ESTP "); Serial.print(RC_Done[RC_ESTP]);
-  Serial.print(" RC_GO "); Serial.print(RC_Done[RC_GO]);
-  Serial.print(" RC_TURN "); Serial.print(RC_Done[RC_TURN]);
-  //Serial.print(" RC_RVS "); Serial.print(RC_Done[RC_RVS]);
-  // Not currently using RC_RVS, and it is always zero.
 
-}
 /*---------------------------------------------------------------------------------------*/
 void Print7headers (bool processed)
 {
@@ -479,7 +469,7 @@ void LogData(unsigned long commands[7], SerialData *sensors)  // data for spread
   Serial.println(Odometer_m);                                        //(m) Distance
 }
 /*---------------------------------------------------------------------------------------*/
-void PrintHeaders (void)
+void PrintHeaders()
 {
   Serial.print("(ms) Time\t");
   Serial.print("(cm/s) Speed\t");
@@ -559,9 +549,8 @@ byte processRC()
 {
   //RC_TURN, RC_ESTOP, RC_BRAKE, RC_AUTO
   boolean autoMode = false; // Once RC_AUTO is implemented, this will default to false
-  //update autoMode based on RC_AUTO (flaps/gyro switch)
-    //ESTOP
-  if (RC_Done[RC_ESTP]) 
+  //ESTOP
+  if (RC_Done[RC_ESTP]) //RC_Done determines if the signal from the remote controll is done processing
   {
     RC_elapsed[RC_ESTP] = (RC_elapsed[RC_ESTP] > MIDDLE ? HIGH : LOW);
   
@@ -619,14 +608,14 @@ void doAutoMovement(){
     delay(1000); // delay and if statement ensure that the remote wasn't simply going past the tick
     if(RC_elapsed[RC_BRAKE] > TICK3 - TICK_DEADZONE && RC_elapsed[RC_BRAKE] < TICK3 + TICK_DEADZONE)
     {
-      //AMAZING Routine
+      //undertirmined Routine
     }
   }
 }
 
 void applySpeed(float speed_kph)
 {
-//  Throttle_
+//  Throttle_PID
 }
 
 void doManualMovement(){
@@ -1103,9 +1092,6 @@ int TurnAngle_degx10()
     OK_left = true;
   long right_degx1000 = (right - RightStraight_A2) * RIGHT_DEGx1000pCOUNT;
   long left_degx1000  = (left -  LeftStraight_A3) *  LEFT_DEGx1000pCOUNT;
-  //    Serial.print("Left"); Serial.print("\t"); Serial.print(left_degx1000);
-  //    Serial.print("\tRight"); Serial.print("\t"); Serial.print(right_degx1000);
-
   expected_turn_degx1000 = old_turn_degx1000;
   if (OK_left && OK_right)
   { // use the median
