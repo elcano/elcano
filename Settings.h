@@ -124,6 +124,11 @@ VEHICLE_NUMBER to your own new number.
 #define RC_MOTOR_FEEDBACK RC_RVS
 #define IRPT_MOTOR_FEEDBACK IRPT_RVS
 
+//PID parameters
+#define P_TUNE 0.4
+#define I_TUNE 0.5
+#define D_TUNE 0.1
+
 #endif
 
 #if (VEHICLE_NUMBER == 2)
