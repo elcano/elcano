@@ -82,6 +82,7 @@ int Left_Max_Count = 980;
 int Right_Min_Count = 698;
 int Right_Max_Count = 808;
 
+static double distance = 0;
 // RC_rise contains the time value collected in the rising edge interrupts.
 // RC_elapsed contains the width of the pulse. The rise and fall interrupts
 // should alternate.
@@ -293,7 +294,7 @@ void setup()
   setupWheelRev(); // WheelRev4 addition
   CalibrateTurnAngle(32, 20);
   calibrationTime_ms = millis();
-  
+  moveFixedDistance(100);
         attachInterrupt(digitalPinToInterrupt(IRPT_TURN),  ISR_TURN_rise,  RISING);//turn right stick l/r turn
         attachInterrupt(digitalPinToInterrupt(IRPT_GO),    ISR_GO_rise,    RISING);//left stick l/r
         attachInterrupt(digitalPinToInterrupt(IRPT_ESTOP), ISR_ESTOP_rise, RISING);//ebrake
@@ -318,7 +319,6 @@ SerialData Results;
 void loop() {
 
   computeSpeed(&history);
-  
   // Get the next loop start time. Note this (and the millis() counter) will
   // roll over back to zero after they exceed the 32-bit size of unsigned long,
   // which happens after about 1.5 months of operation (should check this).
@@ -326,7 +326,7 @@ void loop() {
   // using the micros() counter.
   // If the new nextTime value is <= LOOP_TIME_MS, we've rolled over.
   nextTime = nextTime + LOOP_TIME_MS;
-  Throttle_PID(14 - history.currentSpeed_kmPh);
+  //Throttle_PID(14 - history.currentSpeed_kmPh);
   byte automate = processRC();
   // @ToDo: Verify that this should be conditional. May be moot if it is
   // replaced in the conversion to the new Elcano Serial protocol.
@@ -541,6 +541,16 @@ void squareRoutine(unsigned long sides, unsigned long &rcAuto) {
   delay(1000);
   brake(MIN_BRAKE_OUT);
   rcAuto = LOW;
+}
+
+void moveFixedDistance(double length_m){
+  double start = distance;
+  while(distance < length_m  + start){
+    computeSpeed(&history);
+    Serial.println(distance);
+    Throttle_PID(14 - history.currentSpeed_kmPh);
+  }
+  moveVehicle(0);
 }
 
 // @ToDo: Q: What do the expressions "1st pulse", etc. mean? Is this a
@@ -993,7 +1003,10 @@ void computeSpeed(struct hist *data){
     data->tickMillis = millis();
     
     data->currentSpeed_kmPh = SpeedCyclometer_mmPs/260.0;
-    Serial.println(String(data->currentSpeed_kmPh));
+    distance += ((data -> oldTime_ms - data -> olderTime_ms)/1000.0) * (data -> oldSpeed_mmPs)/100;
+    //distance /= (1000.0 * 1000.0);
+
+    Serial.println(distance);
     if(data->TickTime_ms-data->OldTick_ms > 1000) data->currentSpeed_kmPh = 0;
     return;
   }
