@@ -294,12 +294,27 @@ void setup()
   setupWheelRev(); // WheelRev4 addition
   CalibrateTurnAngle(32, 20);
   calibrationTime_ms = millis();
-  moveFixedDistance(100);
+  
         attachInterrupt(digitalPinToInterrupt(IRPT_TURN),  ISR_TURN_rise,  RISING);//turn right stick l/r turn
         attachInterrupt(digitalPinToInterrupt(IRPT_GO),    ISR_GO_rise,    RISING);//left stick l/r
         attachInterrupt(digitalPinToInterrupt(IRPT_ESTOP), ISR_ESTOP_rise, RISING);//ebrake
         attachInterrupt(digitalPinToInterrupt(IRPT_BRAKE), ISR_BRAKE_rise, RISING);//left stick u/d mode select
 //        attachInterrupt(digitalPinToInterrupt(IRPT_MOTOR_FEEDBACK), ISR_MOTOR_FEEDBACK_rise, RISING);
+  cycleBrake();
+}
+
+// for testing purposes
+void cycleBrake()
+{
+  while(true)
+  {
+    brake(MAX_BRAKE_OUT);
+    Serial.println("ON");
+    delay(1000);
+    brake(MIN_BRAKE_OUT);
+    Serial.println("OFF");
+    delay(1000);
+  }
 }
 
 /*---------------------------------------------------------------------------------------*/
@@ -317,7 +332,6 @@ unsigned long delayTime;
 SerialData Results;
 
 void loop() {
-
   computeSpeed(&history);
   // Get the next loop start time. Note this (and the millis() counter) will
   // roll over back to zero after they exceed the 32-bit size of unsigned long,
@@ -543,9 +557,26 @@ void squareRoutine(unsigned long sides, unsigned long &rcAuto) {
   rcAuto = LOW;
 }
 
+// Turns the wheels straight and stops the vehicle
+// Will not work correctly until wheel with built in speedometer is installed
+void allStop()
+{
+  steer(STRAIGHT_TURN_OUT);
+  while(history.currentSpeed_kmPh > .01) // error of .01 kmph
+  {
+    computeSpeed(&history);
+    Serial.println(history.currentSpeed_kmPh);
+    Throttle_PID(0 - history.currentSpeed_kmPh);
+  }
+}
+
+// Moves the vehicle a fixed distance at 14 km/h
+// currently overshoots by about 48 meters
 void moveFixedDistance(double length_m){
+  steer(STRAIGHT_TURN_OUT);             // Ensures the vehicle isn't turning
+  if(length_m < 0) length_m = 0;        // ensures a negative value isn't given, as this will cause an infinite loop
   double start = distance;
-  while(distance < length_m  + start){
+  while(distance < length_m  + start){  // go until the total distance travaled has increased by the desired distance 
     computeSpeed(&history);
     Serial.println(distance);
     Throttle_PID(14 - history.currentSpeed_kmPh);
@@ -1006,7 +1037,6 @@ void computeSpeed(struct hist *data){
     distance += ((data -> oldTime_ms - data -> olderTime_ms)/1000.0) * (data -> oldSpeed_mmPs)/100;
     //distance /= (1000.0 * 1000.0);
 
-    Serial.println(distance);
     if(data->TickTime_ms-data->OldTick_ms > 1000) data->currentSpeed_kmPh = 0;
     return;
   }
