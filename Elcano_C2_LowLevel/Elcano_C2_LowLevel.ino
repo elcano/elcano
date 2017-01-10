@@ -300,7 +300,11 @@ void setup()
         attachInterrupt(digitalPinToInterrupt(IRPT_ESTOP), ISR_ESTOP_rise, RISING);//ebrake
         attachInterrupt(digitalPinToInterrupt(IRPT_BRAKE), ISR_BRAKE_rise, RISING);//left stick u/d mode select
 //        attachInterrupt(digitalPinToInterrupt(IRPT_MOTOR_FEEDBACK), ISR_MOTOR_FEEDBACK_rise, RISING);
-  cycleBrake();
+  //moveFixedDistance(300, 14);
+  long unsigned state = 0;
+  circleRoutine(1, state);
+  //brake(MAX_BRAKE_OUT);
+  //steer(LEFT_TURN_OUT);
 }
 
 // for testing purposes
@@ -308,11 +312,10 @@ void cycleBrake()
 {
   while(true)
   {
-    brake(MAX_BRAKE_OUT);
+    brake(200);
     Serial.println("ON");
     delay(1000);
-    brake(MIN_BRAKE_OUT);
-    Serial.println("OFF");
+    brake(190);
     delay(1000);
   }
 }
@@ -508,12 +511,9 @@ void PrintHeaders()
 //circleRoutine
 void circleRoutine(unsigned long seconds, unsigned long &rcAuto) {
   rcAuto = HIGH;
-
-  SerialData command;
-  command.kind = MsgType::drive;
-  command.speed_cmPs = 100;
-  command.angle_deg = TURN_MAX_DEG;
-  processHighLevel(&command);
+  steer(LEFT_TURN_OUT);
+  double desiredSpeed = 14;
+  moveFixedDistance(500, desiredSpeed);
   rcAuto = LOW;
 }
 /*---------------------------------------------------------------------------------------*/
@@ -572,14 +572,13 @@ void allStop()
 
 // Moves the vehicle a fixed distance at 14 km/h
 // currently overshoots by about 48 meters
-void moveFixedDistance(double length_m){
-  steer(STRAIGHT_TURN_OUT);             // Ensures the vehicle isn't turning
+void moveFixedDistance(double length_m, double desiredSpeed){
   if(length_m < 0) length_m = 0;        // ensures a negative value isn't given, as this will cause an infinite loop
   double start = distance;
   while(distance < length_m  + start){  // go until the total distance travaled has increased by the desired distance 
     computeSpeed(&history);
+    Throttle_PID(desiredSpeed - history.currentSpeed_kmPh);
     Serial.println(distance);
-    Throttle_PID(14 - history.currentSpeed_kmPh);
   }
   moveVehicle(0);
 }
@@ -592,6 +591,7 @@ byte processRC()
   //RC_TURN, RC_ESTOP, RC_BRAKE, RC_AUTO
   boolean autoMode = false; // Once RC_AUTO is implemented, this will default to false
   //ESTOP
+  
   if (RC_Done[RC_ESTP]) //RC_Done determines if the signal from the remote controll is done processing
   {
     RC_elapsed[RC_ESTP] = (RC_elapsed[RC_ESTP] > MIDDLE ? HIGH : LOW);
@@ -633,6 +633,7 @@ void doAutoMovement(){
     if(RC_elapsed[RC_BRAKE] > TICK1 - TICK_DEADZONE && RC_elapsed[RC_BRAKE] < TICK1 + TICK_DEADZONE)
     {
       circleRoutine(1, state);
+      Serial.println("Tick 1");
     }
   }
   else if(RC_elapsed[RC_BRAKE] > TICK2 - TICK_DEADZONE && RC_elapsed[RC_BRAKE] < TICK2 + TICK_DEADZONE){
@@ -665,14 +666,23 @@ void doManualMovement(){
     //TODO: if less than the middle, reverse, otherwise forward
     if(RC_Done[RC_GO])
     {
-        moveVehicle(convertThrottle(RC_elapsed[RC_GO]));
+      Serial.println(RC_elapsed[RC_GO]);
+      
+      if(RC_elapsed[RC_GO] < MIDDLE){
+        //moveVehicle(convertThrottle(RC_elapsed[RC_GO]));
+      }
+      else{
+        // apply brakes or reverse
+      }
+      //Serial.println(RC_elapsed[RC_GO]);
+      //moveVehicle(convertThrottle(RC_elapsed[RC_GO]));
     }
   //TURN
-//    if (RC_Done[RC_TURN]) 
-//    {
-//      Serial.println(String(convertTurn(RC_elapsed[RC_TURN])));
-//      steer(convertTurn(RC_elapsed[RC_TURN]));
-//    }
+    if (RC_Done[RC_TURN]) 
+    {
+      //Serial.println(String(convertTurn(RC_elapsed[RC_TURN])));
+      //steer(convertTurn(RC_elapsed[RC_TURN]));
+    }
 }
 
 /*---------------------------------------------------------------------------------------*/
