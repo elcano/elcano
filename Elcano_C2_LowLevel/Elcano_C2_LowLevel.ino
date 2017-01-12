@@ -39,8 +39,6 @@ static struct hist {
   // results of every interrupt
 } history;
 
-
-//#include <SoftwareSerial.h>
 // @ToDo: Are these specific to some particular setup or trike? If so,
 // they should be moved to Settings.h.
 // @ToDo: Constants do not need to be stored in memory. They can be #define symbols.
@@ -300,11 +298,8 @@ void setup()
         attachInterrupt(digitalPinToInterrupt(IRPT_ESTOP), ISR_ESTOP_rise, RISING);//ebrake
         attachInterrupt(digitalPinToInterrupt(IRPT_BRAKE), ISR_BRAKE_rise, RISING);//left stick u/d mode select
 //        attachInterrupt(digitalPinToInterrupt(IRPT_MOTOR_FEEDBACK), ISR_MOTOR_FEEDBACK_rise, RISING);
-  //moveFixedDistance(300, 14);
   long unsigned state = 0;
-  circleRoutine(1, state);
-  //brake(MAX_BRAKE_OUT);
-  //steer(LEFT_TURN_OUT);
+  //cycleBrake();
 }
 
 // for testing purposes
@@ -312,9 +307,11 @@ void cycleBrake()
 {
   while(true)
   {
+    analogWrite(BRAKE_OUT_PIN, MAX_BRAKE_OUT);
     brake(200);
     Serial.println("ON");
     delay(1000);
+    analogWrite(BRAKE_OUT_PIN, MIN_BRAKE_OUT);
     brake(190);
     delay(1000);
   }
@@ -335,6 +332,7 @@ unsigned long delayTime;
 SerialData Results;
 
 void loop() {
+  Serial.println(String(RC_elapsed[RC_GO]) + " " + String(RC_elapsed[RC_BRAKE]) + " " + String(RC_elapsed[RC_TURN]));
   computeSpeed(&history);
   // Get the next loop start time. Note this (and the millis() counter) will
   // roll over back to zero after they exceed the 32-bit size of unsigned long,
