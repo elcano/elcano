@@ -3,12 +3,20 @@
 /*
 ** Elcano_Serial.cpp
 ** By Dylan Katz
-**
-** Manages our protocal for robust communication of SerialData over serial connections
+** Paul Curry, Jan 3, 2017
+** Manages our protocal for robust communication of SerialData over serial connections.
+* Note: Sends serial data through the port passed in the write function and reads serial data from the port set to be
+* dev.
 */
 
 namespace elcano {
 
+/*
+ * Begins to read serial data. Places data into its internal state
+ * 
+ * Returns a type ParseStateError which is an enum specifying which error if any
+ * occured in the process.
+ */
 ParseStateError ParseState::update(void) {
 	int c = dev->read();
 	if (c == -1) return ParseStateError::unavailable;
@@ -85,6 +93,10 @@ STATES(9, 19, 29, '}', 1, posN_cm)
 	}
 }
 
+
+/* Turns the given serial data into a protocal string
+ *  and prints it to dev
+ */
 bool SerialData::write(HardwareSerial *dev) {
 	switch (kind) {
 	case MsgType::drive:  dev->print("D"); break;
@@ -129,6 +141,7 @@ bool SerialData::write(HardwareSerial *dev) {
 	return true;
 }
 
+/* Sets MsgType to none and sets all data to NaN */
 void SerialData::clear(void) {
     kind        = MsgType::none;
     number      = NaN;
@@ -140,6 +153,7 @@ void SerialData::clear(void) {
     probability = NaN;
 }
 
+/* Verifies that the MsgType does not have data values NaN that it shouldn't have */
 bool SerialData::verify(void) {
 	switch (kind) {
 	case MsgType::drive:
@@ -171,5 +185,6 @@ bool SerialData::verify(void) {
 	}
 	return true;
 }
+
 
 } // namespace elcano
