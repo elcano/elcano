@@ -52,6 +52,7 @@ const int softwareRx = 7;   // not used
 // If so, it should be moved to Settings.h.
 #define s7s Serial2
 Servo STEER_SERVO;
+Servo BRAKE_SERVO;
 
 // 10 milliseconds -- adjust to accomodate the fastest needed response or
 // sensor data capture.
@@ -256,7 +257,7 @@ void ISR_MOTOR_FEEDBACK_rise() {
 void setup()
 { //Set up pins
   STEER_SERVO.attach(STEER_OUT_PIN);
-  pinMode(BRAKE_OUT_PIN, OUTPUT);
+  BRAKE_SERVO.attach(BRAKE_OUT_PIN);
 
   // SPI: set the slaveSelectPin as an output:
   pinMode (SelectAB, OUTPUT);
@@ -299,23 +300,10 @@ void setup()
         attachInterrupt(digitalPinToInterrupt(IRPT_BRAKE), ISR_BRAKE_rise, RISING);//left stick u/d mode select
 //        attachInterrupt(digitalPinToInterrupt(IRPT_MOTOR_FEEDBACK), ISR_MOTOR_FEEDBACK_rise, RISING);
   long unsigned state = 0;
-  //cycleBrake();
+  moveFixedDistance(300, 15);
 }
 
-// for testing purposes
-void cycleBrake()
-{
-  while(true)
-  {
-    analogWrite(BRAKE_OUT_PIN, MAX_BRAKE_OUT);
-    brake(200);
-    Serial.println("ON");
-    delay(1000);
-    analogWrite(BRAKE_OUT_PIN, MIN_BRAKE_OUT);
-    brake(190);
-    delay(1000);
-  }
-}
+
 
 /*---------------------------------------------------------------------------------------*/
 
@@ -332,7 +320,7 @@ unsigned long delayTime;
 SerialData Results;
 
 void loop() {
-  Serial.println(String(RC_elapsed[RC_GO]) + " " + String(RC_elapsed[RC_BRAKE]) + " " + String(RC_elapsed[RC_TURN]));
+//  moveFixedDistance(300, 15);
   computeSpeed(&history);
   // Get the next loop start time. Note this (and the millis() counter) will
   // roll over back to zero after they exceed the 32-bit size of unsigned long,
@@ -578,7 +566,10 @@ void moveFixedDistance(double length_m, double desiredSpeed){
     Throttle_PID(desiredSpeed - history.currentSpeed_kmPh);
     Serial.println(distance);
   }
+  brake(true);
   moveVehicle(0);
+  delay(1000);
+  brake(false);
 }
 
 // @ToDo: Q: What do the expressions "1st pulse", etc. mean? Is this a
@@ -799,10 +790,16 @@ int convertBrake(unsigned long amount){
   return result;
 }
 /*---------------------------------------------------------------------------------------*/
-void brake (int amount)
+//void brake (int amount)
+//{
+//  BRAKE_SERVO.writeMicroseconds(amount);
+//  brake_control = amount;
+//}
+
+//sets brake to max if true, min otherwise
+void brake(bool on)
 {
-  analogWrite(BRAKE_OUT_PIN, amount);
-  brake_control = amount;
+  BRAKE_SERVO.writeMicroseconds(on ? MAX_BRAKE_OUT : MIN_BRAKE_OUT);
 }
 /*---------------------------------------------------------------------------------------*/
 /* DAC_Write applies value to address, producing an analog voltage.
@@ -1262,7 +1259,8 @@ void Throttle_PID(long error_speed_mmPs)
     brake_control -= brake_increase;
     if (brake_control > MAX_BRAKE_OUT)
       brake_control = MAX_BRAKE_OUT;
-    brake(brake_control);
+//    brake(brake_control);
+    brake(true);
   }
   else if (PID_error < speed_tolerance_mmPs)
   { // too slow
@@ -1277,7 +1275,8 @@ void Throttle_PID(long error_speed_mmPs)
     brake_control += brake_decrease;
     if (brake_control < MIN_BRAKE_OUT)
       brake_control = MIN_BRAKE_OUT;
-    brake(brake_control);
+//    brake(brake_control);
+    brake(false);
   }
   // else maintain current speed
 }
