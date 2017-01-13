@@ -300,7 +300,7 @@ void setup()
         attachInterrupt(digitalPinToInterrupt(IRPT_BRAKE), ISR_BRAKE_rise, RISING);//left stick u/d mode select
 //        attachInterrupt(digitalPinToInterrupt(IRPT_MOTOR_FEEDBACK), ISR_MOTOR_FEEDBACK_rise, RISING);
   long unsigned state = 0;
-  moveFixedDistance(300, 15);
+  brake(false);
 }
 
 
@@ -320,7 +320,7 @@ unsigned long delayTime;
 SerialData Results;
 
 void loop() {
-//  moveFixedDistance(300, 15);
+  brake(false);
   computeSpeed(&history);
   // Get the next loop start time. Note this (and the millis() counter) will
   // roll over back to zero after they exceed the 32-bit size of unsigned long,
@@ -616,22 +616,20 @@ boolean isAutomatic(){
 void doAutoMovement(){
   if(RC_elapsed[RC_BRAKE] > TICK1 - TICK_DEADZONE && RC_elapsed[RC_BRAKE] < TICK1 + TICK_DEADZONE)
   {
-    long unsigned state = 0;
     Serial.println("AT TICK 1");
     delay(1000); // delay and if statement ensure that the remote wasn't simply going past the tick
     if(RC_elapsed[RC_BRAKE] > TICK1 - TICK_DEADZONE && RC_elapsed[RC_BRAKE] < TICK1 + TICK_DEADZONE)
     {
-      circleRoutine(1, state);
-      Serial.println("Tick 1");
+      moveFixedDistance(300, 15);
     }
   }
   else if(RC_elapsed[RC_BRAKE] > TICK2 - TICK_DEADZONE && RC_elapsed[RC_BRAKE] < TICK2 + TICK_DEADZONE){
-    
+    long unsigned state = 0;
     Serial.println("AT TICK 2");
     delay(1000); // delay and if statement ensure that the remote wasn't simply going past the tick
     if(RC_elapsed[RC_BRAKE] > TICK2 - TICK_DEADZONE && RC_elapsed[RC_BRAKE] < TICK2 + TICK_DEADZONE)
     {
-      //square Routine
+      circleRoutine(1, state);
     }
   }
   else if(RC_elapsed[RC_BRAKE] > TICK3 - TICK_DEADZONE && RC_elapsed[RC_BRAKE] < TICK3 + TICK_DEADZONE){
@@ -655,7 +653,6 @@ void doManualMovement(){
     //TODO: if less than the middle, reverse, otherwise forward
     if(RC_Done[RC_GO])
     {
-      Serial.println(RC_elapsed[RC_GO]);
       
       if(RC_elapsed[RC_GO] < MIDDLE){
         //moveVehicle(convertThrottle(RC_elapsed[RC_GO]));
@@ -669,8 +666,8 @@ void doManualMovement(){
   //TURN
     if (RC_Done[RC_TURN]) 
     {
-      //Serial.println(String(convertTurn(RC_elapsed[RC_TURN])));
-      //steer(convertTurn(RC_elapsed[RC_TURN]));
+      Serial.println(String(convertTurn(RC_elapsed[RC_TURN])));
+      steer(convertTurn(RC_elapsed[RC_TURN]));
     }
 }
 
@@ -762,7 +759,7 @@ boolean liveBrake(int b)
 // Emergency stop
 void E_Stop()
 {
-  brake(MAX_BRAKE_OUT);
+  brake(true);
   moveVehicle(MIN_ACC_OUT);
   delay (2000);   // inhibit output
   // TO DO: disable 36V power
