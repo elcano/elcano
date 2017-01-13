@@ -35,7 +35,7 @@ VEHICLE_NUMBER to your own new number.
 
 // MIN and MAX BRAKE_OUT set values to be sent to the brake actuator that controls the brakes on the front wheels
 #define MIN_BRAKE_OUT 1300
-#define MAX_BRAKE_OUT 1515
+#define MAX_BRAKE_OUT 1480
 
 // RIGHT, STRAIGHT, and LEFT TURN_OUT set values to be sent to the steer actuator that changes the direction of the front wheels
 #define RIGHT_TURN_OUT 1000
