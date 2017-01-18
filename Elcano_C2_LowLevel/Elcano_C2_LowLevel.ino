@@ -495,34 +495,34 @@ void PrintHeaders()
 // just as C3 will do.
 /*---------------------------------------------------------------------------------------*/
 //circleRoutine
-void circleRoutine(unsigned long seconds, unsigned long &rcAuto) {
-  rcAuto = HIGH;
+void circleRoutine() {
   steer(LEFT_TURN_OUT);
   delay(1000);
   double desiredSpeed = 14;
   moveFixedDistance(TURN_CIRCUMFERENCE_CM, desiredSpeed);
   steer(STRAIGHT_TURN_OUT);
-  rcAuto = LOW;
 }
 
-void figure8Routine(unsigned long seconds){
-
-  // Make a left circleRoutine for 2/3 the circumference
-  steer(LEFT_TURN_OUT);
+void figure8Routine(){
   double desiredSpeed = 14;
-  moveFixedDistance((2/3) * TURN_CIRCUMFERENCE_CM, desiredSpeed);
-
-  // Move straight for 5 m
-  steer(STRAIGHT_TURN_OUT);
-  moveFixedDistance(500, desiredSpeed);
-
-  // Make a right circleRoutine for 2/3 the circumference
-  steer(RIGHT_TURN_OUT);
-  moveFixedDistance((2/3) * TURN_CIRCUMFERENCE_CM, desiredSpeed);
-
-  // Move straight for 5 m
-  steer(STRAIGHT_TURN_OUT);
-  moveFixedDistance(500, desiredSpeed);
+  for(int i = 0; i < 2; i++)
+  {
+    // Make a left circleRoutine for 2/3 the circumference
+    steer(LEFT_TURN_OUT);
+    moveFixedDistance((2/3) * TURN_CIRCUMFERENCE_CM, desiredSpeed);
+  
+    // Move straight for 5 m
+    steer(STRAIGHT_TURN_OUT);
+    moveFixedDistance(500, desiredSpeed);
+  
+    // Make a right circleRoutine for 2/3 the circumference
+    steer(RIGHT_TURN_OUT);
+    moveFixedDistance((2/3) * TURN_CIRCUMFERENCE_CM, desiredSpeed);
+  
+    // Move straight for 5 m
+    steer(STRAIGHT_TURN_OUT);
+    moveFixedDistance(500, desiredSpeed);
+  }
 }
 
 /*---------------------------------------------------------------------------------------*/
@@ -660,7 +660,7 @@ void doAutoMovement(){
     delay(1000); // delay and if statement ensure that the remote wasn't simply going past the tick
     if(RC_elapsed[RC_BRAKE] > TICK2 - TICK_DEADZONE && RC_elapsed[RC_BRAKE] < TICK2 + TICK_DEADZONE)
     {
-      circleRoutine(1, state);
+      circleRoutine();
     }
   }
   else if(RC_elapsed[RC_BRAKE] > TICK3 - TICK_DEADZONE && RC_elapsed[RC_BRAKE] < TICK3 + TICK_DEADZONE){
@@ -669,7 +669,7 @@ void doAutoMovement(){
     delay(1000); // delay and if statement ensure that the remote wasn't simply going past the tick
     if(RC_elapsed[RC_BRAKE] > TICK3 - TICK_DEADZONE && RC_elapsed[RC_BRAKE] < TICK3 + TICK_DEADZONE)
     {
-      //undertirmined Routine
+      figure8Routine();
     }
   }
 }
