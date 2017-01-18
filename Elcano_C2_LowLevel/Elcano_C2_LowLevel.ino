@@ -500,10 +500,31 @@ void circleRoutine(unsigned long seconds, unsigned long &rcAuto) {
   steer(LEFT_TURN_OUT);
   delay(1000);
   double desiredSpeed = 14;
-  moveFixedDistance(500, desiredSpeed);
+  moveFixedDistance(TURN_CIRCUMFERENCE_CM, desiredSpeed);
   steer(STRAIGHT_TURN_OUT);
   rcAuto = LOW;
 }
+
+void figure8Routine(unsigned long seconds){
+
+  // Make a left circleRoutine for 2/3 the circumference
+  steer(LEFT_TURN_OUT);
+  double desiredSpeed = 14;
+  moveFixedDistance((2/3) * TURN_CIRCUMFERENCE_CM, desiredSpeed);
+
+  // Move straight for 5 m
+  steer(STRAIGHT_TURN_OUT);
+  moveFixedDistance(500, desiredSpeed);
+
+  // Make a right circleRoutine for 2/3 the circumference
+  steer(RIGHT_TURN_OUT);
+  moveFixedDistance((2/3) * TURN_CIRCUMFERENCE_CM, desiredSpeed);
+
+  // Move straight for 5 m
+  steer(STRAIGHT_TURN_OUT);
+  moveFixedDistance(500, desiredSpeed);
+}
+
 /*---------------------------------------------------------------------------------------*/
 //squareRoutine
 void squareRoutine(unsigned long sides, unsigned long &rcAuto) {

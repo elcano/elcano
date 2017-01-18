@@ -42,6 +42,8 @@ VEHICLE_NUMBER to your own new number.
 #define LEFT_TURN_OUT 2000
 #define STRAIGHT_TURN_OUT 1500
 
+#define TURN_CIRCUMFERENCE_CM 96 * PI
+
 // Turn sensors are believed if they are in this range while wheels are straight
 // MAX values here are for the safety of the actuator so as not to break/overload it
 #define RIGHT_MIN_COUNT 80
