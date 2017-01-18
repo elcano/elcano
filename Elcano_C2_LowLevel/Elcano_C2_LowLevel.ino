@@ -498,8 +498,10 @@ void PrintHeaders()
 void circleRoutine(unsigned long seconds, unsigned long &rcAuto) {
   rcAuto = HIGH;
   steer(LEFT_TURN_OUT);
+  delay(1000);
   double desiredSpeed = 14;
   moveFixedDistance(500, desiredSpeed);
+  steer(STRAIGHT_TURN_OUT);
   rcAuto = LOW;
 }
 /*---------------------------------------------------------------------------------------*/
@@ -556,6 +558,22 @@ void allStop()
   }
 }
 
+bool checkEbrake()
+{
+    if (RC_Done[RC_ESTP]) //RC_Done determines if the signal from the remote controll is done processing
+  {
+    RC_elapsed[RC_ESTP] = (RC_elapsed[RC_ESTP] > MIDDLE ? HIGH : LOW);
+  
+    if (RC_elapsed[RC_ESTP] == HIGH)
+    {
+      E_Stop();  // already done at interrupt level
+      return true;
+    }
+  }
+  return false;
+}
+
+
 // Moves the vehicle a fixed distance at 14 km/h
 // currently overshoots by about 48 meters
 void moveFixedDistance(double length_m, double desiredSpeed){
@@ -564,6 +582,7 @@ void moveFixedDistance(double length_m, double desiredSpeed){
   while(distance < length_m  + start){  // go until the total distance travaled has increased by the desired distance 
     computeSpeed(&history);
     Throttle_PID(desiredSpeed - history.currentSpeed_kmPh);
+    if(checkEbrake()) break;
     Serial.println(distance);
   }
   brake(true);
@@ -581,16 +600,7 @@ byte processRC()
   boolean autoMode = false; // Once RC_AUTO is implemented, this will default to false
   //ESTOP
   
-  if (RC_Done[RC_ESTP]) //RC_Done determines if the signal from the remote controll is done processing
-  {
-    RC_elapsed[RC_ESTP] = (RC_elapsed[RC_ESTP] > MIDDLE ? HIGH : LOW);
-  
-    if (RC_elapsed[RC_ESTP] == HIGH)
-    {
-      E_Stop();  // already done at interrupt level
-      return 0x00;
-    }
-  }
+  checkEbrake();
   
   autoMode = isAutomatic();
   
