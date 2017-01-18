@@ -49,16 +49,20 @@ void setup() {
         attachInterrupt(digitalPinToInterrupt(IRPT_TURN),  ISR_TURN_rise,  RISING);   // right stick l/r
 //        attachInterrupt(digitalPinToInterrupt(IRPT_RDR),   ISR_RDR_rise,   RISING);   // nothing
         attachInterrupt(digitalPinToInterrupt(IRPT_GO),    ISR_GO_rise,    RISING);   // left stick l/r
-        attachInterrupt(digitalPinToInterrupt(IRPT_ESTOP), ISR_ESTOP_rise, RISING);   // red switch
-//        attachInterrupt(digitalPinToInterrupt(IRPT_RVS),   ISR_RVS_rise,   RISING);   // nothing
+//        attachInterrupt(digitalPinToInterrupt(IRPT_ESTOP), ISR_ESTOP_rise, RISING);   // red switch
+        attachInterrupt(digitalPinToInterrupt(IRPT_RVS),   ISR_RVS_rise,   RISING);   // nothing
         attachInterrupt(digitalPinToInterrupt(IRPT_BRAKE), ISR_BRAKE_rise, RISING);   // left stick u/d
 //        attachInterrupt(digitalPinToInterrupt(IRPT_MOTOR_FEEDBACK), ISR_MOTOR_FEEDBACK_rise, RISING);
 }
 }
 
 void loop() {
-  int i = RC_TURN;
-  Serial.println(RC_elapsed[i]);
+  //auto, 1, left up/down
+  //go, 4, left r/l
+  //turn, 5, right up/down
+  //
+  int i = RC_ESTP;
+  Serial.println( String(RC_elapsed[1]) + " " + String(RC_elapsed[2]) + " " + String(RC_elapsed[3]) + " " + String(RC_elapsed[4]) + " " + String(RC_elapsed[5]) + " " + String(RC_elapsed[6]));
   delay(200);
 }
 

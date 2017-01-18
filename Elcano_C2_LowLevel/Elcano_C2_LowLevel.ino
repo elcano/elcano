@@ -39,8 +39,6 @@ static struct hist {
   // results of every interrupt
 } history;
 
-
-//#include <SoftwareSerial.h>
 // @ToDo: Are these specific to some particular setup or trike? If so,
 // they should be moved to Settings.h.
 // @ToDo: Constants do not need to be stored in memory. They can be #define symbols.
@@ -54,6 +52,7 @@ const int softwareRx = 7;   // not used
 // If so, it should be moved to Settings.h.
 #define s7s Serial2
 Servo STEER_SERVO;
+Servo BRAKE_SERVO;
 
 // 10 milliseconds -- adjust to accomodate the fastest needed response or
 // sensor data capture.
@@ -82,6 +81,7 @@ int Left_Max_Count = 980;
 int Right_Min_Count = 698;
 int Right_Max_Count = 808;
 
+static double distance = 0;
 // RC_rise contains the time value collected in the rising edge interrupts.
 // RC_elapsed contains the width of the pulse. The rise and fall interrupts
 // should alternate.
@@ -257,7 +257,7 @@ void ISR_MOTOR_FEEDBACK_rise() {
 void setup()
 { //Set up pins
   STEER_SERVO.attach(STEER_OUT_PIN);
-  pinMode(BRAKE_OUT_PIN, OUTPUT);
+  BRAKE_SERVO.attach(BRAKE_OUT_PIN);
 
   // SPI: set the slaveSelectPin as an output:
   pinMode (SelectAB, OUTPUT);
@@ -299,7 +299,11 @@ void setup()
         attachInterrupt(digitalPinToInterrupt(IRPT_ESTOP), ISR_ESTOP_rise, RISING);//ebrake
         attachInterrupt(digitalPinToInterrupt(IRPT_BRAKE), ISR_BRAKE_rise, RISING);//left stick u/d mode select
 //        attachInterrupt(digitalPinToInterrupt(IRPT_MOTOR_FEEDBACK), ISR_MOTOR_FEEDBACK_rise, RISING);
+  long unsigned state = 0;
+  brake(false);
 }
+
+
 
 /*---------------------------------------------------------------------------------------*/
 
@@ -316,9 +320,8 @@ unsigned long delayTime;
 SerialData Results;
 
 void loop() {
-
+  brake(false);
   computeSpeed(&history);
-  
   // Get the next loop start time. Note this (and the millis() counter) will
   // roll over back to zero after they exceed the 32-bit size of unsigned long,
   // which happens after about 1.5 months of operation (should check this).
@@ -326,7 +329,7 @@ void loop() {
   // using the micros() counter.
   // If the new nextTime value is <= LOOP_TIME_MS, we've rolled over.
   nextTime = nextTime + LOOP_TIME_MS;
-  Throttle_PID(14 - history.currentSpeed_kmPh);
+  //Throttle_PID(14 - history.currentSpeed_kmPh);
   byte automate = processRC();
   // @ToDo: Verify that this should be conditional. May be moot if it is
   // replaced in the conversion to the new Elcano Serial protocol.
@@ -485,23 +488,63 @@ void PrintHeaders()
   Serial.println("(m) Distance");
 }
 
-// @ToDo: Remove all code that does not directly pertain to the actual
-// operation of the low-level controller. If we want to execute a pattern
-// of movement as a test, put this in a separate module, running on a
-// separate Arduino, and have that *send in commands* over the serial line
-// just as C3 will do.
-/*---------------------------------------------------------------------------------------*/
-//circleRoutine
-void circleRoutine(unsigned long seconds, unsigned long &rcAuto) {
-  rcAuto = HIGH;
 
-  SerialData command;
-  command.kind = MsgType::drive;
-  command.speed_cmPs = 100;
-  command.angle_deg = TURN_MAX_DEG;
-  processHighLevel(&command);
-  rcAuto = LOW;
+
+// Moves the vehicle a fixed distance at 14 km/h
+// currently overshoots by about 48 meters
+bool moveFixedDistance(double length_m, double desiredSpeed){
+  if(length_m < 0) length_m = 0;        // ensures a negative value isn't given, as this will cause an infinite loop
+  double start = distance;
+  while(distance < length_m  + start){  // go until the total distance travaled has increased by the desired distance 
+    computeSpeed(&history);
+    Throttle_PID(desiredSpeed - history.currentSpeed_kmPh);
+    if(checkEbrake()) return false;
+    Serial.println(distance);
+  }
+  brake(true);
+  moveVehicle(0);
+  delay(1000);
+  brake(false);
+  return true;
 }
+
+
+//circleRoutine
+void circleRoutine() {
+  steer(LEFT_TURN_OUT);
+  delay(1000);
+  double desiredSpeed = 14;
+  moveFixedDistance(TURN_CIRCUMFERENCE_CM, desiredSpeed);
+  steer(STRAIGHT_TURN_OUT);
+}
+
+void figure8Routine(){
+  Serial.println("RUNNING FIGURE 8");
+  double desiredSpeed = 14;
+  for(int i = 0; i < 2; i++)
+  {
+    // Make a left circleRoutine for 2/3 the circumference
+    steer(LEFT_TURN_OUT);
+    delay(1000);
+    if(!moveFixedDistance((2/3.0) * TURN_CIRCUMFERENCE_CM, desiredSpeed)) break;
+  
+    // Move straight for 5 m
+    steer(STRAIGHT_TURN_OUT);
+    delay(1000);
+    if(!moveFixedDistance(50, desiredSpeed)) break;
+  
+    // Make a right circleRoutine for 2/3 the circumference
+    steer(RIGHT_TURN_OUT);
+    delay(1000);
+    if(!moveFixedDistance((2/3.0) * TURN_CIRCUMFERENCE_CM, desiredSpeed)) break;
+  
+    // Move straight for 5 m
+    steer(STRAIGHT_TURN_OUT);
+    delay(1000);
+    if(!moveFixedDistance(50, desiredSpeed)) break;
+  }
+}
+
 /*---------------------------------------------------------------------------------------*/
 //squareRoutine
 void squareRoutine(unsigned long sides, unsigned long &rcAuto) {
@@ -543,6 +586,35 @@ void squareRoutine(unsigned long sides, unsigned long &rcAuto) {
   rcAuto = LOW;
 }
 
+// Turns the wheels straight and stops the vehicle
+// Will not work correctly until wheel with built in speedometer is installed
+void allStop()
+{
+  steer(STRAIGHT_TURN_OUT);
+  while(history.currentSpeed_kmPh > .01) // error of .01 kmph
+  {
+    computeSpeed(&history);
+    Serial.println(history.currentSpeed_kmPh);
+    Throttle_PID(0 - history.currentSpeed_kmPh);
+  }
+}
+
+bool checkEbrake()
+{
+    if (RC_Done[RC_ESTP]) //RC_Done determines if the signal from the remote controll is done processing
+  {
+    RC_elapsed[RC_ESTP] = (RC_elapsed[RC_ESTP] > MIDDLE ? HIGH : LOW);
+  
+    if (RC_elapsed[RC_ESTP] == HIGH)
+    {
+      E_Stop();  // already done at interrupt level
+      return true;
+    }
+  }
+  return false;
+}
+
+
 // @ToDo: Q: What do the expressions "1st pulse", etc. mean? Is this a
 // leftover from trying to combine the RC controls into a single stream?
 /*---------------------------------------------------------------------------------------*/
@@ -551,16 +623,8 @@ byte processRC()
   //RC_TURN, RC_ESTOP, RC_BRAKE, RC_AUTO
   boolean autoMode = false; // Once RC_AUTO is implemented, this will default to false
   //ESTOP
-  if (RC_Done[RC_ESTP]) //RC_Done determines if the signal from the remote controll is done processing
-  {
-    RC_elapsed[RC_ESTP] = (RC_elapsed[RC_ESTP] > MIDDLE ? HIGH : LOW);
   
-    if (RC_elapsed[RC_ESTP] == HIGH)
-    {
-      E_Stop();  // already done at interrupt level
-      return 0x00;
-    }
-  }
+  checkEbrake();
   
   autoMode = isAutomatic();
   
@@ -586,21 +650,20 @@ boolean isAutomatic(){
 void doAutoMovement(){
   if(RC_elapsed[RC_BRAKE] > TICK1 - TICK_DEADZONE && RC_elapsed[RC_BRAKE] < TICK1 + TICK_DEADZONE)
   {
-    long unsigned state = 0;
     Serial.println("AT TICK 1");
     delay(1000); // delay and if statement ensure that the remote wasn't simply going past the tick
     if(RC_elapsed[RC_BRAKE] > TICK1 - TICK_DEADZONE && RC_elapsed[RC_BRAKE] < TICK1 + TICK_DEADZONE)
     {
-      circleRoutine(1, state);
+      moveFixedDistance(300, 15);
     }
   }
   else if(RC_elapsed[RC_BRAKE] > TICK2 - TICK_DEADZONE && RC_elapsed[RC_BRAKE] < TICK2 + TICK_DEADZONE){
-    
+    long unsigned state = 0;
     Serial.println("AT TICK 2");
     delay(1000); // delay and if statement ensure that the remote wasn't simply going past the tick
     if(RC_elapsed[RC_BRAKE] > TICK2 - TICK_DEADZONE && RC_elapsed[RC_BRAKE] < TICK2 + TICK_DEADZONE)
     {
-      //square Routine
+      circleRoutine();
     }
   }
   else if(RC_elapsed[RC_BRAKE] > TICK3 - TICK_DEADZONE && RC_elapsed[RC_BRAKE] < TICK3 + TICK_DEADZONE){
@@ -609,7 +672,7 @@ void doAutoMovement(){
     delay(1000); // delay and if statement ensure that the remote wasn't simply going past the tick
     if(RC_elapsed[RC_BRAKE] > TICK3 - TICK_DEADZONE && RC_elapsed[RC_BRAKE] < TICK3 + TICK_DEADZONE)
     {
-      //undertirmined Routine
+      figure8Routine();
     }
   }
 }
@@ -624,14 +687,22 @@ void doManualMovement(){
     //TODO: if less than the middle, reverse, otherwise forward
     if(RC_Done[RC_GO])
     {
-        moveVehicle(convertThrottle(RC_elapsed[RC_GO]));
+      
+      if(RC_elapsed[RC_GO] < MIDDLE){
+        //moveVehicle(convertThrottle(RC_elapsed[RC_GO]));
+      }
+      else{
+        // apply brakes or reverse
+      }
+      //Serial.println(RC_elapsed[RC_GO]);
+      //moveVehicle(convertThrottle(RC_elapsed[RC_GO]));
     }
   //TURN
-//    if (RC_Done[RC_TURN]) 
-//    {
-//      Serial.println(String(convertTurn(RC_elapsed[RC_TURN])));
-//      steer(convertTurn(RC_elapsed[RC_TURN]));
-//    }
+    if (RC_Done[RC_TURN]) 
+    {
+      Serial.println(String(convertTurn(RC_elapsed[RC_TURN])));
+      steer(convertTurn(RC_elapsed[RC_TURN]));
+    }
 }
 
 /*---------------------------------------------------------------------------------------*/
@@ -722,7 +793,7 @@ boolean liveBrake(int b)
 // Emergency stop
 void E_Stop()
 {
-  brake(MAX_BRAKE_OUT);
+  brake(true);
   moveVehicle(MIN_ACC_OUT);
   delay (2000);   // inhibit output
   // TO DO: disable 36V power
@@ -750,10 +821,16 @@ int convertBrake(unsigned long amount){
   return result;
 }
 /*---------------------------------------------------------------------------------------*/
-void brake (int amount)
+//void brake (int amount)
+//{
+//  BRAKE_SERVO.writeMicroseconds(amount);
+//  brake_control = amount;
+//}
+
+//sets brake to max if true, min otherwise
+void brake(bool on)
 {
-  analogWrite(BRAKE_OUT_PIN, amount);
-  brake_control = amount;
+  BRAKE_SERVO.writeMicroseconds(on ? MAX_BRAKE_OUT : MIN_BRAKE_OUT);
 }
 /*---------------------------------------------------------------------------------------*/
 /* DAC_Write applies value to address, producing an analog voltage.
@@ -993,7 +1070,9 @@ void computeSpeed(struct hist *data){
     data->tickMillis = millis();
     
     data->currentSpeed_kmPh = SpeedCyclometer_mmPs/260.0;
-    Serial.println(String(data->currentSpeed_kmPh));
+    distance += ((data -> oldTime_ms - data -> olderTime_ms)/1000.0) * (data -> oldSpeed_mmPs)/100;
+    //distance /= (1000.0 * 1000.0);
+
     if(data->TickTime_ms-data->OldTick_ms > 1000) data->currentSpeed_kmPh = 0;
     return;
   }
@@ -1211,7 +1290,8 @@ void Throttle_PID(long error_speed_mmPs)
     brake_control -= brake_increase;
     if (brake_control > MAX_BRAKE_OUT)
       brake_control = MAX_BRAKE_OUT;
-    brake(brake_control);
+//    brake(brake_control);
+    brake(true);
   }
   else if (PID_error < speed_tolerance_mmPs)
   { // too slow
@@ -1226,7 +1306,8 @@ void Throttle_PID(long error_speed_mmPs)
     brake_control += brake_decrease;
     if (brake_control < MIN_BRAKE_OUT)
       brake_control = MIN_BRAKE_OUT;
-    brake(brake_control);
+//    brake(brake_control);
+    brake(false);
   }
   // else maintain current speed
 }
