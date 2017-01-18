@@ -504,24 +504,29 @@ void circleRoutine() {
 }
 
 void figure8Routine(){
+  Serial.println("RUNNING FIGURE 8");
   double desiredSpeed = 14;
   for(int i = 0; i < 2; i++)
   {
     // Make a left circleRoutine for 2/3 the circumference
     steer(LEFT_TURN_OUT);
-    moveFixedDistance((2/3) * TURN_CIRCUMFERENCE_CM, desiredSpeed);
+    delay(500);
+    if(!moveFixedDistance((2/3) * TURN_CIRCUMFERENCE_CM, desiredSpeed)) break;
   
     // Move straight for 5 m
     steer(STRAIGHT_TURN_OUT);
-    moveFixedDistance(500, desiredSpeed);
+    delay(500);
+    if(!moveFixedDistance(50, desiredSpeed)) break;
   
     // Make a right circleRoutine for 2/3 the circumference
     steer(RIGHT_TURN_OUT);
-    moveFixedDistance((2/3) * TURN_CIRCUMFERENCE_CM, desiredSpeed);
+    delay(500);
+    if(!moveFixedDistance((2/3) * TURN_CIRCUMFERENCE_CM, desiredSpeed)) break;
   
     // Move straight for 5 m
     steer(STRAIGHT_TURN_OUT);
-    moveFixedDistance(500, desiredSpeed);
+    delay(500);
+    if(!moveFixedDistance(50, desiredSpeed)) break;
   }
 }
 
@@ -597,19 +602,20 @@ bool checkEbrake()
 
 // Moves the vehicle a fixed distance at 14 km/h
 // currently overshoots by about 48 meters
-void moveFixedDistance(double length_m, double desiredSpeed){
+bool moveFixedDistance(double length_m, double desiredSpeed){
   if(length_m < 0) length_m = 0;        // ensures a negative value isn't given, as this will cause an infinite loop
   double start = distance;
   while(distance < length_m  + start){  // go until the total distance travaled has increased by the desired distance 
     computeSpeed(&history);
     Throttle_PID(desiredSpeed - history.currentSpeed_kmPh);
-    if(checkEbrake()) break;
+    if(checkEbrake()) return false;
     Serial.println(distance);
   }
   brake(true);
   moveVehicle(0);
   delay(1000);
   brake(false);
+  return true;
 }
 
 // @ToDo: Q: What do the expressions "1st pulse", etc. mean? Is this a
