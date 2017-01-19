@@ -968,9 +968,9 @@ unsigned long MaxTickTime_ms;
 // ((WHEEL_DIAMETER_MM * 3142) / MIN_SPEED_mmPs)
 // MinTickTime_ms = 9239 ms = 9 sec
 
-long SpeedCyclometer_mmPs = 0;
+double SpeedCyclometer_mmPs = 0;
 // Speed in revolutions per second is independent of wheel size.
-float SpeedCyclometer_revPs = 0.0;//revolutions per sec
+double SpeedCyclometer_revPs = 0.0;//revolutions per sec
 
 #define IRQ_NONE 0
 #define IRQ_FIRST 1
