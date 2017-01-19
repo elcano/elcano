@@ -40,10 +40,55 @@ Servo STEER_SERVO;
 
 // 10 milliseconds -- adjust to accomodate the fastest needed response or
 // sensor data capture.
-#define LOOP_TIME_MS 10
+#define LOOP_TIME_MS 50
 #define ERROR_HISTORY 20 //number of errors to accumulate
 //#define TEN_SECONDS_IN_MICROS 10000000
 #define ULONG_MAX 4294967295
+
+#define SerialOdoOut  Serial3
+#define SerialMonitor Serial
+
+#define MEG 1000000
+#define MAX_SPEED_KPH 50
+#define MAX_SPEED_mmPs   ((MAX_SPEED_KPH * MEG) / 3600)
+// MAX_SPEED_mmPs = 13,888 mm/s = 13.888 m/s
+unsigned long MinTickTime_ms;
+// ((WHEEL_DIAMETER_MM * 3142) / MAX_SPEED_mmPs)
+// MinTickTime_ms = 89 ms
+#define MIN_SPEED_mPh 3000
+// A speed of less than 0.3 KPH is zero.
+unsigned long MaxTickTime_ms;
+// ((WHEEL_DIAMETER_MM * 3142) / MIN_SPEED_mmPs)
+// MinTickTime_ms = 9239 ms = 9 sec
+
+double SpeedCyclometer_mmPs = 0;
+// Speed in revolutions per second is independent of wheel size.
+double SpeedCyclometer_revPs = 0.0;//revolutions per sec
+
+#define IRQ_NONE 0
+#define IRQ_FIRST 1
+#define IRQ_SECOND 2
+#define IRQ_RUNNING 3
+#define NO_DATA 0x7FFFFFFF
+volatile byte InterruptState = IRQ_NONE;  // Tells us if we have initialized.
+volatile byte ClickNumber = 0;         // Used to distinguish old data from new.
+volatile unsigned long TickTime = 0;  // Time from one wheel rotation to the next gives speed.
+volatile unsigned long OldTick = 0;
+
+static struct hist {
+  long olderSpeed_mmPs;  // older data
+  unsigned long olderTime_ms;   // time stamp of older speed
+
+  long oldSpeed_mmPs;  // last data from the interrupt
+  byte oldClickNumber;
+  unsigned long oldTime_ms;  // time stamp of old speed
+
+  byte nowClickNumber;  // situation when we want to display the speed
+  unsigned long nowTime_ms;
+  unsigned long TickTime_ms;  // Tick times are used to compute speeds
+  unsigned long OldTick_ms;   // Tick times may not match time stamps if we don't process
+  // results of every interrupt
+} history;
 
 /*================ReadTurnAngle ================*/
 // @ToDo: Are these specific to a particular trike? If so, move them to Settings.h.
@@ -104,6 +149,20 @@ const unsigned long HubAtZero = 1159448;
 int max_rc = MAX_RC;
 int mid = MIDDLE;
 int min_rc = MIN_RC;
+
+// PID variables
+double PIDThrottleOutput; //used to tell Throttle and Brake what to do as far as acceleration
+double desiredSpeed = 2000.0; //aprox 10kph
+
+//PID update frequency in milliseconds
+#define PID_CALCULATE_TIME 50
+
+double throttleP = .0175;
+double throttleI = .0141;
+double throttleD = .00001;
+
+PID speedPID(&SpeedCyclometer_mmPs, &PIDThrottleOutput, &desiredSpeed, throttleP, throttleI, throttleD, DIRECT);
+
 
 //==========================================================================================
 void ISR_TURN_rise(){
@@ -206,6 +265,7 @@ void ISR_GO_fall() {
   interrupts();
 }
 /*---------------------------------------------------------------------------------------*/
+/*
 // An e-bike hub motor is powered by giving it 3 phase power. This is supplied
 // by the motor controller. The controller needs feeback from the hub.  It
 // receives three feedback signals from the motor, one for each phase.  These
@@ -221,12 +281,15 @@ void ISR_GO_fall() {
 // volts, which exceeds the maximum voltage allowed for Arduino inputs, which
 // is 5.5V.  The signal is cleaned up by an RC low pass filter with R = 1K,
 // C = 100 nF.
+*/
 void ISR_MOTOR_FEEDBACK_rise() {
   noInterrupts();
+  /*
   // This differs from the other interrupt routines since we need the *cycle*
   // duration, not the width of the high pulse.  So here, we get the time from
   // the previous rising edge to the current rising edge.  Q: Are we properly
   // ignoring the first value from all of these interval computations?
+  */
   unsigned long old_phase_rise = RC_rise[RC_MOTOR_FEEDBACK];
   ProcessRiseOfINT(RC_MOTOR_FEEDBACK);
   RC_elapsed[RC_MOTOR_FEEDBACK] = RC_rise[RC_MOTOR_FEEDBACK] - old_phase_rise;
@@ -273,7 +336,7 @@ void setup()
     speed_errors[i] = 0;
   }
 
-  //setupWheelRev(); // WheelRev4 addition
+  setupWheelRev(); // WheelRev4 addition
   CalibrateTurnAngle(32, 20);
   calibrationTime_ms = millis();
   
@@ -301,12 +364,14 @@ unsigned long delayTime;
 SerialData Results;
 
 void loop() {
+  /*
   // Get the next loop start time. Note this (and the millis() counter) will
   // roll over back to zero after they exceed the 32-bit size of unsigned long,
   // which happens after about 1.5 months of operation (should check this).
   // But leave the overflow computation in place, in case we need to go back to
   // using the micros() counter.
   // If the new nextTime value is <= LOOP_TIME_MS, we've rolled over.
+  */
   nextTime = nextTime + LOOP_TIME_MS;
 
   byte automate = processRC();
@@ -316,6 +381,8 @@ void loop() {
   {
     processHighLevel(&Results);
   }
+
+  ThrottlePID();
 
   // @ToDo: What is this doing?
   //Results.clear();
@@ -338,44 +405,53 @@ void loop() {
 
   // @ToDo: What information do we need to send to C6? Is that communication already
   // hiding in here somewhere, or does it need to be added?
-
+  /*
   // Figure out how long we need to wait to reach the desired end time
   // for this loop pass. First, get the actual end time. Note: Beyond this
   // point, there should be *no* more controller activity -- we want
   // minimal time between now, when we capture the actual loop end time,
   // and when we pause til the desired loop end time.
+  */
   endTime = millis();
   delayTime = 0L;
-
+  /*
   // Did the millis() counter or nextTime overflow and roll over during
   // this loop pass? Did the loop's processing time overrun the desired
   // loop period? We have different computations for the delay time in
   // various cases:
+  */
   if ((nextTime >= endTime) &&
       (((endTime < LOOP_TIME_MS) && (nextTime < LOOP_TIME_MS)) ||
        ((endTime >= LOOP_TIME_MS) && (nextTime >= LOOP_TIME_MS)))) {
+    /*
     // 1) Neither millis() nor nextTime rolled over --or-- millis() rolled
     // over *and* nextTime rolled over when we incremented it. For this case,
     // endTime and nextTime will be in their usual relationship, with
     // nextTime >= endTime, and both nextTime and endTime are either greater
     // than the desired loop period, or both are smaller than that.
     // In this case, we want a delayTime of nextTime - endTime here.
+    */
     delayTime = nextTime - endTime;
   } else {
+    /*
     // (We get here if:
     // nextTime < endTime -or- exactly one of nextTime or endTime rolled over.
     // Negate the first if condition and use DeMorgan's laws...
     // Now pick out the "nextTime rolled over" case. We don't need to test both
     // nextTime and endTime as we know only one rolled over.)
+    */
     if (nextTime < LOOP_TIME_MS) {
+      /*
       // 2) nextTime rolled over when we incremented it, but the millis() timer
       // hasn't yet rolled over.
       // In this case, we know we didn't exhaust the loop time, and the time we
       // need to wait is the remaining time til millis() will roll over, i.e.
       // from endTime until the max long value, plus the time from zero to
       // nextTime.
+      */
       delayTime = ULONG_MAX - endTime + nextTime;
     } else {
+      /*
       // (We get here if:
       // nextTime < endTime -or-
       // nextTime >= endTime -and- nextTime did not roll over but endTime did.)
@@ -387,6 +463,7 @@ void loop() {
       // loop period.
       // In this case, we have no delay, but instead extend the allowed time for
       // this loop pass to the actual time it took.
+      */
       nextTime = endTime;
       delayTime = 0L;
     }
@@ -500,6 +577,7 @@ void PrintHeaders (void)
 // separate Arduino, and have that *send in commands* over the serial line
 // just as C3 will do.
 /*---------------------------------------------------------------------------------------*/
+// @ToDo: Fix routines to work with new PID control system.
 //circleRoutine
 void circleRoutine(unsigned long seconds, unsigned long &rcAuto) {
   rcAuto = HIGH;
@@ -514,6 +592,7 @@ void circleRoutine(unsigned long seconds, unsigned long &rcAuto) {
   rcAuto = LOW;
 }
 /*---------------------------------------------------------------------------------------*/
+// @ToDo: Fix routines to work with new PID control system.
 //squareRoutine
 void squareRoutine(unsigned long sides, unsigned long &rcAuto) {
   Serial.println("Starting square routine...");
@@ -557,6 +636,7 @@ void squareRoutine(unsigned long sides, unsigned long &rcAuto) {
 
 // @ToDo: Remove all obsolete code.
 ///*---------------------------------------------------------------------------------------*/
+/*
 ////done in setup, calibrate RC values for MIDDLE, MIN_RC, and MAX_RC at startup
 //void calibrateRC(unsigned long mic) {
 //
@@ -596,6 +676,7 @@ void squareRoutine(unsigned long sides, unsigned long &rcAuto) {
 //  Serial.println(max_rc);
 //  //digitalWrite(LED_PIN_OUT, LOW);
 //}
+*/
 
 // @ToDo: Q: What do the expressions "1st pulse", etc. mean? Is this a
 // leftover from trying to combine the RC controls into a single stream?
@@ -677,17 +758,16 @@ byte processRC (){
   // the "routine" nor "live" positions, we want to stop.
   if (liveThrottle(RC_elapsed[RC_GO])){
     // Here, the throttle is in a "live" position.
-    int going = convertThrottle(RC_elapsed[RC_GO]);
-    moveVehicle(going);
+    desiredSpeed = convertThrottle(RC_elapsed[RC_GO]);
   }
   else if(doRoutine(RC_elapsed[RC_GO])){
-    moveVehicle(MIN_ACC_OUT);
+    desiredSpeed = MIN_ACC_OUT;
     unsigned long autoB = RC_elapsed[RC_AUTO];
     circleRoutine(5, autoB);
     RC_elapsed[RC_AUTO] = autoB;
   }
   else {
-    moveVehicle(MIN_ACC_OUT);
+    desiredSpeed = MIN_ACC_OUT;
     }
 
   if (RC_Done[RC_TURN]) {
@@ -715,7 +795,7 @@ void processHighLevel(SerialData * results)
   steer(turn_signal);
   //End Steer
   //Throttle
-  Throttle_PID(10*results->speed_cmPs);
+  desiredSpeed = (double)results->speed_cmPs;
   //End Throttle
 //  results->write(&Serial3);
 }
@@ -788,17 +868,16 @@ int convertDeg(int deg)
   return result;
 }
 /*---------------------------------------------------------------------------------------*/
-int convertThrottle(int input)
+double convertThrottle(int input)
 {
   //full throttle = 227, min = 40
   const int dacRange = MAX_ACC_OUT - MIN_ACC_OUT;
   const int rcRange = MAX_RC - (MIDDLE + DEAD_ZONE);
   input -= (MIDDLE + DEAD_ZONE);
-  double output = (double)input / (double)rcRange;
+  double trueOut = (double)input / (double)rcRange;
   output *= dacRange;
   output += MIN_ACC_OUT;
   //set max values if out of range
-  int trueOut = (int)output;
   if (trueOut > MAX_ACC_OUT)
     trueOut = MAX_ACC_OUT;
   return trueOut;
@@ -828,6 +907,7 @@ void E_Stop()
 {
   brake(MAX_BRAKE_OUT);
   moveVehicle(MIN_ACC_OUT);
+  desiredSpeed = MIN_ACC_OUT;
   delay (2000);   // inhibit output
   // TO DO: disable 36V power
 }
@@ -937,7 +1017,7 @@ void moveVehicle(int acc)
     255 counts = 4.08 V
   */
   DAC_Write(DAC_CHANNEL, acc);
-  throttle_control = acc;    // post most recent throttle.
+//  throttle_control = acc;    // post most recent throttle.
 }
 
 /*========================================================================/
@@ -952,54 +1032,10 @@ void moveVehicle(int acc)
    This routine computes the speed.
 */
 
-#define SerialOdoOut  Serial3
-#define SerialMonitor Serial
 
-#define MEG 1000000
-#define MAX_SPEED_KPH 50
-#define MAX_SPEED_mmPs   ((MAX_SPEED_KPH * MEG) / 3600)
-// MAX_SPEED_mmPs = 13,888 mm/s = 13.888 m/s
-unsigned long MinTickTime_ms;
-// ((WHEEL_DIAMETER_MM * 3142) / MAX_SPEED_mmPs)
-// MinTickTime_ms = 89 ms
-#define MIN_SPEED_mPh 3000
-// A speed of less than 0.3 KPH is zero.
-unsigned long MaxTickTime_ms;
-// ((WHEEL_DIAMETER_MM * 3142) / MIN_SPEED_mmPs)
-// MinTickTime_ms = 9239 ms = 9 sec
-
-double SpeedCyclometer_mmPs = 0;
-// Speed in revolutions per second is independent of wheel size.
-double SpeedCyclometer_revPs = 0.0;//revolutions per sec
-
-#define IRQ_NONE 0
-#define IRQ_FIRST 1
-#define IRQ_SECOND 2
-#define IRQ_RUNNING 3
-#define NO_DATA 0x7FFFFFFF
-volatile byte InterruptState = IRQ_NONE;  // Tells us if we have initialized.
-volatile byte ClickNumber = 0;         // Used to distinguish old data from new.
-volatile unsigned long TickTime = 0;  // Time from one wheel rotation to the next gives speed.
-volatile unsigned long OldTick = 0;
-
-static struct hist {
-  long olderSpeed_mmPs;  // older data
-  unsigned long olderTime_ms;   // time stamp of older speed
-
-  long oldSpeed_mmPs;  // last data from the interrupt
-  byte oldClickNumber;
-  unsigned long oldTime_ms;  // time stamp of old speed
-
-  byte nowClickNumber;  // situation when we want to display the speed
-  unsigned long nowTime_ms;
-  unsigned long TickTime_ms;  // Tick times are used to compute speeds
-  unsigned long OldTick_ms;   // Tick times may not match time stamps if we don't process
-  // results of every interrupt
-} history;
 
 /*---------------------------------------------------------------------------------------*/
 // WheelRev is called by an interrupt.
-// This is all WAY TOO LONG for an interrupt
 void WheelRev()
 {
   //static int flip = 0;
@@ -1061,6 +1097,7 @@ void setupWheelRev()
   ClickNumber = 0;
   history.oldSpeed_mmPs = history.olderSpeed_mmPs = NO_DATA;
 
+  speedPID.SetMode(AUTOMATIC); //initializes PID controller and allows it to run Compute
   attachInterrupt (digitalPinToInterrupt(IRPT_WHEEL), WheelRev, RISING);//pin 3 on Mega
   //    SerialMonitor.print("TickTime: ");
   //    SerialMonitor.print(TickTime);
@@ -1160,15 +1197,7 @@ void computeSpeed(struct hist *data){
 void PrintSpeed( struct hist *data)
 {
   Serial.print(SpeedCyclometer_mmPs); Serial.print("\t");
-  Serial.print(data->oldSpeed_mmPs); Serial.print("\t");
-  Serial.print(data->olderSpeed_mmPs); Serial.print("\t");
-  Serial.print(data->oldClickNumber); Serial.print("\t");
-  Serial.print(data->nowClickNumber); Serial.print("\t");
-  Serial.print(data->olderTime_ms); Serial.print("\t");
-  Serial.print(data->oldTime_ms); Serial.print("\t");
-  Serial.print(data->nowTime_ms); Serial.print("\t");
-  Serial.print(data->TickTime_ms); Serial.print("\t");
-  Serial.println(data->OldTick_ms);
+  Serial.println();
 }
 /*---------------------------------------------------------------------------------------*/
 void show_speed(SerialData *Results)
@@ -1304,7 +1333,26 @@ int TurnAngle_degx10()
 }
 /*---------------------------------------------------------------------------------------*/
 // @ToDo: Is this a work in progress?
-void newThrottlePID(){
+void ThrottlePID(){
+  
+  speedPID.Compute();
+
+  Serial.print("Throttle out value ");
+  Serial.println(PIDThrottleOutput);
+  int throttleControl = (int)PIDThrottleOutput;
+
+  //apply control value to vehicle
+  moveVehicle(throttleControl);
+
+  if(PIDThrottleOutput == MIN_ACC_OUT){
+    //apply brakes
+    //brake(MAX_BRAKE_OUT);
+  }
+  else{
+    //brake(MIN_BRAKE_OUT);
+  }
+  
+  return;
   
 }
 
