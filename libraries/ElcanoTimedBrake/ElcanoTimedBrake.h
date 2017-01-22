@@ -18,6 +18,13 @@
  *
  *	See timedBrakeGuide.md or timedBrakeGuide.pdf for information
  *	on how to use this library
+ *
+ *	TODO: 
+ *	- CALIBRATE
+ *	- make a queue of commands for if a command is given before
+ *    the current one is completed
+ *  - make estop function that will apply brakes regardles of
+ *    commands queue
  */
 
 
@@ -26,15 +33,20 @@
 #ifndef _LIB_
 #define _LIB_
 
+#include <Settings.h>
+
 // THESE NEED TO BE CHANGED TO MATCH THE PINS AVAILABLE
 #define BRAKE_EXTEND 13
 #define BRAKE_RETRACT 12
+#define BRAKE_EXTEND_TIME 4000 // needs to be calibrated
+
 
 namespace elcano
 {
 	// clock speed of arduino mega 16Mhz
 	const long CLOCK_SPEED = 16000000l;
 	
+	volatile static int brakePosition = 0;
 	// stores pin for extending or retracting
 	// for interrupt to know what to write low when done
 	static int extendOrRetract;
@@ -57,6 +69,16 @@ namespace elcano
 	
 	// ensures that the brake is completely retracted then extends to off position
 	// extend time needs to be calibrated
-	void setupBrake();				
+	void setupBrake();
+	
+	// sets brake position based on the time it would take to reach
+	// that position from fully retracted in ms
+	void setBrakePos(int);
+	
+	// sets brakes to the released position as defined by MIN_BRAKE_OUT in Settings.h
+	void releaseBrakes();
+	
+	// sets brakes to the applyed position as defined by MIN_BRAKE_OUT in Settings.h
+	void applyBrakes();
 }
 #endif
