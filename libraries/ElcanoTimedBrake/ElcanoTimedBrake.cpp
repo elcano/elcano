@@ -83,7 +83,7 @@ namespace elcano
 	{
 		retract(4000);
 		delay(5000);
-		extend(500);	// needs to be callibrated
+		extend(MIN_BRAKE_OUT);
 	}
 	
 	// sets brake position based on the time it would take to reach
