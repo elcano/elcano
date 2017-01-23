@@ -7,13 +7,15 @@ void setup()
   pinMode(12, OUTPUT);
   digitalWrite(13, LOW);
   digitalWrite(12, LOW);
-  setupBrake();
-  delay(10000);
-  applyBrakes();
-  delay(1100);
-  releaseBrakes();
+  extend(2000);
+  retract(1000);
+  extend(2000);
+  retract(1000);
+  extend(2000);
+  retract(1000);
+  extend(2000);
+  retract(1000);
 }
-
 void loop() 
 {
 //  Serial.println(brakePosition);  

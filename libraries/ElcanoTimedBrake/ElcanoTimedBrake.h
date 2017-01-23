@@ -34,11 +34,21 @@
 #define _LIB_
 
 #include <Settings.h>
-
 // THESE NEED TO BE CHANGED TO MATCH THE PINS AVAILABLE
 #define BRAKE_EXTEND 13
 #define BRAKE_RETRACT 12
 #define BRAKE_EXTEND_TIME 4000 // needs to be calibrated
+
+struct command
+{
+	int dist = 0;
+	char type = 'N';
+};
+
+// queue of up to 50 commands
+static command commands[50];
+static int numCommands = 0;
+
 
 
 namespace elcano
@@ -80,5 +90,14 @@ namespace elcano
 	
 	// sets brakes to the applyed position as defined by MIN_BRAKE_OUT in Settings.h
 	void applyBrakes();
+	
+	// applys brakes and clears commands queue
+	void estop();
+	
+	// executes next command
+	void doCommand();
+	
+	void retractNoQueue(double);
+	void extendNoQueue(double);
 }
 #endif
