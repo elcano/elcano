@@ -9,9 +9,8 @@
 #include <arduino.h>
 
 
-namespace elcano
+namespace nonofyobuissness
 {
-
 	/*
 	 * input min: .24 hz
 	 * (range may be expandable by adjusing prescaler (currently 1024) based on input)
@@ -71,10 +70,7 @@ namespace elcano
 		commands[0].type = 'E';
 		if(numCommands <= 1)
 		{
-			doCommand();
-			extendOrRetract = BRAKE_EXTEND;
-			digitalWrite(extendOrRetract, HIGH);
-			setupTimerMillis(ms);
+			extendNoQueue(ms);
 		}
 	}
 	
@@ -110,14 +106,6 @@ namespace elcano
 		setupTimerMillis(ms);
 	}
 	
-	// ensures that the brake is completely retracted then extends to off position
-	// extend time needs to be calibrated
-	void setupBrake()
-	{
-		retract(4000);
-		extend(MIN_BRAKE_OUT);
-	}
-	
 	// sets brake position based on the time it would take to reach
 	// that position from fully retracted in ms
 	void setBrakePos(int posMs)
@@ -126,29 +114,8 @@ namespace elcano
 		else if (posMs < brakePosition) retract(brakePosition - posMs);
 	}
 	
-	// sets brakes to the released position as defined by MIN_BRAKE_OUT in Settings.h
-	void releaseBrakes()
-	{
-		setBrakePos(MIN_BRAKE_OUT);
-	}
-	
-	// sets brakes to the applyed position as defined by MIN_BRAKE_OUT in Settings.h
-	void applyBrakes()
-	{
-		setBrakePos(MAX_BRAKE_OUT);
-	}
-	
-	// applys brakes and clears commands queue
-	void estop()
-	{
-		for(int i = 0; i < 50; i++)
-		{
-			commands[i].type = ' ';
-			commands[i].dist = 0;
-			numCommands = 0;
-		}
-		applyBrakes();
-	}
+
+
 	
 	// executes next command
 	void doCommand()
@@ -170,20 +137,61 @@ namespace elcano
 	ISR(TIMER1_COMPA_vect)
 	{
 		noInterrupts();
-		digitalWrite(extendOrRetract, LOW); // whichever pin is moving the brake is set to low
+		digitalWrite(BRAKE_EXTEND, LOW);
+		digitalWrite(BRAKE_RETRACT, LOW);
+		// Serial.println("numCommands = " + String(numCommands));
+		// digitalWrite(extendOrRetract, LOW); // whichever pin is moving the brake is set to low
 		numCommands--;
 		if(commands[numCommands].type == 'R') brakePosition -= commands[numCommands].dist;
 		if(commands[numCommands].type == 'E') brakePosition += commands[numCommands].dist;
 		if(brakePosition > BRAKE_EXTEND_TIME) brakePosition = BRAKE_EXTEND_TIME;
 		if(brakePosition < 0) brakePosition = 0;
-		Serial.print("pos: ");
+		// Serial.print("pos: ");
 		Serial.println(brakePosition);
 		stopTimer();
 		
-		if(numCommands > 0)
+		if(numCommands >= 0)
 		{
 			doCommand();
 		}
 		interrupts();  
+	}
+}
+namespace elcano
+{
+
+	
+	void releaseBrakes()
+	{
+		if(nonofyobuissness::brakePosition != MIN_BRAKE_OUT)
+			nonofyobuissness::setBrakePos(MIN_BRAKE_OUT);
+	}
+	
+	// sets brakes to the applyed position as defined by MIN_BRAKE_OUT in Settings.h
+	void applyBrakes()
+	{
+		if(nonofyobuissness::brakePosition != MAX_BRAKE_OUT)
+			nonofyobuissness::setBrakePos(MAX_BRAKE_OUT);
+	}
+	
+	// ensures that the brake is completely retracted then extends to off position
+	// extend time needs to be calibrated
+	void setupBrake()
+	{
+		nonofyobuissness::retract(4000);
+		nonofyobuissness::extend(MIN_BRAKE_OUT);
+	}
+	
+	
+	// applys brakes and clears commands queue
+	void estop()
+	{
+		for(int i = 0; i < 50; i++)
+		{
+			commands[i].type = ' ';
+			commands[i].dist = 0;
+			numCommands = 0;
+		}
+		applyBrakes();
 	}
 }

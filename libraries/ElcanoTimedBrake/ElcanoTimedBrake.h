@@ -21,10 +21,7 @@
  *
  *	TODO: 
  *	- CALIBRATE
- *	- make a queue of commands for if a command is given before
- *    the current one is completed
- *  - make estop function that will apply brakes regardles of
- *    commands queue
+ 	- Change distance to time
  */
 
 
@@ -35,9 +32,9 @@
 
 #include <Settings.h>
 // THESE NEED TO BE CHANGED TO MATCH THE PINS AVAILABLE
-#define BRAKE_EXTEND 13
-#define BRAKE_RETRACT 12
-#define BRAKE_EXTEND_TIME 4000 // needs to be calibrated
+#define BRAKE_EXTEND 8
+#define BRAKE_RETRACT 6
+#define BRAKE_EXTEND_TIME 2000 // needs to be calibrated
 
 struct command
 {
@@ -51,7 +48,7 @@ static int numCommands = 0;
 
 
 
-namespace elcano
+namespace nonofyobuissness
 {
 	// clock speed of arduino mega 16Mhz
 	const long CLOCK_SPEED = 16000000l;
@@ -77,27 +74,35 @@ namespace elcano
 	// stops interrupt from being called again
 	void stopTimer();				
 	
-	// ensures that the brake is completely retracted then extends to off position
-	// extend time needs to be calibrated
-	void setupBrake();
-	
 	// sets brake position based on the time it would take to reach
 	// that position from fully retracted in ms
 	void setBrakePos(int);
 	
-	// sets brakes to the released position as defined by MIN_BRAKE_OUT in Settings.h
-	void releaseBrakes();
+
 	
-	// sets brakes to the applyed position as defined by MIN_BRAKE_OUT in Settings.h
-	void applyBrakes();
-	
-	// applys brakes and clears commands queue
-	void estop();
+
 	
 	// executes next command
 	void doCommand();
 	
 	void retractNoQueue(double);
 	void extendNoQueue(double);
+	
+}
+	
+namespace elcano
+{
+	// sets brakes to the released position as defined by MIN_BRAKE_OUT in Settings.h
+	void releaseBrakes();
+	
+	// sets brakes to the applyed position as defined by MIN_BRAKE_OUT in Settings.h
+	void applyBrakes();
+	
+	// ensures that the brake is completely retracted then extends to off position
+	// extend time needs to be calibrated
+	void setupBrake();
+	
+	// applys brakes and clears commands queue
+	void estop();
 }
 #endif
