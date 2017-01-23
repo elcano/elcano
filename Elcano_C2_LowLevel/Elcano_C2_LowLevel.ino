@@ -502,10 +502,8 @@ bool moveFixedDistance(double length_m, double desiredSpeed){
     if(checkEbrake()) return false;
     Serial.println(distance);
   }
-  brake(true);
   moveVehicle(0);
   delay(1000);
-  brake(false);
   return true;
 }
 
