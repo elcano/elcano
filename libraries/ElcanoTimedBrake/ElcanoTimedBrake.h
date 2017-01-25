@@ -34,7 +34,8 @@
 // THESE NEED TO BE CHANGED TO MATCH THE PINS AVAILABLE
 #define BRAKE_EXTEND 8
 #define BRAKE_RETRACT 6
-#define BRAKE_EXTEND_TIME 2000 // needs to be calibrated
+// #define BRAKE_EXTEND_TIME 2000 // needs to be calibrated
+#define BRAKE_EXTEND_TIME 10000
 
 struct command
 {
@@ -45,15 +46,13 @@ struct command
 // queue of up to 50 commands
 static command commands[50];
 static int numCommands = 0;
+volatile static int brakePosition = 0;
 
 
-
-namespace nonofyobuissness
+namespace privateMembers
 {
 	// clock speed of arduino mega 16Mhz
 	const long CLOCK_SPEED = 16000000l;
-	
-	volatile static int brakePosition = 0;
 	// stores pin for extending or retracting
 	// for interrupt to know what to write low when done
 	static int extendOrRetract;
