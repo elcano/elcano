@@ -81,7 +81,7 @@ int Left_Max_Count = 980;
 int Right_Min_Count = 698;
 int Right_Max_Count = 808;
 
-static double distance = 0;
+static double distance_m = 0;
 // RC_rise contains the time value collected in the rising edge interrupts.
 // RC_elapsed contains the width of the pulse. The rise and fall interrupts
 // should alternate.
@@ -293,14 +293,11 @@ void setup()
   setupWheelRev(); // WheelRev4 addition
   CalibrateTurnAngle(32, 20);
   calibrationTime_ms = millis();
-  
         attachInterrupt(digitalPinToInterrupt(IRPT_TURN),  ISR_TURN_rise,  RISING);//turn right stick l/r turn
         attachInterrupt(digitalPinToInterrupt(IRPT_GO),    ISR_GO_rise,    RISING);//left stick l/r
         attachInterrupt(digitalPinToInterrupt(IRPT_ESTOP), ISR_ESTOP_rise, RISING);//ebrake
         attachInterrupt(digitalPinToInterrupt(IRPT_BRAKE), ISR_BRAKE_rise, RISING);//left stick u/d mode select
 //        attachInterrupt(digitalPinToInterrupt(IRPT_MOTOR_FEEDBACK), ISR_MOTOR_FEEDBACK_rise, RISING);
-  long unsigned state = 0;
-  brake(false);
 }
 
 
@@ -328,9 +325,7 @@ void loop() {
   // But leave the overflow computation in place, in case we need to go back to
   // using the micros() counter.
   // If the new nextTime value is <= LOOP_TIME_MS, we've rolled over.
-  Throttle_PID(25);
   nextTime = nextTime + LOOP_TIME_MS;
-  //Throttle_PID(14 - history.currentSpeed_kmPh);
   byte automate = processRC();
   // @ToDo: Verify that this should be conditional. May be moot if it is
   // replaced in the conversion to the new Elcano Serial protocol.
@@ -495,12 +490,12 @@ void PrintHeaders()
 // currently overshoots by about 48 meters
 bool moveFixedDistance(double length_m, double desiredSpeed){
   if(length_m < 0) length_m = 0;        // ensures a negative value isn't given, as this will cause an infinite loop
-  double start = distance;
-  while(distance < length_m  + start){  // go until the total distance travaled has increased by the desired distance 
+  double start = distance_m;
+  while(distance_m < length_m  + start){  // go until the total distance travaled has increased by the desired distance 
     computeSpeed(&history);
     Throttle_PID(desiredSpeed - history.currentSpeed_kmPh);
     if(checkEbrake()) return false;
-    Serial.println(distance);
+    Serial.println(distance_m);
   }
   brake(true);
   moveVehicle(0);
@@ -1071,7 +1066,7 @@ void computeSpeed(struct hist *data){
     data->tickMillis = millis();
     
     data->currentSpeed_kmPh = SpeedCyclometer_mmPs/260.0;
-    distance += ((data -> oldTime_ms - data -> olderTime_ms)/1000.0) * (data -> oldSpeed_mmPs)/100;
+    distance_m += ((data -> oldTime_ms - data -> olderTime_ms)/1000.0) * (data -> oldSpeed_mmPs)/1000.0;
     //distance /= (1000.0 * 1000.0);
 
     if(data->TickTime_ms-data->OldTick_ms > 1000) data->currentSpeed_kmPh = 0;
