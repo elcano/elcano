@@ -1,4 +1,5 @@
 #include <ElcanoTimedBrake.h>
+#include <Servo.h>
 using namespace elcano;
 void setup() 
 {
