@@ -3,6 +3,11 @@
 #include <SPI.h>
 #include <Servo.h>
 Servo STEER_SERVO;
+<<<<<<< HEAD
+
+
+=======
+>>>>>>> elcano/master
 
 /*---------------------------------------------------------------------------------------*/
 //Definitions section: Constants and variables specific to sketch, used between methods
@@ -16,10 +21,19 @@ unsigned long MinTickTime_ms;
 #define MIN_SPEED_mPh 3000
 unsigned long MaxTickTime_ms;
 
+<<<<<<< HEAD
+const int SelectCD = 49; // Select IC 3 DAC (channels C and D)
+const int SelectAB = 53; // Select IC 2 DAC (channels A and B)
+
+double SpeedCyclometer_mmPs = 0; //Note: doubles on Arduinos are the same thing as floats, 4bytes, single precision
+// Speed in revolutions per second is independent of wheel size.
+//float SpeedCyclometer_revPs = 0.0;//revolutions per sec
+=======
 // Select IC 3 DAC (channels C and D)
 #define SelectCD 49 
 // Select IC 2 DAC (channels A and B)
 #define SelectAB 53
+>>>>>>> elcano/master
 
 double SpeedCyclometer_mmPs = 0; //Note: doubles on Arduinos are the same thing as floats, 4bytes, single precision
 
@@ -49,86 +63,93 @@ static struct hist {
 
 double PIDThrottleOutput; //used to tell Throttle and Brake what to do as far as acceleration
 double desiredSpeed = 2000.0; //aprox 10kph
-double PIDSteeringOutput; //output from running steerPID.Compute
-double desiredAngle = 2000.0; //aprox 10kph
+<<<<<<< HEAD
+#define PID_CALCULATE_TIME 50
+
+double proportionalConstant = .0180;
+double integralConstant = .0137;
+=======
 
 //PID update frequency in milliseconds
 #define PID_CALCULATE_TIME 50
 
-double throttleP = .0175;
-double throttleI = .0141;
-double throttleD = .00001;
-
-double steeringP = .0175;
-double steeringI = .0141;
-double steeringD = .00001;
+double proportionalConstant = .0175;
+double integralConstant = .0141;
+>>>>>>> elcano/master
+double derivativeConstant = .00001;
 
 // PID setup block
-PID speedPID(&SpeedCyclometer_mmPs, &PIDThrottleOutput, &desiredSpeed, throttleP, throttleI, throttleD, DIRECT);
-PID steerPID(&SpeedCyclometer_mmPs, &PIDSteeringOutput, &desiredSpeed, steeringP, steeringI, steeringD, DIRECT);
+PID speedPID(&SpeedCyclometer_mmPs, &PIDThrottleOutput, &desiredSpeed, proportionalConstant, integralConstant, derivativeConstant, DIRECT);
 
+<<<<<<< HEAD
 
 
 //...................................................................................
 
+=======
+>>>>>>> elcano/master
 void setup(){
   Serial.begin(9600);
   SPI.begin(); 
   speedPID.SetOutputLimits(MIN_ACC_OUT, MAX_ACC_OUT); //useful if we want to change the limits on what values the output can be set to
   speedPID.SetSampleTime(PID_CALCULATE_TIME); //useful if we want to change the compute period
+<<<<<<< HEAD
+  setupWheelRev();
+  //attachInterrupt(digitalPinToInterrupt(IRPT_RDR), ISR_RDR_rise, RISING);
+=======
   
   setupWheelRev();
+>>>>>>> elcano/master
   STEER_SERVO.attach(STEER_OUT_PIN);
   STEER_SERVO.writeMicroseconds(STRAIGHT_TURN_OUT);
 }
 
 void loop(){
+<<<<<<< HEAD
+
+  
+//pass in speed variable in mm per second, range from 1000-7500.
+=======
 //pass in desired speed variable in mm per second, range from 1000-7500.
+>>>>>>> elcano/master
   if (Serial.available() > 0) {
     // get incoming byte:
     desiredSpeed = Serial.parseInt();
     Serial.println(desiredSpeed);
   }
   computeSpeed(&history);
+<<<<<<< HEAD
+  PrintSpeed(history);
+=======
   PrintSpeed();
+>>>>>>> elcano/master
   ThrottlePID();
 //  Serial.print("Int State ");
 //  Serial.println(InterruptState);
 //  Serial.print("Click ");
 //  Serial.println(ClickNumber);
+<<<<<<< HEAD
+  //delay(50); 
+=======
+>>>>>>> elcano/master
 }
 
 void ThrottlePID(){
   
   speedPID.Compute();
 
+<<<<<<< HEAD
+//  Serial.print("Throttle out value ");
+  Serial.print(PIDThrottleOutput);
+  Serial.print("\r\n");
+  int throttleControl = (int)PIDThrottleOutput;
+=======
   Serial.print("Throttle out value ");
   Serial.println(PIDThrottleOutput);
   int throttleControl = (int)PIDThrottleOutput;
 
   //apply control value to vehicle
-  moveVehicle(throttleControl);
-
-  if(PIDThrottleOutput == MIN_ACC_OUT){
-    //apply brakes
-    //brake(MAX_BRAKE_OUT);
-  }
-  else{
-    //brake(MIN_BRAKE_OUT);
-  }
-  
-  return;
-}
-
-void SteeringPID(){
-  
-  speedPID.Compute();
-
-  Serial.print("Throttle out value ");
-  Serial.println(PIDThrottleOutput);
-  int throttleControl = (int)PIDThrottleOutput;
-
-  //apply control value to vehicle
+>>>>>>> elcano/master
   moveVehicle(throttleControl);
 
   if(PIDThrottleOutput == MIN_ACC_OUT){
@@ -143,13 +164,22 @@ void SteeringPID(){
 }
 
 
+<<<<<<< HEAD
+void PrintSpeed(struct hist data)
+{
+  Serial.print(desiredSpeed); Serial.print("\t");
+=======
 void PrintSpeed(){
+>>>>>>> elcano/master
   Serial.print(SpeedCyclometer_mmPs); Serial.print("\t");
 //  Serial.println();
 }
 
+<<<<<<< HEAD
+=======
 //ISR for cyclometer
 //Reads in pulse on interrupt pin, computes time from last pulse
+>>>>>>> elcano/master
 void ISR_RDR_rise(){
   unsigned long tick;
   noInterrupts();
@@ -200,6 +230,10 @@ void setupWheelRev()
   //    SerialMonitor.println(OldTick);
 
   //    SerialMonitor.println("WheelRev setup complete");
+<<<<<<< HEAD
+  
+=======
+>>>>>>> elcano/master
 }
 
 void computeSpeed(struct hist *data){
@@ -211,7 +245,12 @@ void computeSpeed(struct hist *data){
   { // No data
     SpeedCyclometer_mmPs = 0;
     SpeedCyclometer_revPs = 0;
+<<<<<<< HEAD
+//    Serial.print("No compute  ");
+    //Serial.println(*speedCyclo);
+=======
     Serial.print("No compute  ");
+>>>>>>> elcano/master
     return;
   }
   
@@ -283,6 +322,31 @@ void computeSpeed(struct hist *data){
 }
 
 //function updates what should always be updated in every loop of ComputeSpeed
+<<<<<<< HEAD
+void ComputeSpeedHelper(struct hist *data){
+    data->oldTime_ms = data->nowTime_ms;
+    data->nowTime_ms = TickTime;
+    data->oldClickNumber = data->nowClickNumber;
+    data->nowClickNumber = ClickNumber;
+}
+
+void moveVehicle(int acc)
+{
+  /* Observed behavior on ElCano #1 E-bike no load (May 10, 2013, TCF)
+    0.831 V at rest 52 counts
+    1.20 V: nothing 75
+    1.27 V: just starting 79
+    1.40 V: slow, steady 87
+    1.50 V: brisker 94
+    3.63 V: max 227 counts
+    255 counts = 4.08 V
+  */
+
+  DAC_Write(DAC_CHANNEL, acc);
+  //throttle_control = acc;    // post most recent throttle.
+}
+
+=======
 //void ComputeSpeedHelper(struct hist *data){
 //    data->oldTime_ms = data->nowTime_ms;
 //    data->nowTime_ms = TickTime;
@@ -306,6 +370,7 @@ void moveVehicle(int acc)
   //throttle_control = acc;    // post most recent throttle.
 }
 
+>>>>>>> elcano/master
 /*---------------------------------------------------------------------------------------*/
 /* DAC_Write applies value to address, producing an analog voltage.
   // address: 0 for chan A; 1 for chan B; 2 for chan C; 3 for chan D
