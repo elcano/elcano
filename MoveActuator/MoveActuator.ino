@@ -24,9 +24,9 @@
 #include <Servo.h>
 
 // Define the tests to do.
-#define BRAKE_RAMP
+//#define BRAKE_RAMP
 #define STEER_RAMP
-#define MOTOR_RAMP
+//#define MOTOR_RAMP
 // If operating with the MegaShieldDB, we can use the Digital Analog Converter to move the vehicle
 #define DAC
 
@@ -284,15 +284,15 @@ void loop()
 void moveBrake(int i)
 {
      Serial.print ("Brake "); Serial.print (i);
-     Serial.print (" on ");   Serial.print (BRAKE_OUT_PIN); Serial.print("\t"); 
+     Serial.print (" on ");   Serial.print (BRAKE_OUT_PIN); Serial.print("\t");
      analogWrite(BRAKE_OUT_PIN, i);
 }
 /*---------------------------------------------------------------------------------------*/
 void moveSteer(int i)
 {
   Serial.print ("Steer "); Serial.print(i);
-  Serial.print (" on ");   Serial.println (STEER_OUT_PIN);
-  STEER_SERVO.writeMicroseconds(STRAIGHT_TURN_OUT);
+  Serial.print (" on ");   Serial.print (STEER_OUT_PIN); Serial.print("\t");
+  STEER_SERVO.writeMicroseconds(i);
 }
 /*---------------------------------------------------------------------------------------*/
 void outputToSerial()
