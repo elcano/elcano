@@ -22,6 +22,7 @@ unsigned long MaxTickTime_ms;
 #define SelectAB 53
 
 double SpeedCyclometer_mmPs = 0; //Note: doubles on Arduinos are the same thing as floats, 4bytes, single precision
+double SteerAngle_deg = 0; //Note: doubles on Arduinos are the same thing as floats, 4bytes, single precision
 
 //ISR variables for external cyclometer Interrupt Service Routine
 #define IRQ_NONE 0
@@ -58,7 +59,8 @@ double integralConstant = .0141;
 double derivativeConstant = .00001;
 
 // PID setup block
-PID speedPID(&SpeedCyclometer_mmPs, &PIDThrottleOutput, &desiredSpeed, proportionalConstant, integralConstant, derivativeConstant, DIRECT);
+PID speedPID(&SpeedCyclometer_mmPs, &PIDThrottleOutput, &desiredSpeed, throttleP, throttleI, throttleD, DIRECT);
+PID steerPID(&SteerAngle_deg, &PIDSteeringOutput, &desiredAngle, steeringP, steeringI, steeringD, DIRECT);
 
 void setup(){
   Serial.begin(9600);
@@ -75,12 +77,12 @@ void loop(){
 //pass in desired speed variable in mm per second, range from 1000-7500.
   if (Serial.available() > 0) {
     // get incoming byte:
-    desiredSpeed = Serial.parseInt();
-    Serial.println(desiredSpeed);
+    desiredAngle = Serial.parseInt();
+    Serial.println(desiredAngle);
   }
-  computeSpeed(&history);
+  computeAngle();
   PrintSpeed();
-  ThrottlePID();
+  SteeringPID();
 //  Serial.print("Int State ");
 //  Serial.println(InterruptState);
 //  Serial.print("Click ");
@@ -109,11 +111,33 @@ void ThrottlePID(){
   return;
 }
 
+void SteeringPID(){
+  
+  steerPID.Compute();
+
+  Serial.print("Steering out value ");
+  Serial.println(PIDSteeringOutput);
+  int steeringControl = (int)PIDSteeringOutput;
+
+  //apply control value to vehicle
+  moveSteer(steeringControl);
+  
+  return;
+}
+
 
 void PrintSpeed(){
   Serial.print(SpeedCyclometer_mmPs); Serial.print("\t");
   Serial.println();
 }
+
+void PrintSpeed(){
+  Serial.print(SteerAngle_deg); Serial.print("\t");
+  Serial.print(analogRead(A2)); Serial.print("\t");
+  Serial.print(analogRead(A3)); Serial.print("\t");
+  Serial.println();
+}
+
 
 //ISR for cyclometer
 //Reads in pulse on interrupt pin, computes time from last pulse
@@ -250,12 +274,22 @@ void computeSpeed(struct hist *data){
 }
 
 //function updates what should always be updated in every loop of ComputeSpeed
-//void ComputeSpeedHelper(struct hist *data){
+/*void ComputeSpeedHelper(struct hist *data){
 //    data->oldTime_ms = data->nowTime_ms;
 //    data->nowTime_ms = TickTime;
 //    data->oldClickNumber = data->nowClickNumber;
 //    data->nowClickNumber = ClickNumber;
 //}
+*/
+
+void computeAngle(){
+  int left = analogRead(A2);               //Steer
+  int right = analogRead(A3);
+  
+  //Placeholder
+  SteerAngle_deg = (double)left;
+  
+}
 
 void moveVehicle(int acc)
 {
@@ -330,5 +364,13 @@ void DAC_Write(int address, int value)
       SPI.transfer(byte2);
     }
     // take the SS pin high to de-select the chip:
+    digitalWrite(SelectCD, HIGH);
   }
+}
+
+void moveSteer(int i)
+{
+  Serial.print ("Steer "); Serial.print(i);
+  Serial.print (" on ");   Serial.println (STEER_OUT_PIN);
+  STEER_SERVO.writeMicroseconds(STRAIGHT_TURN_OUT);
 }

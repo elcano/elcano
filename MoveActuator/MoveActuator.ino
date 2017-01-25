@@ -21,6 +21,7 @@
 */
 
 #include <Settings.h>
+#include <Servo.h>
 
 // Define the tests to do.
 #define BRAKE_RAMP
@@ -33,6 +34,8 @@
 The Mega is designed to be used with a data-logging shield.
 The nonMega shield uses A4 and A5 for RTC and D10,11,12,and 13 for MOSI data logging.
 */
+
+Servo STEER_SERVO;
 
 // @ToDo: There are declarations here that are per-trike, and some that are common.
 // Parameters have been added to Settings.h for the per-trike values.
@@ -178,7 +181,7 @@ int BrakePosition = FullBrake;
 int SteerPosition = Straight;
 
 int BrakeIncrement = 1;
-int SteerIncrement = 1;
+int SteerIncrement = 10;
 int ThrottleIncrement = 1;
 
 
@@ -210,32 +213,32 @@ int ThrottleIncrement = 1;
 /*---------------------------------------------------------------------------------------*/
 void setup()
 {
-    //Set up pin modes and interrupts, call serial.begin and call initialize.
-    Serial.begin(9600);
-    
-    // SPI: set the slaveSelectPin as an output:
-    pinMode (SelectAB, OUTPUT);
-    pinMode (SelectCD, OUTPUT);
-    pinMode (10, OUTPUT);
-    SPI.setDataMode( SPI_MODE0);
-    SPI.setBitOrder( MSBFIRST);
-    // initialize SPI:
-    // The following line should not be neccessary. It uses a system library.
-//    PRR0 &= ~4;  // turn off PRR0.PRSPI bit so power isn't off
-    SPI.begin(); 
-    for (int channel = 0; channel < 4; channel++)
-        DAC_Write (channel, 0);   // reset did not clear previous states
+  //Set up pin modes and interrupts, call serial.begin and call initialize.
+  Serial.begin(9600);
+   
+  // SPI: set the slaveSelectPin as an output:
+  pinMode (SelectAB, OUTPUT);
+  pinMode (SelectCD, OUTPUT);
+  pinMode (10, OUTPUT);
+  SPI.setDataMode( SPI_MODE0);
+  SPI.setBitOrder( MSBFIRST);
+  // initialize SPI:
+  // The following line should not be neccessary. It uses a system library.
+  //PRR0 &= ~4;  // turn off PRR0.PRSPI bit so power isn't off
+  SPI.begin(); 
+  for (int channel = 0; channel < 4; channel++)
+      DAC_Write (channel, 0);   // reset did not clear previous states
  
-    pinMode(BRAKE_OUT_PIN, OUTPUT);
-    pinMode(STEER_OUT_PIN, OUTPUT);
+  pinMode(BRAKE_OUT_PIN, OUTPUT);
+  STEER_SERVO.attach(STEER_OUT_PIN);
 
-    moveBrake(BrakePosition);   // release brake
-    moveSteer(SteerPosition);
-    moveVehicle(MinimumThrottle); 
-    Serial.println("Initialized");
-    Serial.print("Left\t");   
-    Serial.print("Right\t");
-    Serial.println("Time");   
+  moveBrake(BrakePosition);   // release brake
+  moveSteer(SteerPosition);
+  moveVehicle(MinimumThrottle); 
+  Serial.println("Initialized");
+  Serial.print("Left\t");   
+  Serial.print("Right\t");
+  Serial.println("Time");   
 }
 /*---------------------------------------------------------------------------------------*/
 void loop()
@@ -287,9 +290,9 @@ void moveBrake(int i)
 /*---------------------------------------------------------------------------------------*/
 void moveSteer(int i)
 {
-     Serial.print ("Steer "); Serial.print(i);
-     Serial.print (" on ");   Serial.println (STEER_OUT_PIN);
-     analogWrite(STEER_OUT_PIN, i);
+  Serial.print ("Steer "); Serial.print(i);
+  Serial.print (" on ");   Serial.println (STEER_OUT_PIN);
+  STEER_SERVO.writeMicroseconds(STRAIGHT_TURN_OUT);
 }
 /*---------------------------------------------------------------------------------------*/
 void outputToSerial()
