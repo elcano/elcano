@@ -22,7 +22,7 @@ unsigned long MaxTickTime_ms;
 #define SelectAB 53
 
 double SpeedCyclometer_mmPs = 0; //Note: doubles on Arduinos are the same thing as floats, 4bytes, single precision
-double SteerAngle_deg = 0; //Note: doubles on Arduinos are the same thing as floats, 4bytes, single precision
+double SteerAngle_wms = 0; //Steering angle in microseconds used by writeMicroseconds function. Note: doubles on Arduinos are the same thing as floats, 4bytes, single precision
 
 //ISR variables for external cyclometer Interrupt Service Routine
 #define IRQ_NONE 0
@@ -47,20 +47,31 @@ static struct hist {
   unsigned long nowTime_ms;
 } history;
 
+int leftsenseleft;
+int rightsenseleft;
+int leftsenseright;
+int rightsenseright;
+
 
 double PIDThrottleOutput; //used to tell Throttle and Brake what to do as far as acceleration
 double desiredSpeed = 2000.0; //aprox 10kph
+double PIDSteeringOutput; //Output from steerPID.Compute() in microseconds (used by Servo.writeMicroseconds())
+double desiredAngle = STRAIGHT_TURN_OUT;
 
 //PID update frequency in milliseconds
 #define PID_CALCULATE_TIME 50
 
-double proportionalConstant = .0175;
-double integralConstant = .0141;
-double derivativeConstant = .00001;
+double throttleP = .0175;
+double throttleI = .0141;
+double throttleD = .00001;
+
+double steeringP = .0175;
+double steeringI = .0141;
+double steeringD = .00001;
 
 // PID setup block
 PID speedPID(&SpeedCyclometer_mmPs, &PIDThrottleOutput, &desiredSpeed, throttleP, throttleI, throttleD, DIRECT);
-PID steerPID(&SteerAngle_deg, &PIDSteeringOutput, &desiredAngle, steeringP, steeringI, steeringD, DIRECT);
+PID steerPID(&SteerAngle_wms, &PIDSteeringOutput, &desiredAngle, steeringP, steeringI, steeringD, DIRECT);
 
 void setup(){
   Serial.begin(9600);
@@ -70,6 +81,23 @@ void setup(){
   
   setupWheelRev();
   STEER_SERVO.attach(STEER_OUT_PIN);
+  
+  STEER_SERVO.writeMicroseconds(LEFT_TURN_OUT); //Calibrate angle sensors for left turn
+  delay(2500);
+  leftsenseleft = analogRead(A2);
+  rightsenseleft = analogRead(A3);
+  Serial.print("Left turn sensor readings: ");
+  Serial.print(leftsenseleft);
+  Serial.println(rightsenseleft);
+  
+  STEER_SERVO.writeMicroseconds(RIGHT_TURN_OUT); //Calibrate angle sensors for right turn
+  delay(2500);
+  leftsenseright = analogRead(A2);
+  rightsenseright = analogRead(A3);
+  Serial.print("Right turn sensor readings: ");
+  Serial.print(leftsenseright);
+  Serial.println(rightsenseright);
+  
   STEER_SERVO.writeMicroseconds(STRAIGHT_TURN_OUT);
 }
 
@@ -81,7 +109,7 @@ void loop(){
     Serial.println(desiredAngle);
   }
   computeAngle();
-  PrintSpeed();
+  PrintAngle();
   SteeringPID();
 //  Serial.print("Int State ");
 //  Serial.println(InterruptState);
@@ -131,8 +159,8 @@ void PrintSpeed(){
   Serial.println();
 }
 
-void PrintSpeed(){
-  Serial.print(SteerAngle_deg); Serial.print("\t");
+void PrintAngle(){
+  Serial.print(SteerAngle_wms); Serial.print("\t");
   Serial.print(analogRead(A2)); Serial.print("\t");
   Serial.print(analogRead(A3)); Serial.print("\t");
   Serial.println();
@@ -285,10 +313,12 @@ void computeSpeed(struct hist *data){
 void computeAngle(){
   int left = analogRead(A2);               //Steer
   int right = analogRead(A3);
+
+  int left_wms = map(left, leftsenseleft, leftsenseright, LEFT_TURN_OUT, RIGHT_TURN_OUT);
+  int right_wms = map(right, rightsenseleft, rightsenseright, LEFT_TURN_OUT, RIGHT_TURN_OUT);
   
   //Placeholder
-  SteerAngle_deg = (double)left;
-  
+  SteerAngle_wms = (double)((left_wms+right_wms)/2);  
 }
 
 void moveVehicle(int acc)
@@ -372,5 +402,5 @@ void moveSteer(int i)
 {
   Serial.print ("Steer "); Serial.print(i);
   Serial.print (" on ");   Serial.println (STEER_OUT_PIN);
-  STEER_SERVO.writeMicroseconds(STRAIGHT_TURN_OUT);
+  STEER_SERVO.writeMicroseconds(i);
 }
