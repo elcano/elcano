@@ -22,7 +22,7 @@ unsigned long MaxTickTime_ms;
 #define SelectAB 53
 
 double SpeedCyclometer_mmPs = 0; //Note: doubles on Arduinos are the same thing as floats, 4bytes, single precision
-double SteerAngle_wms = 0; //Steering angle in microseconds used by writeMicroseconds function. Note: doubles on Arduinos are the same thing as floats, 4bytes, single precision
+double SteerAngle_wms = STRAIGHT_TURN_OUT; //Steering angle in microseconds used by writeMicroseconds function. Note: doubles on Arduinos are the same thing as floats, 4bytes, single precision
 
 //ISR variables for external cyclometer Interrupt Service Routine
 #define IRQ_NONE 0
@@ -78,25 +78,13 @@ void setup(){
   SPI.begin(); 
   speedPID.SetOutputLimits(MIN_ACC_OUT, MAX_ACC_OUT); //useful if we want to change the limits on what values the output can be set to
   speedPID.SetSampleTime(PID_CALCULATE_TIME); //useful if we want to change the compute period
+  steerPID.SetOutputLimits(RIGHT_TURN_OUT, LEFT_TURN_OUT); //useful if we want to change the limits on what values the output can be set to
+  steerPID.SetSampleTime(PID_CALCULATE_TIME); //useful if we want to change the compute period
   
   setupWheelRev();
+  moveVehicle(MIN_ACC_OUT);
   STEER_SERVO.attach(STEER_OUT_PIN);
-  
-  STEER_SERVO.writeMicroseconds(LEFT_TURN_OUT); //Calibrate angle sensors for left turn
-  delay(2500);
-  leftsenseleft = analogRead(A2);
-  rightsenseleft = analogRead(A3);
-  Serial.print("Left turn sensor readings: ");
-  Serial.print(leftsenseleft);
-  Serial.println(rightsenseleft);
-  
-  STEER_SERVO.writeMicroseconds(RIGHT_TURN_OUT); //Calibrate angle sensors for right turn
-  delay(2500);
-  leftsenseright = analogRead(A2);
-  rightsenseright = analogRead(A3);
-  Serial.print("Right turn sensor readings: ");
-  Serial.print(leftsenseright);
-  Serial.println(rightsenseright);
+  calibrateSensors();
   
   STEER_SERVO.writeMicroseconds(STRAIGHT_TURN_OUT);
 }
@@ -140,16 +128,17 @@ void ThrottlePID(){
 }
 
 void SteeringPID(){
-  
-  steerPID.Compute();
+  if(steerPID.Compute()){
+    Serial.print("Steering out value ");
+    Serial.println(PIDSteeringOutput);
+    int steeringControl = (int)PIDSteeringOutput;
 
-  Serial.print("Steering out value ");
-  Serial.println(PIDSteeringOutput);
-  int steeringControl = (int)PIDSteeringOutput;
-
-  //apply control value to vehicle
-  moveSteer(steeringControl);
-  
+    //apply control value to vehicle
+    moveSteer(steeringControl);
+  }
+  else{
+    Serial.println("No compute.");
+  }
   return;
 }
 
@@ -319,6 +308,27 @@ void computeAngle(){
   
   //Placeholder
   SteerAngle_wms = (double)((left_wms+right_wms)/2);  
+}
+
+void calibrateSensors(){
+  
+  STEER_SERVO.writeMicroseconds(LEFT_TURN_OUT); //Calibrate angle sensors for left turn
+  delay(4000);
+  leftsenseleft = analogRead(A2);
+  rightsenseleft = analogRead(A3);
+  Serial.print("Left turn sensor readings: ");
+  Serial.print(leftsenseleft);
+  Serial.println(rightsenseleft);
+  
+  STEER_SERVO.writeMicroseconds(RIGHT_TURN_OUT); //Calibrate angle sensors for right turn
+  delay(4000);
+  leftsenseright = analogRead(A2);
+  rightsenseright = analogRead(A3);
+  Serial.print("Right turn sensor readings: ");
+  Serial.print(leftsenseright);
+  Serial.println(rightsenseright);
+
+  steerPID.SetMode(AUTOMATIC);
 }
 
 void moveVehicle(int acc)
