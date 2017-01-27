@@ -22,6 +22,7 @@ unsigned long MaxTickTime_ms;
 #define SelectAB 53
 
 double SpeedCyclometer_mmPs = 0; //Note: doubles on Arduinos are the same thing as floats, 4bytes, single precision
+double SteerAngle_wms = STRAIGHT_TURN_OUT; //Steering angle in microseconds used by writeMicroseconds function. Note: doubles on Arduinos are the same thing as floats, 4bytes, single precision
 
 //ISR variables for external cyclometer Interrupt Service Routine
 #define IRQ_NONE 0
@@ -46,11 +47,16 @@ static struct hist {
   unsigned long nowTime_ms;
 } history;
 
+int leftsenseleft;
+int rightsenseleft;
+int leftsenseright;
+int rightsenseright;
+
 
 double PIDThrottleOutput; //used to tell Throttle and Brake what to do as far as acceleration
 double desiredSpeed = 2000.0; //aprox 10kph
-double PIDSteeringOutput; //output from running steerPID.Compute
-double desiredAngle = 2000.0; //aprox 10kph
+double PIDSteeringOutput; //Output from steerPID.Compute() in microseconds (used by Servo.writeMicroseconds())
+double desiredAngle = STRAIGHT_TURN_OUT;
 
 //PID update frequency in milliseconds
 #define PID_CALCULATE_TIME 50
@@ -65,20 +71,21 @@ double steeringD = .00001;
 
 // PID setup block
 PID speedPID(&SpeedCyclometer_mmPs, &PIDThrottleOutput, &desiredSpeed, throttleP, throttleI, throttleD, DIRECT);
-PID steerPID(&SpeedCyclometer_mmPs, &PIDSteeringOutput, &desiredSpeed, steeringP, steeringI, steeringD, DIRECT);
-
-
-
-//...................................................................................
+PID steerPID(&SteerAngle_wms, &PIDSteeringOutput, &desiredAngle, steeringP, steeringI, steeringD, DIRECT);
 
 void setup(){
   Serial.begin(9600);
   SPI.begin(); 
   speedPID.SetOutputLimits(MIN_ACC_OUT, MAX_ACC_OUT); //useful if we want to change the limits on what values the output can be set to
   speedPID.SetSampleTime(PID_CALCULATE_TIME); //useful if we want to change the compute period
+  steerPID.SetOutputLimits(RIGHT_TURN_OUT, LEFT_TURN_OUT); //useful if we want to change the limits on what values the output can be set to
+  steerPID.SetSampleTime(PID_CALCULATE_TIME); //useful if we want to change the compute period
   
   setupWheelRev();
+  moveVehicle(MIN_ACC_OUT);
   STEER_SERVO.attach(STEER_OUT_PIN);
+  calibrateSensors();
+  
   STEER_SERVO.writeMicroseconds(STRAIGHT_TURN_OUT);
 }
 
@@ -86,12 +93,12 @@ void loop(){
 //pass in desired speed variable in mm per second, range from 1000-7500.
   if (Serial.available() > 0) {
     // get incoming byte:
-    desiredSpeed = Serial.parseInt();
-    Serial.println(desiredSpeed);
+    desiredAngle = Serial.parseInt();
+    Serial.println(desiredAngle);
   }
-  computeSpeed(&history);
-  PrintSpeed();
-  ThrottlePID();
+  computeAngle();
+  PrintAngle();
+  SteeringPID();
 //  Serial.print("Int State ");
 //  Serial.println(InterruptState);
 //  Serial.print("Click ");
@@ -121,24 +128,17 @@ void ThrottlePID(){
 }
 
 void SteeringPID(){
-  
-  speedPID.Compute();
+  if(steerPID.Compute()){
+    Serial.print("Steering out value ");
+    Serial.println(PIDSteeringOutput);
+    int steeringControl = (int)PIDSteeringOutput;
 
-  Serial.print("Throttle out value ");
-  Serial.println(PIDThrottleOutput);
-  int throttleControl = (int)PIDThrottleOutput;
-
-  //apply control value to vehicle
-  moveVehicle(throttleControl);
-
-  if(PIDThrottleOutput == MIN_ACC_OUT){
-    //apply brakes
-    //brake(MAX_BRAKE_OUT);
+    //apply control value to vehicle
+    moveSteer(steeringControl);
   }
   else{
-    //brake(MIN_BRAKE_OUT);
+    Serial.println("No compute.");
   }
-  
   return;
 }
 
@@ -147,6 +147,14 @@ void PrintSpeed(){
   Serial.print(SpeedCyclometer_mmPs); Serial.print("\t");
 //  Serial.println();
 }
+
+void PrintAngle(){
+  Serial.print(SteerAngle_wms); Serial.print("\t");
+  Serial.print(analogRead(A2)); Serial.print("\t");
+  Serial.print(analogRead(A3)); Serial.print("\t");
+  Serial.println();
+}
+
 
 //ISR for cyclometer
 //Reads in pulse on interrupt pin, computes time from last pulse
@@ -283,12 +291,45 @@ void computeSpeed(struct hist *data){
 }
 
 //function updates what should always be updated in every loop of ComputeSpeed
-//void ComputeSpeedHelper(struct hist *data){
+/*void ComputeSpeedHelper(struct hist *data){
 //    data->oldTime_ms = data->nowTime_ms;
 //    data->nowTime_ms = TickTime;
 //    data->oldClickNumber = data->nowClickNumber;
 //    data->nowClickNumber = ClickNumber;
 //}
+*/
+
+void computeAngle(){
+  int left = analogRead(A2);               //Steer
+  int right = analogRead(A3);
+
+  int left_wms = map(left, leftsenseleft, leftsenseright, LEFT_TURN_OUT, RIGHT_TURN_OUT);
+  int right_wms = map(right, rightsenseleft, rightsenseright, LEFT_TURN_OUT, RIGHT_TURN_OUT);
+  
+  //Placeholder
+  SteerAngle_wms = (double)((left_wms+right_wms)/2);  
+}
+
+void calibrateSensors(){
+  
+  STEER_SERVO.writeMicroseconds(LEFT_TURN_OUT); //Calibrate angle sensors for left turn
+  delay(4000);
+  leftsenseleft = analogRead(A2);
+  rightsenseleft = analogRead(A3);
+  Serial.print("Left turn sensor readings: ");
+  Serial.print(leftsenseleft);
+  Serial.println(rightsenseleft);
+  
+  STEER_SERVO.writeMicroseconds(RIGHT_TURN_OUT); //Calibrate angle sensors for right turn
+  delay(4000);
+  leftsenseright = analogRead(A2);
+  rightsenseright = analogRead(A3);
+  Serial.print("Right turn sensor readings: ");
+  Serial.print(leftsenseright);
+  Serial.println(rightsenseright);
+
+  steerPID.SetMode(AUTOMATIC);
+}
 
 void moveVehicle(int acc)
 {
@@ -363,5 +404,13 @@ void DAC_Write(int address, int value)
       SPI.transfer(byte2);
     }
     // take the SS pin high to de-select the chip:
+    digitalWrite(SelectCD, HIGH);
   }
+}
+
+void moveSteer(int i)
+{
+  Serial.print ("Steer "); Serial.print(i);
+  Serial.print (" on ");   Serial.println (STEER_OUT_PIN);
+  STEER_SERVO.writeMicroseconds(i);
 }
