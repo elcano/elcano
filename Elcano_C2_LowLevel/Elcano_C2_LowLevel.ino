@@ -303,6 +303,25 @@ bool checkEbrake()
 // leftover from trying to combine the RC controls into a single stream?
 /*---------------------------------------------------------------------------------------*/
 /*------------------------------------processRC-------------------------------------------*/
+bool checkEbrake()
+{
+   if (RC_Done[RC_ESTP]) //RC_Done determines if the signal from the remote controll is done processing
+  {
+    RC_elapsed[RC_ESTP] = (RC_elapsed[RC_ESTP] > MIDDLE ? HIGH : LOW);
+    Serial.println(RC_elapsed[RC_ESTP]);
+    if (RC_elapsed[RC_ESTP] == HIGH)
+    {
+      E_Stop();  // already done at interrupt level
+      return true;
+    }
+  }
+  return false;
+}
+
+
+// @ToDo: Q: What do the expressions "1st pulse", etc. mean? Is this a
+// leftover from trying to combine the RC controls into a single stream?
+/*---------------------------------------------------------------------------------------*/
 byte processRC()
 {
   //RC_TURN, RC_ESTOP, RC_BRAKE, RC_AUTO
