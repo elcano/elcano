@@ -211,7 +211,7 @@ void circleRoutine() {
   steer(LEFT_TURN_OUT);
   delay(1000);
   double desiredSpeed = 14;
-  moveFixedDistance(TURN_CIRCUMFERENCE_M, desiredSpeed);
+  moveFixedDistance(TURN_CIRCUMFERENCE_CM/100, desiredSpeed);
   steer(STRAIGHT_TURN_OUT);
 }
 
@@ -223,7 +223,7 @@ void figure8Routine(){
     // Make a left circleRoutine for 2/3 the circumference
     steer(LEFT_TURN_OUT);
     delay(1000);
-    if(!moveFixedDistance((2/3.0) * TURN_CIRCUMFERENCE_M, desiredSpeed)) break;
+    if(!moveFixedDistance((2/3.0) * TURN_CIRCUMFERENCE_CM/100, desiredSpeed)) break;
   
     // Move straight for 5 m
     steer(STRAIGHT_TURN_OUT);
@@ -233,7 +233,7 @@ void figure8Routine(){
     // Make a right circleRoutine for 2/3 the circumference
     steer(RIGHT_TURN_OUT);
     delay(1000);
-    if(!moveFixedDistance((2/3.0) * TURN_CIRCUMFERENCE_M, desiredSpeed)) break;
+    if(!moveFixedDistance((2/3.0) * TURN_CIRCUMFERENCE_CM/100, desiredSpeed)) break;
   
     // Move straight for 5 m
     steer(STRAIGHT_TURN_OUT);
@@ -283,45 +283,9 @@ void squareRoutine(unsigned long sides, unsigned long &rcAuto) {
 }
 
 
-bool checkEbrake()
-{
-   if (RC_Done[RC_ESTP]) //RC_Done determines if the signal from the remote controll is done processing
-  {
-    RC_elapsed[RC_ESTP] = (RC_elapsed[RC_ESTP] > MIDDLE ? HIGH : LOW);
-    Serial.println(RC_elapsed[RC_ESTP]);
-    if (RC_elapsed[RC_ESTP] == HIGH)
-    {
-      E_Stop();  // already done at interrupt level
-      return true;
-    }
-  }
-  return false;
-}
-
-
 // @ToDo: Q: What do the expressions "1st pulse", etc. mean? Is this a
 // leftover from trying to combine the RC controls into a single stream?
-/*---------------------------------------------------------------------------------------*/
 /*------------------------------------processRC-------------------------------------------*/
-bool checkEbrake()
-{
-   if (RC_Done[RC_ESTP]) //RC_Done determines if the signal from the remote controll is done processing
-  {
-    RC_elapsed[RC_ESTP] = (RC_elapsed[RC_ESTP] > MIDDLE ? HIGH : LOW);
-    Serial.println(RC_elapsed[RC_ESTP]);
-    if (RC_elapsed[RC_ESTP] == HIGH)
-    {
-      E_Stop();  // already done at interrupt level
-      return true;
-    }
-  }
-  return false;
-}
-
-
-// @ToDo: Q: What do the expressions "1st pulse", etc. mean? Is this a
-// leftover from trying to combine the RC controls into a single stream?
-/*---------------------------------------------------------------------------------------*/
 byte processRC()
 {
   //RC_TURN, RC_ESTOP, RC_BRAKE, RC_AUTO
