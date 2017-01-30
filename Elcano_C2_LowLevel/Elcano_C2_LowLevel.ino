@@ -497,10 +497,8 @@ bool moveFixedDistance(double length_m, double desiredSpeed){
     if(checkEbrake()) return false;
     Serial.println(distance_m);
   }
-  brake(true);
   moveVehicle(0);
   delay(1000);
-  brake(false);
   return true;
 }
 
@@ -510,7 +508,7 @@ void circleRoutine() {
   steer(LEFT_TURN_OUT);
   delay(1000);
   double desiredSpeed = 14;
-  moveFixedDistance(TURN_CIRCUMFERENCE_CM, desiredSpeed);
+  moveFixedDistance(TURN_CIRCUMFERENCE_M, desiredSpeed);
   steer(STRAIGHT_TURN_OUT);
 }
 
@@ -522,7 +520,7 @@ void figure8Routine(){
     // Make a left circleRoutine for 2/3 the circumference
     steer(LEFT_TURN_OUT);
     delay(1000);
-    if(!moveFixedDistance((2/3.0) * TURN_CIRCUMFERENCE_CM, desiredSpeed)) break;
+    if(!moveFixedDistance((2/3.0) * TURN_CIRCUMFERENCE_M, desiredSpeed)) break;
   
     // Move straight for 5 m
     steer(STRAIGHT_TURN_OUT);
@@ -532,7 +530,7 @@ void figure8Routine(){
     // Make a right circleRoutine for 2/3 the circumference
     steer(RIGHT_TURN_OUT);
     delay(1000);
-    if(!moveFixedDistance((2/3.0) * TURN_CIRCUMFERENCE_CM, desiredSpeed)) break;
+    if(!moveFixedDistance((2/3.0) * TURN_CIRCUMFERENCE_M, desiredSpeed)) break;
   
     // Move straight for 5 m
     steer(STRAIGHT_TURN_OUT);
@@ -597,10 +595,10 @@ void allStop()
 
 bool checkEbrake()
 {
-    if (RC_Done[RC_ESTP]) //RC_Done determines if the signal from the remote controll is done processing
+   if (RC_Done[RC_ESTP]) //RC_Done determines if the signal from the remote controll is done processing
   {
     RC_elapsed[RC_ESTP] = (RC_elapsed[RC_ESTP] > MIDDLE ? HIGH : LOW);
-  
+    Serial.println(RC_elapsed[RC_ESTP]);
     if (RC_elapsed[RC_ESTP] == HIGH)
     {
       E_Stop();  // already done at interrupt level
@@ -650,7 +648,7 @@ void doAutoMovement(){
     delay(1000); // delay and if statement ensure that the remote wasn't simply going past the tick
     if(RC_elapsed[RC_BRAKE] > TICK1 - TICK_DEADZONE && RC_elapsed[RC_BRAKE] < TICK1 + TICK_DEADZONE)
     {
-      moveFixedDistance(300, 15);
+      moveFixedDistance(15, 15);
     }
   }
   else if(RC_elapsed[RC_BRAKE] > TICK2 - TICK_DEADZONE && RC_elapsed[RC_BRAKE] < TICK2 + TICK_DEADZONE){
@@ -1305,6 +1303,7 @@ void Throttle_PID(long error_speed_mmPs)
 //    brake(brake_control);
     brake(false);
   }
+  Serial.println();
   //error_index = (error_index + 1) % ERROR_HISTORY;
   // else maintain current speed
 }
