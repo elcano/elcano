@@ -187,18 +187,19 @@ void processHighLevel(SerialData * results)
 }
 
 /*-----------------------------------moveFixedDistance------------------------------------*/
-bool moveFixedDistance(double length_m, double desiredSpeed){
-  if(length_m < 0) length_m = 0;        // ensures a negative value isn't given, as this will cause an infinite loop
+bool moveFixedDistance(long length_mm, long desiredSpeed)
+{ 
+  if(length_mm < 0) length_mm = 0;        // ensures a negative value isn't given, as this will cause an infinite loop 
   
-  double start = distance_m;
-  
-  
-  while(distance_m < length_m + start){  // go until the total distance travaled has increased by the desired distance 
+  long start = distance; 
+  while(distance < length_mm  + start)  // go until the total distance travaled has increased by the desired distance  
+  {
     computeSpeed(&history);
     Throttle_PID(desiredSpeed - history.currentSpeed_kmPh);
     if(checkEbrake()) return false;
     Serial.println(distance_m);
   }
+  
   moveVehicle(0);
   delay(1000);
   return true;
@@ -210,14 +211,14 @@ bool moveFixedDistance(double length_m, double desiredSpeed){
 void circleRoutine() {
   steer(LEFT_TURN_OUT);
   delay(1000);
-  double desiredSpeed = 14;
+  long desiredSpeed = 14000; 
   moveFixedDistance(TURN_CIRCUMFERENCE_CM/100, desiredSpeed);
   steer(STRAIGHT_TURN_OUT);
 }
 
 void figure8Routine(){
   Serial.println("RUNNING FIGURE 8");
-  double desiredSpeed = 14;
+  long desiredSpeed = 14000; 
   for(int i = 0; i < 2; i++)
   {
     // Make a left circleRoutine for 2/3 the circumference
@@ -403,14 +404,7 @@ int convertTurn(int input)
 /*------------------------------------convertDeg------------------------------------------*/
 int convertDeg(int deg)
 {
-  const int actuatorRange = LEFT_TURN_OUT - RIGHT_TURN_OUT;
-  const int degRange = TURN_MAX_DEG * 2;
-  deg += TURN_MAX_DEG;
-  double operand = (double)deg / (double)degRange;
-  operand *= actuatorRange;
-  operand += RIGHT_TURN_OUT;
-  //set max values if out of range
-  int result = (int)operand;
+  int result = map(deg, -TURN_MAX_DEG, TURN_MAX_DEG, RIGHT_TURN_OUT, LEFT_TURN_OUT);
   if (result > LEFT_TURN_OUT)
     result = LEFT_TURN_OUT;
   return result;
