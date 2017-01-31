@@ -191,17 +191,18 @@ bool moveFixedDistance(long length_mm, long desiredSpeed)
 { 
   if(length_mm < 0) length_mm = 0;        // ensures a negative value isn't given, as this will cause an infinite loop 
   
-  long start = distance; 
-  while(distance < length_mm  + start)  // go until the total distance travaled has increased by the desired distance  
+  long start = distance_mm; 
+  while(distance_mm < length_mm  + start)  // go until the total distance travaled has increased by the desired distance  
   {
     computeSpeed(&history);
     Throttle_PID(desiredSpeed - history.currentSpeed_kmPh);
     if(checkEbrake()) return false;
-    Serial.println(distance_m);
+    Serial.println(distance_mm);
   }
-  
   moveVehicle(0);
+  brake(true);
   delay(1000);
+  brake(false);
   return true;
 
 }
@@ -326,7 +327,7 @@ void doAutoMovement(){
     delay(1000); // delay and if statement ensure that the remote wasn't simply going past the tick
     if(RC_elapsed[RC_BRAKE] > TICK1 - TICK_DEADZONE && RC_elapsed[RC_BRAKE] < TICK1 + TICK_DEADZONE)
     {
-      moveFixedDistance(15, 15);
+      moveFixedDistance(10000, 15);
     }
   }
   else if(RC_elapsed[RC_BRAKE] > TICK2 - TICK_DEADZONE && RC_elapsed[RC_BRAKE] < TICK2 + TICK_DEADZONE){
@@ -471,6 +472,7 @@ int convertBrake(unsigned long amount){
 }
 
 /*-------------------------------------brake-----------------------------------------------*/
+
 void brake(bool on)
 {
   BRAKE_SERVO.writeMicroseconds(on ? MAX_BRAKE_OUT : MIN_BRAKE_OUT);
@@ -613,7 +615,7 @@ void computeSpeed(struct hist *data){
   float SpeedCyclometer_revPs = 0.0;//revolutions per sec
   if (InterruptState == IRQ_NONE || InterruptState == IRQ_FIRST)
   { // No data
-    distance_m += WHEEL_CIRCUM_MM/1000;
+    distance_mm += WHEEL_CIRCUM_MM;
     SpeedCyclometer_mmPs = 0;
     SpeedCyclometer_revPs = 0;
     return;
@@ -621,7 +623,7 @@ void computeSpeed(struct hist *data){
   
   if (InterruptState == IRQ_SECOND)
   { //  first computed speed
-    distance_m += WHEEL_CIRCUM_MM/1000;
+    distance_mm += WHEEL_CIRCUM_MM;
     SpeedCyclometer_revPs = 1000.0 / WheelRev_ms;
     SpeedCyclometer_mmPs  =
       data->oldSpeed_mmPs = data->olderSpeed_mmPs = WHEEL_CIRCUM_MM * SpeedCyclometer_revPs;
@@ -633,7 +635,7 @@ void computeSpeed(struct hist *data){
 
   if (InterruptState == IRQ_RUNNING)
   { //  new data for second computed speed
-    distance_m += WHEEL_CIRCUM_MM/1000;
+    distance_mm += WHEEL_CIRCUM_MM;
     if(TickTime == data->nowTime_ms)
     {//no new data
         //check to see if stopped first
@@ -847,8 +849,6 @@ float mapThrottle(int value){
 }
 
 /*------------------------------Throttle_PID---------------------------------------------*/
-void Throttle_PID(long error_speed_mmPs)
-
 /* Use throttle and brakes to keep vehicle at a desired speed.
  * error_speed_mmPs = Desired speed in millimeters per second
    A PID controller uses the error in the set point to increase or decrease the juice.
@@ -864,6 +864,7 @@ void Throttle_PID(long error_speed_mmPs)
    For more information, search for:
    VanDoren Proportional Integral Derivative Control
 */
+void Throttle_PID(long error_speed_mmPs)
 {
   static int  throttle_control = MIN_ACC_OUT;
   static int  brake_control = MAX_BRAKE_OUT;
