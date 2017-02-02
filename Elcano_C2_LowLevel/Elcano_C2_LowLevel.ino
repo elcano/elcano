@@ -5,6 +5,11 @@
 #include <Elcano_Serial.h>
 #include <Servo.h>
 using namespace elcano;
+
+
+// PID setup block
+PID speedPID(&SpeedCyclometer_mmPs, &PIDThrottleOutput, &desiredSpeed, proportionalConstant, integralConstant, derivativeConstant, DIRECT);
+
 /*
  * C2 is the low-level controller that sends control signals to the hub motor,
  * brake servo, and steering servo.  It is (or will be) a PID controller, but
@@ -38,6 +43,9 @@ void setup()
   // The following line should not be neccessary. It uses a system library.
   PRR0 &= ~4; // turn off PRR0.PRSPI bit so power isn't off
   SPI.begin();
+
+  speedPID.SetOutputLimits(MIN_ACC_OUT, MAX_ACC_OUT); //useful if we want to change the limits on what values the output can be set to
+  speedPID.SetSampleTime(PID_CALCULATE_TIME); //useful if we want to change the compute period
   for (int channel = 0; channel < 4; channel++){
     DAC_Write(channel, 0); // reset did not clear previous states
   }
@@ -75,8 +83,9 @@ void setup()
 
 
 void loop() {
-  brake(false);
+  //brake(false);
   computeSpeed(&history);
+  ThrottlePID(2000);
   // Get the next loop start time. Note this (and the millis() counter) will
   // roll over back to zero after they exceed the 32-bit size of unsigned long,
   // which happens after about 1.5 months of operation (should check this).
@@ -195,7 +204,7 @@ bool moveFixedDistance(long length_mm, long desiredSpeed)
   while(distance_mm < length_mm  + start)  // go until the total distance travaled has increased by the desired distance  
   {
     computeSpeed(&history);
-    Throttle_PID(desiredSpeed - history.currentSpeed_kmPh);
+    ThrottlePID(desiredSpeed - history.currentSpeed_kmPh);
     if(checkEbrake()) return false;
     Serial.println(distance_mm);
   }
@@ -225,7 +234,7 @@ void figure8Routine(){
     // Make a left circleRoutine for 2/3 the circumference
     steer(LEFT_TURN_OUT);
     delay(1000);
-    if(!moveFixedDistance((2/3.0) * TURN_CIRCUMFERENCE_CM/100, desiredSpeed)) break;
+    if(!moveFixedDistance((2/3.0) * TURN_CIRCUMFERENCE_M/100, desiredSpeed)) break;
   
     // Move straight for 5 m
     steer(STRAIGHT_TURN_OUT);
@@ -235,7 +244,7 @@ void figure8Routine(){
     // Make a right circleRoutine for 2/3 the circumference
     steer(RIGHT_TURN_OUT);
     delay(1000);
-    if(!moveFixedDistance((2/3.0) * TURN_CIRCUMFERENCE_CM/100, desiredSpeed)) break;
+    if(!moveFixedDistance((2/3.0) * TURN_CIRCUMFERENCE_M/100, desiredSpeed)) break;
   
     // Move straight for 5 m
     steer(STRAIGHT_TURN_OUT);
@@ -602,6 +611,8 @@ void setupWheelRev()
   InterruptState = IRQ_NONE;
   ClickNumber = 0;
   history.oldSpeed_mmPs = history.olderSpeed_mmPs = NO_DATA;
+  
+  speedPID.SetMode(AUTOMATIC); //initializes PID controller and allows it to run Compute
 
   attachInterrupt (digitalPinToInterrupt(IRPT_WHEEL), WheelRev, RISING);//pin 3 on Mega
 }
@@ -928,6 +939,28 @@ void Throttle_PID(long error_speed_mmPs)
   // else maintain current speed
 }
 
+/*-----------------------------------ThrottlePID------------------------------------*/
+void ThrottlePID(double desired){
+  desiredSpeed = desired;
+  speedPID.Compute();
+  
+  Serial.print("Throttle out value ");
+  Serial.println(PIDThrottleOutput);
+  int throttleControl = (int)PIDThrottleOutput;
+
+  //apply control value to vehicle
+  moveVehicle(throttleControl);
+
+  if(PIDThrottleOutput == MIN_ACC_OUT){
+    //apply brakes
+    //brake(MAX_BRAKE_OUT);
+  }
+  else{
+    //brake(MIN_BRAKE_OUT);
+  }
+  
+  return;
+}
 
 
 /* Serial 7-Segment Display Example Code
