@@ -1,3 +1,4 @@
+#include <PID_v1.h>
 #include <Servo.h>
 #include <Elcano_Serial.h>
 using namespace elcano;
@@ -156,7 +157,7 @@ unsigned long MinTickTime_ms;
 unsigned long MaxTickTime_ms;
 // MinTickTime_ms = 9239 ms = 9 sec
 
-long SpeedCyclometer_mmPs = 0;
+double SpeedCyclometer_mmPs = 0;
 // Speed in revolutions per second is independent of wheel size.
 float SpeedCyclometer_revPs = 0.0;//revolutions per sec
 
@@ -170,4 +171,19 @@ volatile byte ClickNumber = 0;         // Used to distinguish old data from new.
 volatile unsigned long TickTime = 0;  // Time from one wheel rotation to the next gives speed.
 volatile unsigned long OldTick = 0;
 int oldClickNumber;
+
+
+/**
+ * Throttle PID implementation
+ */
+double PIDThrottleOutput; //used to tell Throttle and Brake what to do as far as acceleration
+double desiredSpeed = 2000.0; //aprox 10kph
+
+//PID update frequency in milliseconds
+#define PID_CALCULATE_TIME 50
+
+double proportionalConstant = .0175;
+double integralConstant = .0141;
+double derivativeConstant = .00001;
+
 
