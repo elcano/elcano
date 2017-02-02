@@ -45,11 +45,11 @@ void setup() {
 //  }
 
   //setupWheelRev(); // WheelRev4 addition
-  pinMode(21, INPUT);
+  
         attachInterrupt(digitalPinToInterrupt(IRPT_TURN),  ISR_TURN_rise,  RISING);   // right stick l/r
-        attachInterrupt(digitalPinToInterrupt(IRPT_RDR),   ISR_RDR_rise,   RISING);   // nothing
+//        attachInterrupt(digitalPinToInterrupt(IRPT_RDR),   ISR_RDR_rise,   RISING);   // nothing
         attachInterrupt(digitalPinToInterrupt(IRPT_GO),    ISR_GO_rise,    RISING);   // left stick l/r
-        attachInterrupt(digitalPinToInterrupt(IRPT_ESTOP), ISR_ESTOP_rise, RISING);   // red switch
+//        attachInterrupt(digitalPinToInterrupt(IRPT_ESTOP), ISR_ESTOP_rise, RISING);   // red switch
         attachInterrupt(digitalPinToInterrupt(IRPT_RVS),   ISR_RVS_rise,   RISING);   // nothing
         attachInterrupt(digitalPinToInterrupt(IRPT_BRAKE), ISR_BRAKE_rise, RISING);   // left stick u/d
 //        attachInterrupt(digitalPinToInterrupt(IRPT_MOTOR_FEEDBACK), ISR_MOTOR_FEEDBACK_rise, RISING);
@@ -57,9 +57,12 @@ void setup() {
 }
 
 void loop() {
-//  RC_TURN is index 1 right stick l/r
-//  RC_BRAKE is index 3, right stick u/d
-  Serial.println(RC_elapsed[5]);
+  //auto, 1, left up/down
+  //go, 4, left r/l
+  //turn, 5, right up/down
+  //
+  int i = RC_ESTP;
+  Serial.println(RC_elapsed[RC_ESTP]);
     delay(200);
 }
 
