@@ -66,7 +66,7 @@ void setup()
         attachInterrupt(digitalPinToInterrupt(IRPT_GO),    ISR_GO_rise,    RISING);//left stick l/r
         attachInterrupt(digitalPinToInterrupt(IRPT_ESTOP), ISR_ESTOP_rise, RISING);//ebrake
         attachInterrupt(digitalPinToInterrupt(IRPT_BRAKE), ISR_BRAKE_rise, RISING);//left stick u/d mode select
-        attachInterrupt(digitalPinToInterrupt(IRPT_MOTOR_FEEDBACK), ISR_MOTOR_FEEDBACK_rise, RISING);
+//        attachInterrupt(digitalPinToInterrupt(IRPT_MOTOR_FEEDBACK), ISR_MOTOR_FEEDBACK_rise, RISING);
 }
 
 
@@ -75,6 +75,7 @@ void setup()
 
 
 void loop() {
+  Serial.println(RC_elapsed[RC_BRAKE]);
   brake(false);
   computeSpeed(&history);
   // Get the next loop start time. Note this (and the millis() counter) will
@@ -311,7 +312,7 @@ byte processRC()
 /*------------------------------------isAutomatic-----------------------------------------*/
 boolean isAutomatic(){
     if(RC_Done[RC_BRAKE]){
-      if(RC_elapsed[RC_BRAKE] > MIDDLE + TICK_DEADZONE){
+      if(RC_elapsed[RC_BRAKE] > AUTOMATIC_MIDDLE + TICK_DEADZONE){
         return true;           // It is manual control and not autonomous control
       }
     }
@@ -321,6 +322,7 @@ boolean isAutomatic(){
 
 /*------------------------------------doAutoMovement--------------------------------------*/
 void doAutoMovement(){
+  Serial.println("do Auto Movement");
   if(RC_elapsed[RC_BRAKE] > TICK1 - TICK_DEADZONE && RC_elapsed[RC_BRAKE] < TICK1 + TICK_DEADZONE)
   {
     Serial.println("AT TICK 1");
@@ -356,20 +358,18 @@ void doManualMovement(){
     //TODO: if less than the middle, reverse, otherwise forward
     if(RC_Done[RC_GO])
     {
-      
-      if(RC_elapsed[RC_GO] < MIDDLE){
-        //moveVehicle(convertThrottle(RC_elapsed[RC_GO]));
+//      Serial.println(RC_elapsed[RC_GO]);
+      if(RC_elapsed[RC_GO] > 1800){
+//        Serial.println(convertThrottle(RC_elapsed[RC_GO]));
+        moveVehicle(convertThrottle(RC_elapsed[RC_GO]));
       }
       else{
-        // apply brakes or reverse
+        moveVehicle(0);
       }
-      //Serial.println(RC_elapsed[RC_GO]);
-      //moveVehicle(convertThrottle(RC_elapsed[RC_GO]));
     }
   //TURN
     if (RC_Done[RC_TURN]) 
     {
-      Serial.println(String(convertTurn(RC_elapsed[RC_TURN])));
       steer(convertTurn(RC_elapsed[RC_TURN]));
     }
 }
@@ -414,7 +414,9 @@ int convertDeg(int deg)
 /*------------------------------------convertThrottle-------------------------------------*/
 int convertThrottle(int input)
 {
-  return map(input, 1400, 1000, 80, 140);
+  if(input < 1800) input = 1800;
+  if(input > 2000) input = 2000;
+  return map(input, 1800, 2000, 0, 140);
 }
 
 /*------------------------------------liveThrottle----------------------------------------*/
@@ -615,7 +617,7 @@ void computeSpeed(struct hist *data){
   float SpeedCyclometer_revPs = 0.0;//revolutions per sec
   if (InterruptState == IRQ_NONE || InterruptState == IRQ_FIRST)
   { // No data
-    distance_mm += WHEEL_CIRCUM_MM;
+//    distance_mm += WHEEL_CIRCUM_MM;
     SpeedCyclometer_mmPs = 0;
     SpeedCyclometer_revPs = 0;
     return;
@@ -623,7 +625,7 @@ void computeSpeed(struct hist *data){
   
   if (InterruptState == IRQ_SECOND)
   { //  first computed speed
-    distance_mm += WHEEL_CIRCUM_MM;
+    //distance_mm += WHEEL_CIRCUM_MM;
     SpeedCyclometer_revPs = 1000.0 / WheelRev_ms;
     SpeedCyclometer_mmPs  =
       data->oldSpeed_mmPs = data->olderSpeed_mmPs = WHEEL_CIRCUM_MM * SpeedCyclometer_revPs;
