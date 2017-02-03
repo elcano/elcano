@@ -21,11 +21,12 @@
 */
 
 #include <Settings.h>
+#include <Servo.h>
 
 // Define the tests to do.
-#define BRAKE_RAMP
+//#define BRAKE_RAMP
 #define STEER_RAMP
-#define MOTOR_RAMP
+//#define MOTOR_RAMP
 // If operating with the MegaShieldDB, we can use the Digital Analog Converter to move the vehicle
 #define DAC
 
@@ -33,6 +34,8 @@
 The Mega is designed to be used with a data-logging shield.
 The nonMega shield uses A4 and A5 for RTC and D10,11,12,and 13 for MOSI data logging.
 */
+
+Servo STEER_SERVO;
 
 // @ToDo: There are declarations here that are per-trike, and some that are common.
 // Parameters have been added to Settings.h for the per-trike values.
@@ -157,6 +160,7 @@ const int CruiseThrottle = 15;  // Position of throttle commanded by AI
 #define FALSE 0
 #endif
 
+Servo STEER_SERVO;
 
 // Values to send over DAC
 const int FullThrottle =  MAX_ACC_OUT;   // 3.63 V
@@ -178,7 +182,7 @@ int BrakePosition = FullBrake;
 int SteerPosition = Straight;
 
 int BrakeIncrement = 1;
-int SteerIncrement = 1;
+int SteerIncrement = 10;
 int ThrottleIncrement = 1;
 
 
@@ -210,32 +214,32 @@ int ThrottleIncrement = 1;
 /*---------------------------------------------------------------------------------------*/
 void setup()
 {
-    //Set up pin modes and interrupts, call serial.begin and call initialize.
-    Serial.begin(9600);
-    
-    // SPI: set the slaveSelectPin as an output:
-    pinMode (SelectAB, OUTPUT);
-    pinMode (SelectCD, OUTPUT);
-    pinMode (10, OUTPUT);
-    SPI.setDataMode( SPI_MODE0);
-    SPI.setBitOrder( MSBFIRST);
-    // initialize SPI:
-    // The following line should not be neccessary. It uses a system library.
-//    PRR0 &= ~4;  // turn off PRR0.PRSPI bit so power isn't off
-    SPI.begin(); 
-    for (int channel = 0; channel < 4; channel++)
-        DAC_Write (channel, 0);   // reset did not clear previous states
+  //Set up pin modes and interrupts, call serial.begin and call initialize.
+  Serial.begin(9600);
+   
+  // SPI: set the slaveSelectPin as an output:
+  pinMode (SelectAB, OUTPUT);
+  pinMode (SelectCD, OUTPUT);
+  pinMode (10, OUTPUT);
+  SPI.setDataMode( SPI_MODE0);
+  SPI.setBitOrder( MSBFIRST);
+  // initialize SPI:
+  // The following line should not be neccessary. It uses a system library.
+  //PRR0 &= ~4;  // turn off PRR0.PRSPI bit so power isn't off
+  SPI.begin(); 
+  for (int channel = 0; channel < 4; channel++)
+      DAC_Write (channel, 0);   // reset did not clear previous states
  
-    pinMode(BRAKE_OUT_PIN, OUTPUT);
-    pinMode(STEER_OUT_PIN, OUTPUT);
+  pinMode(BRAKE_OUT_PIN, OUTPUT);
+  STEER_SERVO.attach(STEER_OUT_PIN);
 
-    moveBrake(BrakePosition);   // release brake
-    moveSteer(SteerPosition);
-    moveVehicle(MinimumThrottle); 
-    Serial.println("Initialized");
-    Serial.print("Left\t");   
-    Serial.print("Right\t");
-    Serial.println("Time");   
+  moveBrake(BrakePosition);   // release brake
+  moveSteer(SteerPosition);
+  moveVehicle(MinimumThrottle); 
+  Serial.println("Initialized");
+  Serial.print("Left\t");   
+  Serial.print("Right\t");
+  Serial.println("Time");   
 }
 /*---------------------------------------------------------------------------------------*/
 void loop()
@@ -266,13 +270,16 @@ void loop()
     if (BrakePosition > NoBrake || BrakePosition < FullBrake)
         BrakeIncrement = -BrakeIncrement;
     moveBrake(BrakePosition);
-#endif  // BRAKE_RAMP  
+#endif  // BRAKE_RAMP
   
  // apply steering
 #ifdef STEER_RAMP
     SteerPosition += SteerIncrement;
     if (SteerPosition > HardLeft || SteerPosition < HardRight)
+    {
+        Serial.println("Hard Angle");
         SteerIncrement = -SteerIncrement;
+    }
     moveSteer(SteerPosition);
 #endif  // Steer_RAMP
   outputToSerial();
@@ -281,15 +288,15 @@ void loop()
 void moveBrake(int i)
 {
      Serial.print ("Brake "); Serial.print (i);
-     Serial.print (" on ");   Serial.print (BRAKE_OUT_PIN); Serial.print("\t"); 
+     Serial.print (" on ");   Serial.print (BRAKE_OUT_PIN); Serial.print("\t");
      analogWrite(BRAKE_OUT_PIN, i);
 }
 /*---------------------------------------------------------------------------------------*/
 void moveSteer(int i)
 {
-     Serial.print ("Steer "); Serial.print(i);
-     Serial.print (" on ");   Serial.println (STEER_OUT_PIN);
-     analogWrite(STEER_OUT_PIN, i);
+  Serial.print ("Steer "); Serial.print(i);
+  Serial.print (" on ");   Serial.print (STEER_OUT_PIN); Serial.print("\t");
+  STEER_SERVO.writeMicroseconds(i);
 }
 /*---------------------------------------------------------------------------------------*/
 void outputToSerial()
@@ -323,7 +330,7 @@ void moveVehicle(int counts)
       255 counts = 4.08 V      
       */
      Serial.print ("Motor "); Serial.print(counts);
-     Serial.print (" on ");   Serial.println (THROTTLE_CHANNEL);
+     Serial.print (" on ");   Serial.print (THROTTLE_CHANNEL); Serial.print("\t");
 #ifdef DAC      
    DAC_Write(THROTTLE_CHANNEL, counts);
 #endif

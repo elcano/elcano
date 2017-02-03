@@ -59,6 +59,8 @@ VEHICLE_NUMBER to your own new number.
 
 // Trike-specific physical parameters
 #define WHEEL_DIAMETER_MM 482
+// Wheel Cirumference
+#define WHEEL_CIRCUM_MM WHEEL_DIAMETER_MM * PI
 //		Turning radius in cm.
 #define TURN_RADIUS_CM 209
 //		Turning speed in degrees per ms.
@@ -81,28 +83,29 @@ VEHICLE_NUMBER to your own new number.
 // Channel order differs for different vehicles
 #define RC_TURN 1
 #define RC_AUTO 2
-#define RC_GO   3
+#define RC_GO   5
 #define RC_ESTP 4
 #define RC_RDR  5
 #define RC_RVS  6
+#define RC_BRAKE 3
 #define NUMBER_CHANNELS 6
 
-// The assignment of interrupts / pins used for inputs from the RC controller
+// The assignment of pins used for inputs from the RC controller
 // might differ depending on the trike.
-// D2  = Int 0
 #define IRPT_RVS 2
-// D21 = Int 2
-#define IRPT_TURN 21
-// D20 = Int 3 
-#define IRPT_GO 20
-// D19 = Int 4
-#define IRPT_ESTOP 18
-// RDR (rudder) is not used. Instead, use this interrupt for the motor
+#define IRPT_TURN 21 
+#define IRPT_GO 19
+//EStop is bound to Channel 5, the red switch on the left side of the controller
+//Designed to be toggled on when we want to brake and 
+#define IRPT_ESTOP 20
+// RDR is used for use this interrupt for the motor
 // phase feedback, which gives speed.
-// D18 = Int 5
 #define IRPT_RDR 3
-//
-#define IRPT_SWITCH 19
+//Switch is actually used for Channel 4(Aka rudder) on the controller
+//takes in input from Channel 4 and uses it to control throttle and simple routines
+#define IRPT_SWITCH 20
+
+#define IRPT_BRAKE 18
 
 #define IRPT_WHEEL 3
 
@@ -150,6 +153,8 @@ VEHICLE_NUMBER to your own new number.
 
 // Trike specific physical parameters
 #define WHEEL_DIAMETER_MM 500
+// Wheel Cirumference
+#define WHEEL_CIRCUM_MM WHEEL_DIAMETER_MM * PI
 //Turning radius in cm.
 #define TURN_RADIUS 214
 #define MOTOR_POLE_PAIRS 23
