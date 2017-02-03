@@ -23,11 +23,15 @@ start:
     // to do this, and use `|' to let it capture more than one type at once.
     dt->clear();
     switch(c) {
-#define TYPE(CHR, TYPE)          \
-    case CHR:                     \
-      if (capture & MsgType::TYPE) \
-        dt->kind = MsgType::TYPE;   \
-      else {state = 50; goto start;} \
+#define TYPE(CHR, TYPE)              \
+    case CHR:                        \
+      if (capture & MsgType::TYPE) { \
+        dt->kind = MsgType::TYPE;    \
+        state = 1;                   \
+      } else {                       \
+        output->print(CHR);          \
+        state = 50;                  \
+      }                              \
       break;
 TYPE('D', drive)
 TYPE('S', sensor)
@@ -37,7 +41,6 @@ TYPE('X', seg)
     default:
       return ParseStateError::bad_type;
     }
-    state = 1;
     goto start;
   case 1:
     // During this state, we need to find '{' if we are reading the value for
