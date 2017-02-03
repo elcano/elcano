@@ -2,7 +2,7 @@
 
 #include <PID_v1.h>
 #include <SPI.h>
-#include <Elcano_Serial.h>
+#include <ElcanoSerial.h>
 #include <Servo.h>
 using namespace elcano;
 /*

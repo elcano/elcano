@@ -1,7 +1,7 @@
 #include <TimerOne.h>
 #include <Common.h>
 #include <Matrix.h>
-#include <Elcano_Serial.h>
+#include <ElcanoSerial.h>
 #define STARTSEG 0
 #define ENDSEG 1000
 #define STARTSPLINE 5
@@ -488,9 +488,9 @@ Instruction* InstructionsForWaypoints(int slices, TargetLocation *allTargetLocat
 
 ////////////////////////////////////////////////////////////////////////////////
 
-elcano:: ParseState ps;
-elcano:: SerialData dt;
-elcano:: SerialData sd;
+elcano::ParseState ps;
+elcano::SerialData dt;
+elcano::SerialData sd;
 int32_t currentSegment = 0;
 int tail = 0;
 int head = 0;
@@ -516,11 +516,13 @@ void SendData()
 
 void setup()
 {
-        Serial.begin(9600);
-        Serial1.begin(9600);
+        Serial.begin(elcano::baudrate);
+        Serial1.begin(elcano::baudrate);
         dt.clear();
         ps.dt = &dt;
-        ps.dev = &Serial1;
+        ps.input = &Serial1;
+	ps.output = &Serial2;
+	ps.capture = elcano::MsgType::seg;
         Timer1.initialize(100000);
         complete = false;
 
@@ -542,33 +544,26 @@ void loop()
     interrupts();
     if(r == elcano::ParseStateError::success)
     {
-      if(dt.kind ==  elcano::MsgType::seg)
+      //we're getting a new map
+      if(dt.number == STARTSEG)
       {
-        //we're getting a new map
-        if(dt.number == STARTSEG)
-        {
-           target.bearing = 0; //change this to get data from navigator
-           currentSegment = 0;
-           totalSegments++;
-           complete = false;
-        }
-        // we dont need to receive any more segments
-        else if(dt.number == ENDSEG)
-        {
-          complete = true;
-        }
-        // append the segments to the list
-        else
-        {
-          target.eastPosMm = 0;
-          target.northPosMm = 0;
-          currentLocations[totalSegments] = target;
-          totalSegments++;
-        }
+         target.bearing = 0; //change this to get data from navigator
+         currentSegment = 0;
+         totalSegments++;
+         complete = false;
       }
+      // we dont need to receive any more segments
+      else if(dt.number == ENDSEG)
+      {
+        complete = true;
+      }
+      // append the segments to the list
       else
       {
-        dt.write(&Serial2);
+        target.eastPosMm = 0;
+        target.northPosMm = 0;
+        currentLocations[totalSegments] = target;
+        totalSegments++;
       }
     }
 

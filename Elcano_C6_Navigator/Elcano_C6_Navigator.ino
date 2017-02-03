@@ -86,7 +86,7 @@ Serial lines:
 #include <Wire.h>
 //#include <Adafruit_LSM303.h>
 #include <Adafruit_LSM303_U.h>
-#include <Elcano_Serial.h>
+#include <ElcanoSerial.h>
 #include <FusionData.h>
 
 /* Assign a unique ID to this sensor at the same time */
@@ -144,8 +144,8 @@ const char* Header = "Latitude,Longitude,East_m,North_m,SigmaE_m,SigmaN_m,Time_s
 const char* ObstHeader ="Left,Front,Right,Busy";
 
 // Added by Varsha
-SerialData C2_Results;
-SerialData C4_Results;
+elcano::SerialData C2_Results;
+elcano::SerialData C4_Results;
 
 
 //#define WHEEL_DIAMETER_MM 397
@@ -170,7 +170,7 @@ PositionData oldPos, newPos;
    
    Added by Varsha
 */
-void displayResults(SerialData &Results)
+void displayResults(elcano::SerialData &Results)
 {
     Serial.print("SerialData::Kind :" );
     Serial.println(Results.kind);
@@ -243,7 +243,7 @@ long GetHeading(void)
  * Test Code to be removed
  */
 
-void TestSpeed ( SerialData &data )
+void TestSpeed ( elcano::SerialData &data )
 {
   long randNumber = random(3000, 5000);
   

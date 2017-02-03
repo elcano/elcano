@@ -66,8 +66,10 @@ void setup() {
     Serial1.begin(elcano::baudrate);
     Serial2.begin(elcano::baudrate);
     
-    ps.dt  = &dt;
-    ps.dev = &Serial1;
+    ps.dt     = &dt;
+    ps.input  = &Serial1;
+    ps.output = &Serial2;
+    ps.capture = elcano::MsgType::DESIRED_TYPE;
     dt.clear();
     
     // Any other initialization code goes here
@@ -84,11 +86,7 @@ void loop2() {
 void loop() {
     elcano::ParseStateError r = ps.update();
     if (r == elcano::ParseStateError::success) {
-        if (dt.kind == elcano::MsgType::DESIRED_TYPE) {
-            loop1();
-        } else {
-            dt.write(&Serial2);
-        }
+        loop1();
     }
     
     loop2();
