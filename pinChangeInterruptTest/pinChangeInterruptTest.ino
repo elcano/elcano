@@ -27,7 +27,7 @@ void loop () {
     { 
 //      Serial.println(elapsed[1]);
     }
-    PORTK = B11111110;  // to do: remove writes to PORTK
+    PORTK = B11111110;  // to do: remove writes to PORTK removing these broke code
     delay (1);
     PORTK = B11111101;
     delay (1);
@@ -40,27 +40,24 @@ void loop () {
 // Interrupt function, detects pin change on PCINT23:20
 ISR(PCINT2_vect) {
 //    Serial.println(PINK, BIN);
-    byte lowNibble , highNibble;
-    lowNibble = PINK >> 4;
-    highNibble = PINK & 0xF;
-    byte high;
-    byte low;
-    bool valid = 
-      (highNibble == B1101 || 
-       highNibble == B1011 || 
-       highNibble == B0111)
-       &&
-       (lowNibble == B1110 ||
-       lowNibble == B1101  || 
-       lowNibble == B1011  || 
-       lowNibble == B0111);
-    valid = true;
+
+    valid = true; // not sure if this is needed
     noInterrupts();
     if (valid)
     { 
-      Serial.println(getBit(PINK, 1));
-      if(getBit(oldPINK, 1) == 0 && getBit(PINK, 1) == 1) Serial.println("RISING");
-      if(getBit(oldPINK, 1) == 1 && getBit(PINK, 1) == 0) Serial.println("FALLING");
+      done[1] = false;
+      Serial.println(getBit(PINK, 1)); // bit one is the ESTOP switch
+      if(getBit(oldPINK, 1) == 0 && getBit(PINK, 1) == 1)
+      { 
+//        temp[1] = micros();
+        Serial.println("RISING");
+      }
+      if(getBit(oldPINK, 1) == 1 && getBit(PINK, 1) == 0)
+      {
+//        elapsed[1] = micros() - temp[1];
+        done[1] = true;
+        Serial.println("FALLING");
+      }
       oldPINK = PINK;
     }
     interrupts();
