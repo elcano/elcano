@@ -99,7 +99,10 @@ STATES(9, 19, 29, '}', 1, posN_cm)
 #undef STATES
   case 50:
     output->print((char)c);
-    if (c == '\n') state = 0;
+    if (c == '\n') {
+      state = 0;
+      return ParseStateError::passthru;
+    }
     goto start;
   }
 }

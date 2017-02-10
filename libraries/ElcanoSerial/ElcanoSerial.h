@@ -48,7 +48,8 @@ enum class ParseStateError : int8_t {
   bad_type    = 3, //!< Syntax error: types should be [DSGX]
   bad_lcurly  = 4, //!< Syntax error: expected '{' or '\n' but got neither
   bad_attrib  = 5, //!< Syntax error: attributes should be [nsabpr]
-  bad_number  = 6  //!< Syntax error: number had a bad symbol
+  bad_number  = 6, //!< Syntax error: number had a bad symbol
+  passthru    = 7  //!< An uncaptured message has been passed through
 };
 
 //! Contains internal state for the SerialData parser.

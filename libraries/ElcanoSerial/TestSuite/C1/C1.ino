@@ -54,6 +54,8 @@ void loop() {
     }
   }
 
-  ps2.update();
+  err = ps2.update();
+  if (err == elcano::ParseStateError::passthru) {
+    start = millis();
+  }
 }
-

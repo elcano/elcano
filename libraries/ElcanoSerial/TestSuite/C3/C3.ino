@@ -1,7 +1,7 @@
 #include <ElcanoSerial.h>
 
-elcano::ParseState ps1, ps2;
-elcano::SerialData dt1, dt2;
+elcano::ParseState ps1;
+elcano::SerialData dt1;
 unsigned long start, finish;
 
 void setup() {
@@ -13,11 +13,6 @@ void setup() {
   ps1.input = &Serial1;
   ps1.output = &Serial2;
   ps1.captures = elcano::MsgType::sensor | elcano::MsgType::seg;
-
-  ps2.dt = &dt2;
-  ps2.input = &Serial;
-  ps2.output = &Serial2;
-  ps2.captures = elcano::MsgType::none; // Passthru on all msgs
 
   start = millis();
 }
@@ -53,7 +48,4 @@ void loop() {
       Serial.println("an unknown error!");
     }
   }
-
-  ps2.update();
 }
-
