@@ -62,8 +62,8 @@ void loop() {
   //turn, 5, right up/down
   //
   int i = RC_ESTP;
-  Serial.println( String(RC_elapsed[1]) + " " + String(RC_elapsed[2]) + " " + String(RC_elapsed[3]) + " " + String(RC_elapsed[4]) + " " + String(RC_elapsed[5]) + " " + String(RC_elapsed[6]));
-  delay(200);
+  Serial.println(RC_elapsed[RC_ESTP]);
+    delay(200);
 }
 
 void ISR_AUTO_rise()
