@@ -23,7 +23,7 @@ start:
     // to do this, and use `|' to let it capture more than one type at once.
     dt->clear();
     switch(c) {
-#define TYPE(CHR, TYPE)              \
+#define STATE(CHR, TYPE)              \
     case CHR:                        \
       if (capture & MsgType::TYPE) { \
         dt->kind = MsgType::TYPE;    \
@@ -33,11 +33,11 @@ start:
         state = 50;                  \
       }                              \
       break;
-TYPE('D', drive)
-TYPE('S', sensor)
-TYPE('G', goal)
-TYPE('X', seg)
-#undef TYPE
+STATE('D', drive)
+STATE('S', sensor)
+STATE('G', goal)
+STATE('X', seg)
+#undef STATE
     default:
       return ParseStateError::bad_type;
     }

@@ -24,6 +24,15 @@ enum class MsgType : int8_t {
   seg    = 1 << 4  //!< Part of the navigation path
 };
 
+//! Allow bitfield operators for MsgType
+inline constexpr MsgType operator&(MsgType a, MsgType b) {
+  return static_cast<MsgType>(static_cast<int8_t>(a) & static_cast<int8_t>(b));
+}
+
+inline constexpr MsgType operator|(MsgType a, MsgType b) {
+  return static_cast<MsgType>(static_cast<int8_t>(a) | static_cast<int8_t>(b));
+}
+
 //! Contains information to send/recieve over a serial connection.
 struct SerialData {
   MsgType kind;        //!< The type of message being received [0-4]
