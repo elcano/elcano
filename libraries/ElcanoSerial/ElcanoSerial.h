@@ -54,10 +54,10 @@ enum class ParseStateError : int8_t {
 
 //! Contains internal state for the SerialData parser.
 struct ParseState {
-  HardwareSerial *dev; //!< Connection to read from
-  SerialData *input;   //!< SerialData to read from
-  SerialData *output;  //!< SerialData to write to
-  MsgType capture;     //!< MsgType(s) to capture
+  SerialData *dt;         //!< SerialData to store content in
+  HardwareSerial *input;  //!< Connection to read from
+  HardwareSerial *output; //!< Connection to write to
+  MsgType capture;        //!< MsgType(s) to capture
 
   ParseStateError update(void); //!< Update the state of the parser based on a single character
 private:
