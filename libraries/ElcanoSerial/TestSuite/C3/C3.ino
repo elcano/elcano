@@ -12,7 +12,7 @@ void setup() {
   ps1.dt = &dt1;
   ps1.input = &Serial1;
   ps1.output = &Serial2;
-  ps1.captures = elcano::MsgType::sensor | elcano::MsgType::seg;
+  ps1.capture = elcano::MsgType::sensor | elcano::MsgType::seg;
 
   start = millis();
 }
@@ -26,7 +26,7 @@ void loop() {
     Serial.print(finish - start);
     Serial.println("ms");
     start = finish;
-  } else if (err != elcano::ParseStateError::incomplete) {
+  } else if (err != elcano::ParseStateError::passthru) {
     Serial.print("Error: recieved ");
     switch (err) {
     case elcano::ParseStateError::inval_comb:

@@ -12,7 +12,7 @@ void setup() {
   ps1.dt = &dt1;
   ps1.input = &Serial1;
   ps1.output = &Serial2;
-  ps1.captures = elcano::MsgType::goal;
+  ps1.capture = elcano::MsgType::goal;
 
   start = millis();
 }
@@ -26,7 +26,7 @@ void loop() {
     Serial.print(finish - start);
     Serial.println("ms");
     start = finish;
-  } else if (err != elcano::ParseStateError::incomplete) {
+  } else if (err != elcano::ParseStateError::passthru) {
     Serial.print("Error: recieved ");
     switch (err) {
     case elcano::ParseStateError::inval_comb:

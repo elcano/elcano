@@ -25,8 +25,8 @@ enum class MsgType : int8_t {
 };
 
 //! Allow bitfield operators for MsgType
-inline constexpr MsgType operator&(MsgType a, MsgType b) {
-  return static_cast<MsgType>(static_cast<int8_t>(a) & static_cast<int8_t>(b));
+inline constexpr bool operator&(MsgType a, MsgType b) {
+  return static_cast<bool>(static_cast<int8_t>(a) & static_cast<int8_t>(b));
 }
 
 inline constexpr MsgType operator|(MsgType a, MsgType b) {
