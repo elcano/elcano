@@ -211,7 +211,7 @@ void processHighLevel(SerialData * results)
   long currentSpeed = history.currentSpeed_kmPh * kmPh_to_mms;
   long desiredSpeed = 10*results->speed_cmPs;
   Serial.println("currentSpeed = " + String(currentSpeed) + " desired speed = " + String(desiredSpeed));
-  ThrottlePID(desiredSpeed - currentSpeed);
+  ThrottlePID(desiredSpeed);
   //End Throttle
 }
 
@@ -224,7 +224,7 @@ bool moveFixedDistance(long length_mm, long desiredSpeed)
   while(distance_mm < length_mm  + start)  // go until the total distance travaled has increased by the desired distance  
   {
     computeSpeed(&history);
-    ThrottlePID(desiredSpeed - history.currentSpeed_kmPh);
+    ThrottlePID(desiredSpeed);
     if(checkEbrake()) return false;
     Serial.println(distance_mm);
   }
