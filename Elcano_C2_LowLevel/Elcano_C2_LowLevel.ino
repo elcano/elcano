@@ -2,7 +2,7 @@
 #include "globals.h"
 #include <PID_v1.h>
 #include <SPI.h>
-#include <Elcano_Serial.h>
+#include <ElcanoSerial.h>
 #include <Servo.h>
 using namespace elcano;
 
@@ -70,11 +70,23 @@ void setup()
   setupWheelRev(); // WheelRev4 addition
   CalibrateTurnAngle(32, 20);
   calibrationTime_ms = millis();
-        attachInterrupt(digitalPinToInterrupt(IRPT_TURN),  ISR_TURN_rise,  RISING);//turn right stick l/r turn
-        attachInterrupt(digitalPinToInterrupt(IRPT_GO),    ISR_GO_rise,    RISING);//left stick l/r
-        attachInterrupt(digitalPinToInterrupt(IRPT_ESTOP), ISR_ESTOP_rise, RISING);//ebrake
-        attachInterrupt(digitalPinToInterrupt(IRPT_BRAKE), ISR_BRAKE_rise, RISING);//left stick u/d mode select
-        attachInterrupt(digitalPinToInterrupt(IRPT_MOTOR_FEEDBACK), ISR_MOTOR_FEEDBACK_rise, RISING);
+        
+  attachInterrupt(digitalPinToInterrupt(IRPT_TURN),  ISR_TURN_rise,  RISING);//turn right stick l/r turn
+  attachInterrupt(digitalPinToInterrupt(IRPT_GO),    ISR_GO_rise,    RISING);//left stick l/r
+  attachInterrupt(digitalPinToInterrupt(IRPT_ESTOP), ISR_ESTOP_rise, RISING);//ebrake
+  attachInterrupt(digitalPinToInterrupt(IRPT_BRAKE), ISR_BRAKE_rise, RISING);//left stick u/d mode select
+  attachInterrupt(digitalPinToInterrupt(IRPT_MOTOR_FEEDBACK), ISR_MOTOR_FEEDBACK_rise, RISING);
+
+  parseState.dt = &Results;
+  parseState.input = &Serial1;
+  parseState.output = &Serial2;
+  Serial1.begin(baudrate);
+  Serial2.begin(baudrate);
+  pinMode(19, INPUT);
+  parseState.capture = MsgType::drive;
+  // msgType::drive uses `speed_cmPs` and `angle_deg`
+  Results.clear();
+
 }
 
 
@@ -96,15 +108,20 @@ void loop() {
   byte automate = processRC();
   // @ToDo: Verify that this should be conditional. May be moot if it is
   // replaced in the conversion to the new Elcano Serial protocol.
-  if (automate == 0x01)
+  ParseStateError r = parseState.update();
+  // TEMPORARY
+  automate = 0x01;
+  // END TEMPORARY
+  
+  if (automate == 0x01 && r == ParseStateError::success)
   {
     processHighLevel(&Results);
   }
 
-  // @ToDo: What is this doing?
-  Results.kind = MsgType::sensor;
-  Results.angle_deg = TurnAngle_degx10() / 10;
-  // @ToDo: Is this working and should it be uncommented?
+//  // @ToDo: What is this doing?
+//  Results.kind = MsgType::sensor;
+//  Results.angle_deg = TurnAngle_degx10() / 10;
+//  // @ToDo: Is this working and should it be uncommented?
   
   calibrationTime_ms += LOOP_TIME_MS;
   straightTime_ms = (steer_control == STRAIGHT_TURN_OUT) ? straightTime_ms + LOOP_TIME_MS : 0;
@@ -182,16 +199,19 @@ void loop() {
 /*------------------------------------processHighLevel------------------------------------*/
 void processHighLevel(SerialData * results)
 {
+
+
   //Steer
   int turn_signal = convertDeg(results->angle_deg);
   steer(turn_signal);
   //End Steer
+  
   //Throttle
   long kmPh_to_mms = 277.778;
   long currentSpeed = history.currentSpeed_kmPh * kmPh_to_mms;
   long desiredSpeed = 10*results->speed_cmPs;
   Serial.println("currentSpeed = " + String(currentSpeed) + " desired speed = " + String(desiredSpeed));
-  Throttle_PID(desiredSpeed - currentSpeed);
+  ThrottlePID(desiredSpeed - currentSpeed);
   //End Throttle
 }
 
@@ -234,7 +254,7 @@ void figure8Routine(){
     // Make a left circleRoutine for 2/3 the circumference
     steer(LEFT_TURN_OUT);
     delay(1000);
-    if(!moveFixedDistance((2/3.0) * TURN_CIRCUMFERENCE_M/100, desiredSpeed)) break;
+    if(!moveFixedDistance((2/3.0) * TURN_CIRCUMFERENCE_CM/100, desiredSpeed)) break;
   
     // Move straight for 5 m
     steer(STRAIGHT_TURN_OUT);
@@ -244,7 +264,7 @@ void figure8Routine(){
     // Make a right circleRoutine for 2/3 the circumference
     steer(RIGHT_TURN_OUT);
     delay(1000);
-    if(!moveFixedDistance((2/3.0) * TURN_CIRCUMFERENCE_M/100, desiredSpeed)) break;
+    if(!moveFixedDistance((2/3.0) * TURN_CIRCUMFERENCE_CM/100, desiredSpeed)) break;
   
     // Move straight for 5 m
     steer(STRAIGHT_TURN_OUT);
@@ -944,8 +964,8 @@ void ThrottlePID(double desired){
   desiredSpeed = desired;
   speedPID.Compute();
   
-  Serial.print("Throttle out value ");
-  Serial.println(PIDThrottleOutput);
+//  Serial.print("Throttle out value ");
+//  Serial.println(PIDThrottleOutput);
   int throttleControl = (int)PIDThrottleOutput;
 
   //apply control value to vehicle
