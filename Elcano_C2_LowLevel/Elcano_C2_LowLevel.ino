@@ -112,7 +112,7 @@ void loop() {
   // replaced in the conversion to the new Elcano Serial protocol.
   ParseStateError r = parseState.update();
   // TEMPORARY
-  automate = 0x01;
+//  automate = 0x01;
   if(r == ParseStateError::success) Serial.println("success");
   // END TEMPORARY
   if (automate == 0x01 && r == ParseStateError::success)
@@ -385,22 +385,26 @@ void doAutoMovement(){
 void doManualMovement(){
   //THROTTLE
     //TODO: if less than the middle, reverse, otherwise forward
+    bool doFeather = false;
+    Serial.println(RC_elapsed[RC_GO]);
     if(RC_Done[RC_GO])
     {
-      
-      if(RC_elapsed[RC_GO] < MIDDLE){
+      Serial.println(RC_elapsed[RC_GO]);
+      if(RC_elapsed[RC_GO] > MIDDLE + DEAD_ZONE){
         //moveVehicle(convertThrottle(RC_elapsed[RC_GO]));
       }
-      else{
+      else if(RC_elapsed[RC_GO] < MIDDLE - DEAD_ZONE){
         // apply brakes or reverse
+        doFeather = true;
       }
+      brake_feather(doFeather);
       //Serial.println(RC_elapsed[RC_GO]);
       //moveVehicle(convertThrottle(RC_elapsed[RC_GO]));
     }
   //TURN
     if (RC_Done[RC_TURN]) 
     {
-      Serial.println(String(convertTurn(RC_elapsed[RC_TURN])));
+//      Serial.println(String(convertTurn(RC_elapsed[RC_TURN])));
       steer(convertTurn(RC_elapsed[RC_TURN]));
     }
 }
@@ -473,6 +477,7 @@ boolean liveBrake(int b)
 /*-------------------------------------Emergency stop--------------------------------------*/
 void E_Stop()
 {
+  Serial.println("E_Stop");
   brake(true);
   moveVehicle(MIN_ACC_OUT);
   delay (2000);   // inhibit output
@@ -502,8 +507,15 @@ int convertBrake(unsigned long amount){
   return result;
 }
 
-/*-------------------------------------brake-----------------------------------------------*/
 
+/*-------------------------------------brake_feather---------------------------------------*/
+void brake_feather(bool on)
+{
+  if(on) BRAKE_SERVO.writeMicroseconds((MAX_BRAKE_OUT + MIN_BRAKE_OUT)/2);
+  else BRAKE_SERVO.writeMicroseconds(MIN_BRAKE_OUT);
+}
+
+/*-------------------------------------brake-----------------------------------------------*/
 void brake(bool on)
 {
   BRAKE_SERVO.writeMicroseconds(on ? MAX_BRAKE_OUT : MIN_BRAKE_OUT);
