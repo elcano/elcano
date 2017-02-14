@@ -78,11 +78,13 @@ void setup()
   attachInterrupt(digitalPinToInterrupt(IRPT_MOTOR_FEEDBACK), ISR_MOTOR_FEEDBACK_rise, RISING);
 
   parseState.dt = &Results;
-  parseState.input = &Serial1;
+  parseState.input = &Serial3;
   parseState.output = &Serial2;
   Serial1.begin(baudrate);
   Serial2.begin(baudrate);
-  pinMode(19, INPUT);
+  Serial3.begin(baudrate);
+//  pinMode(19, INPUT);
+  pinMode(15, INPUT);
   parseState.capture = MsgType::drive;
   // msgType::drive uses `speed_cmPs` and `angle_deg`
   Results.clear();
@@ -111,8 +113,8 @@ void loop() {
   ParseStateError r = parseState.update();
   // TEMPORARY
   automate = 0x01;
+  if(r == ParseStateError::success) Serial.println("success");
   // END TEMPORARY
-  
   if (automate == 0x01 && r == ParseStateError::success)
   {
     processHighLevel(&Results);
@@ -199,7 +201,7 @@ void loop() {
 /*------------------------------------processHighLevel------------------------------------*/
 void processHighLevel(SerialData * results)
 {
-
+  
 
   //Steer
   int turn_signal = convertDeg(results->angle_deg);
@@ -879,7 +881,7 @@ float mapThrottle(int value){
     return map(value, MIDDLE-DEAD_ZONE, MIN_RC, 0, MAX_SPEED);
 }
 
-/*------------------------------Throttle_PID---------------------------------------------*/
+/*------------------------------Throttle_PID---------------------------------------------*/// DEFUNCT
 /* Use throttle and brakes to keep vehicle at a desired speed.
  * error_speed_mmPs = Desired speed in millimeters per second
    A PID controller uses the error in the set point to increase or decrease the juice.
@@ -895,7 +897,7 @@ float mapThrottle(int value){
    For more information, search for:
    VanDoren Proportional Integral Derivative Control
 */
-void Throttle_PID(long error_speed_mmPs)
+void Throttle_PID(long error_speed_mmPs) // DEFUNCT
 {
   static int  throttle_control = MIN_ACC_OUT;
   static int  brake_control = MAX_BRAKE_OUT;
