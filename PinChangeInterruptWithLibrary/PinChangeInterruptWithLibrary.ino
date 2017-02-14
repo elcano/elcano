@@ -18,9 +18,10 @@
 #include <Servo.h>
 
 // Assign your channel in pins
-#define THROTTLE_IN_PIN A8
-#define STEERING_IN_PIN A9
-#define AUX_IN_PIN A10
+#define THROTTLE_IN_PIN A9
+#define STEERING_IN_PIN A11
+#define AUX_IN_PIN A13
+#define L_STICK_LR A12
 
 // Assign your channel out pins
 #define THROTTLE_OUT_PIN 5
@@ -52,6 +53,7 @@ volatile uint8_t bUpdateFlagsShared;
 volatile uint16_t unThrottleInShared;
 volatile uint16_t unSteeringInShared;
 volatile uint16_t unAuxInShared;
+volatile uint16_t unLStickShared;
 
 // These are used to record the rising edge of a pulse in the calcInput functions
 // They do not need to be volatile as they are only used in the ISR. If we wanted
@@ -59,7 +61,7 @@ volatile uint16_t unAuxInShared;
 uint32_t ulThrottleStart;
 uint32_t ulSteeringStart;
 uint32_t ulAuxStart;
-
+uint32_t ulLStickStart;
 void setup()
 {
   Serial.begin(9600);
@@ -78,7 +80,7 @@ void setup()
   PCintPort::attachInterrupt(THROTTLE_IN_PIN, calcThrottle,CHANGE); 
   PCintPort::attachInterrupt(STEERING_IN_PIN, calcSteering,CHANGE); 
   PCintPort::attachInterrupt(AUX_IN_PIN, calcAux,CHANGE); 
-  
+  PCintPort::attachInterrupt(L_STICK_LR, calcLStick, CHANGE);
 }
 
 void loop()
@@ -91,6 +93,8 @@ void loop()
   static uint16_t unAuxIn;
   // local copy of update flags
   static uint8_t bUpdateFlags;
+  //Serial.println("Ebrake = " + String(unThrottleInShared));
+  Serial.println(String(unThrottleInShared) + " " + String(unSteeringInShared) + " " + String(unAuxInShared) + " " + String(unLStickShared)); 
   // check shared update flags to see if any channels have a new signal
   if(bUpdateFlagsShared)
   {
@@ -205,7 +209,6 @@ void calcSteering()
 
 void calcAux()
 {
-    //Serial.println("Interrupted");
   if(digitalRead(AUX_IN_PIN) == HIGH)
   { 
     ulAuxStart = micros();
@@ -214,6 +217,15 @@ void calcAux()
   {
     unAuxInShared = (uint16_t)(micros() - ulAuxStart);
     bUpdateFlagsShared |= AUX_FLAG;
+  }
+}
+
+void calcLStick(){
+  if(digitalRead(L_STICK_LR) == HIGH){
+    ulLStickStart = micros();
+  }
+  else{
+    unLStickShared = (uint16_t) (micros() - ulLStickStart);
   }
 }
 
