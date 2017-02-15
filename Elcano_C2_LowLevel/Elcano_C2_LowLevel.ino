@@ -78,13 +78,12 @@ void setup()
   attachInterrupt(digitalPinToInterrupt(IRPT_MOTOR_FEEDBACK), ISR_MOTOR_FEEDBACK_rise, RISING);
 
   parseState.dt = &Results;
-  parseState.input = &Serial3;
+  parseState.input = &Serial2;
   parseState.output = &Serial2;
   Serial1.begin(baudrate);
   Serial2.begin(baudrate);
-  Serial3.begin(baudrate);
 //  pinMode(19, INPUT);
-  pinMode(15, INPUT);
+//  pinMode(15, INPUT);
   parseState.capture = MsgType::drive;
   // msgType::drive uses `speed_cmPs` and `angle_deg`
   Results.clear();
@@ -99,7 +98,8 @@ void setup()
 void loop() {
   //brake(false);
   computeSpeed(&history);
-  ThrottlePID(2000);
+//  compute();
+//  ThrottlePID(2000);
   // Get the next loop start time. Note this (and the millis() counter) will
   // roll over back to zero after they exceed the 32-bit size of unsigned long,
   // which happens after about 1.5 months of operation (should check this).
@@ -111,9 +111,9 @@ void loop() {
   // @ToDo: Verify that this should be conditional. May be moot if it is
   // replaced in the conversion to the new Elcano Serial protocol.
   ParseStateError r = parseState.update();
+  Serial.println(static_cast<int8_t>(r));
   // TEMPORARY
-//  automate = 0x01;
-  if(r == ParseStateError::success) Serial.println("success");
+  automate = 0x01;
   // END TEMPORARY
   if (automate == 0x01 && r == ParseStateError::success)
   {
@@ -202,7 +202,6 @@ void loop() {
 void processHighLevel(SerialData * results)
 {
   
-
   //Steer
   int turn_signal = convertDeg(results->angle_deg);
   steer(turn_signal);
@@ -212,7 +211,8 @@ void processHighLevel(SerialData * results)
   long kmPh_to_mms = 277.778;
   long currentSpeed = history.currentSpeed_kmPh * kmPh_to_mms;
   long desiredSpeed = 10*results->speed_cmPs;
-  Serial.println("currentSpeed = " + String(currentSpeed) + " desired speed = " + String(desiredSpeed));
+  Serial.println(results->speed_cmPs);
+//  Serial.println("currentSpeed = " + String(currentSpeed) + " desired speed = " + String(desiredSpeed));
   ThrottlePID(desiredSpeed);
   //End Throttle
 }
@@ -386,10 +386,10 @@ void doManualMovement(){
   //THROTTLE
     //TODO: if less than the middle, reverse, otherwise forward
     bool doFeather = false;
-    Serial.println(RC_elapsed[RC_GO]);
+//    Serial.println(RC_elapsed[RC_GO]);
     if(RC_Done[RC_GO])
     {
-      Serial.println(RC_elapsed[RC_GO]);
+//      Serial.println(RC_elapsed[RC_GO]);
       if(RC_elapsed[RC_GO] > MIDDLE + DEAD_ZONE){
         //moveVehicle(convertThrottle(RC_elapsed[RC_GO]));
       }
