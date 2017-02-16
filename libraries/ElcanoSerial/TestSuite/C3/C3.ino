@@ -1,8 +1,7 @@
 #include <ElcanoSerial.h>
 
 elcano::ParseState ps1;
-elcano::SerialData dt1;
-unsigned long start, finish;
+elcano::SerialData dt1, dt2;
 
 void setup() {
   Serial.begin(9600); // For communication with the reader
@@ -14,18 +13,16 @@ void setup() {
   ps1.output = &Serial2;
   ps1.capture = elcano::MsgType::sensor | elcano::MsgType::seg;
 
-  start = millis();
+  dt2.clear();
+  dt2.kind = elcano::MsgType::drive;
+  dt2.speed_cmPs = 123456;
+  dt2.angle_deg = 32;
 }
 
 void loop() {
   elcano::ParseStateError err = ps1.update();
   if (err == elcano::ParseStateError::success) {
-    finish = millis();
-    dt1.write(&Serial);
-    Serial.print("Loop completed in ");
-    Serial.print(finish - start);
-    Serial.println("ms");
-    start = finish;
+    dt2.write(&Serial2);
   } else if (err != elcano::ParseStateError::passthru) {
     Serial.print("Error: recieved ");
     switch (err) {

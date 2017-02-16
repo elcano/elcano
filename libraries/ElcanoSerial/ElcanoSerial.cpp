@@ -23,7 +23,7 @@ start:
     // to do this, and use `|' to let it capture more than one type at once.
     dt->clear();
     switch(c) {
-#define STATE(CHR, TYPE)              \
+#define STATE(CHR, TYPE)             \
     case CHR:                        \
       if (capture & MsgType::TYPE) { \
         dt->kind = MsgType::TYPE;    \
@@ -48,7 +48,7 @@ STATE('X', seg)
     switch(c) {
     case '\n': state = 0; return dt->verify() ? ParseStateError::success : ParseStateError::inval_comb;
     case '{' : state = 2; goto start;
-    default  : return ParseStateError::bad_lcurly;
+    default  : state = 0; return ParseStateError::bad_lcurly;
     }
   case 2:
     // During this state, we begin reading an attribute of the SerialData and
@@ -60,35 +60,40 @@ STATE('X', seg)
     case 'b': state = 6; goto start;
     case 'r': state = 7; goto start;
     case 'p': state = 8; goto start;
-    default : return ParseStateError::bad_attrib;
+    default : state = 0; return ParseStateError::bad_attrib;
     }
 #define STATES(SS, PS, NS, TERM, HOME, VAR) \
   case SS:                                  \
     dt->VAR = 0;                            \
     if (c == '-') {                         \
       state = NS;                           \
-      goto start; }                         \
+      goto start;                           \
+    }                                       \
     state = PS;                             \
   case PS:                                  \
     if (c >= '0' && c <= '9') {             \
       dt->VAR *= 10;                        \
       dt->VAR += c - '0';                   \
-      goto start; }                         \
-    else if (c == TERM) {                   \
+      goto start;                           \
+    } else if (c == TERM) {                 \
       state = HOME;                         \
-      goto start; }                         \
-    else                                    \
+      goto start;                           \
+    } else {                                \
+      state = 0;                            \
       return ParseStateError::bad_number;   \
+    }                                       \
   case NS:                                  \
     if (c >= '0' && c <= '9') {             \
       dt->VAR *= 10;                        \
       dt->VAR -= c - '0';                   \
-      goto start; }                         \
-    else if (c == TERM) {                   \
+      goto start;                           \
+    } else if (c == TERM) {                 \
       state = HOME;                         \
-      goto start; }                         \
-    else                                    \
-      return ParseStateError::bad_number;
+      goto start;                           \
+    } else {                                \
+      state = 0;                            \
+      return ParseStateError::bad_number;   \
+    }
 STATES(3, 13, 23, '}', 1, number)
 STATES(4, 14, 24, '}', 1, speed_cmPs)
 STATES(5, 15, 25, '}', 1, angle_deg)
