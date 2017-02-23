@@ -6,7 +6,7 @@
 #include <Servo.h>
 using namespace elcano;
 
-
+long startTime;
 // PID setup block
 PID speedPID(&SpeedCyclometer_mmPs, &PIDThrottleOutput, &desiredSpeed, proportionalConstant, integralConstant, derivativeConstant, DIRECT);
 
@@ -29,7 +29,11 @@ PID speedPID(&SpeedCyclometer_mmPs, &PIDThrottleOutput, &desiredSpeed, proportio
  */
 /*-----------------------------------setup-----------------------------------------------*/
 void setup()
-{ //Set up pins
+{
+  startTime = millis();
+  
+  
+  //Set up pins
   STEER_SERVO.attach(STEER_OUT_PIN);
   BRAKE_SERVO.attach(BRAKE_OUT_PIN);
 
@@ -71,19 +75,18 @@ void setup()
   CalibrateTurnAngle(32, 20);
   calibrationTime_ms = millis();
         
-  attachInterrupt(digitalPinToInterrupt(IRPT_TURN),  ISR_TURN_rise,  RISING);//turn right stick l/r turn
-  attachInterrupt(digitalPinToInterrupt(IRPT_GO),    ISR_GO_rise,    RISING);//left stick l/r
-  attachInterrupt(digitalPinToInterrupt(IRPT_ESTOP), ISR_ESTOP_rise, RISING);//ebrake
-  attachInterrupt(digitalPinToInterrupt(IRPT_BRAKE), ISR_BRAKE_rise, RISING);//left stick u/d mode select
+//  attachInterrupt(digitalPinToInterrupt(IRPT_TURN),  ISR_TURN_rise,  RISING);//turn right stick l/r turn
+//  attachInterrupt(digitalPinToInterrupt(IRPT_GO),    ISR_GO_rise,    RISING);//left stick l/r
+//  attachInterrupt(digitalPinToInterrupt(IRPT_ESTOP), ISR_ESTOP_rise, RISING);//ebrake
+//  attachInterrupt(digitalPinToInterrupt(IRPT_BRAKE), ISR_BRAKE_rise, RISING);//left stick u/d mode select
   attachInterrupt(digitalPinToInterrupt(IRPT_MOTOR_FEEDBACK), ISR_MOTOR_FEEDBACK_rise, RISING);
 
   parseState.dt = &Results;
-  parseState.input = &Serial2;
+  parseState.input = &Serial3;
   parseState.output = &Serial2;
+  Serial3.begin(baudrate);
   Serial1.begin(baudrate);
   Serial2.begin(baudrate);
-//  pinMode(19, INPUT);
-//  pinMode(15, INPUT);
   parseState.capture = MsgType::drive;
   // msgType::drive uses `speed_cmPs` and `angle_deg`
   Results.clear();
@@ -94,13 +97,32 @@ void setup()
 
 /*-----------------------------------loop------------------------------------------------*/
 
+void ThrottlePID(){
+
+  speedPID.Compute();
+  Serial.print("Throttle out value ");
+  Serial.print(PIDThrottleOutput);
+  Serial.println("\tDesiredSpeed: " + String(desiredSpeed) + "\tSpeed: " + String(SpeedCyclometer_mmPs));
+  int throttleControl = (int)PIDThrottleOutput;
+//  if(desiredSpeed > SpeedCyclometer_mmPs) SpeedCyclometer_mmPs += 10;
+//  else if(SpeedCyclometer_mmPs > 10) SpeedCyclometer_mmPs -= 10;
+  //apply control value to vehicle
+  moveVehicle(throttleControl);
+  if(PIDThrottleOutput == MIN_ACC_OUT){
+    //apply brakes
+    brake_feather(true);
+  }
+  else{
+    brake_feather(false);
+  }
+  
+  return;
+}
+
 
 void loop() {
-  //brake(false);
-  computeSpeed(&history);
-  Serial.println(history.currentSpeed_kmPh);
-//  compute();
-//  ThrottlePID(2000);
+//  computeSpeed(&history);
+  ThrottlePID();
   // Get the next loop start time. Note this (and the millis() counter) will
   // roll over back to zero after they exceed the 32-bit size of unsigned long,
   // which happens after about 1.5 months of operation (should check this).
@@ -113,7 +135,14 @@ void loop() {
   // replaced in the conversion to the new Elcano Serial protocol.
   ParseStateError r = parseState.update();
   // TEMPORARY
+//  if(static_cast<int8_t>(r) == 0)
+//  Serial.println(Results.speed_cmPs);
   automate = 0x01;
+//  if(millis() > startTime + 20000)
+//  {
+//    automate = 0x00;
+//    desiredSpeed = 0;
+//  }
   // END TEMPORARY
   if (automate == 0x01 && r == ParseStateError::success)
   {
@@ -201,7 +230,9 @@ void loop() {
 /*------------------------------------processHighLevel------------------------------------*/
 void processHighLevel(SerialData * results)
 {
-  
+  Serial3.end();
+  Serial3.begin(baudrate);
+//  Serial.println("here");
   //Steer
   int turn_signal = convertDeg(results->angle_deg);
   steer(turn_signal);
@@ -210,10 +241,11 @@ void processHighLevel(SerialData * results)
   //Throttle
   long kmPh_to_mms = 277.778;
   long currentSpeed = history.currentSpeed_kmPh * kmPh_to_mms;
-  long desiredSpeed = 10*results->speed_cmPs;
-  Serial.println(results->speed_cmPs);
-//  Serial.println("currentSpeed = " + String(currentSpeed) + " desired speed = " + String(desiredSpeed));
-  ThrottlePID(desiredSpeed);
+  desiredSpeed = results->speed_cmPs * 10;
+  
+//  ThrottlePID(results->speed_cmPs*10);
+//  Serial.println(results->speed_cmPs);
+//  Serial.println("currentSpeed = " + String(SpeedCyclometer_mmPs) + " desired speed = " + String(desiredSpeed));
   //End Throttle
 }
 

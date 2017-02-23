@@ -516,7 +516,12 @@ void loop()
 //    
 //
 //    //---------------------C2 output-------------------------------//
-    Serial.println("here");
+    ParseStateError r = parseState.update();
+//    Serial.println(static_cast<int8_t>(r));
+    if(r == ParseStateError::success)
+    {
+      Serial.println(serialData.bearing_deg);
+    }
     serialData.kind = MsgType::drive;
     serialData.angle_deg = 0;
     serialData.speed_cmPs = speedToSend;
@@ -524,7 +529,7 @@ void loop()
     serialData.write(&Serial1);
     if(speedToSend >= 500) speedDir = -1;
     if(speedToSend <= 0)   speedDir = 1;
-    delay(10);
+    delay(100);
 //    
 //    //Test Data for instructions C4. This is an example of a semgment
 //    /*instructions.kind = 4;
