@@ -46,8 +46,6 @@ void setup() {
 }
 
 void loop() {
-  //rc_read_values();
-
   Serial.print("CH1:"); Serial.print(rc_shared[RC_CH1]); Serial.print("\t");
   Serial.print("CH2:"); Serial.print(rc_shared[RC_CH2]); Serial.print("\t");
   Serial.print("CH3:"); Serial.print(rc_shared[RC_CH3]); Serial.print("\t");
