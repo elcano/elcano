@@ -3,10 +3,10 @@
 
 #include <SPI.h>
 #include <SD.h>
-#include <Elcano_Serial.h>
+#include <ElcanoSerial.h>
 
-SerialData dt;
-ParseState ps;
+elcano::SerialData dt;
+elcano::ParseState ps;
 
 /*  
 Elcano Module C4: Path Planner.
@@ -597,7 +597,7 @@ int PlanPath (waypoint *start, waypoint *destination)
 void SendPath(waypoint *course, int count)
 {
   char *dataString;
-  SerialData Results;
+  elcano::SerialData Results;
   for( int i = 0; i < count; i++)
   {
      Results.clear();
@@ -1046,10 +1046,12 @@ void setup()
 
 	dt.clear();
 	ps.dt = &dt;
-	ps.dev = &Serial1;
+	ps.input = &Serial1;
+	ps.output = &Serial2;
+	ps.capture = elcano::MsgType::goal;
 	
-	Serial1.begin(9600);
-	Serial2.begin(9600);
+	Serial1.begin(elcano::baudrate);
+	Serial2.begin(elcano::baudrate);
 }
 /*---------------------------------------------------------------------------------------*/ 
 void loop() 

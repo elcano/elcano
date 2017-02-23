@@ -1,12 +1,13 @@
 Elcano Serial
 =============
 
-This document should serve as a complete guide to working with the `Elcano_Serial` library, the backbone of interdevice communication in the Elcano project.
+This document should serve as a complete guide to working with the `ElcanoSerial` library, the backbone of interdevice communication in the Elcano project.
 
-1. [Abstract](#Abstract)
-2. [Data Format](#Data Format)
-3. [Usage](#Usage)
-4. [Limitations](#Limitations)
+1. [Abstract](#abstract)
+2. [Data Format](#data-format)
+3. [More on Message Types](#more-on-message-types)
+4. [Usage](#usage)
+5. [Limitations](#limitations)
 
 Abstract
 --------
@@ -51,7 +52,45 @@ There is actually a _6th_ attribute that can be passed, **p** for _position_, an
 
     '{' 'p' '-'? [0-9]+ ',' '-'? [0-9]+ '}'
 
-Any spaces sent are ignored by the parser.
+Any spaces sent are ignored by the parser. Given all of the above, a complete PEG would look like the following:
+
+```
+Message = ('D' / 'S' / 'G' / 'X') ('{' (
+    ('n' / 's' / 'a' / 'b' / 'r') '-'? [0-9]+
+  / 'p' '-'? [0-9]+ ',' '-'? [0-9]+
+) '}')+
+```
+
+This may be of use to you if you need to re-implement this in the future.
+
+More on Message Types
+---------------------
+
+There are 4 types of messages that may be circulated through the system, as mentioned above. Each of them has a specific purpose, and only uses a portion of the available data options.
+
+A *drive* message is used to send data to C2, and requires the usage of two flags:
+- `speed_cmPs`
+- `angle_deg`
+
+A *sensor* command is used to send data to C3 and C6, and requires the usage of 4 flags:
+- `speed_cmPs`
+- `angle_deg`
+- `posE_cm` and `posN_cm`
+- `bearing_deg`
+
+A *goal* command is used to communicate the location of an object to C4, and requires the usage of 3 flags, with an optional 4th:
+- Number
+- Position
+- Bearing
+- Probability (optional)
+
+A *segment* command is used to communicate part of the navigation path to C3, and requires the usage of 4 flags:
+- Number
+- Position
+- Bearing
+- Speed
+
+This is internally verified to ensure that the types have the correct flags. If they do not, `ParseState::update()` returns `ParseStateError::inval_comb`, which you can check for in your `loop()`.
 
 Usage
 -----
@@ -63,39 +102,53 @@ elcano::ParseState ps;
 elcano::SerialData dt;
 
 void setup() {
-    Serial1.begin(elcano::baudrate);
-    Serial2.begin(elcano::baudrate);
-    
-    ps.dt  = &dt;
-    ps.dev = &Serial1;
-    dt.clear();
-    
-    // Any other initialization code goes here
+  Serial1.begin(elcano::baudrate);
+  Serial2.begin(elcano::baudrate);
+
+  ps.dt     = &dt;
+  ps.input  = &Serial1;
+  ps.output = &Serial2;
+  ps.capture = elcano::MsgType::DESIRED_TYPE;
+  dt.clear();
+
+  // Any other initialization code goes here
 }
 
 void loop1() {
-    // Update code here that depends on having recieved a data set
+  // Update code here that depends on having recieved a data set
 }
 
 void loop2() {
-    // Update code here that does not depend on having received a data set
+  // Update code here that does not depend on having received a data set
 }
 
 void loop() {
-    elcano::ParseStateError r = ps.update();
-    if (r == elcano::ParseStateError::success) {
-        if (dt.kind == elcano::MsgType::DESIRED_TYPE) {
-            loop1();
-        } else {
-            dt.write(&Serial2);
-        }
-    }
-    
-    loop2();
+  elcano::ParseStateError r = ps.update();
+  if (r == elcano::ParseStateError::success) {
+    loop1();
+  }
+
+  loop2();
 }
 ```
 
 Replace `DESIRED_TYPE` with `drive`, `sensor`, `goal`, or `seg` depending on your component. The specific serial port used by your component may vary, so you may have to change `Serial1` and `Serial2` around.
+
+The error handling code in the skeleton is enough to get you started, but may be a little bit lacking if you want more fine grained control, especially if you are debugging. That can be accomplished with a switch statement in the loop function:
+
+```c++
+void loop() {
+  elcano::ParseStateError r = ps.update();
+  switch (r) {
+  case elcano::ParseStateError::success:
+    loop1();
+    break;
+  <other cases go here>
+  }
+
+  loop2();
+}
+```
 
 Limitations
 -----------
