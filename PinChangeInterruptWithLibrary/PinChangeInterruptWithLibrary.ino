@@ -9,10 +9,10 @@
 #define RC_CH4 3
 
 // Assign your channel in pins
-#define RC_CH1_INPUT A8
-#define RC_CH2_INPUT A9
-#define RC_CH3_INPUT A10
-#define RC_CH4_INPUT A11
+#define RC_CH1_INPUT A0
+#define RC_CH2_INPUT A1
+#define RC_CH3_INPUT A2
+#define RC_CH4_INPUT A3
 
 volatile uint16_t rc_shared[RC_NUM_CHANNELS];
 uint32_t rc_start[RC_NUM_CHANNELS];
@@ -23,7 +23,7 @@ void setup()
 {
   Serial.begin(9600);
   Serial.println("multiChannels");
-
+  
   // using the PinChangeInt library, attach the interrupts
   // used to read the channels
   PCintPort::attachInterrupt(RC_CH1_INPUT, calc_ch1,CHANGE); 
@@ -34,8 +34,12 @@ void setup()
 
 void loop()
 {
-    Serial.println(rc_shared[RC_CH1]);
-
+//    if(rc_done[RC_CH2])
+//      if(rc_shared[RC_CH2] > 1000 && rc_shared[RC_CH2] < 2000)
+  Serial.println(rc_shared[RC_CH3]);
+//    if(rc_done[RC_CH3])
+//      if(rc_shared[RC_CH3] > 1000 && rc_shared[RC_CH3] < 2000)
+//        Serial.println(rc_shared[RC_CH3]);
   //+ " " + String(unSteeringInShared) + " " + String(unAuxInShared) + " " + String(unLStickShared)); 
 }
 
@@ -44,7 +48,7 @@ void calc_input(uint8_t channel, uint8_t input_pin){
     rc_start[channel] = micros();
   }else{
     rc_shared[channel] = (uint16_t)(micros() - rc_start[channel]);
-    rc_done[channel] = 1;
+    //rc_done[channel] = 1;
   }
 }
 
