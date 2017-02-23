@@ -144,6 +144,7 @@ namespace privateMembers
 		noInterrupts();
 		digitalWrite(BRAKE_EXTEND, LOW);
 		digitalWrite(BRAKE_RETRACT, LOW);
+		delay(20);
 		#ifdef DEBUG
 		digitalWrite(13, LOW);
 		#endif

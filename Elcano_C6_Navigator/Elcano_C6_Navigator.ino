@@ -1,6 +1,5 @@
 //#include <GPS.h>
-#include <ElcanoSerial.h>
-using namespace elcano;
+
 /*
 Elcano Module C6: Navigator.
   Includes C5 Obstacle detection.
@@ -83,6 +82,8 @@ Serial lines:
 #include <SD.h>
 #include <IO.h>
 #include <Matrix.h>
+#include <ElcanoSerial.h>
+using namespace elcano;
 
 #include <Wire.h>
 //#include <Adafruit_LSM303.h>
@@ -276,10 +277,10 @@ void initialize()
   // prints title with ending line break
   Serial.println(" GPS parser");
 //  Serial.print("Acquiring GPS RMC...");
-  checksum(protocol);
+  common::checksum(protocol);
   Serial3.println(protocol);
   disable[10] = '2';
-  checksum(disable);
+  common::checksum(disable);
   Serial3.println(disable);   // no GSA
 
   GPS_available = estimated_position.AcquireGPRMC(70000);
