@@ -1,6 +1,6 @@
 #include <PID_v1.h>
 #include <Servo.h>
-#include <Elcano_Serial.h>
+#include <ElcanoSerial.h>
 using namespace elcano;
 /*
  * C2 is the low-level controller that sends control signals to the hub motor,
@@ -131,6 +131,7 @@ unsigned long delayTime;
 // Inter-module communications data.
 SerialData Results;
 
+ParseState parseState;
 
 /*========================================================================/
   ============================WheelRev4 code==============================/
@@ -185,5 +186,6 @@ double desiredSpeed = 2000.0; //aprox 10kph
 double proportionalConstant = .0175;
 double integralConstant = .0141;
 double derivativeConstant = .00001;
+
 
 

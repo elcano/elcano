@@ -2,7 +2,7 @@
 #include "globals.h"
 #include <PID_v1.h>
 #include <SPI.h>
-#include <Elcano_Serial.h>
+#include <ElcanoSerial.h>
 #include <Servo.h>
 using namespace elcano;
 
@@ -70,11 +70,24 @@ void setup()
   setupWheelRev(); // WheelRev4 addition
   CalibrateTurnAngle(32, 20);
   calibrationTime_ms = millis();
-        attachInterrupt(digitalPinToInterrupt(IRPT_TURN),  ISR_TURN_rise,  RISING);//turn right stick l/r turn
-        attachInterrupt(digitalPinToInterrupt(IRPT_GO),    ISR_GO_rise,    RISING);//left stick l/r
-        attachInterrupt(digitalPinToInterrupt(IRPT_ESTOP), ISR_ESTOP_rise, RISING);//ebrake
-        attachInterrupt(digitalPinToInterrupt(IRPT_BRAKE), ISR_BRAKE_rise, RISING);//left stick u/d mode select
-        attachInterrupt(digitalPinToInterrupt(IRPT_MOTOR_FEEDBACK), ISR_MOTOR_FEEDBACK_rise, RISING);
+        
+  attachInterrupt(digitalPinToInterrupt(IRPT_TURN),  ISR_TURN_rise,  RISING);//turn right stick l/r turn
+  attachInterrupt(digitalPinToInterrupt(IRPT_GO),    ISR_GO_rise,    RISING);//left stick l/r
+  attachInterrupt(digitalPinToInterrupt(IRPT_ESTOP), ISR_ESTOP_rise, RISING);//ebrake
+  attachInterrupt(digitalPinToInterrupt(IRPT_BRAKE), ISR_BRAKE_rise, RISING);//left stick u/d mode select
+  attachInterrupt(digitalPinToInterrupt(IRPT_MOTOR_FEEDBACK), ISR_MOTOR_FEEDBACK_rise, RISING);
+
+  parseState.dt = &Results;
+  parseState.input = &Serial2;
+  parseState.output = &Serial2;
+  Serial1.begin(baudrate);
+  Serial2.begin(baudrate);
+//  pinMode(19, INPUT);
+//  pinMode(15, INPUT);
+  parseState.capture = MsgType::drive;
+  // msgType::drive uses `speed_cmPs` and `angle_deg`
+  Results.clear();
+
 }
 
 
@@ -85,7 +98,9 @@ void setup()
 void loop() {
   //brake(false);
   computeSpeed(&history);
-  ThrottlePID(2000);
+  Serial.println(history.currentSpeed_kmPh);
+//  compute();
+//  ThrottlePID(2000);
   // Get the next loop start time. Note this (and the millis() counter) will
   // roll over back to zero after they exceed the 32-bit size of unsigned long,
   // which happens after about 1.5 months of operation (should check this).
@@ -96,15 +111,19 @@ void loop() {
   byte automate = processRC();
   // @ToDo: Verify that this should be conditional. May be moot if it is
   // replaced in the conversion to the new Elcano Serial protocol.
-  if (automate == 0x01)
+  ParseStateError r = parseState.update();
+  // TEMPORARY
+  automate = 0x01;
+  // END TEMPORARY
+  if (automate == 0x01 && r == ParseStateError::success)
   {
     processHighLevel(&Results);
   }
 
-  // @ToDo: What is this doing?
-  Results.kind = MsgType::sensor;
-  Results.angle_deg = TurnAngle_degx10() / 10;
-  // @ToDo: Is this working and should it be uncommented?
+//  // @ToDo: What is this doing?
+//  Results.kind = MsgType::sensor;
+//  Results.angle_deg = TurnAngle_degx10() / 10;
+//  // @ToDo: Is this working and should it be uncommented?
   
   calibrationTime_ms += LOOP_TIME_MS;
   straightTime_ms = (steer_control == STRAIGHT_TURN_OUT) ? straightTime_ms + LOOP_TIME_MS : 0;
@@ -182,16 +201,19 @@ void loop() {
 /*------------------------------------processHighLevel------------------------------------*/
 void processHighLevel(SerialData * results)
 {
+  
   //Steer
   int turn_signal = convertDeg(results->angle_deg);
   steer(turn_signal);
   //End Steer
+  
   //Throttle
   long kmPh_to_mms = 277.778;
   long currentSpeed = history.currentSpeed_kmPh * kmPh_to_mms;
   long desiredSpeed = 10*results->speed_cmPs;
-  Serial.println("currentSpeed = " + String(currentSpeed) + " desired speed = " + String(desiredSpeed));
-  Throttle_PID(desiredSpeed - currentSpeed);
+  Serial.println(results->speed_cmPs);
+//  Serial.println("currentSpeed = " + String(currentSpeed) + " desired speed = " + String(desiredSpeed));
+  ThrottlePID(desiredSpeed);
   //End Throttle
 }
 
@@ -204,7 +226,7 @@ bool moveFixedDistance(long length_mm, long desiredSpeed)
   while(distance_mm < length_mm  + start)  // go until the total distance travaled has increased by the desired distance  
   {
     computeSpeed(&history);
-    ThrottlePID(desiredSpeed - history.currentSpeed_kmPh);
+    ThrottlePID(desiredSpeed);
     if(checkEbrake()) return false;
     Serial.println(distance_mm);
   }
@@ -234,7 +256,7 @@ void figure8Routine(){
     // Make a left circleRoutine for 2/3 the circumference
     steer(LEFT_TURN_OUT);
     delay(1000);
-    if(!moveFixedDistance((2/3.0) * TURN_CIRCUMFERENCE_M/100, desiredSpeed)) break;
+    if(!moveFixedDistance((2/3.0) * TURN_CIRCUMFERENCE_CM/100, desiredSpeed)) break;
   
     // Move straight for 5 m
     steer(STRAIGHT_TURN_OUT);
@@ -244,7 +266,7 @@ void figure8Routine(){
     // Make a right circleRoutine for 2/3 the circumference
     steer(RIGHT_TURN_OUT);
     delay(1000);
-    if(!moveFixedDistance((2/3.0) * TURN_CIRCUMFERENCE_M/100, desiredSpeed)) break;
+    if(!moveFixedDistance((2/3.0) * TURN_CIRCUMFERENCE_CM/100, desiredSpeed)) break;
   
     // Move straight for 5 m
     steer(STRAIGHT_TURN_OUT);
@@ -363,22 +385,26 @@ void doAutoMovement(){
 void doManualMovement(){
   //THROTTLE
     //TODO: if less than the middle, reverse, otherwise forward
+    bool doFeather = false;
+//    Serial.println(RC_elapsed[RC_GO]);
     if(RC_Done[RC_GO])
     {
-      
-      if(RC_elapsed[RC_GO] < MIDDLE){
+//      Serial.println(RC_elapsed[RC_GO]);
+      if(RC_elapsed[RC_GO] > MIDDLE + DEAD_ZONE){
         //moveVehicle(convertThrottle(RC_elapsed[RC_GO]));
       }
-      else{
+      else if(RC_elapsed[RC_GO] < MIDDLE - DEAD_ZONE){
         // apply brakes or reverse
+        doFeather = true;
       }
+      brake_feather(doFeather);
       //Serial.println(RC_elapsed[RC_GO]);
       //moveVehicle(convertThrottle(RC_elapsed[RC_GO]));
     }
   //TURN
     if (RC_Done[RC_TURN]) 
     {
-      Serial.println(String(convertTurn(RC_elapsed[RC_TURN])));
+//      Serial.println(String(convertTurn(RC_elapsed[RC_TURN])));
       steer(convertTurn(RC_elapsed[RC_TURN]));
     }
 }
@@ -451,6 +477,7 @@ boolean liveBrake(int b)
 /*-------------------------------------Emergency stop--------------------------------------*/
 void E_Stop()
 {
+  Serial.println("E_Stop");
   brake(true);
   moveVehicle(MIN_ACC_OUT);
   delay (2000);   // inhibit output
@@ -480,8 +507,15 @@ int convertBrake(unsigned long amount){
   return result;
 }
 
-/*-------------------------------------brake-----------------------------------------------*/
 
+/*-------------------------------------brake_feather---------------------------------------*/
+void brake_feather(bool on)
+{
+  if(on) BRAKE_SERVO.writeMicroseconds((MAX_BRAKE_OUT + MIN_BRAKE_OUT)/2);
+  else BRAKE_SERVO.writeMicroseconds(MIN_BRAKE_OUT);
+}
+
+/*-------------------------------------brake-----------------------------------------------*/
 void brake(bool on)
 {
   BRAKE_SERVO.writeMicroseconds(on ? MAX_BRAKE_OUT : MIN_BRAKE_OUT);
@@ -859,7 +893,7 @@ float mapThrottle(int value){
     return map(value, MIDDLE-DEAD_ZONE, MIN_RC, 0, MAX_SPEED);
 }
 
-/*------------------------------Throttle_PID---------------------------------------------*/
+/*------------------------------Throttle_PID---------------------------------------------*/// DEFUNCT
 /* Use throttle and brakes to keep vehicle at a desired speed.
  * error_speed_mmPs = Desired speed in millimeters per second
    A PID controller uses the error in the set point to increase or decrease the juice.
@@ -875,7 +909,7 @@ float mapThrottle(int value){
    For more information, search for:
    VanDoren Proportional Integral Derivative Control
 */
-void Throttle_PID(long error_speed_mmPs)
+void Throttle_PID(long error_speed_mmPs) // DEFUNCT
 {
   static int  throttle_control = MIN_ACC_OUT;
   static int  brake_control = MAX_BRAKE_OUT;
@@ -944,8 +978,8 @@ void ThrottlePID(double desired){
   desiredSpeed = desired;
   speedPID.Compute();
   
-  Serial.print("Throttle out value ");
-  Serial.println(PIDThrottleOutput);
+//  Serial.print("Throttle out value ");
+//  Serial.println(PIDThrottleOutput);
   int throttleControl = (int)PIDThrottleOutput;
 
   //apply control value to vehicle
