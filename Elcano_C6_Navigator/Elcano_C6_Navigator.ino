@@ -82,11 +82,13 @@ Serial lines:
 #include <SD.h>
 #include <IO.h>
 #include <Matrix.h>
+#include <ElcanoSerial.h>
+using namespace elcano;
 
 #include <Wire.h>
 //#include <Adafruit_LSM303.h>
 #include <Adafruit_LSM303_U.h>
-#include <Elcano_Serial.h>
+//#include <Elcano_Serial.h>
 #include <FusionData.h>
 
 /* Assign a unique ID to this sensor at the same time */
@@ -172,24 +174,24 @@ PositionData oldPos, newPos;
 */
 void displayResults(SerialData &Results)
 {
-    Serial.print("SerialData::Kind :" );
-    Serial.println(Results.kind);
-    Serial.print("SerialData::Number:");    
-    Serial.println(Results.number);    
-    Serial.print("SerialData::speed_cmPs:");
-    Serial.println(Results.speed_cmPs);
-    Serial.print("SerialData::angle_deg:");
-    Serial.println(Results.angle_deg);    // front wheels
-    Serial.print("SerialData::bearing_deg:");
-    Serial.println(Results.bearing_deg);  // compass direction
-    Serial.print("SerialData::posE_cm:");
-    Serial.println(Results.posE_cm);
-    Serial.print("SerialData::posN_cm:");
-    Serial.println(Results.posN_cm);
-    Serial.print("SerialData::probability:");
-    Serial.println(Results.probability);
-    Serial.print("SerialData::distance_travelled_cm:");
-    Serial.println(Results.distance_travelled_cm);
+//    Serial.print("SerialData::Kind :" );
+//    Serial.println(Results.kind);
+//    Serial.print("SerialData::Number:");    
+//    Serial.println(Results.number);    
+//    Serial.print("SerialData::speed_cmPs:");
+//    Serial.println(Results.speed_cmPs);
+//    Serial.print("SerialData::angle_deg:");
+//    Serial.println(Results.angle_deg);    // front wheels
+//    Serial.print("SerialData::bearing_deg:");
+//    Serial.println(Results.bearing_deg);  // compass direction
+//    Serial.print("SerialData::posE_cm:");
+//    Serial.println(Results.posE_cm);
+//    Serial.print("SerialData::posN_cm:");
+//    Serial.println(Results.posN_cm);
+//    Serial.print("SerialData::probability:");
+//    Serial.println(Results.probability);
+//    Serial.print("SerialData::distance_travelled_cm:");
+//    Serial.println(Results.distance_travelled_cm);
 }
 
 //---------------------------------------------------------------------------
@@ -249,7 +251,7 @@ void TestSpeed ( SerialData &data )
   
   Serial.println(randNumber);
   data.clear();
-  data.kind = MSG_SENSOR;
+//  data.kind = MSG_SENSOR;
   data.speed_cmPs = randNumber;
 }
 /*
@@ -275,10 +277,10 @@ void initialize()
   // prints title with ending line break
   Serial.println(" GPS parser");
 //  Serial.print("Acquiring GPS RMC...");
-  checksum(protocol);
+  common::checksum(protocol);
   Serial3.println(protocol);
   disable[10] = '2';
-  checksum(disable);
+  common::checksum(disable);
   Serial3.println(disable);   // no GSA
 
   GPS_available = estimated_position.AcquireGPRMC(70000);
@@ -476,7 +478,7 @@ void loop()
     Read lane deviation;   
     If (message from C4)    
     { */     
-      readline(2);  // C4 Path planner on serial 2 get new route and speed
+//      readline(2);  // C4 Path planner on serial 2 get new route and speed
  /* }
     If (message from C3)
     { */
@@ -499,53 +501,53 @@ void loop()
     C4_Results.bearing_deg = CurrentHeading;
     C4_Results.posE_cm = estimated_position.east_mm;
     C4_Results.posN_cm = estimated_position.north_mm;
-    C4_Results.kind = MSG_GOAL;
+//    C4_Results.kind = MSG_GOAL;
 
     //Sending GPS position from C6 to C2
     C2_Results.clear();    
     C2_Results.posE_cm = estimated_position.east_mm/10;
     C2_Results.posN_cm = estimated_position.north_mm/10;
-    C2_Results.kind = MSG_SENSOR;
+//    C2_Results.kind = MSG_SENSOR;
     
     // Read data from C2 using Elcano_Serial
     C2_Results.clear();
-    readSerial(&Serial2, &C2_Results);
+//    readSerial(&Serial2, &C2_Results);
     TestSpeed(C2_Results);
     displayResults(C2_Results);
     
-    if ( C2_Results.kind == MSG_SENSOR )
-    {
-        // Updating the C4_Results with the
-        // odometer details from C2
-        C4_Results.speed_cmPs = C2_Results.speed_cmPs;
-      
-	    newPos.speed_cmPs = C2_Results.speed_cmPs;
-	    newPos.bearing_deg = CurrentHeading;
-	    newPos.time_ms = time;
-		
-        ComputePositionWithDR(oldPos, newPos);
-	  
-	    // Populate PositionData struct
-	    PositionData gps, fuzzy_out;
-		
-		gps.x_Pos = estimated_position.latitude;
-		gps.y_Pos = estimated_position.longitude;
-
-	    
-	    // Translate GPS position
-	    TranslateCoordinates(newPos, gps, 1);
-	    RotateCoordinates(gps, newPos.bearing_deg, ROTATE_CLOCKWISE);
-	    FindFuzzyCrossPointXY(gps, newPos.distance_mm, newPos.bearing_deg, fuzzy_out);
-		RotateCoordinates(fuzzy_out, newPos.bearing_deg, ROTATE_COUNTER_CLOCKWISE);
-		TranslateCoordinates(oldPos, fuzzy_out, 1);
-
-	    // Swap data
-	    CopyData(oldPos, newPos);
-
-		// Copy GPS fuzzy output to C4
-		C4_Results.posE_cm = fuzzy_out.x_Pos;
-		C4_Results.posN_cm = fuzzy_out.y_Pos;
-    }
+//    if ( C2_Results.kind == MSG_SENSOR )
+//    {
+//        // Updating the C4_Results with the
+//        // odometer details from C2
+//        C4_Results.speed_cmPs = C2_Results.speed_cmPs;
+//      
+//	    newPos.speed_cmPs = C2_Results.speed_cmPs;
+//	    newPos.bearing_deg = CurrentHeading;
+//	    newPos.time_ms = time;
+//		
+//        ComputePositionWithDR(oldPos, newPos);
+//	  
+//	    // Populate PositionData struct
+//	    PositionData gps, fuzzy_out;
+//		
+//		gps.x_Pos = estimated_position.latitude;
+//		gps.y_Pos = estimated_position.longitude;
+//
+//	    
+//	    // Translate GPS position
+//	    TranslateCoordinates(newPos, gps, 1);
+//	    RotateCoordinates(gps, newPos.bearing_deg, ROTATE_CLOCKWISE);
+//	    FindFuzzyCrossPointXY(gps, newPos.distance_mm, newPos.bearing_deg, fuzzy_out);
+//		RotateCoordinates(fuzzy_out, newPos.bearing_deg, ROTATE_COUNTER_CLOCKWISE);
+//		TranslateCoordinates(oldPos, fuzzy_out, 1);
+//
+//	    // Swap data
+//	    CopyData(oldPos, newPos);
+//
+//		// Copy GPS fuzzy output to C4
+//		C4_Results.posE_cm = fuzzy_out.x_Pos;
+//		C4_Results.posN_cm = fuzzy_out.y_Pos;
+//    }
         
     C4_Results.write(&Serial2);
     C2_Results.write(&Serial2);   

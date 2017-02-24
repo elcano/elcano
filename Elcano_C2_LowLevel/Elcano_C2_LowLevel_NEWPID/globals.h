@@ -20,21 +20,6 @@ using namespace elcano;
  * past C2 on the ring.
  */
 
-static struct hist {
-  long olderSpeed_mmPs;  // older data
-  unsigned long olderTime_ms;   // time stamp of older speed
-  float currentSpeed_kmPh;
-  long oldSpeed_mmPs;  // last data from the interrupt
-  byte oldClickNumber;
-  unsigned long oldTime_ms;  // time stamp of old speed
-  long tickMillis;
-  long oldTickMillis;
-  byte nowClickNumber;  // situation when we want to display the speed
-  unsigned long nowTime_ms;
-  unsigned long TickTime_ms;  // Tick times are used to compute speeds
-  unsigned long OldTick_ms;   // Tick times may not match time stamps if we don't process
-  // results of every interrupt
-} history;
 //
 // @ToDo: Are these specific to some particular setup or trike? If so,
 // they should be moved to Settings.h.
@@ -52,7 +37,7 @@ Servo STEER_SERVO;
 Servo BRAKE_SERVO;
 // 10 milliseconds -- adjust to accomodate the fastest needed response or
 // sensor data capture.
-#define LOOP_TIME_MS 10
+#define LOOP_TIME_MS 50
 #define ERROR_HISTORY 20 //number of errors to accumulate
 //#define TEN_SECONDS_IN_MICROS 10000000
 #define ULONG_MAX 4294967295
@@ -77,7 +62,7 @@ int Left_Max_Count = 980;
 int Right_Min_Count = 698;
 int Right_Max_Count = 808;
 
-static long distance_mm = 0;
+static long distance = 0;
 // RC_rise contains the time value collected in the rising edge interrupts.
 // RC_elapsed contains the width of the pulse. The rise and fall interrupts
 // should alternate.
@@ -130,7 +115,6 @@ unsigned long delayTime;
 
 // Inter-module communications data.
 SerialData Results;
-
 ParseState parseState;
 
 /*========================================================================/
@@ -171,14 +155,34 @@ volatile byte InterruptState = IRQ_NONE;  // Tells us if we have initialized.
 volatile byte ClickNumber = 0;         // Used to distinguish old data from new.
 volatile unsigned long TickTime = 0;  // Time from one wheel rotation to the next gives speed.
 volatile unsigned long OldTick = 0;
-int oldClickNumber;
 
-
+static struct hist 
+{
+  long tickMillis;
+  long oldTickMillis;
+  long currentSpeed_kmPh;
+  long currentSpeed_mmPs;
+  long olderSpeed_mmPs;  // older data
+  unsigned long olderTime_ms;   // time stamp of older speed
+  
+  long oldSpeed_mmPs;  // last data from the interrupt
+  byte oldClickNumber;
+  unsigned long oldTime_ms;  // time stamp of old speed
+  
+  byte nowClickNumber;  // situation when we want to display the speed
+  unsigned long nowTime_ms;
+  unsigned long TickTime_ms;  // Tick times are used to compute speeds
+  unsigned long OldTick_ms;   // Tick times may not match time stamps if we don't process
+  // results of every interrupt
+} history;
+static long distance_mm;
+static long oldClickNumber;
 /**
  * Throttle PID implementation
  */
 double PIDThrottleOutput; //used to tell Throttle and Brake what to do as far as acceleration
-double desiredSpeed = 2000.0; //aprox 10kph
+//double desiredSpeed = 2000.0; //aprox 10kph
+double desiredSpeed = 0;
 
 //PID update frequency in milliseconds
 #define PID_CALCULATE_TIME 50
@@ -186,6 +190,5 @@ double desiredSpeed = 2000.0; //aprox 10kph
 double proportionalConstant = .0175;
 double integralConstant = .0141;
 double derivativeConstant = .00001;
-
 
 
