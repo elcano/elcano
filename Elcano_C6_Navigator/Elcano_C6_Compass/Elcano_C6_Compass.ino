@@ -29,6 +29,7 @@ void setup(void)
   ps.dt = &data;
   ps.input = &Serial1;
   ps.output = &Serial2;
+  ps.capture = MsgType::drive;
   data.clear();
   Serial1.begin(baudrate);
   Serial2.begin(baudrate);
@@ -36,7 +37,7 @@ void setup(void)
   delay(5000);
 
   Serial.begin(9600);
-  Serial.println("Magnetometer Test"); Serial.println("");
+//  Serial.println("Magnetometer Test"); Serial.println("");
   
   /* Enable auto-gain */
   mag.enableAutoRange(true);
@@ -60,11 +61,9 @@ void loop(void)
   mag.getEvent(&event);
  
   /* Display the results (magnetic vector values are in micro-Tesla (uT)) */
-  Serial.print("X: "); Serial.print(event.magnetic.x); Serial.print("  ");
-  Serial.print("Y: "); Serial.print(event.magnetic.y); Serial.print("  ");
-  Serial.print("Z: "); Serial.print(event.magnetic.z); Serial.print("  ");Serial.println("uT");
-//
-  Serial.println(M_PI);
+//  Serial.print("X: "); Serial.print(event.magnetic.x); Serial.print("  ");
+//  Serial.print("Y: "); Serial.print(event.magnetic.y); Serial.print("  ");
+//  Serial.print("Z: "); Serial.print(event.magnetic.z); Serial.print("  ");Serial.println("uT");
   
   // Calculate the angle of the vector y,x
   float heading = (atan2(event.magnetic.y,event.magnetic.x) * 180) / M_PI;
@@ -75,15 +74,19 @@ void loop(void)
     heading = 360 + heading;
   }
 //  Serial.print("Compass Heading: ");
-  Serial.println(heading);
+//  Serial.println(heading);
   data.kind = MsgType::sensor;
   data.bearing_deg = heading;
   data.speed_cmPs = 0;
   data.angle_deg = 0;
-  data.posE_cm = 0;
-  data.posN_cm = 0;
-  Serial.println("here");
+  data.posE_cm = event.magnetic.x;
+  data.posN_cm = event.magnetic.y;
   data.write(&Serial2);
+
+  ParseStateError r = ps.update();
+  if(r == ParseStateError::success) {
+    Serial.println("speed = " + String(data.speed_cmPs));
+  }
 
   delay(500);
 }

@@ -122,6 +122,28 @@ bool ReadWaypoints(TargetLocation* TargetLocationArray)
    return true;
 }
 
+void squareRoutine(){
+  // go straigt for x distance
+  for(int i = 0; i < 4)
+  {
+      // send speed (fast) angle 0
+      // while distance not met{
+          // poll distance from C6 (get distance data)
+       // }
+       // for early versions, stop completely
+       // send speed (slow) angle hard left
+       // while direction not met{
+          // poll direction from C6 (get direction data)
+       // }
+  } 
+}
+
+/*-----------------------------------moveFixedDistance------------------------------------*/
+void moveFixedDistance(long length_mm, long speed_mms)
+{ 
+  
+}
+
 //this will be the square test of the first autonomous baby step.
 void Drive(int myAngle, int myX, int myY, int targetAngle, int targetX, int targetY)
 {
