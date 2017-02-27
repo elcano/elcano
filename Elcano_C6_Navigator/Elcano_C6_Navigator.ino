@@ -114,7 +114,7 @@ namespace C6_Navigator
 
 // Set the GPSRATE to the baud rate of the GPS module. Most are 4800
 // but some are 38400 or other. Check the datasheet!
-#define GPSRATE 4800
+#define GPSRATE 9600
 
 #define MAX_WAYPOINTS 10
 /*   There are two coordinate systems.
@@ -283,7 +283,7 @@ void initialize()
   common::checksum(disable);
   Serial3.println(disable);   // no GSA
 
-  GPS_available = estimated_position.AcquireGPRMC(70000);
+  GPS_available = estimated_position.AcquireGPRMC(10000);
   
   Serial.println(TimeHeader);
   Serial.println(StartTime);
@@ -355,7 +355,7 @@ void initialize()
 void setup()
 {
   
-randomSeed(analogRead(0));
+//    randomSeed(analogRead(0));
     pinMode(Rx0, INPUT);
     pinMode(Tx0, OUTPUT);
     pinMode(GPS_RX, INPUT);
@@ -447,9 +447,7 @@ void waypoint::SetTime(char *pTime, char * pDate)
 
 
 /*---------------------------------------------------------------------------------------*/
-void loop()
-{
-    Serial.println("Inside C6 loop");
+void loop(){
     unsigned long deltaT_ms;
     unsigned long time = millis();
     unsigned long endTime = time + LoopPeriod;
@@ -459,6 +457,8 @@ void loop()
     char* pGPS;
     char* pObstacles;
     bool GPS_available = GPS_reading.AcquireGPGGA(300 );
+
+
 
     /* Perform dead reckoning from clock and previous state
     Read compass.
@@ -471,7 +471,7 @@ void loop()
     // Added by Varsha - to get heading
     CurrentHeading = GetHeading();
     Serial.print("CurrentHeading:");
-    Serial.println(CurrentHeading);
+    Serial.print(CurrentHeading);
     // End of changes
     
 /*  Read Optical Odometer;
@@ -497,23 +497,28 @@ void loop()
     // Send vehicle state to C6 and C4.
 
     // Preparing Result struct to send data to C4
-    C4_Results.clear();
-    C4_Results.bearing_deg = CurrentHeading;
-    C4_Results.posE_cm = estimated_position.east_mm;
-    C4_Results.posN_cm = estimated_position.north_mm;
-//    C4_Results.kind = MSG_GOAL;
-
-    //Sending GPS position from C6 to C2
-    C2_Results.clear();    
-    C2_Results.posE_cm = estimated_position.east_mm/10;
-    C2_Results.posN_cm = estimated_position.north_mm/10;
-//    C2_Results.kind = MSG_SENSOR;
-    
-    // Read data from C2 using Elcano_Serial
-    C2_Results.clear();
+    // C4_Results.clear();
+  //   C4_Results.bearing_deg = CurrentHeading;
+     Serial.print("\tposition east: ");
+     Serial.print(estimated_position.east_mm);
+     Serial.print("\tposition north: ");
+     Serial.println("position north: ");
+     Serial.println(estimated_position.north_mmÂ);
+//     C4_Results.posE_cm = estimated_position.east_mm;
+//     C4_Results.posN_cm = estimated_position.north_mm;
+  //   //C4_Results.kind = MSG_GOAL;
+  //
+  //   //Sending GPS position from C6 to C2
+  //   C2_Results.clear();
+  //   C2_Results.posE_cm = estimated_position.east_mm/10;
+  //   C2_Results.posN_cm = estimated_position.north_mm/10;
+  //  // C2_Results.kind = MSG_SENSOR;
+  //
+  //   // Read data from C2 using Elcano_Serial
+  //   C2_Results.clear();
 //    readSerial(&Serial2, &C2_Results);
-    TestSpeed(C2_Results);
-    displayResults(C2_Results);
+//    TestSpeed(C2_Results);
+//    displayResults(C2_Results);
     
 //    if ( C2_Results.kind == MSG_SENSOR )
 //    {
@@ -549,44 +554,44 @@ void loop()
 //		C4_Results.posN_cm = fuzzy_out.y_Pos;
 //    }
         
-    C4_Results.write(&Serial2);
-    C2_Results.write(&Serial2);   
+    // C4_Results.write(&Serial2);
+    // C2_Results.write(&Serial2);   
     
-    Serial.print("time, gps, dt_ms = ");
-    Serial.print(time, DEC); Serial.print(", ");
-    Serial.print(GPS_reading.time_ms, DEC); Serial.print(", ");
-    Serial.println(deltaT_ms, DEC);
+//    Serial.print("time, gps, dt_ms = ");
+//    Serial.print(time, DEC); Serial.print(", ");
+//    Serial.print(GPS_reading.time_ms, DEC); Serial.print(", ");
+//    Serial.println(deltaT_ms, DEC);
 
     // Send vehicle state to C3 and C4.
 
     // open the file. note that only one file can be open at a time,
     // so you have to close this one before opening another.
-    dataFile = SD.open(GPSfile, FILE_WRITE);
+//    dataFile = SD.open(GPSfile, FILE_WRITE);
 
     // if the file is available, write to it:
     if (GPS_available)
-    {
+	{
         digitalWrite(GPS_GREEN_LED, HIGH);
         pGPS = GPS_reading.formPointString();
         if (dataFile) dataFile.print(pGPS);
         // print to the serial port too:
-        Serial.print(pGPS);
+//        Serial.print("\t" + String(pGPS));
         pData = estimated_position.formPointString();
         if (dataFile) dataFile.print(pData);
-        Serial.print(pData);
-        Serial3.print(pData);  // send data to C4 path planner
+//        Serial.print("\t" + String(pData));
+//        Serial3.print(pData);  // send data to C4 path planner
         pObstacles = obstacleDetect();
         if (dataFile)
         {
           dataFile.print(pObstacles);
         }
-        Serial.print(pObstacles);
-    }
-    else
-    {
-        digitalWrite(GPS_GREEN_LED, LOW);
-        Serial.print("GPS not available");
-    }
+//        Serial.print(pObstacles);
+   }
+   else
+   {
+       digitalWrite(GPS_GREEN_LED, LOW);
+//       Serial.print("GPS not available");
+   }
 
     work_time = millis() - time;
     PerCentBusy = (100 * work_time) / LoopPeriod;
@@ -594,7 +599,7 @@ void loop()
     {
       dataFile.println(PerCentBusy);
     }
-    Serial.println(PerCentBusy);
+//    Serial.println(PerCentBusy);
     // if the file didn't open, pop up an error:
     if (dataFile)
     {
