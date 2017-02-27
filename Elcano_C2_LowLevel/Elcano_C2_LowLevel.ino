@@ -99,7 +99,6 @@ void setup()
 /*-----------------------------------loop------------------------------------------------*/
 
 void ThrottlePID(){
-
   speedPID.Compute();
   Serial.print("Throttle out value ");
   Serial.print(PIDThrottleOutput);
@@ -141,7 +140,7 @@ void calibrateSensors(){
   leftsenseleft = analogRead(A2) - analogRead(A6);
   rightsenseleft = analogRead(A3) - analogRead(A7);
   Serial.print("Left turn sensor readings: ");
-  Serial.print(leftsenseleft);
+//  Serial.print(leftsenseleft);
   Serial.println(rightsenseleft);
   
   STEER_SERVO.writeMicroseconds(RIGHT_TURN_OUT); //Calibrate angle sensors for right turn
@@ -149,7 +148,7 @@ void calibrateSensors(){
   leftsenseright = analogRead(A2) - analogRead(A6);
   rightsenseright = analogRead(A3) - analogRead(A7);
   Serial.print("Right turn sensor readings: ");
-  Serial.print(leftsenseright);
+//  Serial.print(leftsenseright);
   Serial.println(rightsenseright);
 
   steerPID.SetMode(AUTOMATIC);
@@ -157,7 +156,8 @@ void calibrateSensors(){
 
 void loop() {
 //  computeSpeed(&history);
-  ThrottlePID();
+  desiredAngle = LEFT_TURN_OUT;
+  //ThrottlePID();
   SteeringPID();
   // Get the next loop start time. Note this (and the millis() counter) will
   // roll over back to zero after they exceed the 32-bit size of unsigned long,
@@ -294,8 +294,7 @@ bool moveFixedDistance(long length_mm, long speed_mms)
   while(distance_mm < length_mm  + start)  // go until the total distance travaled has increased by the desired distance  
   {
     computeSpeed(&history);
-    desiredSpeed = speed_mms;
-    ThrottlePID();
+    ThrottlePID(speed_mms);
     if(checkEbrake()) return false;
     Serial.println(distance_mm);
   }
