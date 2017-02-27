@@ -77,6 +77,17 @@ int Left_Max_Count = 980;
 int Right_Min_Count = 698;
 int Right_Max_Count = 808;
 
+double SteerAngle_wms = STRAIGHT_TURN_OUT; //Steering angle in microseconds used by writeMicroseconds function. Note: doubles on Arduinos are the same thing as floats, 4bytes, single precision
+double PIDSteeringOutput; //Output from steerPID.Compute() in microseconds (used by Servo.writeMicroseconds())
+double desiredAngle = STRAIGHT_TURN_OUT;
+double steeringP = 1;
+double steeringI = 0.0001;
+double steeringD = 0.00001;
+int leftsenseleft;
+int rightsenseleft;
+int leftsenseright;
+int rightsenseright;
+
 static long distance_mm = 0;
 // RC_rise contains the time value collected in the rising edge interrupts.
 // RC_elapsed contains the width of the pulse. The rise and fall interrupts
