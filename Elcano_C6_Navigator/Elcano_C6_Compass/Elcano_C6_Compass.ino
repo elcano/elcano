@@ -74,7 +74,7 @@ void loop(void)
     heading = 360 + heading;
   }
 //  Serial.print("Compass Heading: ");
-//  Serial.println(heading);
+  Serial.println(heading);
   data.kind = MsgType::sensor;
   data.bearing_deg = heading;
   data.speed_cmPs = 0;
@@ -90,3 +90,6 @@ void loop(void)
 
   delay(500);
 }
+
+//  Serial.print("Compass Heading: ");
+//  Serial.println(heading);
