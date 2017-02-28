@@ -60,7 +60,7 @@ VEHICLE_NUMBER to your own new number.
 #define BRAKE_OUT_PIN 6
 
 // Trike-specific physical parameters
-#define WHEEL_DIAMETER_MM 508
+#define WHEEL_DIAMETER_MM 20
 // Wheel Cirumference
 #define WHEEL_CIRCUM_MM WHEEL_DIAMETER_MM * PI
 //		Turning radius in cm.

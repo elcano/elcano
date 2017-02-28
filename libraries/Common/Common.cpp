@@ -6,7 +6,8 @@
 char buffer[BUFFSIZ];        // string buffer for the sentence
 char dataString[BUFFSIZ];
 volatile bool DataAvailable;
-
+namespace common
+{
 /*---------------------------------------------------------------------------------------*/ 
 bool checksum(char* msg)
 // Assume that message starts with $ and ends with *
@@ -29,6 +30,10 @@ bool checksum(char* msg)
     }
     return false;
 }
+}
+namespace elcano
+{
+	
 /*---------------------------------------------------------------------------------------*/ 
 //---------------------------------------------------------
 long int parsedecimal(char *str) 
@@ -119,7 +124,7 @@ bool readline(int channel)
   The receiving computer gets interrupted by this signal and sets DataAvailable.
   */
   if (!DataAvailable)
-    return false;
+    //r//eturn false;
   
   buffidx = 0; // start at begining
 //  if (Serial3.available() < MinimumMessage)
@@ -129,7 +134,7 @@ bool readline(int channel)
       switch(channel)
       {
       case 1:
-         Available = Serial1.available();     
+         Available = Serial1.available();  
          c=Serial1.read();
          break;
        case 2:
@@ -139,6 +144,7 @@ bool readline(int channel)
       case 3:
          Available = Serial3.available();     
          c=Serial3.read();
+		 Serial.println(Available);
          break;
       default:
          Available = Serial.available();     
@@ -290,14 +296,14 @@ long  waypoint::distance_mm(long East_mm, long North_mm)
 }
 
 //========================= Items only for C6 Navigator =================================
-#ifdef MEGA
+//#ifdef MEGA
 
 #define REAL double
 // unsigned long millis() is time since program started running
 // offset_ms is value of millis() at start_time
 unsigned long offset_ms = 0;
 
-void Filter(REAL* x, REAL* P, REAL* measure, REAL deltaT, REAL* variance);
+void Filter(REAL* x, REAL* P, REAL* measure, REAL deltaT, REAL* variance){} // needs to be implemented
 
 /*---------------------------------------------------------------------------------------*/ 
 void waypoint::fuse(waypoint GPS_reading, int deltaT_ms)
@@ -423,7 +429,7 @@ bool waypoint::AcquireGPRMC(unsigned long max_wait_ms)
       if (millis() > TimeOut)
       {
          Serial.println("Timed out");
-         return false;
+		 return false;
       }
     }
 //    Serial.println("Read line");
@@ -530,7 +536,8 @@ bool waypoint::AcquireGPGGA(unsigned long max_wait_ms)
      
       if (offset_ms == 0)
       {
-          SetTime(pTime, "1205xx");
+		  char ch [] = "1205xx";
+          SetTime(pTime, ch);
           offset_ms = AcquisitionTime_ms;
       }      
       time_ms = AcquisitionTime_ms;
@@ -541,4 +548,5 @@ bool waypoint::AcquireGPGGA(unsigned long max_wait_ms)
   return true;
 }
 
-#endif  // MEGA
+//#endif  // MEGA
+}

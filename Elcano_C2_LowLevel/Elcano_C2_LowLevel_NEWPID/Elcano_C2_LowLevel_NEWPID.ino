@@ -9,7 +9,7 @@ using namespace elcano;
 long startTime;
 // PID setup block
 PID speedPID(&SpeedCyclometer_mmPs, &PIDThrottleOutput, &desiredSpeed, proportionalConstant, integralConstant, derivativeConstant, DIRECT);
-PID steerPID(&SteerAngle_wms, &PIDSteeringOutput, &desiredAngle, steeringP, steeringI, steeringD, DIRECT);
+
 /*
  * C2 is the low-level controller that sends control signals to the hub motor,
  * brake servo, and steering servo.  It is (or will be) a PID controller, but
@@ -32,6 +32,7 @@ void setup()
 {
   startTime = millis();
   
+  
   //Set up pins
   STEER_SERVO.attach(STEER_OUT_PIN);
   BRAKE_SERVO.attach(BRAKE_OUT_PIN);
@@ -49,9 +50,6 @@ void setup()
 
   speedPID.SetOutputLimits(MIN_ACC_OUT, MAX_ACC_OUT); //useful if we want to change the limits on what values the output can be set to
   speedPID.SetSampleTime(PID_CALCULATE_TIME); //useful if we want to change the compute period
-  steerPID.SetOutputLimits(RIGHT_TURN_OUT, LEFT_TURN_OUT); //useful if we want to change the limits on what values the output can be set to
-  steerPID.SetSampleTime(PID_CALCULATE_TIME); //useful if we want to change the compute period
-  
   for (int channel = 0; channel < 4; channel++){
     DAC_Write(channel, 0); // reset did not clear previous states
   }
@@ -75,7 +73,6 @@ void setup()
 
   setupWheelRev(); // WheelRev4 addition
   CalibrateTurnAngle(32, 20);
-  calibrateSensors();
   calibrationTime_ms = millis();
         
 //  attachInterrupt(digitalPinToInterrupt(IRPT_TURN),  ISR_TURN_rise,  RISING);//turn right stick l/r turn
@@ -96,9 +93,12 @@ void setup()
 
 }
 
+
+
 /*-----------------------------------loop------------------------------------------------*/
 
 void ThrottlePID(){
+
   speedPID.Compute();
   Serial.print("Throttle out value ");
   Serial.print(PIDThrottleOutput);
@@ -115,59 +115,21 @@ void ThrottlePID(){
   else{
     brake_feather(false);
   }
+  
   return;
 }
 
-void SteeringPID(){
-  if(steerPID.Compute()){
-    Serial.print("Steering out value ");
-    Serial.println(PIDSteeringOutput);
-    int steeringControl = (int)PIDSteeringOutput;
-
-    //apply control value to vehicle
-    moveSteer(steeringControl);
-  }
-  else{
-    Serial.println("No compute.");
-  }
-  return;
-}
-
-void calibrateSensors(){
-  
-  STEER_SERVO.writeMicroseconds(LEFT_TURN_OUT); //Calibrate angle sensors for left turn
-  delay(4000);
-  leftsenseleft = analogRead(A2) - analogRead(A6);
-  rightsenseleft = analogRead(A3) - analogRead(A7);
-  Serial.print("Left turn sensor readings: ");
-//  Serial.print(leftsenseleft);
-  Serial.println(rightsenseleft);
-  
-  STEER_SERVO.writeMicroseconds(RIGHT_TURN_OUT); //Calibrate angle sensors for right turn
-  delay(4000);
-  leftsenseright = analogRead(A2) - analogRead(A6);
-  rightsenseright = analogRead(A3) - analogRead(A7);
-  Serial.print("Right turn sensor readings: ");
-//  Serial.print(leftsenseright);
-  Serial.println(rightsenseright);
-
-  steerPID.SetMode(AUTOMATIC);
-}
 
 void loop() {
 //  computeSpeed(&history);
-  desiredAngle = LEFT_TURN_OUT;
-  //ThrottlePID();
-  SteeringPID();
+  ThrottlePID();
   // Get the next loop start time. Note this (and the millis() counter) will
   // roll over back to zero after they exceed the 32-bit size of unsigned long,
   // which happens after about 1.5 months of operation (should check this).
   // But leave the overflow computation in place, in case we need to go back to
   // using the micros() counter.
   // If the new nextTime value is <= LOOP_TIME_MS, we've rolled over.
-  Throttle_PID(25);
   nextTime = nextTime + LOOP_TIME_MS;
-  //Throttle_PID(14 - history.currentSpeed_kmPh);
   byte automate = processRC();
   // @ToDo: Verify that this should be conditional. May be moot if it is
   // replaced in the conversion to the new Elcano Serial protocol.
@@ -288,7 +250,7 @@ void processHighLevel(SerialData * results)
 }
 
 /*-----------------------------------moveFixedDistance------------------------------------*/
-bool moveFixedDistance(long length_mm, long speed_mms)
+bool moveFixedDistance(long length_mm, long desiredSpeed)
 { 
   if(length_mm < 0) length_mm = 0;        // ensures a negative value isn't given, as this will cause an infinite loop 
   
@@ -296,7 +258,7 @@ bool moveFixedDistance(long length_mm, long speed_mms)
   while(distance_mm < length_mm  + start)  // go until the total distance travaled has increased by the desired distance  
   {
     computeSpeed(&history);
-    ThrottlePID(speed_mms);
+    ThrottlePID(desiredSpeed);
     if(checkEbrake()) return false;
     Serial.println(distance_mm);
   }
@@ -383,22 +345,6 @@ void squareRoutine(unsigned long sides, unsigned long &rcAuto) {
   delay(1000);
   brake(MIN_BRAKE_OUT);
   rcAuto = LOW;
-}
-
-
-bool checkEbrake()
-{
-    if (RC_Done[RC_ESTP]) //RC_Done determines if the signal from the remote controll is done processing
-  {
-    RC_elapsed[RC_ESTP] = (RC_elapsed[RC_ESTP] > MIDDLE ? HIGH : LOW);
-  
-    if (RC_elapsed[RC_ESTP] == HIGH)
-    {
-      E_Stop();  // already done at interrupt level
-      return true;
-    }
-  }
-  return false;
 }
 
 
@@ -683,13 +629,6 @@ void moveVehicle(int acc)
   */
   DAC_Write(DAC_CHANNEL, acc);
   throttle_control = acc;    // post most recent throttle.
-}
-
-void moveSteer(int i)
-{
-  Serial.print ("Steer "); Serial.print(i);
-  Serial.print (" on ");   Serial.println (STEER_OUT_PIN);
-  STEER_SERVO.writeMicroseconds(i);
 }
 
 /*========================================================================/
@@ -1269,6 +1208,5 @@ bool checkEbrake()
   }
   return false;
 }
-
 
 
