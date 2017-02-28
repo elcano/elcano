@@ -122,20 +122,107 @@ bool ReadWaypoints(TargetLocation* TargetLocationArray)
    return true;
 }
 
+void leftTurn(int turnAmount)
+{
+    while(true)
+    {
+      ParseStateError r = parseState.update();
+      if(r == ParseStateError::success)
+      {
+        break;
+      }
+      Serial.println("waiting for initial bearing: " + String(static_cast<int8_t>(r)));
+      delay(100);
+    }
+    long initialBearing = serialData.bearing_deg;
+ // send speed (slow) angle hard left
+    serialData.clear();
+    serialData.kind = MsgType::drive;
+    serialData.speed_cmPs = 200;
+    serialData.angle_deg = 15; // what should this actually be
+    serialData.write(&Serial1);
+
+    int currentBearing = 0;
+    // while direction not met
+    while(currentBearing < turnAmount)
+    {
+      
+      // poll direction from C6 (get direction data)
+      ParseStateError r = parseState.update();
+      if(r == ParseStateError::success)
+      {
+        currentBearing = abs(serialData.bearing_deg - initialBearing);
+        Serial.println(currentBearing);
+      }
+      Serial.println("keep turning, current angle: " + String(currentBearing) + " goal: " + String((turnAmount)));
+    }
+    Serial.println("done turning!");
+    serialData.kind = MsgType::drive;
+    serialData.speed_cmPs = 0;
+    serialData.angle_deg = 0; // what should this actually be
+    serialData.write(&Serial1);
+
+}
+
+void rightTurn(int turnAmount)
+{
+    while(true)
+    {
+      ParseStateError r = parseState.update();
+      if(r == ParseStateError::success)
+      {
+        break;
+      }
+      Serial.println("waiting for initial bearing: " + String(static_cast<int8_t>(r)));
+      delay(100);
+    }
+    long initialBearing = serialData.bearing_deg;
+ // send speed (slow) angle hard left
+    serialData.clear();
+    serialData.kind = MsgType::drive;
+    serialData.speed_cmPs = 200;
+    serialData.angle_deg = -15; // what should this actually be
+    serialData.write(&Serial1);
+
+    int currentBearing = 0;
+    int oldBearing = 0;
+    // while direction not met
+    while(currentBearing < turnAmount)
+    {
+      
+      // poll direction from C6 (get direction data)
+      ParseStateError r = parseState.update();
+      if(r == ParseStateError::success)
+      {
+        currentBearing = abs((serialData.bearing_deg - initialBearing));
+        if(currentBearing > 250 && oldBearing <90 && (initialBearing <= 90 || initialBearing >= 250))
+        {
+          Serial.println("here");
+          currentBearing %= 180; 
+        }
+        Serial.println("keep turning, current angle: " + String(currentBearing) + " goal: " + String((turnAmount)));  
+      }
+      oldBearing = currentBearing;
+    }
+    Serial.println("done turning!");
+    serialData.kind = MsgType::drive;
+    serialData.speed_cmPs = 0;
+    serialData.angle_deg = 0; // what should this actually be
+    serialData.write(&Serial1);
+
+}
+
 void squareRoutine(){
   // go straigt for x distance
-  for(int i = 0; i < 4)
-  {
+  //for(int i = 0; i < 4; i++)
+  //{
       // send speed (fast) angle 0
       // while distance not met{
           // poll distance from C6 (get distance data)
        // }
        // for early versions, stop completely
-       // send speed (slow) angle hard left
-       // while direction not met{
-          // poll direction from C6 (get direction data)
-       // }
-  } 
+//      rightTurn(90);
+  //} 
 }
 
 /*-----------------------------------moveFixedDistance------------------------------------*/
@@ -504,6 +591,7 @@ void setup()
         serialData.clear();
         pinMode(8,OUTPUT);
         Serial.println("2");
+        squareRoutine();
 }
 
 int speedDir = 1;
