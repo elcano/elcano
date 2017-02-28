@@ -34,13 +34,15 @@ VEHICLE_NUMBER to your own new number.
 #define MAX_ACC_OUT 235
 
 // MIN and MAX BRAKE_OUT set values to be sent to the brake actuator that controls the brakes on the front wheels
-#define MIN_BRAKE_OUT 185
-#define MAX_BRAKE_OUT 240
+#define MIN_BRAKE_OUT 1700
+#define MAX_BRAKE_OUT 2000
 
 // RIGHT, STRAIGHT, and LEFT TURN_OUT set values to be sent to the steer actuator that changes the direction of the front wheels
 #define RIGHT_TURN_OUT 1000
 #define LEFT_TURN_OUT 2000
 #define STRAIGHT_TURN_OUT 1500
+
+#define TURN_CIRCUMFERENCE_CM 96 * PI
 
 // Turn sensors are believed if they are in this range while wheels are straight
 // MAX values here are for the safety of the actuator so as not to break/overload it
@@ -58,7 +60,7 @@ VEHICLE_NUMBER to your own new number.
 #define BRAKE_OUT_PIN 6
 
 // Trike-specific physical parameters
-#define WHEEL_DIAMETER_MM 482
+#define WHEEL_DIAMETER_MM 508
 // Wheel Cirumference
 #define WHEEL_CIRCUM_MM WHEEL_DIAMETER_MM * PI
 //		Turning radius in cm.
@@ -242,12 +244,14 @@ VEHICLE_NUMBER to your own new number.
 // RC input values - pulse widths in microseconds
 #define DEAD_ZONE 75
 // was 1322; new stable value = 1510
-#define MIDDLE 1460
+#define MIDDLE 1760
 // extremes of RC pulse width
 // was 911:
 #define MIN_RC 1076
 // was 1730:
 #define MAX_RC 1908
+
+#define AUTOMATIC_MIDDLE 1460
 
 #endif
 
