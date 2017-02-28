@@ -61,9 +61,9 @@ void loop(void)
   mag.getEvent(&event);
  
   /* Display the results (magnetic vector values are in micro-Tesla (uT)) */
-//  Serial.print("X: "); Serial.print(event.magnetic.x); Serial.print("  ");
-//  Serial.print("Y: "); Serial.print(event.magnetic.y); Serial.print("  ");
-//  Serial.print("Z: "); Serial.print(event.magnetic.z); Serial.print("  ");Serial.println("uT");
+  Serial.print("X: "); Serial.print(event.magnetic.x); Serial.print("  ");
+  Serial.print("Y: "); Serial.print(event.magnetic.y); Serial.print("  ");
+  Serial.print("Z: "); Serial.print(event.magnetic.z); Serial.print("  ");Serial.println("uT");
   
   // Calculate the angle of the vector y,x
   float heading = (atan2(event.magnetic.y,event.magnetic.x) * 180) / M_PI;
