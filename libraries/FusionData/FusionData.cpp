@@ -2,7 +2,7 @@
 #include <math.h>
 #include <Common.h>
 #include <FusionData.h>
-#include <Elcano_Serial.h>
+#include <ElcanoSerial.h>
 
 /* Initializes the member variables for PositionData struct */
 void PositionData::Clear()

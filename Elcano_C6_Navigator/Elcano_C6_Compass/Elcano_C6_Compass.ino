@@ -1,9 +1,10 @@
 #include <Wire.h>
 #include "Adafruit_Sensor.h"
 #include "Adafruit_LSM303_U.h"
-
+#include <ElcanoSerial.h>
+using namespace elcano;
 /* Assign a unique ID to this sensor at the same time */
-Adafruit_LSM303_Mag_Unified mag = Adafruit_LSM303_Mag_Unified(1366123);
+Adafruit_LSM303_Mag mag = Adafruit_LSM303_Mag(1366123);
 
 void displaySensorDetails(void)
 {
@@ -20,15 +21,23 @@ void displaySensorDetails(void)
   Serial.println("");
   delay(500);
 }
-
+SerialData data;
+ParseState ps;
 
 void setup(void) 
 {
-
+  ps.dt = &data;
+  ps.input = &Serial1;
+  ps.output = &Serial2;
+  ps.capture = MsgType::drive;
+  data.clear();
+  Serial1.begin(baudrate);
+  Serial2.begin(baudrate);
+  pinMode(16,OUTPUT);
   delay(5000);
 
   Serial.begin(9600);
-  Serial.println("Magnetometer Test"); Serial.println("");
+//  Serial.println("Magnetometer Test"); Serial.println("");
   
   /* Enable auto-gain */
   mag.enableAutoRange(true);
@@ -55,8 +64,6 @@ void loop(void)
   Serial.print("X: "); Serial.print(event.magnetic.x); Serial.print("  ");
   Serial.print("Y: "); Serial.print(event.magnetic.y); Serial.print("  ");
   Serial.print("Z: "); Serial.print(event.magnetic.z); Serial.print("  ");Serial.println("uT");
-
-  Serial.println(M_PI);
   
   // Calculate the angle of the vector y,x
   float heading = (atan2(event.magnetic.y,event.magnetic.x) * 180) / M_PI;
@@ -66,9 +73,23 @@ void loop(void)
   {
     heading = 360 + heading;
   }
-  Serial.print("Compass Heading: ");
+//  Serial.print("Compass Heading: ");
   Serial.println(heading);
+  data.kind = MsgType::sensor;
+  data.bearing_deg = heading;
+  data.speed_cmPs = 0;
+  data.angle_deg = 0;
+  data.posE_cm = event.magnetic.x;
+  data.posN_cm = event.magnetic.y;
+  data.write(&Serial2);
 
+  ParseStateError r = ps.update();
+  if(r == ParseStateError::success) {
+    Serial.println("speed = " + String(data.speed_cmPs));
+  }
 
   delay(500);
 }
+
+//  Serial.print("Compass Heading: ");
+//  Serial.println(heading);

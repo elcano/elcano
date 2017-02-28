@@ -1,9 +1,10 @@
 
 #include <Common.h>
 #include <Matrix.h>
-#include <Elcano_Serial.h>
+#include <ElcanoSerial.h>
 #include <SPI.h>
 
+using namespace elcano;
 /*
 // Elcano Contol Module C3: Pilot.
 
@@ -22,6 +23,10 @@ serial line. The format of the DRIVE command is documented in the C1 code.
 [in] Digital Signal 0: J1 pin 1 (RxD) Serial signal from C4 Path planner, which passes on
 data from C6 Navigator
 */
+
+SerialData serialData;
+ParseState parseState;
+
 
 // TargetLocation struct is used to store the data of each TargetLocation of the path given by the planner.
 // We create a new struct becuase the SerialData should only be used to send data.
@@ -89,28 +94,141 @@ bool ReadWaypoints(TargetLocation* TargetLocationArray)
    while(true)
    {
     //check if we're done receiveing
-    readSerial(&Serial1,&dataRead);
+//    readSerial(&Serial1,&dataRead);
     // bad number there is no more data or end of data
-    if(dataRead.number >= 789 || count >= MAX_WAYPOINTS)
+    ParseStateError r = parseState.update();
+    if(r == ParseStateError::success)
     {
-      if(count == 0) // nothing was read
+      if(dataRead.number >= 789 || count >= MAX_WAYPOINTS)
       {
-        return false;
+        if(count == 0) // nothing was read
+        {
+          return false;
+        }
+        break;
       }
-      break;
-    }
-    else
-    //process and store if valid. 
-    {
-      if(ProcessTargetLocation(&currentTargetLocation, dataRead))
+      else
+      //process and store if valid. 
       {
-        TargetLocationArray[count] = currentTargetLocation;
-        count++;
+        if(ProcessTargetLocation(&currentTargetLocation, dataRead))
+        {
+          TargetLocationArray[count] = currentTargetLocation;
+          count++;
+        }
+        // send back acknowledgement
       }
-      // send back acknowledgement
     }
    }
    return true;
+}
+
+void leftTurn(int turnAmount)
+{
+    while(true)
+    {
+      ParseStateError r = parseState.update();
+      if(r == ParseStateError::success)
+      {
+        break;
+      }
+      Serial.println("waiting for initial bearing: " + String(static_cast<int8_t>(r)));
+      delay(100);
+    }
+    long initialBearing = serialData.bearing_deg;
+ // send speed (slow) angle hard left
+    serialData.clear();
+    serialData.kind = MsgType::drive;
+    serialData.speed_cmPs = 200;
+    serialData.angle_deg = 15; // what should this actually be
+    serialData.write(&Serial1);
+
+    int currentBearing = 0;
+    // while direction not met
+    while(currentBearing < turnAmount)
+    {
+      
+      // poll direction from C6 (get direction data)
+      ParseStateError r = parseState.update();
+      if(r == ParseStateError::success)
+      {
+        currentBearing = abs(serialData.bearing_deg - initialBearing);
+        Serial.println(currentBearing);
+      }
+      Serial.println("keep turning, current angle: " + String(currentBearing) + " goal: " + String((turnAmount)));
+    }
+    Serial.println("done turning!");
+    serialData.kind = MsgType::drive;
+    serialData.speed_cmPs = 0;
+    serialData.angle_deg = 0; // what should this actually be
+    serialData.write(&Serial1);
+
+}
+
+void rightTurn(int turnAmount)
+{
+    while(true)
+    {
+      ParseStateError r = parseState.update();
+      if(r == ParseStateError::success)
+      {
+        break;
+      }
+      Serial.println("waiting for initial bearing: " + String(static_cast<int8_t>(r)));
+      delay(100);
+    }
+    long initialBearing = serialData.bearing_deg;
+ // send speed (slow) angle hard left
+    serialData.clear();
+    serialData.kind = MsgType::drive;
+    serialData.speed_cmPs = 200;
+    serialData.angle_deg = -15; // what should this actually be
+    serialData.write(&Serial1);
+
+    int currentBearing = 0;
+    int oldBearing = 0;
+    // while direction not met
+    while(currentBearing < turnAmount)
+    {
+      
+      // poll direction from C6 (get direction data)
+      ParseStateError r = parseState.update();
+      if(r == ParseStateError::success)
+      {
+        currentBearing = abs((serialData.bearing_deg - initialBearing));
+        if(currentBearing > 250 && oldBearing <90 && (initialBearing <= 90 || initialBearing >= 250))
+        {
+          Serial.println("here");
+          currentBearing %= 180; 
+        }
+        Serial.println("keep turning, current angle: " + String(currentBearing) + " goal: " + String((turnAmount)));  
+      }
+      oldBearing = currentBearing;
+    }
+    Serial.println("done turning!");
+    serialData.kind = MsgType::drive;
+    serialData.speed_cmPs = 0;
+    serialData.angle_deg = 0; // what should this actually be
+    serialData.write(&Serial1);
+
+}
+
+void squareRoutine(){
+  // go straigt for x distance
+  //for(int i = 0; i < 4; i++)
+  //{
+      // send speed (fast) angle 0
+      // while distance not met{
+          // poll distance from C6 (get distance data)
+       // }
+       // for early versions, stop completely
+//      rightTurn(90);
+  //} 
+}
+
+/*-----------------------------------moveFixedDistance------------------------------------*/
+void moveFixedDistance(long length_mm, long speed_mms)
+{ 
+  
 }
 
 //this will be the square test of the first autonomous baby step.
@@ -463,82 +581,96 @@ float ArcLength(Cubic x, Cubic y, float t,float deltaT, float current)
 ////////////////////////////////////////////////////////////////////////////////
 void setup() 
 {  
-        Serial1.begin(9600); 
-        //Serial2.begin(9600);
-        //Serial3.begin(9600); 
+        Serial1.begin(baudrate);
+        Serial.begin(9600); // for debugging
+        Serial.println("1"); 
+        parseState.dt       = &serialData;
+        parseState.input    = &Serial1;
+        parseState.output   = &Serial1;
+        parseState.capture = MsgType::sensor | MsgType::seg;
+        serialData.clear();
         pinMode(8,OUTPUT);
+        Serial.println("2");
+        squareRoutine();
 }
+
+int speedDir = 1;
+int speedToSend = 0;
+
 
 void loop() 
 {
-    int steeringAngle = 35;
-    int speedSetting = 300;
-    // get newest map data from C4 planner
-    // Using Elcano_Serial.h Using the SerialData struct in the .h file.
-    // Receive a TargetLocation from C4. C4 will only ever send TargetLocations to C3.
-
-
-    //-----------------------C4 input--------------------------//
-    SerialData instructions;
-    readSerial(&Serial1, &instructions);
-    TargetLocation currentTargetLocation;
-    ProcessTargetLocation(&currentTargetLocation,instructions);
-    TargetLocation allTargetLocations[MAX_WAYPOINTS];
-    ReadWaypoints(allTargetLocations);
-    
-
-    //Test of input from C4.
-    //Serial.println("test");
-    //Serial.println(instructions.kind);
-  
-    //-----------------------C5 input-------------------------//
-    //SerialData sensorData;
-    //readSerial(&Serial2, &sensorData);
-    
-
-    //---------------------C2 output-------------------------------//
-
-    //Send data to low level.
-    //SerialData toLowLevel;
-    //toLowLevel.kind = MSG_DRIVE;
-    //toLowLevel.angle_deg = steeringAngle;
-    //toLowLevel.speed_cmPs = speedSetting;
-    //toLowLevel.write(&Serial3);
-
-    //Test of output to C2.
-    // Outputting to C2 uses the Elcano Serial kind 1 to send a "drive signal to C2"
-    // The drive signal includes angle and speed.
-    
-    //Test Data for instructions C4. This is an example of a semgment
-    /*instructions.kind = 4;
-    instructions.number = 1;
-    instructions.speed_cmPs = 100;
-    instructions.bearing_deg = 35;
-    instructions.posE_cm = 400;
-    instructions.posN_cm = 400;
-
-    //Test Data for C5 sensor input. This is an example of a sensor signal.
-    /*
-     sensorData.kind = 2;
-     sensorData.speedcmPs = 100;
-     sensorData.angle_deg = 12;
-     sensorData.posE_cm = 50;
-     sensorData.posN_cm = 50;
-     sensorData.bearing_deg = 15;
-    */
-
-    //Test Data for C2 drive output. Example drive commands.
-    /*
-    toLowLevel.kind = 1;
-    toLowLevel.speed_cmPs = 400;
-    toLowLevel.angle_deg = 35;
-     */
-    
-    //turning test
-    //Drive()
-    //{
-      
-    //}
+//    int steeringAngle = 35;
+//    int speedSetting = 300;
+//    // get newest map data from C4 planner
+//    // Using Elcano_Serial.h Using the SerialData struct in the .h file.
+//    // Receive a TargetLocation from C4. C4 will only ever send TargetLocations to C3.
+//
+//
+//    //-----------------------C4 input--------------------------//
+//    SerialData instructions;
+////    readSerial(&Serial1, &instructions);
+//    TargetLocation currentTargetLocation;
+//    ProcessTargetLocation(&currentTargetLocation,instructions);
+//    TargetLocation allTargetLocations[MAX_WAYPOINTS];
+//    ReadWaypoints(allTargetLocations);
+//    
+//
+//    //Test of input from C4.
+//    //Serial.println("test");
+//    //Serial.println(instructions.kind);
+//  
+//    //-----------------------C5 input-------------------------//
+//    //SerialData sensorData;
+//    //readSerial(&Serial2, &sensorData);
+//    
+//
+//    //---------------------C2 output-------------------------------//
+    ParseStateError r = parseState.update();
+//    Serial.println(static_cast<int8_t>(r));
+    if(r == ParseStateError::success)
+    {
+      Serial.println(serialData.bearing_deg);
+    }
+    serialData.kind = MsgType::drive;
+    serialData.angle_deg = 0;
+    serialData.speed_cmPs = speedToSend;
+    speedToSend += speedDir * 1;
+    serialData.write(&Serial1);
+    if(speedToSend >= 500) speedDir = -1;
+    if(speedToSend <= 0)   speedDir = 1;
+    delay(100);
+//    
+//    //Test Data for instructions C4. This is an example of a semgment
+//    /*instructions.kind = 4;
+//    instructions.number = 1;
+//    instructions.speed_cmPs = 100;
+//    instructions.bearing_deg = 35;
+//    instructions.posE_cm = 400;
+//    instructions.posN_cm = 400;
+//
+//    //Test Data for C5 sensor input. This is an example of a sensor signal.
+//    /*
+//     sensorData.kind = 2;
+//     sensorData.speedcmPs = 100;
+//     sensorData.angle_deg = 12;
+//     sensorData.posE_cm = 50;
+//     sensorData.posN_cm = 50;
+//     sensorData.bearing_deg = 15;
+//    */
+//
+//    //Test Data for C2 drive output. Example drive commands.
+//    /*
+//    toLowLevel.kind = 1;
+//    toLowLevel.speed_cmPs = 400;
+//    toLowLevel.angle_deg = 35;
+//     */
+//    
+//    //turning test
+//    //Drive()
+//    //{
+//      
+//    //}
 
 }
 
