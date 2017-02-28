@@ -8,8 +8,8 @@
 
 //#include "stdafx.h"  // required for MSVC. Remove for Arduino.
 
-#include "Matrix.h"
-
+// #include "Matrix.h"
+#include "Kalman.h"
 /*
 Kalman filter
 Matrix x state: longs for position_mm_east, position_mm_north,
@@ -99,5 +99,3 @@ void Filter(REAL* State, // e.g  x, y position, x, y velocity
         P.values(uncertainty);
 	return;
 }
-
-
