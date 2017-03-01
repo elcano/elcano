@@ -1,4 +1,3 @@
-
 #include <Common.h>
 #include <Matrix.h>
 #include <ElcanoSerial.h>
@@ -141,21 +140,23 @@ void leftTurn(int turnAmount)
     serialData.speed_cmPs = 200;
     serialData.angle_deg = 15; // what should this actually be
     serialData.write(&Serial1);
-
+   
+    Serial.println("angle = " + String(initialBearing));
     int currentBearing = 0;
-    // while direction not met
-    while(currentBearing < turnAmount)
-    {
-      
-      // poll direction from C6 (get direction data)
-      ParseStateError r = parseState.update();
-      if(r == ParseStateError::success)
-      {
-        currentBearing = abs(serialData.bearing_deg - initialBearing);
-        Serial.println(currentBearing);
-      }
-      Serial.println("keep turning, current angle: " + String(currentBearing) + " goal: " + String((turnAmount)));
-    }
+//    // while direction not met
+//    while(currentBearing < turnAmount)
+//    {
+//      
+//      // poll direction from C6 (get direction data)
+//      ParseStateError r = parseState.update();
+//      if(r == ParseStateError::success)
+//      {
+//        currentBearing = abs(serialData.bearing_deg - initialBearing);
+//        Serial.println(currentBearing);
+//      }
+//      Serial.println("keep turning, current angle: " + String(currentBearing) + " goal: " + String((turnAmount)));
+//    }
+
     Serial.println("done turning!");
     serialData.kind = MsgType::drive;
     serialData.speed_cmPs = 0;
@@ -222,6 +223,7 @@ void squareRoutine(){
        // }
        // for early versions, stop completely
 //      rightTurn(90);
+    leftTurn(90);
   //} 
 }
 
@@ -630,7 +632,7 @@ void loop()
 //    Serial.println(static_cast<int8_t>(r));
     if(r == ParseStateError::success)
     {
-      Serial.println(serialData.bearing_deg);
+      Serial.println("angle = " + String(serialData.bearing_deg));
     }
     serialData.kind = MsgType::drive;
     serialData.angle_deg = 0;
