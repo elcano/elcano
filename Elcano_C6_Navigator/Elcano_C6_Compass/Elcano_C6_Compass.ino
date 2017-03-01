@@ -66,7 +66,7 @@ void loop(void)
   Serial.print("Z: "); Serial.print(event.magnetic.z); Serial.print("  ");Serial.println("uT");
   
   // Calculate the angle of the vector y,x
-  float heading = (atan2(event.magnetic.y,event.magnetic.x) * 180) / M_PI;
+  float heading = (atan2(event.magnetic.y,event.magnetic.x)*180)/PI;
   
   // Normalize to 0-360
   if (heading < 0)
