@@ -155,9 +155,22 @@ void calibrateSensors(){
 }
 
 void loop() {
-//  computeSpeed(&history);
-  desiredAngle = LEFT_TURN_OUT;
-  //ThrottlePID();
+  computeSpeed(&history);
+  
+  // send data to C6
+  Results.clear();
+  Results.kind = MsgType::sensor;
+  Results.speed_cmPs = history.olderSpeed_mmPs;
+  Results.angle_deg = 0;
+  Results.posE_cm = 0;
+  Results.posN_cm = 0;
+  Results.bearing_deg = 0;
+  Results.write(&Serial2);
+  delay(100);
+  
+  
+  
+  ThrottlePID();
   SteeringPID();
   // Get the next loop start time. Note this (and the millis() counter) will
   // roll over back to zero after they exceed the 32-bit size of unsigned long,
@@ -268,12 +281,12 @@ void loop() {
 /*------------------------------------processHighLevel------------------------------------*/
 void processHighLevel(SerialData * results)
 {
-  Serial3.end();
-  Serial3.begin(baudrate);
+//  Serial3.end();
+//  Serial3.begin(baudrate);
 //  Serial.println("here");
   //Steer
   int turn_signal = convertDeg(results->angle_deg);
-  steer(turn_signal);
+  map(turn_signal, -15, 15, LEFT_TURN_OUT, RIGHT_TURN_OUT); 
   //End Steer
   
   //Throttle

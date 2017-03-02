@@ -29,7 +29,7 @@ void setup(void)
   ps.dt = &data;
   ps.input = &Serial1;
   ps.output = &Serial2;
-  ps.capture = MsgType::drive;
+  ps.capture = MsgType::drive | MsgType::sensor;
   data.clear();
   Serial1.begin(baudrate);
   Serial2.begin(baudrate);
@@ -75,10 +75,10 @@ void loop(void)
   }
 //  Serial.print("Compass Heading: ");
   Serial.println(heading);
-  data.kind = MsgType::sensor;
+  data.kind = MsgType::seg;
   data.bearing_deg = heading;
   data.speed_cmPs = 0;
-  data.angle_deg = 0;
+  data.number = 0;
   data.posE_cm = event.magnetic.x;
   data.posN_cm = event.magnetic.y;
   data.write(&Serial2);
