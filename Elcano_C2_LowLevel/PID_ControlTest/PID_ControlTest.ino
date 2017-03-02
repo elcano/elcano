@@ -79,6 +79,7 @@ void loop(){
     Serial.println(desiredSpeed);
   }
   computeSpeed(&history);
+  desiredSpeed = 2000;
   PrintSpeed();
   ThrottlePID();
 //  Serial.print("Int State ");

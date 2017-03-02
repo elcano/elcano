@@ -1252,23 +1252,3 @@ void allStop()
     Throttle_PID(0 - history.currentSpeed_kmPh);
   }
 }
-
-
-/*------------------------------checkEbrake-----------------------------------------------*/
-bool checkEbrake()
-{
-    if (RC_Done[RC_ESTP]) //RC_Done determines if the signal from the remote controll is done processing
-  {
-    RC_elapsed[RC_ESTP] = (RC_elapsed[RC_ESTP] > MIDDLE ? HIGH : LOW);
-  
-    if (RC_elapsed[RC_ESTP] == HIGH)
-    {
-      E_Stop();  // already done at interrupt level
-      return true;
-    }
-  }
-  return false;
-}
-
-
-
