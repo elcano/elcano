@@ -141,22 +141,26 @@ void leftTurn(int turnAmount)
     serialData.angle_deg = 15; // what should this actually be
     serialData.write(&Serial1);
    
-    Serial.println("angle = " + String(initialBearing));
-    int currentBearing = 0;
-//    // while direction not met
-//    while(currentBearing < turnAmount)
-//    {
-//      
-//      // poll direction from C6 (get direction data)
-//      ParseStateError r = parseState.update();
-//      if(r == ParseStateError::success)
-//      {
-//        currentBearing = abs(serialData.bearing_deg - initialBearing);
-//        Serial.println(currentBearing);
-//      }
-//      Serial.println("keep turning, current angle: " + String(currentBearing) + " goal: " + String((turnAmount)));
-//    }
-
+   int currentBearing = 0;
+    int oldBearing = 0;
+    // while direction not met
+    while(currentBearing < turnAmount)
+    {
+      
+      // poll direction from C6 (get direction data)
+      ParseStateError r = parseState.update();
+      if(r == ParseStateError::success)
+      {
+        currentBearing = abs((serialData.bearing_deg - initialBearing));
+        if(currentBearing > 250 && oldBearing <90 && (initialBearing <= 90 || initialBearing >= 250))
+        {
+          Serial.println("here");
+          currentBearing %= 180; 
+        }
+        Serial.println("keep turning, current angle: " + String(currentBearing) + " goal: " + String((turnAmount)));  
+      }
+      oldBearing = currentBearing;
+    }
     Serial.println("done turning!");
     serialData.kind = MsgType::drive;
     serialData.speed_cmPs = 0;
@@ -593,7 +597,7 @@ void setup()
         serialData.clear();
         pinMode(8,OUTPUT);
         Serial.println("2");
-        squareRoutine();
+//        squareRoutine();
 }
 
 int speedDir = 1;
@@ -629,10 +633,20 @@ void loop()
 //
 //    //---------------------C2 output-------------------------------//
     ParseStateError r = parseState.update();
-//    Serial.println(static_cast<int8_t>(r));
     if(r == ParseStateError::success)
     {
-      Serial.println("angle = " + String(serialData.bearing_deg));
+      if(serialData.kind == MsgType::seg)
+      {
+        Serial.println("angle = " + String(serialData.bearing_deg));
+      }
+      if(serialData.kind == MsgType::sensor)
+      {
+        Serial.println("speed = " + String(serialData.speed_cmPs));
+      }
+    }
+    else 
+    {
+//      Serial.println(Serial.println(static_cast<int8_t>(r)));
     }
     serialData.kind = MsgType::drive;
     serialData.angle_deg = 0;
