@@ -77,16 +77,16 @@ void setup()
   CalibrateTurnAngle(32, 20);
   calibrateSensors();
   calibrationTime_ms = millis();
-  steer(STRAIGHT_TURN_OUT);
-//  attachInterrupt(digitalPinToInterrupt(IRPT_TURN),  ISR_TURN_rise,  RISING);//turn right stick l/r turn
-//  attachInterrupt(digitalPinToInterrupt(IRPT_GO),    ISR_GO_rise,    RISING);//left stick l/r
-//  attachInterrupt(digitalPinToInterrupt(IRPT_ESTOP), ISR_ESTOP_rise, RISING);//ebrake
-//  attachInterrupt(digitalPinToInterrupt(IRPT_BRAKE), ISR_BRAKE_rise, RISING);//left stick u/d mode select
+  //steer(STRAIGHT_TURN_OUT);
+  attachInterrupt(digitalPinToInterrupt(IRPT_TURN),  ISR_TURN_rise,  RISING);//turn right stick l/r turn
+  attachInterrupt(digitalPinToInterrupt(IRPT_GO),    ISR_GO_rise,    RISING);//left stick l/r
+  attachInterrupt(digitalPinToInterrupt(IRPT_ESTOP), ISR_ESTOP_rise, RISING);//ebrake
+  attachInterrupt(digitalPinToInterrupt(IRPT_BRAKE), ISR_BRAKE_rise, RISING);//left stick u/d mode select
   attachInterrupt(digitalPinToInterrupt(IRPT_MOTOR_FEEDBACK), ISR_MOTOR_FEEDBACK_rise, RISING);
 
   parseState.dt = &Results;
   parseState.input = &Serial3;
-  parseState.output = &Serial2;
+  parseState.output = &Serial3;
   Serial3.begin(baudrate);
   Serial1.begin(baudrate);
   Serial2.begin(baudrate);
@@ -94,7 +94,7 @@ void setup()
   // msgType::drive uses `speed_cmPs` and `angle_deg`
   Results.clear();
 
-  //moveFixedDistance(1000000, 2000);
+  //moveFixedDistance(50, 2);
 }
 
 /*-----------------------------------loop------------------------------------------------*/
@@ -103,7 +103,6 @@ void ThrottlePID(){
   speedPID.Compute();
   Serial.print("Throttle out value ");
   Serial.print(PIDThrottleOutput);
-  Serial.println("\tDesiredSpeed: " + String(desiredSpeed) + "\tSpeed: " + String(SpeedCyclometer_mmPs));
   int throttleControl = (int)PIDThrottleOutput;
 //  if(desiredSpeed > SpeedCyclometer_mmPs) SpeedCyclometer_mmPs += 10;
 //  else if(SpeedCyclometer_mmPs > 10) SpeedCyclometer_mmPs -= 10;
@@ -177,14 +176,24 @@ void loop() {
   Results.posN_cm = 0;
   Results.bearing_deg = 0;
   Results.write(&Serial2);
+ 
   delay(100);
-  desiredSpeed = 2000;
-  desiredAngle = 2000;
-  computeAngle();
+
+  ParseStateError r = parseState.update();
+  if(r == ParseStateError::success){      // If data is got from C3 then use that data
+    desiredSpeed = Results.speed_cmPs * 10;
+    desiredAngle = STRAIGHT_TURN_OUT;     // Should be changed to map (SerialData.angle_deg, from, to, from, to)
+  }else{                                  // Default move 7.2kph with a steering of straight.
+    desiredSpeed = 2000.0;
+    desiredAngle = STRAIGHT_TURN_OUT;
+  }
+  
   computeSpeed(&history);
-  //ThrottlePID();
+  computeAngle();
+  
+  ThrottlePID(desiredSpeed);
   SteeringPID();
-  // Get the next loop start time. Note this (and the millis() counter) will
+    // Get the next loop start time. Note this (and the millis() counter) will
   // roll over back to zero after they exceed the 32-bit size of unsigned long,
   // which happens after about 1.5 months of operation (should check this).
   // But leave the overflow computation in place, in case we need to go back to
@@ -192,10 +201,10 @@ void loop() {
   // If the new nextTime value is <= LOOP_TIME_MS, we've rolled over.
   nextTime = nextTime + LOOP_TIME_MS;
   //Throttle_PID(14 - history.currentSpeed_kmPh);
-  byte automate = processRC();
+  byte automate = true;//processRC();
   // @ToDo: Verify that this should be conditional. May be moot if it is
   // replaced in the conversion to the new Elcano Serial protocol.
-  ParseStateError r = parseState.update();
+  //ParseStateError r = parseState.update();
   // TEMPORARY
 //  if(static_cast<int8_t>(r) == 0)
 //  Serial.println(Results.speed_cmPs);
@@ -206,7 +215,7 @@ void loop() {
 //    desiredSpeed = 0;
 //  }
   // END TEMPORARY
-  if (automate == 0x01 && r == ParseStateError::success)
+  if (automate == 0x01)
   {
     processHighLevel(&Results);
   }
@@ -312,28 +321,28 @@ void processHighLevel(SerialData * results)
 }
 
 /*-----------------------------------moveFixedDistance------------------------------------*/
-bool moveFixedDistance(long length_mm, long speed_mms)
+bool moveFixedDistance(long length_m, long speed_ms)
 { 
-  if(length_mm < 0) length_mm = 0;        // ensures a negative value isn't given, as this will cause an infinite loop 
-  
+  if(length_m < 0) length_m = 0;        // ensures a negative value isn't given, as this will cause an infinite loop 
+ 
   long start = distance_mm; 
+  long length_mm = length_m * 1000;       // Convert the metres passed on to mm
+  long speed_mms = speed_ms * 1000;       // Convert the speed from m/s to mm/s
+  Serial.println("length = " + String(length_m));
   desiredAngle = STRAIGHT_TURN_OUT;
   while(distance_mm < length_mm  + start)  // go until the total distance travaled has increased by the desired distance  
   {
     computeSpeed(&history);
+    computeAngle();
     SteeringPID();
     ThrottlePID(speed_mms);
     if(checkEbrake()) return false;
     Serial.println(distance_mm);
   }
   moveVehicle(0);
-  brake(true);
-  delay(1000);
-  brake(false);
+  desiredSpeed = 0;
   return true;
-
 }
-
 
 /*-----------------------------------circleRoutine----------------------------------------*/
 void circleRoutine() {
@@ -415,14 +424,16 @@ void squareRoutine(unsigned long sides, unsigned long &rcAuto) {
 bool checkEbrake()
 {
     if (RC_Done[RC_ESTP]) //RC_Done determines if the signal from the remote controll is done processing
-  {
-    RC_elapsed[RC_ESTP] = (RC_elapsed[RC_ESTP] > MIDDLE ? HIGH : LOW);
-  
-    if (RC_elapsed[RC_ESTP] == HIGH)
     {
-      E_Stop();  // already done at interrupt level
-      return true;
-    }
+      RC_elapsed[RC_ESTP] = (RC_elapsed[RC_ESTP] > MIDDLE ? HIGH : LOW);
+      if (RC_elapsed[RC_ESTP] == HIGH)
+      {
+        E_Stop();  // already done at interrupt level
+        return true;
+      }
+      else{
+        brake(false);
+      }
   }
   return false;
 }
@@ -438,7 +449,7 @@ byte processRC()
   //ESTOP
   
   checkEbrake();
-  
+
   autoMode = isAutomatic();
   
   if(autoMode){
@@ -498,23 +509,19 @@ void doManualMovement(){
   //THROTTLE
     //TODO: if less than the middle, reverse, otherwise forward
     bool doFeather = false;
-//    Serial.println(RC_elapsed[RC_GO]);
-    if(RC_Done[RC_GO])
+    Serial.println(RC_elapsed[RC_GO]);
+    bool on = checkEbrake();
+    if(RC_Done[RC_GO]&& !on)
     {
-//      Serial.println(RC_elapsed[RC_GO]);
-      if(RC_elapsed[RC_GO] > MIDDLE + DEAD_ZONE){
-        //moveVehicle(convertThrottle(RC_elapsed[RC_GO]));
+      if(RC_elapsed[RC_GO] > MIDDLE +  2 * DEAD_ZONE){
+        moveVehicle(convertThrottle(RC_elapsed[RC_GO]));
       }
-      else if(RC_elapsed[RC_GO] < MIDDLE - DEAD_ZONE){
-        // apply brakes or reverse
-        doFeather = true;
+      else{
+        moveVehicle(0);
       }
-      brake_feather(doFeather);
-      //Serial.println(RC_elapsed[RC_GO]);
-      //moveVehicle(convertThrottle(RC_elapsed[RC_GO]));
     }
   //TURN
-    if (RC_Done[RC_TURN]) 
+    if (RC_Done[RC_TURN] && !on) 
     {
 //      Serial.println(String(convertTurn(RC_elapsed[RC_TURN])));
       steer(convertTurn(RC_elapsed[RC_TURN]));
@@ -561,7 +568,8 @@ int convertDeg(int deg)
 /*------------------------------------convertThrottle-------------------------------------*/
 int convertThrottle(int input)
 {
-  return map(input, 1400, 1000, 80, 140);
+  int mapping = map(input, MIDDLE + DEAD_ZONE + DEAD_ZONE, MAX_RCGO, 80, 140);
+  return mapping;
 }
 
 /*------------------------------------liveThrottle----------------------------------------*/
@@ -630,7 +638,8 @@ void brake_feather(bool on)
 /*-------------------------------------brake-----------------------------------------------*/
 void brake(bool on)
 {
-  BRAKE_SERVO.writeMicroseconds(on ? MAX_BRAKE_OUT : MIN_BRAKE_OUT);
+  int microsecs = (on ? MAX_BRAKE_OUT : MIN_BRAKE_OUT);
+  BRAKE_SERVO.writeMicroseconds(microsecs);
 }
 
 /*-------------------------------------DAC_Write-------------------------------------------*/
@@ -779,7 +788,6 @@ void computeSpeed(struct hist *data){
   float SpeedCyclometer_revPs = 0.0;//revolutions per sec
   if (InterruptState == IRQ_NONE || InterruptState == IRQ_FIRST)
   { // No data
-    distance_mm += WHEEL_CIRCUM_MM;
     SpeedCyclometer_mmPs = 0;
     SpeedCyclometer_revPs = 0;
     return;
@@ -787,7 +795,6 @@ void computeSpeed(struct hist *data){
   
   if (InterruptState == IRQ_SECOND)
   { //  first computed speed
-    distance_mm += WHEEL_CIRCUM_MM;
     SpeedCyclometer_revPs = 1000.0 / WheelRev_ms;
     SpeedCyclometer_mmPs  =
       data->oldSpeed_mmPs = data->olderSpeed_mmPs = WHEEL_CIRCUM_MM * SpeedCyclometer_revPs;
@@ -799,7 +806,6 @@ void computeSpeed(struct hist *data){
 
   if (InterruptState == IRQ_RUNNING)
   { //  new data for second computed speed
-    distance_mm += WHEEL_CIRCUM_MM;
     if(TickTime == data->nowTime_ms)
     {//no new data
         //check to see if stopped first
@@ -849,8 +855,7 @@ void computeSpeed(struct hist *data){
     data->tickMillis = millis();
     
     data->currentSpeed_kmPh = SpeedCyclometer_mmPs/260.0;
-//    distance_m += ((data -> oldTime_ms - data -> olderTime_ms)/1000.0) * (data -> oldSpeed_mmPs)/1000.0;
-    //distance /= (1000.0 * 1000.0);
+    distance_mm += ((data -> oldTime_ms - data -> olderTime_ms)/1000.0) * (data -> oldSpeed_mmPs);
 
     if(data->TickTime_ms-data->OldTick_ms > 1000) data->currentSpeed_kmPh = 0;
     return;
@@ -1096,11 +1101,7 @@ void Throttle_PID(long error_speed_mmPs) // DEFUNCT
 void ThrottlePID(double desired){
   desiredSpeed = desired;
   speedPID.Compute();
-  
-//  Serial.print("Throttle out value ");
-//  Serial.println(PIDThrottleOutput);
   int throttleControl = (int)PIDThrottleOutput;
-
   //apply control value to vehicle
   moveVehicle(throttleControl);
 

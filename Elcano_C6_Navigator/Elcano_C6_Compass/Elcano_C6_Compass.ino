@@ -67,7 +67,8 @@ void loop(void)
   
   // Calculate the angle of the vector y,x
   float heading = (atan2(event.magnetic.y,event.magnetic.x)*180)/PI;
-  
+
+  Serial.println("heading = " + String(heading));
   // Normalize to 0-360
   if (heading < 0)
   {

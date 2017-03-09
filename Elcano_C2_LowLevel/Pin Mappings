@@ -1,0 +1,7 @@
+pin 19 -> RC_GO
+pin 18 -> RC_BRAKE
+pin 20 -> RC_ESTP
+
+RC_GO MIDDLE = 1760
+RC_GO LOW = 1492
+RC_GO HIGH = 2068
