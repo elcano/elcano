@@ -189,7 +189,7 @@ int oldClickNumber;
  * Throttle PID implementation
  */
 double PIDThrottleOutput; //used to tell Throttle and Brake what to do as far as acceleration
-double desiredSpeed = 2000.0; //aprox 10kph
+double desiredSpeed = 2000.0;
 
 //PID update frequency in milliseconds
 #define PID_CALCULATE_TIME 50

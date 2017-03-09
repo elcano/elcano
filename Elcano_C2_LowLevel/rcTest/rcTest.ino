@@ -14,7 +14,7 @@ const int SelectAB = 53; // Select IC 2 DAC (channels A and B)
 
 
 void setup() {
-{ //Set up pins
+    //Set up pins
 
     Serial.begin(9600);
 //  for (int i = 0; i < RC_NUM_SIGNALS; i++)
@@ -33,11 +33,10 @@ void setup() {
         attachInterrupt(digitalPinToInterrupt(IRPT_TURN),  ISR_TURN_rise,  RISING);   // right stick l/r
 //        attachInterrupt(digitalPinToInterrupt(IRPT_RDR),   ISR_RDR_rise,   RISING);   // nothing
         attachInterrupt(digitalPinToInterrupt(IRPT_GO),    ISR_GO_rise,    RISING);   // left stick l/r
-//        attachInterrupt(digitalPinToInterrupt(IRPT_ESTOP), ISR_ESTOP_rise, RISING);   // red switch
-        attachInterrupt(digitalPinToInterrupt(IRPT_RVS),   ISR_RVS_rise,   RISING);   // nothing
+        attachInterrupt(digitalPinToInterrupt(IRPT_ESTOP), ISR_ESTOP_rise, RISING);   // red switch
+//        attachInterrupt(digitalPinToInterrupt(IRPT_RVS),   ISR_RVS_rise,   RISING);   // nothing
         attachInterrupt(digitalPinToInterrupt(IRPT_BRAKE), ISR_BRAKE_rise, RISING);   // left stick u/d
 //        attachInterrupt(digitalPinToInterrupt(IRPT_MOTOR_FEEDBACK), ISR_MOTOR_FEEDBACK_rise, RISING);
-}
 }
 
 void loop() {
@@ -47,7 +46,7 @@ void loop() {
   //
   int i = RC_GO;
   Serial.println(String(RC_elapsed[i]) + " " + String(RC_elapsed[RC_ESTP]) + " " + String(RC_elapsed[RC_BRAKE]) + " " + String(RC_elapsed[RC_TURN]));
-    delay(200);
+  delay(200);
 }
 
 void ISR_AUTO_rise()
@@ -131,7 +130,6 @@ void ISR_TURN_fall() {
   noInterrupts();
   ProcessFallOfINT(RC_TURN);
   RC_Done[RC_TURN] = 1;
-  //Serial.println("TURN");
   attachInterrupt(digitalPinToInterrupt(IRPT_TURN), ISR_TURN_rise, RISING);
   interrupts();
 }

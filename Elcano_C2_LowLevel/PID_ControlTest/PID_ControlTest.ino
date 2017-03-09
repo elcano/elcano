@@ -98,8 +98,8 @@ void loop(){
   }
   //computeAngle();
   PrintAngle();
-  //SteeringPID();
-  moveSteer(1500);
+  SteeringPID();
+  //moveSteer(1500);
   
 //  Serial.print("Int State ");
 //  Serial.println(InterruptState);
