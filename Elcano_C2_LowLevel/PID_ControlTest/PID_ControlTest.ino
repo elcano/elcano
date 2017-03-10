@@ -96,6 +96,9 @@ void loop(){
     desiredAngle = Serial.parseInt();
     Serial.print(desiredAngle);
   }
+  desiredSpeed = 2000;
+  computeSpeed(&history);
+  ThrottlePID();
   //computeAngle();
   PrintAngle();
   SteeringPID();

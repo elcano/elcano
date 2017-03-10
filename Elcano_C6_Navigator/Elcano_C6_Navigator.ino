@@ -264,7 +264,6 @@ void TestSpeed ( SerialData &data )
 
 
 /*---------------------------------------------------------------------------------------*/
-
 void initialize()
 {
   pinMode(GPS_POWER, OUTPUT);
@@ -386,19 +385,19 @@ void setup()
     /* Initializing old PositionData struct to default values
      *  Added by Varsha
      */
-  data.clear();
-  ps.dt = &data;
- 
-  ps.input = &Serial1;
-  ps.output = &Serial2;
+    data.clear();
+    ps.dt = &data;
+   
+    ps.input = &Serial2;
+    ps.output = &Serial2;
+    
+    Serial1.begin(baudrate);
+    Serial2.begin(baudrate);
+    Serial3.begin(GPSRATE); // GPS
+    pinMode(16,OUTPUT);
   
-  Serial1.begin(baudrate);
-  Serial2.begin(baudrate);
-  Serial3.begin(GPSRATE); // GPS
-  pinMode(16,OUTPUT);
-
-  oldPos.Clear();
-  oldPos.time_ms = millis();
+    oldPos.Clear();
+    oldPos.time_ms = millis();
 
     //Enable auto-gain
     mag.enableAutoRange(true);

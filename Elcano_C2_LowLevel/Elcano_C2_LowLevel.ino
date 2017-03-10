@@ -75,7 +75,7 @@ void setup()
 
   setupWheelRev(); // WheelRev4 addition
   CalibrateTurnAngle(32, 20);
-  calibrateSensors();
+  //calibrateSensors();
   calibrationTime_ms = millis();
   //steer(STRAIGHT_TURN_OUT);
   attachInterrupt(digitalPinToInterrupt(IRPT_TURN),  ISR_TURN_rise,  RISING);//turn right stick l/r turn
@@ -85,8 +85,8 @@ void setup()
   attachInterrupt(digitalPinToInterrupt(IRPT_MOTOR_FEEDBACK), ISR_MOTOR_FEEDBACK_rise, RISING);
 
   parseState.dt = &Results;
-  parseState.input = &Serial3;
-  parseState.output = &Serial3;
+  parseState.input = &Serial2;
+  parseState.output = &Serial2;
   Serial3.begin(baudrate);
   Serial1.begin(baudrate);
   Serial2.begin(baudrate);
@@ -121,7 +121,6 @@ void ThrottlePID(){
 void SteeringPID(){
   if(steerPID.Compute()){
     Serial.print("Steering out value ");
-    Serial.println(PIDSteeringOutput);
     int steeringControl = (int)PIDSteeringOutput;
 
     //apply control value to vehicle
@@ -179,20 +178,7 @@ void loop() {
  
   delay(100);
 
-  ParseStateError r = parseState.update();
-  if(r == ParseStateError::success){      // If data is got from C3 then use that data
-    desiredSpeed = Results.speed_cmPs * 10;
-    desiredAngle = STRAIGHT_TURN_OUT;     // Should be changed to map (SerialData.angle_deg, from, to, from, to)
-  }else{                                  // Default move 7.2kph with a steering of straight.
-    desiredSpeed = 2000.0;
-    desiredAngle = STRAIGHT_TURN_OUT;
-  }
-  
-  computeSpeed(&history);
-  computeAngle();
-  
-  ThrottlePID(desiredSpeed);
-  SteeringPID();
+
     // Get the next loop start time. Note this (and the millis() counter) will
   // roll over back to zero after they exceed the 32-bit size of unsigned long,
   // which happens after about 1.5 months of operation (should check this).
@@ -200,24 +186,30 @@ void loop() {
   // using the micros() counter.
   // If the new nextTime value is <= LOOP_TIME_MS, we've rolled over.
   nextTime = nextTime + LOOP_TIME_MS;
-  //Throttle_PID(14 - history.currentSpeed_kmPh);
-  byte automate = true;//processRC();
+  desiredSpeed = 2000;
+  //computeSpeed(&history);
+  //computeAngle();
+  ThrottlePID(desiredSpeed);
+  //SteeringPID();
   // @ToDo: Verify that this should be conditional. May be moot if it is
   // replaced in the conversion to the new Elcano Serial protocol.
   //ParseStateError r = parseState.update();
   // TEMPORARY
 //  if(static_cast<int8_t>(r) == 0)
 //  Serial.println(Results.speed_cmPs);
-  automate = 0x01;
 //  if(millis() > startTime + 20000)
 //  {
 //    automate = 0x00;
 //    desiredSpeed = 0;
 //  }
+  byte automate = processRC();
   // END TEMPORARY
   if (automate == 0x01)
   {
-    processHighLevel(&Results);
+    ParseStateError r = parseState.update();
+    if(r == ParseStateError::success){
+      processHighLevel(&Results);
+    }
   }
 
 //  // @ToDo: What is this doing?
@@ -306,13 +298,13 @@ void processHighLevel(SerialData * results)
 //  Serial.println("here");
   //Steer
   int turn_signal = convertDeg(results->angle_deg);
-  map(turn_signal, -15, 15, LEFT_TURN_OUT, RIGHT_TURN_OUT); 
   //End Steer
   
   //Throttle
   long kmPh_to_mms = 277.778;
   long currentSpeed = history.currentSpeed_kmPh * kmPh_to_mms;
   desiredSpeed = results->speed_cmPs * 10;
+  desiredAngle = turn_signal;
   
 //  ThrottlePID(results->speed_cmPs*10);
 //  Serial.println(results->speed_cmPs);
@@ -453,7 +445,8 @@ byte processRC()
   autoMode = isAutomatic();
   
   if(autoMode){
-    doAutoMovement();
+    //doAutoMovement();
+    return 0x01;
   }
   else // not in autonomous mode
   {
@@ -509,7 +502,6 @@ void doManualMovement(){
   //THROTTLE
     //TODO: if less than the middle, reverse, otherwise forward
     bool doFeather = false;
-    Serial.println(RC_elapsed[RC_GO]);
     bool on = checkEbrake();
     if(RC_Done[RC_GO]&& !on)
     {
@@ -521,6 +513,7 @@ void doManualMovement(){
       }
     }
   //TURN
+    Serial.println(RC_elapsed[RC_TURN]);
     if (RC_Done[RC_TURN] && !on) 
     {
 //      Serial.println(String(convertTurn(RC_elapsed[RC_TURN])));
@@ -546,7 +539,9 @@ int convertTurn(int input)
   // LEFT_TURN_OUT > RIGHT_TURN_OUT
   else
   {
-    return map(input, MIN_RC, MAX_RC, RIGHT_TURN_OUT, LEFT_TURN_OUT);
+    int value = map(input, MIN_RCSTEER, MAX_RCSTEER, RIGHT_TURN_OUT, LEFT_TURN_OUT);
+    Serial.println("Value = " + String(value));
+    return value;
   }
   // @ToDo: Fix this so it is correct in any case.
   // If a controller requires some value to be reversed, then specify that
@@ -1104,7 +1099,6 @@ void ThrottlePID(double desired){
   int throttleControl = (int)PIDThrottleOutput;
   //apply control value to vehicle
   moveVehicle(throttleControl);
-
   if(PIDThrottleOutput == MIN_ACC_OUT){
     //apply brakes
     //brake(MAX_BRAKE_OUT);

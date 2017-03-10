@@ -133,6 +133,7 @@ void leftTurn(int turnAmount)
       Serial.println("waiting for initial bearing: " + String(static_cast<int8_t>(r)));
       delay(100);
     }
+    
     long initialBearing = serialData.bearing_deg;
  // send speed (slow) angle hard left
     serialData.clear();
@@ -241,7 +242,7 @@ void moveFixedDistance(long length_mm, long speed_mms)
     {
       break;
     }
-    Serial.println("waiting for initial bearing: " + String(static_cast<int8_t>(r)));
+    Serial.println("waiting for initial distance: " + String(static_cast<int8_t>(r)));
     delay(100);
   }
   double initialDistance_cm = sqrt(serialData.posE_cm * serialData.posE_cm + serialData.posN_cm * serialData.posN_cm);
@@ -261,7 +262,7 @@ void moveFixedDistance(long length_mm, long speed_mms)
       currentDistance_cm += delta_cm;
     }
   }
-  Serial.println("Done turning");
+  Serial.println("Done moving fixed distance");
   serialData.kind = MsgType::drive;
   serialData.speed_cmPs = 0;
   serialData.angle_deg = 0; // what should this actually be : it should be STRAIGHT_TURN_OUT
@@ -618,17 +619,21 @@ float ArcLength(Cubic x, Cubic y, float t,float deltaT, float current)
 ////////////////////////////////////////////////////////////////////////////////
 void setup() 
 {  
-        Serial1.begin(baudrate);
-        Serial.begin(9600); // for debugging
-        Serial.println("1"); 
-        parseState.dt       = &serialData;
-        parseState.input    = &Serial1;
-        parseState.output   = &Serial1;
-        parseState.capture = MsgType::sensor | MsgType::seg;
-        serialData.clear();
-        pinMode(8,OUTPUT);
-        Serial.println("2");
-//        squareRoutine();
+  Serial1.begin(baudrate);
+  Serial.begin(9600); // for debugging
+  Serial.println("1"); 
+  parseState.dt       = &serialData;
+  parseState.input    = &Serial1;
+  parseState.output   = &Serial1;
+  parseState.capture = MsgType::sensor | MsgType::seg;
+  serialData.clear();
+  pinMode(8,OUTPUT);
+  Serial.println("2");
+  double length_mm = 50000;     // default value
+  double speed_mms = 2000;
+  moveFixedDistance(length_mm, speed_mms);
+  
+  //        squareRoutine();
 }
 
 int speedDir = 1;
