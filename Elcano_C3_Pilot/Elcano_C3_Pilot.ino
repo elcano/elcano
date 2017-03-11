@@ -240,27 +240,33 @@ void moveFixedDistance(long length_mm, long speed_mms)
     ParseStateError r = parseState.update();
     if(r == ParseStateError::success)
     {
+      serialData.posE_cm /= 10000;
+      serialData.posN_cm /= 10000;
       break;
     }
     Serial.println("waiting for initial distance: " + String(static_cast<int8_t>(r)));
     delay(100);
   }
-  double initialDistance_cm = sqrt(serialData.posE_cm * serialData.posE_cm + serialData.posN_cm * serialData.posN_cm);
+  double initialDistance_cm = sqrt(abs(abs(serialData.posE_cm) * abs(serialData.posE_cm) + abs(serialData.posN_cm) * abs(serialData.posN_cm)));
+  Serial.println(initialDistance_cm);
   serialData.clear();
   serialData.kind = MsgType::drive;
   serialData.speed_cmPs = 200; // The initial speed to send.
-  serialData.angle_deg = -15; // what should this actually be
+  serialData.angle_deg = 0; // what should this actually be
   serialData.write(&Serial1);
 
   double currentDistance_cm = 0;
-  double length_cm = length_mm / 0.1;
+  double length_cm = length_mm / 10;
   while(currentDistance_cm < length_cm){
     ParseStateError r = parseState.update();
     if(r == ParseStateError::success){
-      double currentLocation_cm = sqrt(serialData.posE_cm * serialData.posE_cm + serialData.posN_cm * serialData.posN_cm);
-      double delta_cm = currentLocation_cm - initialDistance_cm;
+      serialData.posE_cm /= 10000;
+      serialData.posN_cm /= 10000;
+      double currentLocation_cm = sqrt(abs(abs(serialData.posE_cm) * abs(serialData.posE_cm) + abs(serialData.posN_cm) * abs(serialData.posN_cm)));
+      double delta_cm = abs(currentLocation_cm - initialDistance_cm);
       currentDistance_cm += delta_cm;
-    }
+      Serial.println("Current: " + String(currentDistance_cm));
+    }    
   }
   Serial.println("Done moving fixed distance");
   serialData.kind = MsgType::drive;
@@ -619,6 +625,7 @@ float ArcLength(Cubic x, Cubic y, float t,float deltaT, float current)
 ////////////////////////////////////////////////////////////////////////////////
 void setup() 
 {  
+  delay(10000);
   Serial1.begin(baudrate);
   Serial.begin(9600); // for debugging
   Serial.println("1"); 
@@ -629,11 +636,11 @@ void setup()
   serialData.clear();
   pinMode(8,OUTPUT);
   Serial.println("2");
-  double length_mm = 50000;     // default value
+  double length_mm = 100000;     // default value
   double speed_mms = 2000;
-  moveFixedDistance(length_mm, speed_mms);
-  
-  //        squareRoutine();
+//  moveFixedDistance(length_mm, speed_mms);
+  rightTurn(90);
+//  squareRoutine();
 }
 
 int speedDir = 1;
@@ -658,6 +665,15 @@ void loop()
 //    ReadWaypoints(allTargetLocations);
 //    
 //
+      ParseStateError r = parseState.update();
+      if(r == ParseStateError::success)
+      {
+        Serial.print(serialData.posN_cm);
+        Serial.print("\t");
+        Serial.println(serialData.posE_cm);
+      }
+
+
 //    //Test of input from C4.
 //    //Serial.println("test");
 //    //Serial.println(instructions.kind);
@@ -684,7 +700,6 @@ void loop()
 //    {
 //      Serial.println(Serial.println(static_cast<int8_t>(r)));
 //    }
-    Serial.println((char)Serial1.read());
     serialData.kind = MsgType::drive;
     serialData.angle_deg = 0;
     serialData.speed_cmPs = speedToSend;

@@ -78,15 +78,15 @@ void setup()
   //calibrateSensors();
   calibrationTime_ms = millis();
   //steer(STRAIGHT_TURN_OUT);
-  attachInterrupt(digitalPinToInterrupt(IRPT_TURN),  ISR_TURN_rise,  RISING);//turn right stick l/r turn
-  attachInterrupt(digitalPinToInterrupt(IRPT_GO),    ISR_GO_rise,    RISING);//left stick l/r
-  attachInterrupt(digitalPinToInterrupt(IRPT_ESTOP), ISR_ESTOP_rise, RISING);//ebrake
-  attachInterrupt(digitalPinToInterrupt(IRPT_BRAKE), ISR_BRAKE_rise, RISING);//left stick u/d mode select
+//  attachInterrupt(digitalPinToInterrupt(IRPT_TURN),  ISR_TURN_rise,  RISING);//turn right stick l/r turn
+//  attachInterrupt(digitalPinToInterrupt(IRPT_GO),    ISR_GO_rise,    RISING);//left stick l/r
+//  attachInterrupt(digitalPinToInterrupt(IRPT_ESTOP), ISR_ESTOP_rise, RISING);//ebrake
+//  attachInterrupt(digitalPinToInterrupt(IRPT_BRAKE), ISR_BRAKE_rise, RISING);//left stick u/d mode select
   attachInterrupt(digitalPinToInterrupt(IRPT_MOTOR_FEEDBACK), ISR_MOTOR_FEEDBACK_rise, RISING);
 
   parseState.dt = &Results;
-  parseState.input = &Serial2;
-  parseState.output = &Serial2;
+  parseState.input = &Serial3;
+  parseState.output = &Serial3;
   Serial3.begin(baudrate);
   Serial1.begin(baudrate);
   Serial2.begin(baudrate);
@@ -168,15 +168,15 @@ void calibrateSensors(){
 void loop() {
   // send data to C6
   Results.clear();
-  Results.kind = MsgType::sensor;
-  Results.speed_cmPs = history.olderSpeed_mmPs;
+  Results.kind = MsgType::drive;
+  Results.speed_cmPs = SpeedCyclometer_mmPs;
+  // temporary
+//  Results.speed_cmPs = 0;
+  // end temporary
   Results.angle_deg = 0;
-  Results.posE_cm = 0;
-  Results.posN_cm = 0;
-  Results.bearing_deg = 0;
-  Results.write(&Serial2);
+  Results.write(&Serial3);
  
-  delay(100);
+//  delay(100);
 
 
     // Get the next loop start time. Note this (and the millis() counter) will
@@ -187,26 +187,30 @@ void loop() {
   // If the new nextTime value is <= LOOP_TIME_MS, we've rolled over.
   nextTime = nextTime + LOOP_TIME_MS;
   desiredSpeed = 2000;
-  //computeSpeed(&history);
+//  computeSpeed(&history); // commented out for simulation
   //computeAngle();
   ThrottlePID(desiredSpeed);
   //SteeringPID();
   // @ToDo: Verify that this should be conditional. May be moot if it is
   // replaced in the conversion to the new Elcano Serial protocol.
   //ParseStateError r = parseState.update();
+  
+  
+  byte automate = processRC();
   // TEMPORARY
 //  if(static_cast<int8_t>(r) == 0)
 //  Serial.println(Results.speed_cmPs);
 //  if(millis() > startTime + 20000)
 //  {
-//    automate = 0x00;
+    automate = 0x01;
 //    desiredSpeed = 0;
 //  }
-  byte automate = processRC();
+  
   // END TEMPORARY
   if (automate == 0x01)
   {
     ParseStateError r = parseState.update();
+    Serial.println(static_cast<int8_t>(r));
     if(r == ParseStateError::success){
       processHighLevel(&Results);
     }
@@ -304,8 +308,9 @@ void processHighLevel(SerialData * results)
   long kmPh_to_mms = 277.778;
   long currentSpeed = history.currentSpeed_kmPh * kmPh_to_mms;
   desiredSpeed = results->speed_cmPs * 10;
+  SpeedCyclometer_mmPs = desiredSpeed; // for simulation
   desiredAngle = turn_signal;
-  
+  Serial.println(String(results->speed_cmPs * 10) + " " + String(turn_signal));
 //  ThrottlePID(results->speed_cmPs*10);
 //  Serial.println(results->speed_cmPs);
 //  Serial.println("currentSpeed = " + String(SpeedCyclometer_mmPs) + " desired speed = " + String(desiredSpeed));
@@ -513,7 +518,6 @@ void doManualMovement(){
       }
     }
   //TURN
-    Serial.println(RC_elapsed[RC_TURN]);
     if (RC_Done[RC_TURN] && !on) 
     {
 //      Serial.println(String(convertTurn(RC_elapsed[RC_TURN])));
@@ -539,8 +543,9 @@ int convertTurn(int input)
   // LEFT_TURN_OUT > RIGHT_TURN_OUT
   else
   {
-    int value = map(input, MIN_RCSTEER, MAX_RCSTEER, RIGHT_TURN_OUT, LEFT_TURN_OUT);
-    Serial.println("Value = " + String(value));
+//    int value = map(input, MIN_RCSTEER, MAX_RCSTEER, RIGHT_TURN_OUT, LEFT_TURN_OUT);
+//    Serial.println("Value = " + String(value));
+    int value = 0;
     return value;
   }
   // @ToDo: Fix this so it is correct in any case.
@@ -563,7 +568,8 @@ int convertDeg(int deg)
 /*------------------------------------convertThrottle-------------------------------------*/
 int convertThrottle(int input)
 {
-  int mapping = map(input, MIDDLE + DEAD_ZONE + DEAD_ZONE, MAX_RCGO, 80, 140);
+//  int mapping = map(input, MIDDLE + DEAD_ZONE + DEAD_ZONE, MAX_RCGO, 80, 140);
+  int mapping = 0;
   return mapping;
 }
 
