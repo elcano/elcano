@@ -308,7 +308,7 @@ void initialize()
     estimated_position.sigma_mm = 1.0E5; // 100 m standard deviation
     estimated_position.time_ms = millis();
     Serial.println("Failed");
-    while(1){}
+//    while(1){}
   }
   // Set velocity and acceleration to zero.
   estimated_position.speed_mmPs = 0;
@@ -390,6 +390,8 @@ void setup()
    
     ps.input = &Serial2;
     ps.output = &Serial2;
+
+    ps.capture = MsgType::drive;
     
     Serial1.begin(baudrate);
     Serial2.begin(baudrate);
@@ -472,8 +474,7 @@ void loop()
     char* pData;
     char* pGPS;
     char* pObstacles;
-    bool GPS_available = GPS_reading.AcquireGPGGA(300 );
-
+    bool GPS_available = GPS_reading.AcquireGPGGA(300);
     /* Perform dead reckoning from clock and previous state
     Read compass.
     ReadINU.
@@ -538,8 +539,8 @@ void loop()
    data.write(&Serial2);
    data.clear();
    
-   Serial.print(String(estimated_position.north_mm) + "estimated_position.north_mm\t");
-   Serial.println(String(estimated_position.east_mm) + "estimated_position.east_mm");
+//   Serial.print(String(estimated_position.north_mm) + "estimated_position.north_mm\t");
+//   Serial.println(String(estimated_position.east_mm) + "estimated_position.east_mm");
    
 
      //Sending GPS position from C6 to C2
@@ -552,39 +553,50 @@ void loop()
     // Read data from C2 using Elcano_Serial
   data.write(&Serial2);
   data.clear();
-//    if ( C2_Results.kind == MSG_SENSOR )
-//    {
-//        // Updating the data with the
-//        // odometer details from C2
-//        data.speed_cmPs = C2_Results.speed_cmPs;
-//      
-//      newPos.speed_cmPs = C2_Results.speed_cmPs;
-//      newPos.bearing_deg = CurrentHeading;
-//      newPos.time_ms = time;
-//    
-//        ComputePositionWithDR(oldPos, newPos);
-//    
-//      // Populate PositionData struct
-//      PositionData gps, fuzzy_out;
-//    
-//    gps.x_Pos = estimated_position.latitude;
-//    gps.y_Pos = estimated_position.longitude;
-//
-//      
-//      // Translate GPS position
-//      TranslateCoordinates(newPos, gps, 1);
-//      RotateCoordinates(gps, newPos.bearing_deg, ROTATE_CLOCKWISE);
-//      FindFuzzyCrossPointXY(gps, newPos.distance_mm, newPos.bearing_deg, fuzzy_out);
-//    RotateCoordinates(fuzzy_out, newPos.bearing_deg, ROTATE_COUNTER_CLOCKWISE);
-//    TranslateCoordinates(oldPos, fuzzy_out, 1);
-//
-//      // Swap data
-//      CopyData(oldPos, newPos);
-//
-//    // Copy GPS fuzzy output to C4
-//    data.posE_cm = fuzzy_out.x_Pos;
-//    data.posN_cm = fuzzy_out.y_Pos;
-//    }
+  
+  ParseStateError r = ps.update();
+  if(r == ParseStateError::success) 
+  {
+    Serial.println("Recieved Speed:\t\t\t\t\t\t\t\t\t" + String(data.speed_cmPs));
+    Serial2.end();
+    Serial2.begin(baudrate);
+      // Updating the data with the
+      // odometer details from C2
+//    data.speed_cmPs = C2_Results.speed_cmPs;
+    
+    newPos.speed_cmPs = data.speed_cmPs;
+    newPos.bearing_deg = CurrentHeading;
+    newPos.time_ms = time;
+  
+    ComputePositionWithDR(oldPos, newPos);
+  
+    // Populate PositionData struct
+    PositionData gps, fuzzy_out;
+  
+    gps.x_Pos = estimated_position.latitude;
+    gps.y_Pos = estimated_position.longitude;
+
+    
+    // Translate GPS position
+    TranslateCoordinates(newPos, gps, 1);
+    RotateCoordinates(gps, newPos.bearing_deg, ROTATE_CLOCKWISE);
+    FindFuzzyCrossPointXY(gps, newPos.distance_mm, newPos.bearing_deg, fuzzy_out);
+    RotateCoordinates(fuzzy_out, newPos.bearing_deg, ROTATE_COUNTER_CLOCKWISE);
+    TranslateCoordinates(oldPos, fuzzy_out, 1);
+
+    // Swap data
+    CopyData(oldPos, newPos);
+
+    // Copy GPS fuzzy output to C4
+    data.kind = MsgType::sensor;
+    // speed already set
+    data.posE_cm = fuzzy_out.x_Pos;
+    data.posN_cm = fuzzy_out.y_Pos;
+    data.bearing_deg = CurrentHeading;
+    data.angle_deg = 0;
+    data.write(&Serial2);
+    Serial.println("\t\t\t\t\tx_Pos" + String(fuzzy_out.x_Pos) + "   y_Pos" + String(fuzzy_out.y_Pos));
+  }
         
     //data.write(&Serial2);
     //C2_Results.write(&Serial2);   
