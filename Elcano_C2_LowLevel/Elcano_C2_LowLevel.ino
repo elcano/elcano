@@ -93,7 +93,7 @@ void setup()
   parseState.capture = MsgType::drive;
   // msgType::drive uses `speed_cmPs` and `angle_deg`
   Results.clear();
-
+  SpeedCyclometer_mmPs = 0;
   //moveFixedDistance(50, 2);
 }
 
@@ -101,8 +101,8 @@ void setup()
 
 void ThrottlePID(){
   speedPID.Compute();
-  Serial.print("Throttle out value ");
-  Serial.print(PIDThrottleOutput);
+//  Serial.print("Throttle out value ");
+//  Serial.println(PIDThrottleOutput);
   int throttleControl = (int)PIDThrottleOutput;
 //  if(desiredSpeed > SpeedCyclometer_mmPs) SpeedCyclometer_mmPs += 10;
 //  else if(SpeedCyclometer_mmPs > 10) SpeedCyclometer_mmPs -= 10;
@@ -169,7 +169,7 @@ void loop() {
   // send data to C6
   Results.clear();
   Results.kind = MsgType::drive;
-  Results.speed_cmPs = SpeedCyclometer_mmPs;
+  Results.speed_cmPs = SpeedCyclometer_mmPs/10;
   // temporary
 //  Results.speed_cmPs = 0;
   // end temporary
@@ -186,10 +186,9 @@ void loop() {
   // using the micros() counter.
   // If the new nextTime value is <= LOOP_TIME_MS, we've rolled over.
   nextTime = nextTime + LOOP_TIME_MS;
-  desiredSpeed = 2000;
-//  computeSpeed(&history); // commented out for simulation
+  computeSpeed(&history); // commented out for simulation
   //computeAngle();
-  ThrottlePID(desiredSpeed);
+  ThrottlePID();
   //SteeringPID();
   // @ToDo: Verify that this should be conditional. May be moot if it is
   // replaced in the conversion to the new Elcano Serial protocol.
@@ -210,9 +209,14 @@ void loop() {
   if (automate == 0x01)
   {
     ParseStateError r = parseState.update();
-    Serial.println(static_cast<int8_t>(r));
-    if(r == ParseStateError::success){
+//    Serial.println(static_cast<int8_t>(r));
+    if(r == ParseStateError::success)
+    {
       processHighLevel(&Results);
+    }
+    else
+    {
+      Serial.println("no comms");
     }
   }
 
@@ -297,8 +301,8 @@ void loop() {
 /*------------------------------------processHighLevel------------------------------------*/
 void processHighLevel(SerialData * results)
 {
-//  Serial3.end();
-//  Serial3.begin(baudrate);
+  Serial3.end();
+  Serial3.begin(baudrate);
 //  Serial.println("here");
   //Steer
   int turn_signal = convertDeg(results->angle_deg);
@@ -308,9 +312,11 @@ void processHighLevel(SerialData * results)
   long kmPh_to_mms = 277.778;
   long currentSpeed = history.currentSpeed_kmPh * kmPh_to_mms;
   desiredSpeed = results->speed_cmPs * 10;
-  SpeedCyclometer_mmPs = desiredSpeed; // for simulation
+  
+//  SpeedCyclometer_mmPs = desiredSpeed; // for simulation
+  
   desiredAngle = turn_signal;
-  Serial.println(String(results->speed_cmPs * 10) + " " + String(turn_signal));
+  Serial.println(String(results->speed_cmPs * 10) + " " + String(results->angle_deg));
 //  ThrottlePID(results->speed_cmPs*10);
 //  Serial.println(results->speed_cmPs);
 //  Serial.println("currentSpeed = " + String(SpeedCyclometer_mmPs) + " desired speed = " + String(desiredSpeed));

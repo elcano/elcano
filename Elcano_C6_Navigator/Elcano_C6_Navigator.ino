@@ -225,13 +225,13 @@ long GetHeading(void)
     sensors_event_t event;
     mag.getEvent(&event);
     
-    Serial.print("X:");
-    Serial.print(event.magnetic.x);
-    Serial.print(" Y:");
-    Serial.print(event.magnetic.y);
-    Serial.print(" z:");
-    Serial.print(event.magnetic.z);
-    Serial.println("");
+//    Serial.print("X:");
+//    Serial.print(event.magnetic.x);
+//    Serial.print(" Y:");
+//    Serial.print(event.magnetic.y);
+//    Serial.print(" z:");
+//    Serial.print(event.magnetic.z);
+//    Serial.println("");
     
     //Calculate the current heading (angle of the vector y,x)
     //Normalize the heading
@@ -531,33 +531,33 @@ void loop()
     displayResults(C2_Results);
       // Preparing Result struct to send data to C4
       */
-
-   data.kind = MsgType::goal;
-   data.bearing_deg = CurrentHeading;
-   data.posE_cm = GPS_reading.latitude;
-   data.posN_cm = GPS_reading.longitude;
-   data.write(&Serial2);
+//
+//   data.kind = MsgType::goal;
+//   data.bearing_deg = CurrentHeading;
+//   data.posE_cm = GPS_reading.latitude;
+//   data.posN_cm = GPS_reading.longitude;
+//   data.write(&Serial2);
    data.clear();
    
 //   Serial.print(String(estimated_position.north_mm) + "estimated_position.north_mm\t");
 //   Serial.println(String(estimated_position.east_mm) + "estimated_position.east_mm");
    
 
-     //Sending GPS position from C6 to C2
-  data.kind = MsgType::sensor;
-  data.bearing_deg = CurrentHeading;
-  //C2_Results.speed_cmPs = 0;
-  //C2_Results.angle_deg = 0;
-  data.posE_cm = GPS_reading.latitude/10;
-  data.posN_cm = GPS_reading.longitude/10;
-    // Read data from C2 using Elcano_Serial
-  data.write(&Serial2);
+//     //Sending GPS position from C6 to C2
+//  data.kind = MsgType::sensor;
+//  data.bearing_deg = CurrentHeading;
+//  //C2_Results.speed_cmPs = 0;
+//  //C2_Results.angle_deg = 0;
+//  data.posE_cm = GPS_reading.latitude/10;
+//  data.posN_cm = GPS_reading.longitude/10;
+//    // Read data from C2 using Elcano_Serial
+//  data.write(&Serial2);
   data.clear();
   
   ParseStateError r = ps.update();
   if(r == ParseStateError::success) 
   {
-    Serial.println("Recieved Speed:\t\t\t\t\t\t\t\t\t" + String(data.speed_cmPs));
+    Serial.print(String(time) + ",");
     Serial2.end();
     Serial2.begin(baudrate);
       // Updating the data with the
@@ -595,7 +595,7 @@ void loop()
     data.bearing_deg = CurrentHeading;
     data.angle_deg = 0;
     data.write(&Serial2);
-    Serial.println("\t\t\t\t\tx_Pos" + String(fuzzy_out.x_Pos) + "   y_Pos" + String(fuzzy_out.y_Pos));
+    Serial.println(String(fuzzy_out.x_Pos) + "," + String(fuzzy_out.y_Pos));
   }
         
     //data.write(&Serial2);
