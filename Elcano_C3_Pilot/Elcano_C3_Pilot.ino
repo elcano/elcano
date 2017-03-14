@@ -257,7 +257,7 @@ void moveFixedDistance(long length_mm, long speed_mms)
 
   double currentDistance_cm = 0;
   double length_cm = length_mm / 10;
-  while(currentDistance_cm < length_cm){
+  while(currentDistance_cm < length_cm + initialDistance_cm){
     ParseStateError r = parseState.update();
     if(r == ParseStateError::success){
       serialData.posE_cm /= 10000;
@@ -266,6 +266,8 @@ void moveFixedDistance(long length_mm, long speed_mms)
       double delta_cm = abs(currentLocation_cm - initialDistance_cm);
       currentDistance_cm += delta_cm;
       Serial.println("Current: " + String(currentDistance_cm));
+      serialData.write(&Serial1);
+
     }    
   }
   Serial.println("Done moving fixed distance");
@@ -636,7 +638,7 @@ void setup()
   serialData.clear();
   pinMode(8,OUTPUT);
   Serial.println("2");
-  double length_mm = 10000;     // default value
+  double length_mm = 2000;     // default value
   double speed_mms = 5000;
   moveFixedDistance(length_mm, speed_mms);
 //  rightTurn(90);
@@ -707,9 +709,9 @@ void loop()
     speedToSend += speedDir * 1;
 
     serialData.write(&Serial1);
+    Serial.println("wrote to C2");
     if(speedToSend >= 500) speedDir = -1;
     if(speedToSend <= 0)   speedDir = 1;
-    delay(100);
 //    
 //    //Test Data for instructions C4. This is an example of a semgment
 //    /*instructions.kind = 4;
