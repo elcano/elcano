@@ -251,7 +251,7 @@ void moveFixedDistance(long length_mm, long speed_mms)
   Serial.println(initialDistance_cm);
   serialData.clear();
   serialData.kind = MsgType::drive;
-  serialData.speed_cmPs = 200; // The initial speed to send.
+  serialData.speed_cmPs = speed_mms/10; // The initial speed to send.
   serialData.angle_deg = 0; // what should this actually be
   serialData.write(&Serial1);
 
@@ -636,10 +636,10 @@ void setup()
   serialData.clear();
   pinMode(8,OUTPUT);
   Serial.println("2");
-  double length_mm = 100000;     // default value
-  double speed_mms = 2000;
-//  moveFixedDistance(length_mm, speed_mms);
-  rightTurn(90);
+  double length_mm = 10000;     // default value
+  double speed_mms = 5000;
+  moveFixedDistance(length_mm, speed_mms);
+//  rightTurn(90);
 //  squareRoutine();
 }
 
@@ -702,8 +702,10 @@ void loop()
 //    }
     serialData.kind = MsgType::drive;
     serialData.angle_deg = 0;
+    speedToSend = 0;
     serialData.speed_cmPs = speedToSend;
     speedToSend += speedDir * 1;
+
     serialData.write(&Serial1);
     if(speedToSend >= 500) speedDir = -1;
     if(speedToSend <= 0)   speedDir = 1;
