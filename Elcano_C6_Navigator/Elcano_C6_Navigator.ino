@@ -437,6 +437,7 @@ void setup()
           dataFile.close();
       }
     }
+    
     // Commented by Varsha as low-level routine will be used from C2
     //pinMode(CYCLOMETER, INPUT);
     //attachInterrupt (5, WheelRev, RISING);
@@ -466,6 +467,7 @@ void waypoint::SetTime(char *pTime, char * pDate)
 void loop()
 {
     //Serial.println("Inside C6 loop");
+    
     unsigned long deltaT_ms;
     unsigned long time = millis();
     unsigned long endTime = time + LoopPeriod;
@@ -557,7 +559,7 @@ void loop()
   ParseStateError r = ps.update();
   if(r == ParseStateError::success) 
   {
-    Serial.print(String(time) + ",");
+    Serial.println("Speed: " + String(data.speed_cmPs));
     Serial2.end();
     Serial2.begin(baudrate);
       // Updating the data with the
@@ -595,9 +597,8 @@ void loop()
     data.bearing_deg = CurrentHeading;
     data.angle_deg = 0;
     data.write(&Serial2);
-    Serial.println(String(fuzzy_out.x_Pos) + "," + String(fuzzy_out.y_Pos));
   }
-        
+  else Serial.println("no comms");
     //data.write(&Serial2);
     //C2_Results.write(&Serial2);   
     
