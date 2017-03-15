@@ -14,25 +14,9 @@ const int SelectAB = 53; // Select IC 2 DAC (channels A and B)
 
 
 void setup() {
-{ //Set up pins
+    //Set up pins
 
-  // SPI: set the slaveSelectPin as an output:
-  pinMode (SelectAB, OUTPUT);
-  pinMode (SelectCD, OUTPUT);
-  pinMode (10, OUTPUT);
-  SPI.setDataMode( SPI_MODE0);
-  SPI.setBitOrder( MSBFIRST);
-  // initialize SPI:
-  // The following line should not be neccessary. It uses a system library.
-  PRR0 &= ~4; // turn off PRR0.PRSPI bit so power isn't off
-  SPI.begin();
-  for (int channel = 0; channel < 4; channel++){
-    DAC_Write(channel, 0); // reset did not clear previous states
-  }
-  // put vehicle in initial state
-
-  delay(500);   // let vehicle stabilize
-  Serial.begin(9600);
+    Serial.begin(9600);
 //  for (int i = 0; i < RC_NUM_SIGNALS; i++)
 //  {
 //    RC_rise[i] = INVALID_DATA;
@@ -49,11 +33,10 @@ void setup() {
         attachInterrupt(digitalPinToInterrupt(IRPT_TURN),  ISR_TURN_rise,  RISING);   // right stick l/r
 //        attachInterrupt(digitalPinToInterrupt(IRPT_RDR),   ISR_RDR_rise,   RISING);   // nothing
         attachInterrupt(digitalPinToInterrupt(IRPT_GO),    ISR_GO_rise,    RISING);   // left stick l/r
-//        attachInterrupt(digitalPinToInterrupt(IRPT_ESTOP), ISR_ESTOP_rise, RISING);   // red switch
-        attachInterrupt(digitalPinToInterrupt(IRPT_RVS),   ISR_RVS_rise,   RISING);   // nothing
+        attachInterrupt(digitalPinToInterrupt(IRPT_ESTOP), ISR_ESTOP_rise, RISING);   // red switch
+//        attachInterrupt(digitalPinToInterrupt(IRPT_RVS),   ISR_RVS_rise,   RISING);   // nothing
         attachInterrupt(digitalPinToInterrupt(IRPT_BRAKE), ISR_BRAKE_rise, RISING);   // left stick u/d
 //        attachInterrupt(digitalPinToInterrupt(IRPT_MOTOR_FEEDBACK), ISR_MOTOR_FEEDBACK_rise, RISING);
-}
 }
 
 void loop() {
@@ -61,8 +44,8 @@ void loop() {
   //go, 4, left r/l
   //turn, 5, right up/down
   //
-  int i = RC_ESTP;
-  Serial.println( String(RC_elapsed[1]) + " " + String(RC_elapsed[2]) + " " + String(RC_elapsed[3]) + " " + String(RC_elapsed[4]) + " " + String(RC_elapsed[5]) + " " + String(RC_elapsed[6]));
+  int i = RC_GO;
+  Serial.println(String(RC_elapsed[i]) + " " + String(RC_elapsed[RC_ESTP]) + " " + String(RC_elapsed[RC_BRAKE]) + " " + String(RC_elapsed[RC_TURN]));
   delay(200);
 }
 
@@ -147,7 +130,6 @@ void ISR_TURN_fall() {
   noInterrupts();
   ProcessFallOfINT(RC_TURN);
   RC_Done[RC_TURN] = 1;
-  //Serial.println("TURN");
   attachInterrupt(digitalPinToInterrupt(IRPT_TURN), ISR_TURN_rise, RISING);
   interrupts();
 }
@@ -197,55 +179,4 @@ void ISR_GO_fall() {
 }
 
 
-void DAC_Write(int address, int value)
-/*
-  REGISTER 5-3: WRITE COMMAND REGISTER FOR MCP4802 (8-BIT DAC)
-  A/B — GA SHDN D7 D6 D5 D4 D3 D2 D1 D0 x x x x
-  bit 15 bit 0
-  bit 15 A/B: DACA or DACB Selection bit
-  1 = Write to DACB
-  0 = Write to DACA
-  bit 14 — Don’t Care
-  bit 13 GA: Output Gain Selection bit
-  1 = 1x (VOUT = VREF * D/4096)
-  0 = 2x (VOUT = 2 * VREF * D/4096), where internal VREF = 2.048V.
-  bit 12 SHDN: Output Shutdown Control bit
-  1 = Active mode operation. VOUT is available.
-  0 = Shutdown the selected DAC channel. Analog output is not available at the channel that was shut down.
-  VOUT pin is connected to 500 k (typical)
-  bit 11-0 D11:D0: DAC Input Data bits. Bit x is ignored.
-  With 4.95 V on Vcc, observed output for 255 is 4.08V.
-  This is as documented; with gain of 2, maximum output is 2 * Vref
-*/
-{
-  int byte1 = ((value & 0xF0) >> 4) | 0x10; // active mode, bits D7-D4
-  int byte2 = (value & 0x0F) << 4; // D3-D0
-  if (address < 2)
-  {
-    // take the SS pin low to select the chip:
-    digitalWrite(SelectAB, LOW);
-    if (address >= 0)
-    {
-      if (address == 1)
-        byte1 |= 0x80; // second channnel
-      SPI.transfer(byte1);
-      SPI.transfer(byte2);
-    }
-    // take the SS pin high to de-select the chip:
-    digitalWrite(SelectAB, HIGH);
-  }
-  else
-  {
-    // take the SS pin low to select the chip:
-    digitalWrite(SelectCD, LOW);
-    if (address <= 3)
-    {
-      if (address == 3)
-        byte1 |= 0x80; // second channnel
-      SPI.transfer(byte1);
-      SPI.transfer(byte2);
-    }
-    // take the SS pin high to de-select the chip:
-    digitalWrite(SelectCD, HIGH);
-  }
-}
+
