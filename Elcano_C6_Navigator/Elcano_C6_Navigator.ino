@@ -557,6 +557,7 @@ void loop()
   data.clear();
   
   ParseStateError r = ps.update();
+  Serial.println(static_cast<int8_t>(r));
   if(r == ParseStateError::success) 
   {
     Serial.println("Speed: " + String(data.speed_cmPs));
@@ -598,7 +599,6 @@ void loop()
     data.angle_deg = 0;
     data.write(&Serial2);
   }
-  else Serial.println("no comms");
     //data.write(&Serial2);
     //C2_Results.write(&Serial2);   
     
