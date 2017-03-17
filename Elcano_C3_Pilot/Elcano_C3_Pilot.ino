@@ -121,107 +121,6 @@ bool ReadWaypoints(TargetLocation* TargetLocationArray)
    return true;
 }
 
-void leftTurn(int turnAmount)
-{
-    while(true)
-    {
-      ParseStateError r = parseState.update();
-      if(r == ParseStateError::success)
-      {
-        break;
-      }
-      Serial.println("waiting for initial bearing: " + String(static_cast<int8_t>(r)));
-      delay(100);
-    }
-    
-    long initialBearing = serialData.bearing_deg;
- // send speed (slow) angle hard left
-    serialData.clear();
-    serialData.kind = MsgType::drive;
-    serialData.speed_cmPs = 200;
-    serialData.angle_deg = 15; // what should this actually be
-    serialData.write(&Serial1);
-   
-   int currentBearing = 0;
-    int oldBearing = 0;
-  // while direction not met
-  while(currentBearing < turnAmount)
-  {
-
-    // poll direction from C6 (get direction data)
-    ParseStateError r = parseState.update();
-    if(r == ParseStateError::success)
-    {
-      currentBearing = abs((serialData.bearing_deg - initialBearing));
-      if(currentBearing > (360-turnAmount) 
-        && oldBearing < turnAmount 
-        && (initialBearing <= turnAmount 
-        || initialBearing >= (360 - turnAmount)))
-      {
-        Serial.println("here");
-        currentBearing %= 180; 
-      }
-      Serial.println("keep turning, current angle: " + String(currentBearing) + " goal: " + String((turnAmount)));  
-    }
-    oldBearing = currentBearing;
-  }
-  Serial.println("done turning!");
-  serialData.kind = MsgType::drive;
-  serialData.speed_cmPs = 0;
-  serialData.angle_deg = 0; // what should this actually be
-  serialData.write(&Serial1);
-
-}
-
-void rightTurn(int turnAmount)
-{
-    while(true)
-    {
-      ParseStateError r = parseState.update();
-      if(r == ParseStateError::success)
-      {
-        break;
-      }
-      Serial.println("waiting for initial bearing: " + String(static_cast<int8_t>(r)));
-      delay(100);
-    }
-    long initialBearing = serialData.bearing_deg;
- // send speed (slow) angle hard left
-    serialData.clear();
-    serialData.kind = MsgType::drive;
-    serialData.speed_cmPs = 200;
-    serialData.angle_deg = -15; // what should this actually be
-    serialData.write(&Serial1);
-
-    int currentBearing = 0;
-    int oldBearing = 0;
-    // while direction not met
-    while(currentBearing < turnAmount)
-    {
-
-      // poll direction from C6 (get direction data)
-      ParseStateError r = parseState.update();
-      if(r == ParseStateError::success)
-      {
-        currentBearing = abs((serialData.bearing_deg - initialBearing));
-        if(currentBearing > (360-turnAmount) 
-          && oldBearing < turnAmount 
-          && (initialBearing <= turnAmount 
-          || initialBearing >= (360 - turnAmount)))
-        {
-          currentBearing %= 180; 
-        }
-        Serial.println("keep turning, current angle: " + String(currentBearing) + " goal: " + String((turnAmount)));  
-      }
-      oldBearing = currentBearing;
-    }
-    Serial.println("done turning!");
-    serialData.kind = MsgType::drive;
-    serialData.speed_cmPs = 0;
-    serialData.angle_deg = 0; // what should this actually be
-    serialData.write(&Serial1);
-
-}
 
 // turn a number of degrees. Positive number for left, negative for right
 void turn(int turnAmount)
@@ -290,7 +189,7 @@ void squareRoutine(){
   double speed_mms = 2000;      // default value
   for(int i = 0; i < 4; i++){
     moveFixedDistance(length_mm, speed_mms);
-    leftTurn(90);
+    turn(90);
   }
 }
 
@@ -302,7 +201,7 @@ void moveFixedDistance(long length_mm, long speed_mms)
     ParseStateError r = parseState.update();
     if(r == ParseStateError::success)
     {
-      serialData.posE_cm /= 10000;
+      serialData.posE_cm /= 10000; // avoid overflow
       serialData.posN_cm /= 10000;
       break;
     }
@@ -339,11 +238,6 @@ void moveFixedDistance(long length_mm, long speed_mms)
   serialData.write(&Serial1);
 }
 
-//this will be the square test of the first autonomous baby step.
-void Drive(int myAngle, int myX, int myY, int targetAngle, int targetX, int targetY)
-{
-  
-}
 
 /* This function will rotate the bike to the desired angle. 
  * This includes calculation of the difference in its current heading and the 

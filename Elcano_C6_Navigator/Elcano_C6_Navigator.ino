@@ -559,13 +559,9 @@ void loop()
   ParseStateError r = ps.update();
   if(r == ParseStateError::success) 
   {
-    Serial.println("Speed: " + String(data.speed_cmPs));
     Serial2.end();
     Serial2.begin(baudrate);
-      // Updating the data with the
-      // odometer details from C2
-//    data.speed_cmPs = C2_Results.speed_cmPs;
-    
+        
     newPos.speed_cmPs = data.speed_cmPs;
     newPos.bearing_deg = CurrentHeading;
     newPos.time_ms = time;
@@ -598,7 +594,6 @@ void loop()
     data.angle_deg = 0;
     data.write(&Serial2);
   }
-  else Serial.println("no comms");
     //data.write(&Serial2);
     //C2_Results.write(&Serial2);   
     
