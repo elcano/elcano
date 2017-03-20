@@ -557,7 +557,7 @@ void loop()
   data.clear();
   
   ParseStateError r = ps.update();
-  Serial.println(static_cast<int8_t>(r));
+  Serial.println("success = " + String(static_cast<int8_t>(r)));
   if(r == ParseStateError::success) 
   {
     Serial.println("Speed: " + String(data.speed_cmPs));

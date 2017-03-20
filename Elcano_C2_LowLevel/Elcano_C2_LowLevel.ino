@@ -82,89 +82,18 @@ void setup()
 //  attachInterrupt(digitalPinToInterrupt(IRPT_GO),    ISR_GO_rise,    RISING);//left stick l/r
 //  attachInterrupt(digitalPinToInterrupt(IRPT_ESTOP), ISR_ESTOP_rise, RISING);//ebrake
 //  attachInterrupt(digitalPinToInterrupt(IRPT_BRAKE), ISR_BRAKE_rise, RISING);//left stick u/d mode select
-  attachInterrupt(digitalPinToInterrupt(IRPT_MOTOR_FEEDBACK), ISR_MOTOR_FEEDBACK_rise, RISING);
+//  attachInterrupt(digitalPinToInterrupt(IRPT_MOTOR_FEEDBACK), ISR_MOTOR_FEEDBACK_rise, RISING);
 
   parseState.dt = &Results;
   parseState.input = &Serial3;
   parseState.output = &Serial3;
   Serial3.begin(baudrate);
-  Serial1.begin(baudrate);
-  Serial2.begin(baudrate);
   parseState.capture = MsgType::drive;
   // msgType::drive uses `speed_cmPs` and `angle_deg`
   Results.clear();
-  SpeedCyclometer_mmPs = 0;
-  //moveFixedDistance(50, 2);
 }
 
 /*-----------------------------------loop------------------------------------------------*/
-
-void ThrottlePID(){
-  speedPID.Compute();
-//  Serial.print("Throttle out value ");
-//  Serial.println(PIDThrottleOutput);
-  int throttleControl = (int)PIDThrottleOutput;
-//  if(desiredSpeed > SpeedCyclometer_mmPs) SpeedCyclometer_mmPs += 10;
-//  else if(SpeedCyclometer_mmPs > 10) SpeedCyclometer_mmPs -= 10;
-  //apply control value to vehicle
-  moveVehicle(throttleControl);
-  if(PIDThrottleOutput == MIN_ACC_OUT){
-    //apply brakes
-    brake_feather(true);
-  }
-  else{
-    brake_feather(false);
-  }
-  return;
-}
-
-void SteeringPID(){
-  if(steerPID.Compute()){
-    Serial.print("Steering out value ");
-    int steeringControl = (int)PIDSteeringOutput;
-
-    //apply control value to vehicle
-    moveSteer(steeringControl);
-  }
-  else{
-    Serial.println("No compute.");
-  }
-  return;
-}
-
-void computeAngle(){
-  int left = analogRead(A2);
-  int right = analogRead(A3);
-
-  int left_wms = map(left, leftsenseleft, leftsenseright, LEFT_TURN_OUT, RIGHT_TURN_OUT); // Left sensor spikes outside of calibrated range between setup() and loop(); temporarily disregard data
-  int right_wms = map(right, rightsenseleft, rightsenseright, LEFT_TURN_OUT, RIGHT_TURN_OUT);
-//  int left_wms = right_wms;
-  
-  //Placeholder
-  SteerAngle_wms = (double)((left_wms+right_wms)/2);  
-}
-
-void calibrateSensors(){
-  
-  STEER_SERVO.writeMicroseconds(LEFT_TURN_OUT); //Calibrate angle sensors for left turn
-  delay(4000);
-  leftsenseleft = analogRead(A2);
-  rightsenseleft = analogRead(A3);
-  Serial.print("Left turn sensor readings: ");
-  Serial.print(leftsenseleft);
-  Serial.println(rightsenseleft);
-  
-  STEER_SERVO.writeMicroseconds(RIGHT_TURN_OUT); //Calibrate angle sensors for right turn
-  delay(4000);
-  leftsenseright = analogRead(A2);
-  rightsenseright = analogRead(A3);
-  Serial.print("Right turn sensor readings: ");
-  Serial.print(leftsenseright);
-  Serial.println(rightsenseright);
-
-  steerPID.SetMode(AUTOMATIC);
-}
-
 void loop() {
   // send data to C6
   Results.clear();
@@ -175,9 +104,8 @@ void loop() {
   // end temporary
   Results.angle_deg = 0;
   Results.write(&Serial3);
- 
 //  delay(100);
-
+  
 
     // Get the next loop start time. Note this (and the millis() counter) will
   // roll over back to zero after they exceed the 32-bit size of unsigned long,
@@ -186,25 +114,24 @@ void loop() {
   // using the micros() counter.
   // If the new nextTime value is <= LOOP_TIME_MS, we've rolled over.
   nextTime = nextTime + LOOP_TIME_MS;
-  computeSpeed(&history); // commented out for simulation
-  //computeAngle();
-  ThrottlePID();
-  //SteeringPID();
+//  computeSpeed(&history); // commented out for simulation
+  computeAngle();
+//  ThrottlePID();
+  SteeringPID();
   // @ToDo: Verify that this should be conditional. May be moot if it is
   // replaced in the conversion to the new Elcano Serial protocol.
   //ParseStateError r = parseState.update();
   
-  
-  byte automate = processRC();
+  //byte automate = processRC();
   // TEMPORARY
 //  if(static_cast<int8_t>(r) == 0)
 //  Serial.println(Results.speed_cmPs);
 //  if(millis() > startTime + 20000)
 //  {
-    automate = 0x01;
 //    desiredSpeed = 0;
 //  }
-  
+
+  int automate = 0x01;
   // END TEMPORARY
   if (automate == 0x01)
   {
@@ -298,6 +225,72 @@ void loop() {
   }
 }
 
+void ThrottlePID(){
+  speedPID.Compute();
+//  Serial.print("Throttle out value ");
+//  Serial.println(PIDThrottleOutput);
+  int throttleControl = (int)PIDThrottleOutput;
+//  if(desiredSpeed > SpeedCyclometer_mmPs) SpeedCyclometer_mmPs += 10;
+//  else if(SpeedCyclometer_mmPs > 10) SpeedCyclometer_mmPs -= 10;
+  //apply control value to vehicle
+  moveVehicle(throttleControl);
+  if(PIDThrottleOutput == MIN_ACC_OUT){
+    //apply brakes
+    brake_feather(true);
+  }
+  else{
+    brake_feather(false);
+  }
+  return;
+}
+
+void SteeringPID(){
+  if(steerPID.Compute()){
+    Serial.print("Steering out value ");
+    int steeringControl = (int)PIDSteeringOutput;
+
+    //apply control value to vehicle
+    moveSteer(steeringControl);
+  }
+  else{
+    Serial.println("No compute.");
+  }
+  return;
+}
+
+void computeAngle(){
+  int left = analogRead(A2);
+  int right = analogRead(A3);
+
+  int left_wms = map(left, leftsenseleft, leftsenseright, LEFT_TURN_OUT, RIGHT_TURN_OUT); // Left sensor spikes outside of calibrated range between setup() and loop(); temporarily disregard data
+  int right_wms = map(right, rightsenseleft, rightsenseright, LEFT_TURN_OUT, RIGHT_TURN_OUT);
+//  int left_wms = right_wms;
+  
+  //Placeholder
+  SteerAngle_wms = (double)((left_wms+right_wms)/2);  
+}
+
+void calibrateSensors(){
+  
+  STEER_SERVO.writeMicroseconds(LEFT_TURN_OUT); //Calibrate angle sensors for left turn
+  delay(4000);
+  leftsenseleft = analogRead(A2);
+  rightsenseleft = analogRead(A3);
+  Serial.print("Left turn sensor readings: ");
+  Serial.print(leftsenseleft);
+  Serial.println(rightsenseleft);
+  
+  STEER_SERVO.writeMicroseconds(RIGHT_TURN_OUT); //Calibrate angle sensors for right turn
+  delay(4000);
+  leftsenseright = analogRead(A2);
+  rightsenseright = analogRead(A3);
+  Serial.print("Right turn sensor readings: ");
+  Serial.print(leftsenseright);
+  Serial.println(rightsenseright);
+
+  steerPID.SetMode(AUTOMATIC);
+}
+
 /*------------------------------------processHighLevel------------------------------------*/
 void processHighLevel(SerialData * results)
 {
@@ -317,9 +310,6 @@ void processHighLevel(SerialData * results)
   
   desiredAngle = turn_signal;
   Serial.println(String(results->speed_cmPs * 10) + " " + String(results->angle_deg));
-//  ThrottlePID(results->speed_cmPs*10);
-//  Serial.println(results->speed_cmPs);
-//  Serial.println("currentSpeed = " + String(SpeedCyclometer_mmPs) + " desired speed = " + String(desiredSpeed));
   //End Throttle
 }
 
@@ -516,7 +506,7 @@ void doManualMovement(){
     bool on = checkEbrake();
     if(RC_Done[RC_GO]&& !on)
     {
-      if(RC_elapsed[RC_GO] > MIDDLE +  2 * DEAD_ZONE){
+      if(RC_elapsed[RC_GO] > MIDDLE +  DEAD_ZONE){
         moveVehicle(convertThrottle(RC_elapsed[RC_GO]));
       }
       else{
@@ -526,7 +516,6 @@ void doManualMovement(){
   //TURN
     if (RC_Done[RC_TURN] && !on) 
     {
-//      Serial.println(String(convertTurn(RC_elapsed[RC_TURN])));
       steer(convertTurn(RC_elapsed[RC_TURN]));
     }
 }
@@ -535,12 +524,11 @@ void doManualMovement(){
 //Converts RC values to corresponding values for the PWM output
 int convertTurn(int input)
 {
-  
   long int steerRange, rcRange;
   long output;
   int trueOut;
   //  Check if Input is in steer dead zone
-  if ((input <= MIDDLE + DEAD_ZONE) && (input >= MIDDLE - DEAD_ZONE))
+  if ((input <= MIDDLE_STEER + DEAD_ZONE) && (input >= MIDDLE_STEER - DEAD_ZONE))
   {
     return STRAIGHT_TURN_OUT;
   }
@@ -551,7 +539,7 @@ int convertTurn(int input)
   {
 //    int value = map(input, MIN_RCSTEER, MAX_RCSTEER, RIGHT_TURN_OUT, LEFT_TURN_OUT);
 //    Serial.println("Value = " + String(value));
-    int value = 0;
+    int value = map(input, MIN_RCSTEER, MAX_RCSTEER, RIGHT_TURN_OUT, LEFT_TURN_OUT);
     return value;
   }
   // @ToDo: Fix this so it is correct in any case.
@@ -574,8 +562,7 @@ int convertDeg(int deg)
 /*------------------------------------convertThrottle-------------------------------------*/
 int convertThrottle(int input)
 {
-//  int mapping = map(input, MIDDLE + DEAD_ZONE + DEAD_ZONE, MAX_RCGO, 80, 140);
-  int mapping = 0;
+  int mapping = map(input, MIDDLE + DEAD_ZONE, MAX_RCGO, 80, 140);
   return mapping;
 }
 
@@ -1024,86 +1011,6 @@ float mapThrottle(int value){
     return map(value, MIDDLE-DEAD_ZONE, MIN_RC, 0, MAX_SPEED);
 }
 
-/*------------------------------Throttle_PID---------------------------------------------*/// DEFUNCT
-/* Use throttle and brakes to keep vehicle at a desired speed.
- * error_speed_mmPs = Desired speed in millimeters per second
-   A PID controller uses the error in the set point to increase or decrease the juice.
-   P = proportional; change based on present error
-   I = integra;  change based on recent sum of errors
-   D = derivative: change based on how error is changing.
-   The controller needs to avoid problems of being too sluggish or too skittery.
-   A sluggish control (overdamped) takes too long to reach the set-point.
-   A skitterish control (underdamped) can overshoot, then undershoot, producing
-   oscillations and jerky motion.
-   Getting the right control is a matter of tuning right parts of P, I, and D,
-   which is something of a black art.
-   For more information, search for:
-   VanDoren Proportional Integral Derivative Control
-*/
-void Throttle_PID(long error_speed_mmPs) // DEFUNCT
-{
-  static int  throttle_control = MIN_ACC_OUT;
-  static int  brake_control = MAX_BRAKE_OUT;
-  static int error_index = 0;
-  int i;
-  static long error_sum = 0;
-  long mean_speed_error = 0;
-  long extrapolated_error = 0;
-  long PID_error;
-  const long speed_tolerance_mmPs = 75;  // about 0.2 mph
-  // setting the max_error affacts control: anything bigger gets maximum response
-  const long max_error_mmPs = 2500; // about 5.6 mph
-
-  //lets look through this
-  error_sum -= speed_errors[error_index];
-  speed_errors[error_index] = error_speed_mmPs;
-  error_sum += error_speed_mmPs;
-  mean_speed_error = error_sum / ERROR_HISTORY;
-  i = (error_index - 1) % ERROR_HISTORY;
-  if (++error_index >= ERROR_HISTORY)
-    error_index = 0;
-  extrapolated_error = 2 * error_speed_mmPs - speed_errors[i];
-  PID_error = P_TUNE * error_speed_mmPs
-              + I_TUNE * mean_speed_error
-              + D_TUNE * extrapolated_error;
-
-//  Serial.println("PID_error = " + String(PID_error) + " speed_tolerance_mmPs = " + String(speed_tolerance_mmPs));
-  if (PID_error > speed_tolerance_mmPs)
-  { // too fast
-    long throttle_decrease = (MAX_ACC_OUT - MIN_ACC_OUT) * PID_error / max_error_mmPs;
-    throttle_control -= throttle_decrease;
-    if (throttle_control < MIN_ACC_OUT)
-      throttle_control = MIN_ACC_OUT;
-    moveVehicle(throttle_control);
-
-    long brake_increase = (MAX_BRAKE_OUT - MIN_BRAKE_OUT) * PID_error / max_error_mmPs;
-    brake_control -= brake_increase;
-    if (brake_control > MAX_BRAKE_OUT)
-      brake_control = MAX_BRAKE_OUT;
-//    brake(brake_control);
-    brake(true);
-  }
-  else if (PID_error < speed_tolerance_mmPs)
-  { // too slow
-    long throttle_increase = (MAX_ACC_OUT - MIN_ACC_OUT) * PID_error / max_error_mmPs;
-    throttle_control += throttle_increase;
-    if (throttle_control > MAX_ACC_OUT)
-      throttle_control = MAX_ACC_OUT;
-    moveVehicle(throttle_control);
-
-    // release brakes
-    long brake_decrease = (MAX_BRAKE_OUT - MIN_BRAKE_OUT) * PID_error / max_error_mmPs;
-    brake_control += brake_decrease;
-    if (brake_control < MIN_BRAKE_OUT)
-      brake_control = MIN_BRAKE_OUT;
-//    brake(brake_control);
-    brake(false);
-  }
-  Serial.println();
-  //error_index = (error_index + 1) % ERROR_HISTORY;
-  // else maintain current speed
-}
-
 /*-----------------------------------ThrottlePID------------------------------------*/
 void ThrottlePID(double desired){
   desiredSpeed = desired;
@@ -1274,14 +1181,3 @@ void PrintHeaders()
   Serial.println("(m) Distance");
 }
 
-/*------------------------------allStop---------------------------------------------------*/
-void allStop()
-{
-  steer(STRAIGHT_TURN_OUT);
-  while(history.currentSpeed_kmPh > .01) // error of .01 kmph
-  {
-    computeSpeed(&history);
-    Serial.println(history.currentSpeed_kmPh);
-    Throttle_PID(0 - history.currentSpeed_kmPh);
-  }
-}
