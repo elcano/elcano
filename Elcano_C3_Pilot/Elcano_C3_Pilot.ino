@@ -223,68 +223,6 @@ void rightTurn(int turnAmount)
 
 }
 
-// turn a number of degrees. Positive number for left, negative for right
-void turn(int turnAmount)
-{
-    while(true) // wait until information on the bearing is recieved by C6
-    {
-      ParseStateError r = parseState.update();
-      if(r == ParseStateError::success)
-      {
-        Serial1.end();
-        Serial1.begin(baudrate);  // clear the buffer
-        break;
-      }
-    }
-    
-    int initialBearing = serialData.bearing_deg;
- 
-    // send a slow speed to C2 and either a left or a right turn
-    serialData.clear();
-    serialData.kind = MsgType::drive;
-    serialData.speed_cmPs = 200;
-   
-    if(turnAmount < 0) 
-    {
-      serialData.angle_deg = -15;
-    }
-    else
-    {
-      serialData.angle_deg = 15;
-    }
-    serialData.write(&Serial1); // send command
-
-
-
-    int currentBearing = 0;
-    int oldBearing = 0;
-    
-    // while direction not met
-    while(currentBearing < turnAmount)
-    {
-      ParseStateError r = parseState.update();
-      if(r == ParseStateError::success)
-      {
-        currentBearing = abs((serialData.bearing_deg - initialBearing));
-        if(currentBearing > (360-turnAmount) 
-        && oldBearing < turnAmount 
-        && (initialBearing <= turnAmount 
-        || initialBearing >= (360 - turnAmount)))
-        {
-          currentBearing %= 180; 
-        }
-      }
-      oldBearing = currentBearing;
-    }
-
-    // send command to stop
-    serialData.kind = MsgType::drive;
-    serialData.speed_cmPs = 0;
-    serialData.angle_deg = 0;
-    serialData.write(&Serial1);
-
-}
-
 void squareRoutine(){
   double length_mm = 50000;     // default value
   double speed_mms = 2000;      // default value
@@ -310,14 +248,13 @@ void moveFixedDistance(long length_mm, long speed_mms)
     delay(100);
   }
   double initialDistance_cm = sqrt(abs(abs(serialData.posE_cm) * abs(serialData.posE_cm) + abs(serialData.posN_cm) * abs(serialData.posN_cm)));
-  Serial.println(initialDistance_cm);
   serialData.clear();
   serialData.kind = MsgType::drive;
   serialData.speed_cmPs = speed_mms/10; // The initial speed to send.
-  serialData.angle_deg = 0;
+  serialData.angle_deg = 1500; // what should this actually be
   serialData.write(&Serial1);
 
-  double currentDistance_cm = 0;
+  double currentDistance_cm = initialDistance_cm;
   double length_cm = length_mm / 10;
   while(currentDistance_cm < length_cm + initialDistance_cm){
     ParseStateError r = parseState.update();
@@ -328,18 +265,13 @@ void moveFixedDistance(long length_mm, long speed_mms)
       double delta_cm = abs(currentLocation_cm - initialDistance_cm);
       currentDistance_cm += delta_cm;
       Serial.println("Current: " + String(currentDistance_cm));
-
-      serialData.kind = MsgType::drive;
-      serialData.speed_cmPs = speed_mms/10; // The initial speed to send.
-      serialData.angle_deg = 0;
       serialData.write(&Serial1);
-
     }    
   }
   Serial.println("Done moving fixed distance");
   serialData.kind = MsgType::drive;
   serialData.speed_cmPs = 0;
-  serialData.angle_deg = 0; // what should this actually be : it should be STRAIGHT_TURN_OUT
+  serialData.angle_deg = 1500; // what should this actually be : it should be STRAIGHT_TURN_OUT
   serialData.write(&Serial1);
 }
 
@@ -704,8 +636,8 @@ void setup()
   serialData.clear();
   pinMode(8,OUTPUT);
   Serial.println("2");
-  double length_mm = 2000;     // default value
-  double speed_mms = 5000;
+  double length_mm = 10000;     // default value
+  double speed_mms = 2000;
   moveFixedDistance(length_mm, speed_mms);
 //  rightTurn(90);
 //  squareRoutine();
@@ -775,7 +707,6 @@ void loop()
     speedToSend += speedDir * 1;
 
     serialData.write(&Serial1);
-    Serial.println("wrote to C2");
     if(speedToSend >= 500) speedDir = -1;
     if(speedToSend <= 0)   speedDir = 1;
 //    
