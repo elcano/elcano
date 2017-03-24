@@ -77,7 +77,7 @@ double SteerAngle_wms = STRAIGHT_TURN_OUT; //Steering angle in microseconds used
 double PIDSteeringOutput; //Output from steerPID.Compute() in microseconds (used by Servo.writeMicroseconds())
 double desiredAngle = STRAIGHT_TURN_OUT;
 double steeringP = 1.5;
-double steeringI = 1; 
+double steeringI = 1.35; 
 double steeringD = .005;
 int leftsenseleft;
 int rightsenseleft;
@@ -245,7 +245,7 @@ void setup()
 
   setupWheelRev(); // WheelRev4 addition
   CalibrateTurnAngle(32, 20);
-  //calibrateSensors();
+  calibrateSensors();
   calibrationTime_ms = millis();
   //steer(STRAIGHT_TURN_OUT);
 //  attachInterrupt(digitalPinToInterrupt(IRPT_TURN),  ISR_TURN_rise,  RISING);//turn right stick l/r turn
@@ -271,6 +271,8 @@ void setup()
 /*-----------------------------------loop------------------------------------------------*/
 void loop() {
   // send data to C6
+
+  Serial.println(desiredAngle);
   Results.clear();
   Results.kind = MsgType::drive;
   Results.speed_cmPs = SpeedCyclometer_mmPs/10;
@@ -280,12 +282,13 @@ void loop() {
   Results.angle_deg = 0;
   Results.write(&Serial3);
  
+  
 
   nextTime = nextTime + LOOP_TIME_MS;
   computeSpeed(&history);
-  //computeAngle();
+  computeAngle();
   ThrottlePID();
-  //SteeringPID();
+  SteeringPID();
 
     // Get the next loop start time. Note this (and the millis() counter) will
   // roll over back to zero after they exceed the 32-bit size of unsigned long,
@@ -406,14 +409,13 @@ void ThrottlePID(){
 
 void SteeringPID(){
   if(steerPID.Compute()){
-    Serial.print("Steering out value ");
+    
     int steeringControl = (int)PIDSteeringOutput;
-
     //apply control value to vehicle
     STEER_SERVO.writeMicroseconds(steeringControl);
   }
   else{
-    Serial.println("No compute.");
+//    Serial.println("No compute.");
   }
   return;
 }

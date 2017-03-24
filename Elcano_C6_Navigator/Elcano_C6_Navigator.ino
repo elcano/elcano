@@ -243,6 +243,7 @@ long GetHeading(void)
     }
     // Converting heading to x1000
     return ((long)(heading * HEADING_PRECISION));
+//    return heading;
 }
 
 /*
@@ -466,7 +467,7 @@ void waypoint::SetTime(char *pTime, char * pDate)
 /*---------------------------------------------------------------------------------------*/
 void loop()
 {
-    //Serial.println("Inside C6 loop");
+//    Serial.println("Inside C6 loop");
     
     unsigned long deltaT_ms;
     unsigned long time = millis();
@@ -574,6 +575,7 @@ void loop()
     gps.x_Pos = estimated_position.latitude;
     gps.y_Pos = estimated_position.longitude;
 
+
     
     // Translate GPS position
     TranslateCoordinates(newPos, gps, 1);
@@ -584,15 +586,18 @@ void loop()
 
     // Swap data
     CopyData(oldPos, newPos);
-
+    
     // Copy GPS fuzzy output to C4
     data.kind = MsgType::sensor;
     // speed already set
     data.posE_cm = fuzzy_out.x_Pos;
     data.posN_cm = fuzzy_out.y_Pos;
-    data.bearing_deg = CurrentHeading;
+    data.bearing_deg = CurrentHeading / HEADING_PRECISION;
     data.angle_deg = 0;
+
+    Serial.println(String(fuzzy_out.x_Pos) + ", " + String(fuzzy_out.y_Pos));
     data.write(&Serial2);
+
   }
     //data.write(&Serial2);
     //C2_Results.write(&Serial2);   

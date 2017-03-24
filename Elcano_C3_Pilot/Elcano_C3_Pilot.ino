@@ -47,9 +47,350 @@ struct Cubic
 
 struct Point
 {
-  float x;
-  float y;
+  double x;
+  double y;
 };
+
+struct Turn
+{
+  float distance_mm;
+  float steeringAngle_deg;
+};
+
+class Cubic2D
+{
+public:  
+  /* Prefered constructor: 
+   * takes start point (start position of the trike) and end point (final position)
+   * start bearing and end bearing (compass directions
+   * and arc adjust (this value makes the turn wider, a "less straight" line
+   */
+  Cubic2D(Point start, Point end, float startBearing, float endBearing, float arcAdjust)
+  {
+    Point startTanPoint = CalculateStartTangentPoint(startBearing);
+    Point endTanPoint   = CalculateStartTangentPoint(endBearing);
+
+    endTanPoint = TangentArcAdjustment(endTanPoint, arcAdjust);
+    
+    CalculateCubic(x, start.x, end.x, startTanPoint.x, endTanPoint.x);
+    CalculateCubic(y, start.y, end.y, startTanPoint.y, endTanPoint.y);
+  }
+
+  // returns an array of turns of length 100
+  void getTurns(Turn turns[100])
+  {
+    for(int i = 0; i < 100; i++)
+    {
+      float bearing1 = bearingValueAtT(i/100.);
+      float bearing2 = bearingValueAtT((i+1)/100.);
+      turns[i].steeringAngle_deg = ShortestAngle(bearing1, bearing2);
+      turns[i].distance_mm = sqrt(sq(valueAtTime((i+1)/100.).x - valueAtTime(i/100.).x) + sq(valueAtTime((i+1)/100.).y - valueAtTime(i/100.).y));
+    }
+  }
+
+  /*
+   * Calculation of the current x or y value at the time value passes in.
+   */
+  Point valueAtTime(float t)
+  {
+    Point retVal;
+    retVal.x = ValueAtTime(x, t);
+    retVal.y = ValueAtTime(y, t);
+    return retVal;
+  }
+
+  /*
+   * This is a basic 3rd degree to 2nd degree derivative function. This
+   * will be used with the speed calculation.
+   */
+  float bearingValueAtT(float t)
+  {
+        Point a = valueAtTime(t);
+    Point b = valueAtTime(t+.001);
+    Point change;
+    change.x = b.x - a.x;
+    change.y = b.y - a.y;
+    if(change.x == 0)
+    {
+      if(change.y > 0) return 0;
+      else return 180;
+    }
+    if(change.x >= 0)
+    {
+      return 90 - (180/PI)*atan(change.y/change.x);
+    }
+    else return 270 - (180/PI)*atan(change.y/change.x);
+  }
+  /*
+   * Calculation of the speed the trike will need to be traveling at
+   * time t.
+   */
+  float speedAtT(float t)
+  {
+     float yPrime = DerivativeValueAtT(y,t);
+     float xPrime = DerivativeValueAtT(x,t);
+     return sqrt(sq(xPrime) + sq(yPrime));
+  }
+
+  /*
+   * Calculation of the arc length at time t. This allows us to know
+   * Where we are by how far we have traveled.
+   */
+  float ArcLength(float t,float deltaT, float current)
+  {
+    if(FloatComparison(t,0.00,2))
+    {
+      return 0;
+    }
+    else
+    {
+      float currentX = ValueAtTime(x,t);
+      float currentY = ValueAtTime(y,t);
+      float previousX = ValueAtTime(x,(t-deltaT));
+      float previousY = ValueAtTime(y,(t-deltaT));
+      
+      return(current + (sqrt(sq(currentX - previousX)+sq(currentY - previousY))));
+    }
+  }
+
+  
+private:  
+  /*
+   * This is a basic 3rd degree to 2nd degree derivative function. This
+   * will be used with the speed calculation.
+   */
+  float DerivativeValueAtT(Cubic x, float t)
+  {
+    Cubic xPrime;
+    float retVal;
+    xPrime.a = (x.a*(3*sq(t)));
+    xPrime.b = (x.b*(2*t));
+    xPrime.c = (x.c);
+  
+    retVal = (xPrime.a + xPrime.b + xPrime.c);
+    return retVal;
+  }
+
+  float UniformAngle(float angle)
+  {
+     while(angle > 180)
+     {
+        angle -= 360; 
+     }
+     while(angle < -180)
+     {
+        angle += 360; 
+     }
+     return angle;
+  }
+  
+  float ShortestAngle(float currentAngle, float targetAngle)
+  {
+       // handle cases of positve past 180 and negative past -180
+       // This simplifies our calulations of smallest angle
+       currentAngle = UniformAngle(currentAngle);
+       targetAngle = UniformAngle(targetAngle);
+  
+       //find the lowest angle
+  
+       // case of positive positve
+       if( currentAngle >= 0 && targetAngle >= 0)
+       {
+          if(currentAngle > targetAngle)
+          {
+            return (currentAngle - targetAngle) * -1;
+          }
+          else
+          {
+            return (targetAngle - currentAngle);
+          }
+       }
+       
+       // case of negative negative
+       else if( currentAngle <= 0 && targetAngle <= 0)
+       {
+          if(currentAngle > targetAngle)
+          {
+            return (targetAngle - currentAngle);
+          }
+          else
+          {
+            return (currentAngle - targetAngle) * -1;
+          }
+       }
+       
+       // case of positve negative
+       else if( currentAngle >= 0 && targetAngle <= 0)
+       {
+          float retVal = (-currentAngle + targetAngle);
+          if(abs((180 - currentAngle) - (-180 - targetAngle)) < abs(retVal))
+          {
+            retVal = ((180 - currentAngle) - (-180 - targetAngle));
+          }
+          return retVal;
+       }
+       //case of negative positve
+       else if( currentAngle <= 0 && targetAngle >= 0)
+       {
+          float retVal = (-currentAngle + targetAngle);
+          if(abs(-(180 + currentAngle) - (180 - targetAngle)) < abs(retVal))
+          {
+            retVal = (-(180 + currentAngle) - (180 - targetAngle));
+          }
+          return retVal;
+       }
+  }
+  
+  
+  /*
+   * Calculation of the current x or y value at the time value passes in.
+   */
+   float ValueAtTime(Cubic x, float t)
+  {
+    Cubic cubicAtT;
+    float retVal;
+    cubicAtT.a = (x.a*(pow(t,3)));
+    cubicAtT.b = (x.b*(sq(t)));
+    cubicAtT.c = (x.c * t);
+    cubicAtT.d = x.d;
+  
+    retVal = (cubicAtT.a + cubicAtT.b + cubicAtT.c + cubicAtT.d);
+    return retVal;
+  }
+  
+
+  /*
+ * FirstCoefficient calculates the first coefficient of the Hermite cubic 
+ * function. This requires input of the Tanget values adjusted for the arc 
+ * length. the start point and end point are the map locations we want the bike 
+ * to sit at or start at. This functioncan solve for both the x and y equations.
+ */
+  float FirstCoeffiecent(float endTangent, float endValue, float startValue, 
+        float startTangent)
+{
+  float retVal = (endTangent - (2 * endValue) +(2 * startValue) + startTangent);
+  return retVal;
+}
+
+  /*
+ * SecondCoefficient calculates the second coefficient of the Hermite cubic 
+ * function This requires input of the Tanget values adjusted for the arc 
+ * lenght. the start point and end point are the map locations we want the 
+ * bike to sit at or start at. This function can solve for both 
+ * the x and y equations.
+ */
+  float SecondCoeffiecent(float firstCoeffiecent, float tangentStartValue, 
+        float endValue, float startValue)
+  {
+  float retVal = (-firstCoeffiecent-tangentStartValue-startValue+endValue);
+  return retVal;
+}
+
+  /*
+ * CalculateCubic will do all the work needed to calculate the cubic function 
+ * it takes in a Cubic by reference and stores the values of a b c d in the 
+ * struct. this requres input of The start point, end point, point of the 
+ * direction of the end tangent adusted by the arc and direction of the start 
+ * point adjusted by the arc.
+ */
+  void CalculateCubic(Cubic& function, float startValue, float endValue,
+     float startTangent, float endTangent)
+  {
+  function.a = FirstCoeffiecent(endTangent, endValue, startValue,
+      startTangent);
+  function.b = SecondCoeffiecent(function.a, startTangent,
+      endValue, startValue);
+  function.c = startTangent;
+  function.d = startValue;
+}
+
+  /*
+ *  Calculate start tangent translates angle of the trike to a corresponding 
+ *  point on a line that passes through the origin with the slope and compass
+ *  direction representing the same angle. Example
+ *  angle 0 degress = 1,0 or angle 90 degrees equals 0,1.
+ */
+  Point CalculateStartTangentPoint(float angleDegrees)
+  {
+  Point retVal;
+  retVal.x= sin((angleDegrees * 0.0174533));
+  retVal.y = cos((angleDegrees * 0.0174533));
+  return retVal;
+}
+
+  /*
+ * This function takes 2 points and translates the slope between the two
+ * to a point that is on the equivalent slope line that passes through
+ * the origin this allows us to calculate the tangent for the next point.
+ */
+  Point pointSlope(Point a, Point b)
+  {
+    float slope = (a.y - b.y) / (a.x - b.x);
+    Point wrtOrigin;
+    wrtOrigin.x = 1;
+    wrtOrigin.y = slope;
+    return wrtOrigin;
+}
+
+  /*
+ * This point translates the tangent point value based on the arc length
+ * passed in by the user to allow for different curve profiles which
+ * allows for tighter or wider turns which will also change corner speed.
+ */
+  Point TangentArcAdjustment(Point target, float arcLength)
+  {
+      Point retVal;
+      retVal.x = (target.x/sqrt(sq(target.x) + sq(target.y))) * arcLength;
+      retVal.y = (target.y/sqrt(sq(target.x) + sq(target.y))) * arcLength;
+      return retVal;
+  }  
+
+  bool FloatComparison(float a, float b, int places)
+  {
+    // values are cast to an integer for = comparison of
+    // values.
+    int aVal;
+    int bVal;
+    // each case represents the number of decimal places compared.
+    switch(places)
+    {
+      case 1:
+          aVal = a*10;
+          bVal = b*10;
+          break;
+      case 2:
+          aVal = a*100;
+          bVal = b*100;
+          break;
+      case 3:
+          aVal = a*1000;
+          bVal = b*1000;
+          break;
+      case 4:
+          aVal = a*10000;
+          bVal = b*10000;
+          break;
+  
+      default:
+          aVal = a;
+          bVal = b;
+          break;
+    }
+    // return cases.
+    if(aVal == bVal)
+    {
+      return true;
+    }
+    else 
+    {
+      return false;
+    }
+  }
+  
+  Cubic x;
+  Cubic y;
+};
+
 ////////////////////////////////////////////////////////////////////////////////
 /* Process segement assures that we received a valid TargetLocation and not 
  * noise. It then stores the data in another struct that holds similar data. 
@@ -122,9 +463,43 @@ bool ReadWaypoints(TargetLocation* TargetLocationArray)
 }
 
 
+void noCompasTurn(int degrees)
+{
+  // Turning diameter = 2 * (Wb / sine(A)) 
+  // Wb = 876 mm
+  // Distance for n degree turn = (n * diameter * pi) / (360)
+  
+  int speed_cmPs = 500;
+  int wheelAngle_deg = 30;  // use settings.h
+  int wb_mm = 876;          // use settings.h
+  if(degrees < 0)
+  {
+    wheelAngle_deg *= -1;
+  }
+
+  float turnDiameter_mm = 2*(wb_mm/abs(sin(wheelAngle_deg)));
+  float distance_mm = (degrees * turnDiameter_mm * PI) / 360;
+  
+  int time_ms = ((speed_cmPs * 10) / distance_mm) * 1000;
+  SerialData command;
+  command.kind = MsgType::drive;
+//    command.speed_cmPs = speed_cmPs;
+  command.speed_cmPs = 500;
+  command.angle_deg = wheelAngle_deg;
+  
+  command.write(&Serial1);
+  delay(time_ms);
+  command.speed_cmPs = 0;
+  command.angle_deg = 0;
+  command.write(&Serial1);
+    
+}
+
 // turn a number of degrees. Positive number for left, negative for right
 void turn(int turnAmount)
 {
+    SerialData command;
+    command.kind = MsgType::drive;
     while(true) // wait until information on the bearing is recieved by C6
     {
       ParseStateError r = parseState.update();
@@ -134,24 +509,23 @@ void turn(int turnAmount)
         Serial1.begin(baudrate);  // clear the buffer
         break;
       }
+      Serial.println("waiting for comms");
     }
-    
+
     int initialBearing = serialData.bearing_deg;
  
     // send a slow speed to C2 and either a left or a right turn
-    serialData.clear();
-    serialData.kind = MsgType::drive;
-    serialData.speed_cmPs = 200;
+    command.speed_cmPs = 500;
    
     if(turnAmount < 0) 
     {
-      serialData.angle_deg = -15;
+      command.angle_deg = -30;
     }
     else
     {
-      serialData.angle_deg = 15;
+      command.angle_deg = 30;
     }
-    serialData.write(&Serial1); // send command
+    command.write(&Serial1); // send command
 
 
 
@@ -161,6 +535,7 @@ void turn(int turnAmount)
     // while direction not met
     while(currentBearing < turnAmount)
     {
+      command.write(&Serial1); // send command
       ParseStateError r = parseState.update();
       if(r == ParseStateError::success)
       {
@@ -174,19 +549,19 @@ void turn(int turnAmount)
         }
       }
       oldBearing = currentBearing;
+      Serial.println("keep turning");
     }
-
+    Serial.println("done");
     // send command to stop
-    serialData.kind = MsgType::drive;
-    serialData.speed_cmPs = 0;
-    serialData.angle_deg = 0;
-    serialData.write(&Serial1);
+    command.speed_cmPs = 0;
+    command.angle_deg = 0;
+    command.write(&Serial1);
 
 }
 
 void squareRoutine(){
-  double length_mm = 50000;     // default value
-  double speed_mms = 2000;      // default value
+  long length_mm = 2000;     // default value
+  long speed_mms = 5000;      // default value
   for(int i = 0; i < 4; i++){
     moveFixedDistance(length_mm, speed_mms);
     turn(90);
@@ -205,8 +580,7 @@ void moveFixedDistance(long length_mm, long speed_mms)
       serialData.posN_cm /= 10000;
       break;
     }
-    Serial.println("waiting for initial distance: " + String(static_cast<int8_t>(r)));
-    delay(100);
+    Serial.println("waiting for initial location: " + String(static_cast<int8_t>(r)));
   }
   double initialDistance_cm = sqrt(abs(abs(serialData.posE_cm) * abs(serialData.posE_cm) + abs(serialData.posN_cm) * abs(serialData.posN_cm)));
   Serial.println(initialDistance_cm);
@@ -234,7 +608,7 @@ void moveFixedDistance(long length_mm, long speed_mms)
   Serial.println("Done moving fixed distance");
   serialData.kind = MsgType::drive;
   serialData.speed_cmPs = 0;
-  serialData.angle_deg = 0; // what should this actually be : it should be STRAIGHT_TURN_OUT
+  serialData.angle_deg = 0;
   serialData.write(&Serial1);
 }
 
@@ -425,279 +799,96 @@ bool ValidRange(float x1,float y1, float x2,float y2, float range)
   return retVal;
 }
 
-//-----------------------Start Hermite Cubic Functions------------------------//
-
-/*
- * FirstCoefficient calculates the first coefficient of the Hermite cubic 
- * function. This requires input of the Tanget values adjusted for the arc 
- * length. the start pointand end point are the map locations we want the bike 
- * to sit at or start at. This functioncan solve for both the x and y equations.
- */
-float FirstCoeffiecent(float endTangent, float endValue, float startValue, 
-      float startTangent)
-{
-  float retVal = (endTangent - (2 * endValue) +(2 * startValue) + startTangent);
-  return retVal;
-}
-
-/*
- * SecondCoefficient calculates the first coefficient of the Hermite cubic 
- * function This requires input of the Tanget values adjusted for the arc 
- * lenght. the start point and end point are the map locations we want the 
- * bike to sit at or start at. This function can solve for both 
- * the x and y equations.
- */
-float SecondCoeffiecent(float firstCoeffiecent, float tangentStartValue, 
-      float endValue, float startValue)
-{
-  float retVal = (-firstCoeffiecent-tangentStartValue-startValue+endValue);
-  return retVal;
-}
-
-/*
- * CalculateCubic will do all the work needed to calculate the cubic function 
- * it takes in a Cubic by reference and stores the values of a b c d in the 
- * struct. this requres input of The start point, end point, point of the 
- * direction of the end tangent adusted by the arc and direction of the start 
- * point adjusted by the arc.
- */
-void CalculateCubic(Cubic& function, float startValue, float endValue,
-     float startTangent, float endTangent)
-{
-  function.a = FirstCoeffiecent(endTangent, endValue, startValue,
-      startTangent);
-  function.b = SecondCoeffiecent(function.a, startTangent,
-      endValue, startValue);
-  function.c = startTangent;
-  function.d = startValue;
-}
-
-
-/*
- *  Calculate start tangent translates angle of the trike to a corresponding 
- *  point on a line that passes through the origin with the slope and compass
- *  direction representing the same angle. Example
- *  angle 0 degress = 0,1 or angle 90 degrees equals 0,1.
- */
-Point CalculateStartTangentPoint(float angleDegrees)
-{
-  Point retVal;
-  retVal.x= sin((angleDegrees * 0.0174533));
-  retVal.y = cos((angleDegrees * 0.0174533));
-  return retVal;
-}
-
-/*
- * This function takes 2 points and translates the slope between the two
- * to a point that is on the equivalent slope line that passes through
- * the origin this allows us to calculate the tangent for the next point.
- */
-Point pointSlope(Point a, Point b)
-{
-    float slope = (a.y - b.y) / (a.x - b.x);
-    Point wrtOrigin;
-    wrtOrigin.x = 1;
-    wrtOrigin.y = slope;
-    return wrtOrigin;
-}
-
-/*
- * This point translates the tangent point value based on the arc length
- * passed in by the user to allow for different curve profiles which
- * allows for tighter or wider turns which will also change corner speed.
- */
-Point TangentArcAdjustment(Point target, float arcLength)
-{
-    Point retVal;
-    retVal.x = (target.x/sqrt(sq(target.x) + sq(target.y))) * arcLength;
-    retVal.y = (target.y/sqrt(sq(target.x) + sq(target.y))) * arcLength;
-    return retVal;
-}
-
-/*
- * This is a basic 3rd degree to 2nd degree derivative function. This
- * will be used with the speed calculation.
- */
-float DerivativeValueAtT(Cubic x, float t)
-{
-  Cubic xPrime;
-  float retVal;
-  xPrime.a = (x.a*(3*sq(t)));
-  xPrime.b = (x.b*(2*t));
-  xPrime.c = (x.c);
-
-  retVal = (xPrime.a + xPrime.b + xPrime.c);
-  return retVal;
-}
-
-/*
- * Calculation of the speed the trike will need to be traveling at
- * time t.
- */
-float SpeedAtT(Cubic x,Cubic y, float t)
-{
-   float yPrime = DerivativeValueAtT(y,t);
-   float xPrime = DerivativeValueAtT(x,t);
-   return sqrt(sq(xPrime) + sq(yPrime));
-}
-
-/*
- * Calculation of the arc length at time t. This allows us to know
- * Where we are by how far we have traveled.
- */
-float ArcLength(Cubic x, Cubic y, float t,float deltaT, float current)
-{
-  if(FloatComparison(t,0.00,2))
-  {
-    return 0;
-  }
-  else
-  {
-    float currentX = ValueAtTime(x,t);
-    float currentY = ValueAtTime(y,t);
-    float previousX = ValueAtTime(x,(t-deltaT));
-    float previousY = ValueAtTime(y,(t-deltaT));
-    
-    return(current + (sqrt(sq(currentX - previousX)+sq(currentY - previousY))));
-  }
-}
-
-/*
- * Calculation of the current x or y value at the time value passes in.
- */
- float ValueAtTime(Cubic x, float t)
-{
-  Cubic cubicAtT;
-  float retVal;
-  cubicAtT.a = (x.a*(pow(t,3)));
-  cubicAtT.b = (x.b*(sq(t)));
-  cubicAtT.c = (x.c * t);
-  cubicAtT.d = x.d;
-
-  retVal = (cubicAtT.a + cubicAtT.b + cubicAtT.c + cubicAtT.d);
-  return retVal;
-}
-
-//----------------------End Hermite Cubic Functions---------------------------//
 
 ////////////////////////////////////////////////////////////////////////////////
 void setup() 
 {  
-  delay(10000);
+
+  Serial.begin(9600);
   Serial1.begin(baudrate);
-  Serial.begin(9600); // for debugging
-  Serial.println("1"); 
+  /* 
+   *  this for loop is so that there is time between uploading
+   *  the program and the program moving the trike (for debugging purposes)
+   */
+  pinMode(13, OUTPUT);
+  digitalWrite(13, LOW);
+  for(int i = 5; i >= 0; i--)
+  {
+    Serial.println(i);
+    digitalWrite(13,HIGH); 
+    delay(200);
+    digitalWrite(13,LOW); 
+    delay(800);
+  }
+  
   parseState.dt       = &serialData;
   parseState.input    = &Serial1;
   parseState.output   = &Serial1;
   parseState.capture = MsgType::sensor | MsgType::seg;
   serialData.clear();
   pinMode(8,OUTPUT);
-  Serial.println("2");
-  double length_mm = 2000;     // default value
-  double speed_mms = 5000;
-  moveFixedDistance(length_mm, speed_mms);
-//  rightTurn(90);
-//  squareRoutine();
+  
+  long length_mm = 2000;     // default value
+  long speed_mms = 5000;
+//  moveFixedDistance(length_mm, speed_mms);
+//  noCompasTurn(90);
+  go20mNorth();
 }
 
-int speedDir = 1;
-int speedToSend = 0;
-
-
-void loop() 
+void go20mNorth()
 {
-//    int steeringAngle = 35;
-//    int speedSetting = 300;
-//    // get newest map data from C4 planner
-//    // Using Elcano_Serial.h Using the SerialData struct in the .h file.
-//    // Receive a TargetLocation from C4. C4 will only ever send TargetLocations to C3.
-//
-//
-//    //-----------------------C4 input--------------------------//
-//    SerialData instructions;
-////    readSerial(&Serial1, &instructions);
-//    TargetLocation currentTargetLocation;
-//    ProcessTargetLocation(&currentTargetLocation,instructions);
-//    TargetLocation allTargetLocations[MAX_WAYPOINTS];
-//    ReadWaypoints(allTargetLocations);
-//    
-//
-      ParseStateError r = parseState.update();
-      if(r == ParseStateError::success)
-      {
-        Serial.print(serialData.posN_cm);
-        Serial.print("\t");
-        Serial.println(serialData.posE_cm);
-      }
-
-
-//    //Test of input from C4.
-//    //Serial.println("test");
-//    //Serial.println(instructions.kind);
-//  
-//    //-----------------------C5 input-------------------------//
-//    //SerialData sensorData;
-//    //readSerial(&Serial2, &sensorData);
-//    
-//
-//    //---------------------C2 output-------------------------------//
+  Point start, end;
+  int startBearing;
+//  while(true)
+//  {
 //    ParseStateError r = parseState.update();
 //    if(r == ParseStateError::success)
 //    {
-//      if(serialData.kind == MsgType::seg)
-//      {
-//        Serial.println("angle = " + String(serialData.bearing_deg));
-//      }
-//      if(serialData.kind == MsgType::sensor)
-//      {
-//        Serial.println("PosE_cm: " + String(serialData.posE_cm) + "PosN_cm: " + String(serialData.posN_cm));
-//      }
+//      start.x = serialData.posE_cm/100.;
+//      start.y = serialData.posN_cm/100.;
+//      startBearing = serialData.bearing_deg;
+//      break;
 //    }
-//    else 
-//    {
-//      Serial.println(Serial.println(static_cast<int8_t>(r)));
-//    }
-    serialData.kind = MsgType::drive;
-    serialData.angle_deg = 0;
-    speedToSend = 0;
-    serialData.speed_cmPs = speedToSend;
-    speedToSend += speedDir * 1;
+//    Serial.println("waiting");
+//  }
+  start.x = 0;
+  start.y = 0;
+  
+  end.x = start.x + 2;
+  end.y = start.y + 2;
+  //start to end, starting bearing, end pointing souch, 10 for arc length modifier (arbitrarily chosen)
+  Cubic2D path(start, end, 0, 0, 0); 
+  Turn turns[100];
+  path.getTurns(turns);
+  for(int i = 0; i < 100; i++)
+  {
+    Serial.println(String(turns[i].distance_mm) + ", " + String(turns[i].steeringAngle_deg));
+  }
+  Serial.println("\n\nhere");
+  for(int i = 0; i < 100; i++)
+  {
+    Serial.println(String(path.valueAtTime(i/100.).x) + ", " + String(path.valueAtTime(i/100.).y) + ", " + String(path.bearingValueAtT(i/100.)));
+  }
+}
 
-    serialData.write(&Serial1);
-    Serial.println("wrote to C2");
-    if(speedToSend >= 500) speedDir = -1;
-    if(speedToSend <= 0)   speedDir = 1;
-//    
-//    //Test Data for instructions C4. This is an example of a semgment
-//    /*instructions.kind = 4;
-//    instructions.number = 1;
-//    instructions.speed_cmPs = 100;
-//    instructions.bearing_deg = 35;
-//    instructions.posE_cm = 400;
-//    instructions.posN_cm = 400;
-//
-//    //Test Data for C5 sensor input. This is an example of a sensor signal.
-//    /*
-//     sensorData.kind = 2;
-//     sensorData.speedcmPs = 100;
-//     sensorData.angle_deg = 12;
-//     sensorData.posE_cm = 50;
-//     sensorData.posN_cm = 50;
-//     sensorData.bearing_deg = 15;
-//    */
-//
-//    //Test Data for C2 drive output. Example drive commands.
-//    /*
-//    toLowLevel.kind = 1;
-//    toLowLevel.speed_cmPs = 400;
-//    toLowLevel.angle_deg = 35;
-//     */
-//    
-//    //turning test
-//    //Drive()
-//    //{
-//      
-//    //}
+void loop() 
+{
+
+  //-----------------------Input from C6--------------------//
+  ParseStateError r = parseState.update();
+  if(r == ParseStateError::success)
+  {
+//    Serial.print(serialData.posN_cm);
+//    Serial.print("\t");
+//    Serial.println(serialData.posE_cm);
+  }
+
+  //-----------------------Output to C2-----------------------//
+  serialData.kind = MsgType::drive;
+  serialData.angle_deg = 0;
+  serialData.speed_cmPs = 0;
+  serialData.write(&Serial1);
+
+
 
 }
