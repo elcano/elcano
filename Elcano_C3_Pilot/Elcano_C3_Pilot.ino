@@ -83,9 +83,21 @@ public:
     {
       float bearing1 = bearingValueAtT(i/100.);
       float bearing2 = bearingValueAtT((i+1)/100.);
-      turns[i].steeringAngle_deg = ShortestAngle(bearing1, bearing2);
+      turns[i].steeringAngle_deg = bearing2 - bearing1;
+
+      while(turns[i].steeringAngle_deg < -60) 
+      {
+        turns[i].steeringAngle_deg += 360;
+      }
+
+      while(turns[i].steeringAngle_deg > 60) 
+      {
+        turns[i].steeringAngle_deg -= 360;
+      }
+      
       turns[i].distance_mm = sqrt(sq(valueAtTime((i+1)/100.).x - valueAtTime(i/100.).x) + sq(valueAtTime((i+1)/100.).y - valueAtTime(i/100.).y));
     }
+    turns[99].steeringAngle_deg = 0;
   }
 
   /*
@@ -485,12 +497,12 @@ void noCompasTurn(int degrees)
   command.kind = MsgType::drive;
 //    command.speed_cmPs = speed_cmPs;
   command.speed_cmPs = 500;
-  command.angle_deg = wheelAngle_deg;
+  command.angle_mDeg = wheelAngle_deg * 1000;
   
   command.write(&Serial1);
   delay(time_ms);
   command.speed_cmPs = 0;
-  command.angle_deg = 0;
+  command.angle_mDeg = 0;
   command.write(&Serial1);
     
 }
@@ -519,11 +531,11 @@ void turn(int turnAmount)
    
     if(turnAmount < 0) 
     {
-      command.angle_deg = -30;
+      command.angle_mDeg = -30 * 1000;
     }
     else
     {
-      command.angle_deg = 30;
+      command.angle_mDeg = 30 * 1000;
     }
     command.write(&Serial1); // send command
 
@@ -554,7 +566,7 @@ void turn(int turnAmount)
     Serial.println("done");
     // send command to stop
     command.speed_cmPs = 0;
-    command.angle_deg = 0;
+    command.angle_mDeg = 0;
     command.write(&Serial1);
 
 }
@@ -587,7 +599,7 @@ void moveFixedDistance(long length_mm, long speed_mms)
   serialData.clear();
   serialData.kind = MsgType::drive;
   serialData.speed_cmPs = speed_mms/10; // The initial speed to send.
-  serialData.angle_deg = 0; // what should this actually be
+  serialData.angle_mDeg = 0; // what should this actually be
   serialData.write(&Serial1);
 
   double currentDistance_cm = 0;
@@ -608,7 +620,7 @@ void moveFixedDistance(long length_mm, long speed_mms)
   Serial.println("Done moving fixed distance");
   serialData.kind = MsgType::drive;
   serialData.speed_cmPs = 0;
-  serialData.angle_deg = 0;
+  serialData.angle_mDeg = 0;
   serialData.write(&Serial1);
 }
 
@@ -857,18 +869,26 @@ void go20mNorth()
   end.x = start.x + 2;
   end.y = start.y + 2;
   //start to end, starting bearing, end pointing souch, 10 for arc length modifier (arbitrarily chosen)
-  Cubic2D path(start, end, 0, 0, 0); 
+  Cubic2D path(start, end, 0, 90, 10); 
   Turn turns[100];
   path.getTurns(turns);
   for(int i = 0; i < 100; i++)
   {
-    Serial.println(String(turns[i].distance_mm) + ", " + String(turns[i].steeringAngle_deg));
+    SerialData command;
+    command.kind = MsgType::drive;
+    command.speed_cmPs = 0; // The initial speed to send.
+    command.angle_mDeg = turns[i].steeringAngle_deg * -1 * 5 * 1000; // the 5 is to exadurate it for more visual results
+    Serial.println(command.angle_mDeg);
+    command.write(&Serial1);
+//    Serial.println(String(turns[i].distance_mm) + ", " + String(turns[i].steeringAngle_deg));
+    delay(500);
+    
   }
-  Serial.println("\n\nhere");
-  for(int i = 0; i < 100; i++)
-  {
-    Serial.println(String(path.valueAtTime(i/100.).x) + ", " + String(path.valueAtTime(i/100.).y) + ", " + String(path.bearingValueAtT(i/100.)));
-  }
+
+//  for(int i = 0; i < 100; i++)
+//  {
+//    Serial.println(String(path.valueAtTime(i/100.).x) + ", " + String(path.valueAtTime(i/100.).y));
+//  }
 }
 
 void loop() 
@@ -885,7 +905,7 @@ void loop()
 
   //-----------------------Output to C2-----------------------//
   serialData.kind = MsgType::drive;
-  serialData.angle_deg = 0;
+  serialData.angle_mDeg = 0;
   serialData.speed_cmPs = 0;
   serialData.write(&Serial1);
 

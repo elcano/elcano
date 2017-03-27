@@ -271,15 +271,13 @@ void setup()
 /*-----------------------------------loop------------------------------------------------*/
 void loop() {
   // send data to C6
-
-  Serial.println(desiredAngle);
   Results.clear();
   Results.kind = MsgType::drive;
   Results.speed_cmPs = SpeedCyclometer_mmPs/10;
   // temporary
 //  Results.speed_cmPs = 0;
   // end temporary
-  Results.angle_deg = 0;
+  Results.angle_mDeg = 0;
   Results.write(&Serial3);
  
   
@@ -310,6 +308,7 @@ void loop() {
     {
       processHighLevel(&Results);
     }
+//    else Serial.println("comms error: " + String(static_cast<int8_t>(r)));
   }
 
 
@@ -461,8 +460,8 @@ void processHighLevel(SerialData * results)
   Serial3.end();
   Serial3.begin(baudrate);  // clear the buffer
   
-  int turn_signal = convertDeg(results->angle_deg);
-
+  double turn_signal = convertDeg(results->angle_mDeg / 1000.);
+  Serial.println(results->angle_mDeg);
   desiredSpeed = results->speed_cmPs * 10;
   desiredAngle = turn_signal;
   
