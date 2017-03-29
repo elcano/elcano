@@ -107,7 +107,7 @@ void loop() {
 //  delay(100);
   
 
-    // Get the next loop start time. Note this (and the millis() counter) will
+  // Get the next loop start time. Note this (and the millis() counter) will
   // roll over back to zero after they exceed the 32-bit size of unsigned long,
   // which happens after about 1.5 months of operation (should check this).
   // But leave the overflow computation in place, in case we need to go back to
@@ -140,6 +140,7 @@ void loop() {
     if(r == ParseStateError::success)
     {
       processHighLevel(&Results);
+      Serial.println("Comms");
     }
     else
     {
