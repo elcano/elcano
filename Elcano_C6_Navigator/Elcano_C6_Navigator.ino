@@ -182,8 +182,8 @@ void displayResults(SerialData &Results)
 //    Serial.println(Results.number);    
 //    Serial.print("SerialData::speed_cmPs:");
 //    Serial.println(Results.speed_cmPs);
-//    Serial.print("SerialData::angle_deg:");
-//    Serial.println(Results.angle_deg);    // front wheels
+//    Serial.print("SerialData::angle_mDeg:");
+//    Serial.println(Results.angle_mDeg);    // front wheels
 //    Serial.print("SerialData::bearing_deg:");
 //    Serial.println(Results.bearing_deg);  // compass direction
 //    Serial.print("SerialData::posE_cm:");
@@ -243,6 +243,7 @@ long GetHeading(void)
     }
     // Converting heading to x1000
     return ((long)(heading * HEADING_PRECISION));
+//    return heading;
 }
 
 /*
@@ -466,7 +467,7 @@ void waypoint::SetTime(char *pTime, char * pDate)
 /*---------------------------------------------------------------------------------------*/
 void loop()
 {
-    //Serial.println("Inside C6 loop");
+//    Serial.println("Inside C6 loop");
     
     unsigned long deltaT_ms;
     unsigned long time = millis();
@@ -549,7 +550,7 @@ void loop()
 //  data.kind = MsgType::sensor;
 //  data.bearing_deg = CurrentHeading;
 //  //C2_Results.speed_cmPs = 0;
-//  //C2_Results.angle_deg = 0;
+//  //C2_Results.angle_mDeg = 0;
 //  data.posE_cm = GPS_reading.latitude/10;
 //  data.posN_cm = GPS_reading.longitude/10;
 //    // Read data from C2 using Elcano_Serial
@@ -557,16 +558,11 @@ void loop()
   data.clear();
   
   ParseStateError r = ps.update();
-  Serial.println("success = " + String(static_cast<int8_t>(r)));
   if(r == ParseStateError::success) 
   {
-    Serial.println("Speed: " + String(data.speed_cmPs));
     Serial2.end();
     Serial2.begin(baudrate);
-      // Updating the data with the
-      // odometer details from C2
-//    data.speed_cmPs = C2_Results.speed_cmPs;
-    
+        
     newPos.speed_cmPs = data.speed_cmPs;
     newPos.bearing_deg = CurrentHeading;
     newPos.time_ms = time;
@@ -579,6 +575,7 @@ void loop()
     gps.x_Pos = estimated_position.latitude;
     gps.y_Pos = estimated_position.longitude;
 
+
     
     // Translate GPS position
     TranslateCoordinates(newPos, gps, 1);
@@ -589,15 +586,18 @@ void loop()
 
     // Swap data
     CopyData(oldPos, newPos);
-
+    
     // Copy GPS fuzzy output to C4
     data.kind = MsgType::sensor;
     // speed already set
     data.posE_cm = fuzzy_out.x_Pos;
     data.posN_cm = fuzzy_out.y_Pos;
-    data.bearing_deg = CurrentHeading;
-    data.angle_deg = 0;
+    data.bearing_deg = CurrentHeading / HEADING_PRECISION;
+    data.angle_mDeg = 0;
+
+    Serial.println(String(fuzzy_out.x_Pos) + ", " + String(fuzzy_out.y_Pos));
     data.write(&Serial2);
+
   }
     //data.write(&Serial2);
     //C2_Results.write(&Serial2);   

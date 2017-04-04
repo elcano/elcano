@@ -5,8 +5,8 @@ namespace elcano
 {
 // latitude and longitude are multiplied by 1,000,000.
 // (47.621300, -122.350900) is Seattle Center House.
-#define LATITUDE_ORIGIN   47621300
-#define LONGITUDE_ORIGIN -122350900
+#define LATITUDE_ORIGIN   47.621300
+#define LONGITUDE_ORIGIN -122.350900
 #define EARTH_RADIUS_MM 6371000000.
 #define PIf ((float) 3.1415926)
 #define PId 3.14159265358979
