@@ -96,13 +96,13 @@ void writeline(int channel)
       switch(channel)
       {
       case 1:
-         Serial1.println(buffer);
+        //  Serial1.println(buffer);
          break;
        case 2:
-         Serial2.println(buffer);
+        //  Serial2.println(buffer);
          break;
       case 3:
-         Serial3.println(buffer);
+        //  Serial3.println(buffer);
          break;
       default:
          Serial.println(buffer);
@@ -134,17 +134,16 @@ bool readline(int channel)
       switch(channel)
       {
       case 1:
-         Available = Serial1.available();  
-         c=Serial1.read();
+        //  Available = Serial1.available();  
+        //  c=Serial1.read();
          break;
        case 2:
-         Available = Serial2.available();     
-         c=Serial2.read();
+        //  Available = Serial2.available();     
+        //  c=Serial2.read();
          break;
       case 3:
-         Available = Serial3.available();     
-         c=Serial3.read();
-		 Serial.println(Available);
+        //  Available = Serial3.available();     
+        //  c=Serial3.read();
          break;
       default:
          Available = Serial.available();     
@@ -313,12 +312,12 @@ void waypoint::fuse(waypoint GPS_reading, int deltaT_ms)
     // speed standard deviation is in m/sec; 
     // assuming no time error it is same as position standard deviation
     static REAL uncertainty[] = {100., 0,   0,   0,
-                          0,   100., 0,   0,
-                          0,    0,  100., 0,
-                          0,    0,   0,  100.};
+								 0,   100., 0,   0,
+								 0,    0,  100., 0,
+								 0,    0,   0,  100.};
     static REAL State[4] = {5000000, 0, 0, 0};
     REAL variance[] = {100., 0,
-                         0, 100.};
+					   0, 100.};
 
     REAL deltaT_s = ((REAL) deltaT_ms) / 1000.0;
     REAL measurements[2];
@@ -482,6 +481,8 @@ bool waypoint::AcquireGPRMC(unsigned long max_wait_ms)
 // wait up to max_wait milliseconds to get a valid signal.
 bool waypoint::AcquireGPGGA(unsigned long max_wait_ms)
 {
+  
+  
   uint8_t satelites_used, hdop;
   REAL HDOP, error_m, error_mm;
   char FixIndicator = '0';
@@ -498,8 +499,9 @@ bool waypoint::AcquireGPGGA(unsigned long max_wait_ms)
     if (!readline(3))
     {  // nothing to read; how long have we waited?
       if (millis() > TimeOut)
+	     Serial.println("AcquireGPGGA timed out");
          return false;
-    }    
+    }
 //    Serial.println(buffer);
     if (strncmp(buffer, "$GPGGA",6) == 0) 
     {
@@ -544,7 +546,10 @@ bool waypoint::AcquireGPGGA(unsigned long max_wait_ms)
     }
   }
   if (FixIndicator == '0')
+  {
+  	Serial.println("FixIndicator is 0");
     return false;
+  }
   return true;
 }
 

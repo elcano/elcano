@@ -38,7 +38,7 @@ struct SerialData {
   MsgType kind;        //!< The type of message being received [0-4]
   int32_t number;      //!< The number of the unit
   int32_t speed_cmPs;  //!< The speed the bike is moving at (cm/s)
-  int32_t angle_deg;   //!< Angle (deg) of the bike
+  int32_t angle_mDeg;   //!< Angle (deg) of the bike
   int32_t bearing_deg; //!< Bearing (deg) of the camera
   int32_t posE_cm;     //!< Position (cm) on the E-W axis
   int32_t posN_cm;     //!< Position (cm) on the N-S axis
