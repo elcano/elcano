@@ -77,7 +77,7 @@ public:
   }
 
   // returns an array of turns of length 100
-  void getTurns(Turn turns[100])
+  void getTurns(Turn turns[100]) // TODO: verify turn angles are calculated correctly, determine correct speed
   {
     for(int i = 0; i < 100; i++)
     {
@@ -481,7 +481,7 @@ void noCompasTurn(int degrees)
   // Wb = 876 mm
   // Distance for n degree turn = (n * diameter * pi) / (360)
   
-  int speed_cmPs = 500;
+  int speed_mmps = 2000;
   int wheelAngle_deg = 30;  // use settings.h
   int wb_mm = 876;          // use settings.h
   if(degrees < 0)
@@ -489,22 +489,32 @@ void noCompasTurn(int degrees)
     wheelAngle_deg *= -1;
   }
 
-  float turnDiameter_mm = 2*(wb_mm/abs(sin(wheelAngle_deg)));
+  float turnDiameter_mm = 2*(wb_mm/abs(sin(wheelAngle_deg))); // same as for 4 wheels?
   float distance_mm = (degrees * turnDiameter_mm * PI) / 360;
+  int time_ms = 1000 * (double)(distance_mm/speed_mmps);
   
-  int time_ms = ((speed_cmPs * 10) / distance_mm) * 1000;
   SerialData command;
   command.kind = MsgType::drive;
-//    command.speed_cmPs = speed_cmPs;
-  command.speed_cmPs = 500;
+
+  command.speed_cmPs = 0;
   command.angle_mDeg = wheelAngle_deg * 1000;
-  
   command.write(&Serial1);
+
+Serial.println("waiting");
+delay(1000);
+Serial.println("waiting");
+delay(1000);
+  
+  command.speed_cmPs = speed_mmps/10;
+  command.angle_mDeg = wheelAngle_deg * 1000;
+  command.write(&Serial1);
+  Serial.println("Starting");
+  Serial.println(time_ms);
   delay(time_ms);
   command.speed_cmPs = 0;
   command.angle_mDeg = 0;
   command.write(&Serial1);
-    
+  Serial.println("Stopping");
 }
 
 // turn a number of degrees. Positive number for left, negative for right
@@ -572,30 +582,37 @@ void turn(int turnAmount)
 }
 
 void squareRoutine(){
-  long length_mm = 2000;     // default value
+  long length_mm = 1000;     // default value
   long speed_mms = 5000;      // default value
+  Serial.println("Begin square");
   for(int i = 0; i < 4; i++){
     moveFixedDistance(length_mm, speed_mms);
-    turn(90);
+    delay(5000);
+    noCompasTurn(90);
+    Serial.println("Side " + String(i+1) + " completed");
+    delay(5000);
   }
+  Serial.println("Square completed");
 }
 
 /*-----------------------------------moveFixedDistance------------------------------------*/
 void moveFixedDistance(long length_mm, long speed_mms)
 { 
+  Serial.println("starting move fixed distance");
   while(true)
   {
     ParseStateError r = parseState.update();
+//    Serial.println("waiting for initial location: " + String(static_cast<int8_t>(r)));
     if(r == ParseStateError::success)
     {
+      Serial.println("got initial location");
       serialData.posE_cm /= 10000; // avoid overflow
       serialData.posN_cm /= 10000;
       break;
     }
-    Serial.println("waiting for initial location: " + String(static_cast<int8_t>(r)));
   }
   double initialDistance_cm = sqrt(abs(abs(serialData.posE_cm) * abs(serialData.posE_cm) + abs(serialData.posN_cm) * abs(serialData.posN_cm)));
-  Serial.println(initialDistance_cm);
+//  Serial.println(initialDistance_cm);
   serialData.clear();
   serialData.kind = MsgType::drive;
   serialData.speed_cmPs = speed_mms/10; // The initial speed to send.
@@ -612,12 +629,11 @@ void moveFixedDistance(long length_mm, long speed_mms)
       double currentLocation_cm = sqrt(abs(abs(serialData.posE_cm) * abs(serialData.posE_cm) + abs(serialData.posN_cm) * abs(serialData.posN_cm)));
       double delta_cm = abs(currentLocation_cm - initialDistance_cm);
       currentDistance_cm += delta_cm;
-      Serial.println("Current: " + String(currentDistance_cm));
-      serialData.write(&Serial1);
+//      Serial.println("Current: " + String(currentDistance_cm));
 
     }    
   }
-  Serial.println("Done moving fixed distance");
+//  Serial.println("Done moving fixed distance");
   serialData.kind = MsgType::drive;
   serialData.speed_cmPs = 0;
   serialData.angle_mDeg = 0;
@@ -842,9 +858,8 @@ void setup()
   
   long length_mm = 2000;     // default value
   long speed_mms = 5000;
-//  moveFixedDistance(length_mm, speed_mms);
-//  noCompasTurn(90);
-  go20mNorth();
+//  squareRoutine();
+  noCompasTurn(90);
 }
 
 void go20mNorth()
@@ -866,8 +881,8 @@ void go20mNorth()
   start.x = 0;
   start.y = 0;
   
-  end.x = start.x + 2;
-  end.y = start.y + 2;
+  end.x = start.x;
+  end.y = start.y + 20;
   //start to end, starting bearing, end pointing souch, 10 for arc length modifier (arbitrarily chosen)
   Cubic2D path(start, end, 0, 90, 10); 
   Turn turns[100];
@@ -898,9 +913,9 @@ void loop()
   ParseStateError r = parseState.update();
   if(r == ParseStateError::success)
   {
-//    Serial.print(serialData.posN_cm);
-//    Serial.print("\t");
-//    Serial.println(serialData.posE_cm);
+    Serial.print(serialData.posN_cm);
+    Serial.print("\t");
+    Serial.println(serialData.posE_cm);
   }
 
   //-----------------------Output to C2-----------------------//

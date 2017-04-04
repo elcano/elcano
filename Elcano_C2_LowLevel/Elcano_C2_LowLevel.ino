@@ -266,6 +266,7 @@ void setup()
   
   Results.clear();
   SpeedCyclometer_mmPs = 0;
+  brake(false);
 }
 
 /*-----------------------------------loop------------------------------------------------*/
@@ -295,10 +296,10 @@ void loop() {
   // using the micros() counter.
   // If the new nextTime value is <= LOOP_TIME_MS, we've rolled over.
 
-   byte automate = processRC();
+//   byte automate = processRC();
   
   // TEMPORARY
-  automate = 0x01;
+  byte automate = 0x01;
   
   // END TEMPORARY
   if (automate == 0x01)
@@ -398,10 +399,10 @@ void ThrottlePID(){
   moveVehicle(throttleControl);
   if(PIDThrottleOutput == MIN_ACC_OUT){
     //apply brakes
-    brake_feather(true);
+//    brake_feather(true);
   }
   else{
-    brake_feather(false);
+//    brake_feather(false);
   }
   return;
 }
@@ -464,8 +465,12 @@ void processHighLevel(SerialData * results)
   Serial.println(results->angle_mDeg);
   desiredSpeed = results->speed_cmPs * 10;
   desiredAngle = turn_signal;
+
   
-//  Serial.println(String(results->speed_cmPs * 10) + " " + String(results->angle_deg));
+//  if(desiredSpeed != 0) brake(MIN_BRAKE_OUT);
+//  if(desiredSpeed == 0) brake(MAX_BRAKE_OUT);
+  
+//  Serial.println(String(results->speed_cmPs * 10) + " " + String(results->angle_mDeg));
 
 }
 
