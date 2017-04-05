@@ -209,6 +209,7 @@ void setup()
   // SPI: set the slaveSelectPin as an output:
   pinMode (SelectAB, OUTPUT);
   pinMode (SelectCD, OUTPUT);
+  pinMode (29, OUTPUT);
   pinMode (10, OUTPUT);
   SPI.setDataMode( SPI_MODE0);
   SPI.setBitOrder( MSBFIRST);
@@ -397,12 +398,12 @@ void ThrottlePID(){
 //  else if(SpeedCyclometer_mmPs > 10) SpeedCyclometer_mmPs -= 10;
   //apply control value to vehicle
   moveVehicle(throttleControl);
-  if(PIDThrottleOutput == MIN_ACC_OUT){
+  if(PIDThrottleOutput == MIN_ACC_OUT || desiredSpeed == 0){
     //apply brakes
-//    brake_feather(true);
+    brake(true);
   }
   else{
-//    brake_feather(false);
+    brake(false);
   }
   return;
 }
@@ -740,6 +741,8 @@ void WheelRev()
 {
   oldClickNumber = ClickNumber;
   //static int flip = 0;
+  digitalWrite(29, HIGH);
+  digitalWrite(29, LOW);
   unsigned long tick;
   noInterrupts();
   tick = millis();
