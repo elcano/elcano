@@ -1,18 +1,25 @@
 #include "ElcanoSerial.h"
+#include "Arduino.h"
+#include <FastCRC.h>
+FastCRC8 CRC8;
+
 
 // Elcano_Serial.h
 // By Dylan Katz
-//
+// 
 // Manages our protocal for robust communication of SerialData over serial
 // connections. Complete documentation and usage is on the wiki.
 namespace elcano {
 
 ParseStateError ParseState::update(void) {
+  
+  numStarted = false;
   int c;
 start:
-  c = input->read();
+  input->read();
   if (c == -1) return ParseStateError::unavailable;
   if (c == ' ' || c == '\t' || c == '\0' || c == '\r') goto start;
+  
   switch(state) {
   case 0:
     // During this state, we begin the processing of a new SerialData packet
@@ -27,6 +34,7 @@ start:
     case CHR:                        \
       if (capture & MsgType::TYPE) { \
         dt->kind = MsgType::TYPE;    \
+									 \
         state = 1;                   \
       } else {                       \
         output->print(CHR);          \
@@ -63,7 +71,7 @@ STATE('X', seg)
     case 'p': state = 8; goto start;
     default : state = 0; return ParseStateError::bad_attrib;
     }
-#define STATES(SS, PS, NS, TERM, HOME, VAR) \
+#define STATES(SS, PS, NS, TERM, HOME, VAR) \	
   case SS:                                  \
     dt->VAR = 0;                            \
     if (c == '-') {                         \
@@ -71,30 +79,61 @@ STATE('X', seg)
       goto start;                           \
     }                                       \
     state = PS;                             \
-  case PS:                                  \
+  case PS:									\
     if (c >= '0' && c <= '9') {             \
-      dt->VAR *= 10;                        \
-      dt->VAR += c - '0';                   \
-      goto start;                           \
-    } else if (c == TERM) {                 \
-      state = HOME;                         \
-      goto start;                           \
-    } else {                                \
-      state = 0;                            \
-      return ParseStateError::bad_number;   \
-    }                                       \
+	  if(c != '0' || numStarted){ 			\
+	      dt->VAR *= 10;                    \ 
+	      dt->VAR += c - '0';               \
+	      goto start;                       \
+	    } else if (c == TERM) {             \
+	      state = HOME;                     \
+	      goto start;                       \
+	  } else {                              \
+      	  state = 0;                        \
+	      return ParseStateError::bad_number;\
+	  }  									\
+    }     							        \
+	  else if(!numStarted && c != '0')      \
+	  {										\
+		numStarted = true;					\
+		dt->VAR *= 10;                      \
+		dt->VAR += c - '0';                 \
+		goto start;                         \
+	  } else if (c == TERM) {               \
+		state = HOME;                       \
+		goto start;                         \
+	  } else {                              \
+		state = 0;                          \
+		return ParseStateError::bad_number; \
+	  }										\
+			                                \
   case NS:                                  \
-    if (c >= '0' && c <= '9') {             \
-      dt->VAR *= 10;                        \
-      dt->VAR -= c - '0';                   \
-      goto start;                           \
-    } else if (c == TERM) {                 \
-      state = HOME;                         \
-      goto start;                           \
-    } else {                                \
-      state = 0;                            \
-      return ParseStateError::bad_number;   \
-    }
+  if (c >= '0' && c <= '9') {               \
+	if(c != '0' || numStarted){ 		    \
+		dt->VAR *= 10;                      \ 
+		dt->VAR -= c - '0';                 \
+		goto start;                         \
+	  } else if (c == TERM) {               \
+		state = HOME;                       \
+		goto start;                         \
+	  } else {                              \
+		state = 0;                          \
+		return ParseStateError::bad_number; \
+	} 										\
+    }      							    	\
+	else if(!numStarted && c != '0')      	\
+	{										\
+	  numStarted = true;					\
+	  dt->VAR *= 10;                        \
+	  dt->VAR -= c - '0';                 	\
+	  goto start;                         	\
+	} else if (c == TERM) {               	\
+	  state = HOME;                       	\
+	  goto start;                         	\
+	} else {                              	\
+	  state = 0;                          	\
+	  return ParseStateError::bad_number; 	\
+	}											
 STATES(3, 13, 23, '}', 1, number)
 STATES(4, 14, 24, '}', 1, speed_cmPs)
 STATES(5, 15, 25, '}', 1, angle_mDeg)
@@ -113,47 +152,149 @@ STATES(9, 19, 29, '}', 1, posN_cm)
   }
 }
 
+
 bool SerialData::write(HardwareSerial *dev) {
   switch (kind) {
-  case MsgType::drive:  dev->print("D"); break;
-  case MsgType::sensor: dev->print("S"); break;
-  case MsgType::goal:   dev->print("G"); break;
-  case MsgType::seg:    dev->print("X"); break;
-  default:              return false;
+  case MsgType::drive:  
+	dev->print("D");
+	outBuffer[outSize++] = "D";
+	break;
+  case MsgType::sensor:
+	dev->print("S"); 
+	outBuffer[outSize++] = "S";
+	break;
+  case MsgType::goal:   
+	dev->print("G"); 
+	outBuffer[outSize++] = "G";
+	break;
+  case MsgType::seg:    
+	dev->print("X"); 
+	outBuffer[outSize++] = "X";
+	break;
+  default:              
+	return false;
   }
+  
+  
   if (number != NaN && (kind == MsgType::goal || kind == MsgType::seg)) {
     dev->print("{n ");
-    dev->print(number);
+	outBuffer[outSize++] = '{';
+	outBuffer[outSize++] = 'n';
+	outBuffer[outSize++] = ' ';
+    
+	dev->print(number);
+	String num = String(number);
+	for(int i = 0; i < num.length(); i++)
+	{
+		outBuffer[outSize++] = num.charAt(i);
+	}
     dev->print("}");
+	outBuffer[outSize++] = '}';
   }
   if (speed_cmPs != NaN && kind != MsgType::goal) {
     dev->print("{s ");
+	
+	outBuffer[outSize++] = '{';
+	outBuffer[outSize++] = 's';
+	outBuffer[outSize++] = ' ';
+	
     dev->print(speed_cmPs);
+	String num = String(speed_cmPs);
+	for(int i = 0; i < num.length(); i++)
+	{
+		outBuffer[outSize++] = num.charAt(i);
+	}
     dev->print("}");
+	outBuffer[outSize++] = '}';
   }
   if (angle_mDeg != NaN && (kind == MsgType::drive || kind == MsgType::sensor)) {
     dev->print("{a ");
+	
+	outBuffer[outSize++] = '{';
+	outBuffer[outSize++] = 'a';
+	outBuffer[outSize++] = ' ';
+	
     dev->print(angle_mDeg);
+	String num = String(angle_mDeg);
+	for(int i = 0; i < num.length(); i++)
+	{
+		outBuffer[outSize++] = num.charAt(i);
+	}
+	
     dev->print("}");
+	outBuffer[outSize++] = '}';
   }
   if (bearing_deg != NaN && kind != MsgType::drive) {
     dev->print("{b ");
+	
+	outBuffer[outSize++] = '{';
+	outBuffer[outSize++] = 'b';
+	outBuffer[outSize++] = ' ';
+	
     dev->print(bearing_deg);
+	String num = String(bearing_deg);
+	for(int i = 0; i < num.length(); i++)
+	{
+		outBuffer[outSize++] = num.charAt(i);
+	}
+	
+	
     dev->print("}");
+	outBuffer[outSize++] = '}';
+	
   }
   if (posE_cm != NaN && posN_cm != NaN && kind != MsgType::drive) {
     dev->print("{p ");
+	
+	outBuffer[outSize++] = '{';
+	outBuffer[outSize++] = 'p';
+	outBuffer[outSize++] = ' ';
+	
     dev->print(posE_cm);
+	
+	String num = String(posE_cm);
+	for(int i = 0; i < num.length(); i++)
+	{
+		outBuffer[outSize++] = num.charAt(i);
+	}
+	
     dev->print(",");
+	outBuffer[outSize++] = ',';
+	
     dev->print(posN_cm);
+	
+	num = String(posN_cm);
+	for(int i = 0; i < num.length(); i++)
+	{
+		outBuffer[outSize++] = num.charAt(i);
+	}
+	
     dev->print("}");
+	outBuffer[outSize++] = '}';
   }
+  
   if (probability != NaN && kind == MsgType::goal) {
     dev->print("{r ");
+	
+	outBuffer[outSize++] = '{';
+	outBuffer[outSize++] = 'r';
+	outBuffer[outSize++] = ' ';
+	
     dev->print(probability);
+	
+	String num = String(probability);
+	for(int i = 0; i < num.length(); i++)
+	{
+		outBuffer[outSize++] = num.charAt(i);
+	}
+	
     dev->print("}");
+	outBuffer[outSize++] = '}';
+	
   }
+  dev->print(String(CRC8.smbus(outBuffer, outSize)));
   dev->print("\n");
+  // Serial.println(String(CRC8.smbus(outBuffer, outSize)));
   return true;
 }
 
@@ -168,7 +309,7 @@ void SerialData::clear(void) {
   probability = NaN;
 }
 
-bool SerialData::verify(void) {
+bool SerialData::verify() {
   switch (kind) {
   case MsgType::drive:
     if (speed_cmPs  == NaN) return false;

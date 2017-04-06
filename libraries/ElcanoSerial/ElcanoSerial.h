@@ -44,9 +44,12 @@ struct SerialData {
   int32_t posN_cm;     //!< Position (cm) on the N-S axis
   int32_t probability; //!< Probability that the value is a cone
 
+  int outSize = 0;
+  char outBuffer[60]; 
+
   void clear(void); //!< Set the values to the defaults
   bool write(HardwareSerial * /**< Connection to write to */); //!< Write to a serial connection
-  bool verify(void); //!< Check that the types match the values
+  bool verify(); //!< Check that the types match the values
 };
 
 //! The different possible results of the ParseState::update method
@@ -71,6 +74,8 @@ struct ParseState {
   ParseStateError update(void); //!< Update the state of the parser based on a single character
 private:
   uint8_t state = 0;   //!< Internal state variable
+  int processedChars = 0;
+  bool numStarted = false;
 };
 
 } // namespace elcano
