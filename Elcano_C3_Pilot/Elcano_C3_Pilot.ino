@@ -903,7 +903,7 @@ void setup()
   serialData.clear();
   pinMode(8,OUTPUT);
   attachInterrupt(digitalPinToInterrupt(2), incrementDistance, RISING);
-  squareRoutine();
+//  squareRoutine();
 }
 
 
@@ -924,7 +924,7 @@ void moveFixedDistanceWheelRev(long distance_mm)
 
 void incrementDistance()
 {
-  odo_mm += WHEEL_CIRCUM_MM;
+  odo_mm += WHEEL_CIRCUM_MM / 4;
 }
 
 void loop() 
@@ -938,7 +938,7 @@ void loop()
     Serial.print("\t");
     Serial.println(serialData.posE_cm);
   }
-
+//  Serial.println(static_cast<int8_t>(r));
   //-----------------------Output to C2-----------------------//
   serialData.kind = MsgType::drive;
   serialData.angle_mDeg = 0;

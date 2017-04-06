@@ -467,7 +467,7 @@ void waypoint::SetTime(char *pTime, char * pDate)
 /*---------------------------------------------------------------------------------------*/
 void loop()
 {
-//    Serial.println("Inside C6 loop");
+    Serial.println(String(newPos.x_Pos) + '\t' + String(newPos.y_Pos));
     
     unsigned long deltaT_ms;
     unsigned long time = millis();
@@ -491,7 +491,6 @@ void loop()
     //Serial.print("CurrentHeading:");
    // Serial.println(CurrentHeading);
     // End of changes
-    
 /*  Read Optical Odometer;
     Read lane deviation;   
     If (message from C4)    
@@ -590,12 +589,12 @@ void loop()
     // Copy GPS fuzzy output to C4
     data.kind = MsgType::sensor;
     // speed already set
-    data.posE_cm = fuzzy_out.x_Pos;
-    data.posN_cm = fuzzy_out.y_Pos;
+    data.posE_cm = newPos.x_Pos;
+    data.posN_cm = newPos.y_Pos;
     data.bearing_deg = CurrentHeading / HEADING_PRECISION;
     data.angle_mDeg = 0;
 
-    Serial.println(String(fuzzy_out.x_Pos) + ", " + String(fuzzy_out.y_Pos));
+//    Serial.println(String(fuzzy_out.x_Pos) + ", " + String(fuzzy_out.y_Pos));
     data.write(&Serial2);
 
   }

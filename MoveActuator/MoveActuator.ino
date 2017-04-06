@@ -261,6 +261,7 @@ void loop()
 #endif  // MOTOR_RAMP  
   
   // apply brakes
+  #undef BRAKE_RAMP
 #ifdef BRAKE_RAMP
     BrakePosition += BrakeIncrement;
     if (BrakePosition > NoBrake || BrakePosition < FullBrake)

@@ -1,5 +1,4 @@
 #include <Settings.h>
-
 #include <PID_v1.h>
 #include <SPI.h>
 #include <ElcanoSerial.h>
@@ -42,6 +41,9 @@ static struct hist {
   // results of every interrupt
 } history;
 
+#define SPEED_HIST_LENGTH 5
+int speedHistIndex = 0;
+long speedHistory[SPEED_HIST_LENGTH];
 
 
 Servo STEER_SERVO;
@@ -189,7 +191,9 @@ double desiredSpeed = 0;
 #define PID_CALCULATE_TIME 50
 
 double proportionalConstant = .0175;
+//double proportionalConstant = .405;
 double integralConstant = .0141;
+//double integralConstant = .02;
 double derivativeConstant = .00001;
 
 // PID setup block
@@ -287,6 +291,13 @@ void loop() {
   nextTime = nextTime + LOOP_TIME_MS;
   computeSpeed(&history);
   computeAngle();
+
+  for(int i = 0; i < SPEED_HIST_LENGTH; i++)
+  {
+    Serial.println(speedHistory[i]);
+  }
+  
+  desiredSpeed = 0;
   ThrottlePID();
   SteeringPID();
 
@@ -795,6 +806,8 @@ void computeSpeed(struct hist *data){
   if (InterruptState == IRQ_NONE || InterruptState == IRQ_FIRST)
   { // No data
     SpeedCyclometer_mmPs = 0;
+    speedHistory[speedHistIndex] = SpeedCyclometer_mmPs;
+    speedHistIndex = (speedHistIndex + 1) % SPEED_HIST_LENGTH;
     SpeedCyclometer_revPs = 0;
     return;
   }
@@ -807,6 +820,8 @@ void computeSpeed(struct hist *data){
     data->oldTime_ms = OldTick;
     data->nowTime_ms = TickTime;  // time stamp for oldSpeed_mmPs
     data->oldClickNumber = data->nowClickNumber = ClickNumber;
+    speedHistory[speedHistIndex] = SpeedCyclometer_mmPs;
+    speedHistIndex = (speedHistIndex + 1) % SPEED_HIST_LENGTH;
     return;
   }
 
@@ -820,6 +835,8 @@ void computeSpeed(struct hist *data){
       { // too long without getting a tick
          SpeedCyclometer_mmPs = 0;
          SpeedCyclometer_revPs = 0;
+         speedHistory[speedHistIndex] = SpeedCyclometer_mmPs;
+         speedHistIndex = (speedHistIndex + 1) % SPEED_HIST_LENGTH;
          if (timeStamp - data->nowTime_ms > 2 * MaxTickTime_ms)
          {
           InterruptState = IRQ_FIRST;  //  Invalidate old data
@@ -836,6 +853,8 @@ void computeSpeed(struct hist *data){
           if (SpeedCyclometer_mmPs < 0)
             SpeedCyclometer_mmPs = 0;
           SpeedCyclometer_revPs = SpeedCyclometer_mmPs / WHEEL_CIRCUM_MM;
+          speedHistory[speedHistIndex] = SpeedCyclometer_mmPs;
+          speedHistIndex = (speedHistIndex + 1) % SPEED_HIST_LENGTH;
        }
        else
        { // accelerating; should get new data soon
@@ -856,6 +875,9 @@ void computeSpeed(struct hist *data){
     data->oldSpeed_mmPs = SpeedCyclometer_mmPs;
     SpeedCyclometer_revPs = 1000.0 / WheelRev_ms;
     SpeedCyclometer_mmPs  = WHEEL_CIRCUM_MM * SpeedCyclometer_revPs;
+
+    speedHistory[speedHistIndex] = SpeedCyclometer_mmPs;
+    speedHistIndex = (speedHistIndex + 1) % SPEED_HIST_LENGTH;
 
     data->oldTickMillis = data->tickMillis;
     data->tickMillis = millis();
