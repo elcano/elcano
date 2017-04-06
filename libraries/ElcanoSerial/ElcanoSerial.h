@@ -76,6 +76,8 @@ private:
   uint8_t state = 0;   //!< Internal state variable
   int processedChars = 0;
   bool numStarted = false;
+  int buffer[60];
+  int bufferSize = 0;
 };
 
 } // namespace elcano

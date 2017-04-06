@@ -9,16 +9,23 @@ FastCRC8 CRC8;
 // 
 // Manages our protocal for robust communication of SerialData over serial
 // connections. Complete documentation and usage is on the wiki.
+
 namespace elcano {
 
 ParseStateError ParseState::update(void) {
-  
+  Serial.print('h');
   numStarted = false;
   int c;
 start:
+  Serial.println('u');
   input->read();
+  Serial.println(c);
   if (c == -1) return ParseStateError::unavailable;
   if (c == ' ' || c == '\t' || c == '\0' || c == '\r') goto start;
+  
+  buffer[bufferSize++] = c;
+  Serial.print((char)(buffer[bufferSize]));
+  //if(bufferSize >=60) bufferSize =0;
   
   switch(state) {
   case 0:
@@ -215,6 +222,8 @@ bool SerialData::write(HardwareSerial *dev) {
 	outBuffer[outSize++] = ' ';
 	
     dev->print(angle_mDeg);
+	
+	dev->print(speed_cmPs);
 	String num = String(angle_mDeg);
 	for(int i = 0; i < num.length(); i++)
 	{
