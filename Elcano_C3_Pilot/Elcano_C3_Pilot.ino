@@ -656,10 +656,10 @@ void RotateToAngle(int targetAngle, int currentHeading)
     return;
   }
 
-  //if not we set the steering angle and conitune turning.
-  if(ShortestAngle(targetAngle, currentHeading))
-  {
-  }
+//  //if not we set the steering angle and conitune turning.
+//  if(ShortestAngle(targetAngle, currentHeading))
+//  {
+//  }
 
   //was is our max steering angle?
   
@@ -671,62 +671,62 @@ void RotateToAngle(int targetAngle, int currentHeading)
  * that = comparison will give.
  */
 
-float ShortestAngle(float currentAngle, float targetAngle)
-{
-     // handle cases of positve past 180 and negative past -180
-     // This simplifies our calulations of smallest angle
-     currentAngle = UniformAngle(currentAngle);
-     targetAngle = UniformAngle(targetAngle);
-
-     //find the lowest angle
-
-     // case of positive positve
-     if( currentAngle >= 0 && targetAngle >= 0)
-     {
-        if(currentAngle > targetAngle)
-        {
-          return (currentAngle - targetAngle) * -1;
-        }
-        else
-        {
-          return (targetAngle - currentAngle);
-        }
-     }
-     
-     // case of negative negative
-     else if( currentAngle <= 0 && targetAngle <= 0)
-     {
-        if(currentAngle > targetAngle)
-        {
-          return (targetAngle - currentAngle);
-        }
-        else
-        {
-          return (currentAngle - targetAngle) * -1;
-        }
-     }
-     
-     // case of positve negative
-     else if( currentAngle >= 0 && targetAngle <= 0)
-     {
-        float retVal = (-currentAngle + targetAngle);
-        if(abs((180 - currentAngle) - (-180 - targetAngle)) < abs(retVal))
-        {
-          retVal = ((180 - currentAngle) - (-180 - targetAngle));
-        }
-        return retVal;
-     }
-     //case of negative positve
-     else if( currentAngle <= 0 && targetAngle >= 0)
-     {
-        float retVal = (-currentAngle + targetAngle);
-        if(abs(-(180 + currentAngle) - (180 - targetAngle)) < abs(retVal))
-        {
-          retVal = (-(180 + currentAngle) - (180 - targetAngle));
-        }
-        return retVal;
-     }
-}
+//float ShortestAngle(float currentAngle, float targetAngle)
+//{
+//     // handle cases of positve past 180 and negative past -180
+//     // This simplifies our calulations of smallest angle
+//     currentAngle = UniformAngle(currentAngle);
+//     targetAngle = UniformAngle(targetAngle);
+//
+//     //find the lowest angle
+//
+//     // case of positive positve
+//     if( currentAngle >= 0 && targetAngle >= 0)
+//     {
+//        if(currentAngle > targetAngle)
+//        {
+//          return (currentAngle - targetAngle) * -1;
+//        }
+//        else
+//        {
+//          return (targetAngle - currentAngle);
+//        }
+//     }
+//     
+//     // case of negative negative
+//     else if( currentAngle <= 0 && targetAngle <= 0)
+//     {
+//        if(currentAngle > targetAngle)
+//        {
+//          return (targetAngle - currentAngle);
+//        }
+//        else
+//        {
+//          return (currentAngle - targetAngle) * -1;
+//        }
+//     }
+//     
+//     // case of positve negative
+//     else if( currentAngle >= 0 && targetAngle <= 0)
+//     {
+//        float retVal = (-currentAngle + targetAngle);
+//        if(abs((180 - currentAngle) - (-180 - targetAngle)) < abs(retVal))
+//        {
+//          retVal = ((180 - currentAngle) - (-180 - targetAngle));
+//        }
+//        return retVal;
+//     }
+//     //case of negative positve
+//     else if( currentAngle <= 0 && targetAngle >= 0)
+//     {
+//        float retVal = (-currentAngle + targetAngle);
+//        if(abs(-(180 + currentAngle) - (180 - targetAngle)) < abs(retVal))
+//        {
+//          retVal = (-(180 + currentAngle) - (180 - targetAngle));
+//        }
+//        return retVal;
+//     }
+//}
 
 /* This function converts any angle we are dealing with to be from 0 to 180 and 
  * anything greater than 180 and less than 0 to be represented as a negative 
