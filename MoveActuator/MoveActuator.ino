@@ -268,7 +268,7 @@ void loop()
         BrakeIncrement = -BrakeIncrement;
     moveBrake(BrakePosition);
 #endif  // BRAKE_RAMP  
-  
+  #undef STEER_RAMP
  // apply steering
 #ifdef STEER_RAMP
     SteerPosition += SteerIncrement;
@@ -306,10 +306,10 @@ void outputToSerial()
 #ifdef STEER_RAMP 
      int left = analogRead(A2);               //Steer
      int right = analogRead(A3);
-     Serial.print(left);   Serial.print("\t"); //Left turn sensor
-     Serial.print(right);  Serial.print("\t"); //Right turn sensor
+//     Serial.print(left);   Serial.print("\t"); //Left turn sensor
+//     Serial.print(right);  Serial.print("\t"); //Right turn sensor
 #endif //STEER_RAMP
-  Serial.println(micros()); //Current time and end line
+//  Serial.println(micros()); //Current time and end line
 }
 /*---------------------------------------------------------------------------------------*/
 void moveVehicle(int counts)

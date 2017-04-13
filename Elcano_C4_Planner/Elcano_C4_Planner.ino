@@ -3,8 +3,8 @@
 
 #include <SPI.h>
 #include <SD.h>
-#include <Elcano_Serial.h>
-
+#include <ElcanoSerial.h>
+using namespace elcano;
 SerialData dt;
 ParseState ps;
 
@@ -132,7 +132,7 @@ we could have another processor whose sole function is communication.
 #define START  -1
 #define EMPTY  -2
 
-void DataReady();
+//void DataReady();
 extern bool DataAvailable;
 
 // change this to match your SD shield or module;
@@ -602,12 +602,14 @@ void SendPath(waypoint *course, int count)
   {
      Results.clear();
      Results.number = i;
-     Results.kind = MSG_SEG;
+     Results.kind = MsgType::seg;
      Results.posE_cm = course->east_mm / 10;
      Results.posN_cm = course->north_mm / 10;
      float angle = atan2(course->Nvector_x1000, course->Evector_x1000) * 180 / PI + 90.;
      Results.bearing_deg = (long) (-angle);
      Results.speed_cmPs = course->speed_mmPs / 10;
+
+     while(1) Serial.println(String(Results.posE_cm) + ", " + String(Results.posN_cm));
      
      Results.write(&Serial2);
   }
@@ -1040,13 +1042,14 @@ void setup()
 	Serial.println();
 	pinMode(DATA_READY, INPUT);
 	DataAvailable = false;
-	attachInterrupt(0, DataReady, FALLING);
+//	attachInterrupt(0, DataReady, FALLING);
 	
 	initialize();
 
 	dt.clear();
 	ps.dt = &dt;
-	ps.dev = &Serial1;
+  ps.input = &Serial1;
+	ps.output = &Serial1;
 	
 	Serial1.begin(9600);
 	Serial2.begin(9600);
@@ -1073,9 +1076,9 @@ void loop()
     if (DataAvailable)
     {
         // read vehicle position from C6
-        readline(0);
+//        readline(0);
         // send data to C3
-        writeline(0);
+//        writeline(0);
         
         digitalWrite(C4_DATA_SENT, HIGH);  // transition interrupts the processor
         delay(1);

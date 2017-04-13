@@ -33,7 +33,7 @@ volatile long odo_mm = 0; // this is used by the interrupt
 // We create a new struct becuase the SerialData should only be used to send data.
 struct TargetLocation
 {
-   long int targetSpeed;
+   long int targetSpeed_cmPs;
    long int bearing;
    long int northPos;
    long int eastPos;
@@ -450,38 +450,7 @@ void go20mNorth()
 //  }
 }
 
-////////////////////////////////////////////////////////////////////////////////
-/* Process segement assures that we received a valid TargetLocation and not 
- * noise. It then stores the data in another struct that holds similar data. 
- * This is done for loose coupling. If we need to change the point data stored 
- * locally, we don't need to try to change the elcano serial file.
- */
-bool ProcessTargetLocation(TargetLocation *currentTargetLocation, SerialData instructions)
-{
-  // Each statement checks that the data received is not int_max.
-  if(instructions.speed_cmPs == 2147483648)
-  {
-    return false;
-  }
-  else if(instructions.posE_cm == 2147483648)
-  {
-    return false;
-  }
-  else if(instructions.posN_cm == 2147483648)
-  {
-    return false;
-  }
-  else if(instructions.bearing_deg == 2147483648)
-  {
-    return false;
-  }
-  // If none of the data was corrupted then we can store it in the TargetLocation struct provided.
-  currentTargetLocation->targetSpeed = instructions.speed_cmPs;
-  currentTargetLocation->bearing = instructions.bearing_deg;
-  currentTargetLocation->eastPos = instructions.posE_cm;
-  currentTargetLocation->northPos = instructions.posN_cm;
-  return true;
-}
+
 
 bool ReadWaypoints(TargetLocation* TargetLocationArray)
 {
@@ -509,11 +478,8 @@ bool ReadWaypoints(TargetLocation* TargetLocationArray)
       else
       //process and store if valid. 
       {
-        if(ProcessTargetLocation(&currentTargetLocation, dataRead))
-        {
           TargetLocationArray[count] = currentTargetLocation;
           count++;
-        }
         // send back acknowledgement
       }
     }
@@ -649,17 +615,14 @@ void moveFixedDistance(long length_mm, long speed_mms)
   while(true)
   {
     ParseStateError r = parseState.update();
-//    Serial.println("waiting for initial location: " + String(static_cast<int8_t>(r)));
+    Serial.println("waiting for initial location: " + String(static_cast<int8_t>(r)));
     if(r == ParseStateError::success)
     {
       Serial.println("got initial location");
-      serialData.posE_cm /= 10000; // avoid overflow
-      serialData.posN_cm /= 10000;
       break;
     }
   }
   double initialDistance_cm = sqrt(abs(abs(serialData.posE_cm) * abs(serialData.posE_cm) + abs(serialData.posN_cm) * abs(serialData.posN_cm)));
-//  Serial.println(initialDistance_cm);
   serialData.clear();
   serialData.kind = MsgType::drive;
   serialData.speed_cmPs = speed_mms/10; // The initial speed to send.
@@ -671,16 +634,15 @@ void moveFixedDistance(long length_mm, long speed_mms)
   while(currentDistance_cm < length_cm + initialDistance_cm){
     ParseStateError r = parseState.update();
     if(r == ParseStateError::success){
-      serialData.posE_cm /= 10000;
-      serialData.posN_cm /= 10000;
       double currentLocation_cm = sqrt(abs(abs(serialData.posE_cm) * abs(serialData.posE_cm) + abs(serialData.posN_cm) * abs(serialData.posN_cm)));
+      Serial.println(currentLocation_cm);
       double delta_cm = abs(currentLocation_cm - initialDistance_cm);
       currentDistance_cm += delta_cm;
 //      Serial.println("Current: " + String(currentDistance_cm));
 
     }    
   }
-//  Serial.println("Done moving fixed distance");
+  Serial.println("Done moving fixed distance");
   serialData.kind = MsgType::drive;
   serialData.speed_cmPs = 0;
   serialData.angle_mDeg = 0;
@@ -874,6 +836,52 @@ bool ValidRange(float x1,float y1, float x2,float y2, float range)
   return retVal;
 }
 
+void moveFixedDistanceWheelRev(long distance_mm)
+{
+  long target_mm = odo_mm + distance_mm;
+  SerialData command;
+  command.kind = MsgType::drive;
+  command.speed_cmPs = 200;
+  command.angle_mDeg = 0;
+  command.write(&Serial1);
+
+  while(odo_mm < target_mm);
+
+  command.speed_cmPs = 0;
+  command.write(&Serial1);
+}
+
+void incrementDistance()
+{
+  odo_mm += WHEEL_CIRCUM_MM / 4;
+}
+
+
+void go10NorthNoCubic()
+{
+  long startX = 0;
+  long startY = 0;
+  int startBearing;
+  while(true)
+  {
+    ParseStateError r = parseState.update();
+    if(r == ParseStateError::success)
+    {
+      break;
+    }
+    else Serial.println(static_cast<int8_t>(r));
+  }
+
+  TargetLocation target; // temp, will be replaced by C4 input
+  target.northPos = startY + 1000;
+  target.eastPos = startX;
+  target.bearing = 0;
+  target.targetSpeed_cmPs = 0;
+
+
+  int deg = ShortestAngle(serialData.bearing_deg, target.bearing);
+  while(1)Serial.println(deg);
+}
 
 ////////////////////////////////////////////////////////////////////////////////
 void setup() 
@@ -903,33 +911,12 @@ void setup()
   serialData.clear();
   pinMode(8,OUTPUT);
   attachInterrupt(digitalPinToInterrupt(2), incrementDistance, RISING);
-//  squareRoutine();
-}
 
-
-void moveFixedDistanceWheelRev(long distance_mm)
-{
-  long target_mm = odo_mm + distance_mm;
-  SerialData command;
-  command.kind = MsgType::drive;
-  command.speed_cmPs = 200;
-  command.angle_mDeg = 0;
-  command.write(&Serial1);
-
-  while(odo_mm < target_mm);
-
-  command.speed_cmPs = 0;
-  command.write(&Serial1);
-}
-
-void incrementDistance()
-{
-  odo_mm += WHEEL_CIRCUM_MM / 4;
+  moveFixedDistance(1000, 5000);
 }
 
 void loop() 
 {
-
   //-----------------------Input from C6--------------------//
   ParseStateError r = parseState.update();
   if(r == ParseStateError::success)
@@ -940,11 +927,12 @@ void loop()
   }
 //  Serial.println(static_cast<int8_t>(r));
   //-----------------------Output to C2-----------------------//
+  serialData.clear();
   serialData.kind = MsgType::drive;
   serialData.angle_mDeg = 0;
   serialData.speed_cmPs = 0;
   serialData.write(&Serial1);
 
-
+  delay(100);
 
 }

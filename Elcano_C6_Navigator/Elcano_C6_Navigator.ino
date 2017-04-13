@@ -467,7 +467,6 @@ void waypoint::SetTime(char *pTime, char * pDate)
 /*---------------------------------------------------------------------------------------*/
 void loop()
 {
-    Serial.println(String(newPos.x_Pos) + '\t' + String(newPos.y_Pos));
     
     unsigned long deltaT_ms;
     unsigned long time = millis();
@@ -598,6 +597,7 @@ void loop()
     data.write(&Serial2);
 
   }
+  else Serial.println("noComs");
     //data.write(&Serial2);
     //C2_Results.write(&Serial2);   
     

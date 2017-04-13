@@ -41,10 +41,6 @@ static struct hist {
   // results of every interrupt
 } history;
 
-#define SPEED_HIST_LENGTH 5
-int speedHistIndex = 0;
-long speedHistory[SPEED_HIST_LENGTH];
-
 
 Servo STEER_SERVO;
 Servo BRAKE_SERVO;
@@ -191,9 +187,7 @@ double desiredSpeed = 0;
 #define PID_CALCULATE_TIME 50
 
 double proportionalConstant = .0175;
-//double proportionalConstant = .405;
 double integralConstant = .0141;
-//double integralConstant = .02;
 double derivativeConstant = .00001;
 
 // PID setup block
@@ -204,6 +198,7 @@ PID steerPID(&SteerAngle_wms, &PIDSteeringOutput, &desiredAngle, steeringP, stee
 /*-----------------------------------setup-----------------------------------------------*/
 void setup()
 {
+  Serial.begin(9600);
   startTime = millis();
   
   //Set up pins
@@ -258,9 +253,6 @@ void setup()
 //  attachInterrupt(digitalPinToInterrupt(IRPT_ESTOP), ISR_ESTOP_rise, RISING);//ebrake
 //  attachInterrupt(digitalPinToInterrupt(IRPT_BRAKE), ISR_BRAKE_rise, RISING);//left stick u/d mode select
   attachInterrupt(digitalPinToInterrupt(IRPT_MOTOR_FEEDBACK), ISR_MOTOR_FEEDBACK_rise, RISING);
-
-
-  Serial.begin(9600);
   
   parseState.dt = &Results;
   parseState.input = &Serial3;
@@ -268,10 +260,12 @@ void setup()
   Serial3.begin(baudrate);
   parseState.capture = MsgType::drive;
   // msgType::drive uses `speed_cmPs` and `angle_deg`
+
   
   Results.clear();
   SpeedCyclometer_mmPs = 0;
   brake(false);
+  desiredSpeed = 0;
 }
 
 /*-----------------------------------loop------------------------------------------------*/
@@ -280,24 +274,13 @@ void loop() {
   Results.clear();
   Results.kind = MsgType::drive;
   Results.speed_cmPs = SpeedCyclometer_mmPs/10;
-  // temporary
-//  Results.speed_cmPs = 0;
-  // end temporary
   Results.angle_mDeg = 0;
   Results.write(&Serial3);
- 
-  
 
   nextTime = nextTime + LOOP_TIME_MS;
   computeSpeed(&history);
   computeAngle();
-
-  for(int i = 0; i < SPEED_HIST_LENGTH; i++)
-  {
-    Serial.println(speedHistory[i]);
-  }
   
-  desiredSpeed = 0;
   ThrottlePID();
   SteeringPID();
 
@@ -319,11 +302,11 @@ void loop() {
     ParseStateError r = parseState.update();
     if(r == ParseStateError::success)
     {
+      Serial.println("inside");
       processHighLevel(&Results);
     }
 //    else Serial.println("comms error: " + String(static_cast<int8_t>(r)));
   }
-
 
   
   calibrationTime_ms += LOOP_TIME_MS;
@@ -397,6 +380,7 @@ void loop() {
     // No, pause til the next loop start time.
     delay(delayTime);
   }
+  
 }
 
 
@@ -477,12 +461,8 @@ void processHighLevel(SerialData * results)
   Serial.println(results->angle_mDeg);
   desiredSpeed = results->speed_cmPs * 10;
   desiredAngle = turn_signal;
-
   
-//  if(desiredSpeed != 0) brake(MIN_BRAKE_OUT);
-//  if(desiredSpeed == 0) brake(MAX_BRAKE_OUT);
-  
-//  Serial.println(String(results->speed_cmPs * 10) + " " + String(results->angle_mDeg));
+  Serial.println(String(results->speed_cmPs * 10) + " " + String(results->angle_mDeg));
 
 }
 
@@ -750,6 +730,7 @@ void moveVehicle(int acc)
 // WheelRev is called by an interrupt.
 void WheelRev()
 {
+  
   oldClickNumber = ClickNumber;
   //static int flip = 0;
   digitalWrite(29, HIGH);
@@ -799,6 +780,7 @@ void setupWheelRev()
 
 /*----------------------------computeSpeed-----------------------------------------------*/
 void computeSpeed(struct hist *data){
+
   //cyclometer has only done 1 or 2 revolutions
   //normal procedures begin here
   unsigned long WheelRev_ms = TickTime - OldTick;
@@ -806,8 +788,6 @@ void computeSpeed(struct hist *data){
   if (InterruptState == IRQ_NONE || InterruptState == IRQ_FIRST)
   { // No data
     SpeedCyclometer_mmPs = 0;
-    speedHistory[speedHistIndex] = SpeedCyclometer_mmPs;
-    speedHistIndex = (speedHistIndex + 1) % SPEED_HIST_LENGTH;
     SpeedCyclometer_revPs = 0;
     return;
   }
@@ -820,8 +800,6 @@ void computeSpeed(struct hist *data){
     data->oldTime_ms = OldTick;
     data->nowTime_ms = TickTime;  // time stamp for oldSpeed_mmPs
     data->oldClickNumber = data->nowClickNumber = ClickNumber;
-    speedHistory[speedHistIndex] = SpeedCyclometer_mmPs;
-    speedHistIndex = (speedHistIndex + 1) % SPEED_HIST_LENGTH;
     return;
   }
 
@@ -835,8 +813,6 @@ void computeSpeed(struct hist *data){
       { // too long without getting a tick
          SpeedCyclometer_mmPs = 0;
          SpeedCyclometer_revPs = 0;
-         speedHistory[speedHistIndex] = SpeedCyclometer_mmPs;
-         speedHistIndex = (speedHistIndex + 1) % SPEED_HIST_LENGTH;
          if (timeStamp - data->nowTime_ms > 2 * MaxTickTime_ms)
          {
           InterruptState = IRQ_FIRST;  //  Invalidate old data
@@ -853,8 +829,6 @@ void computeSpeed(struct hist *data){
           if (SpeedCyclometer_mmPs < 0)
             SpeedCyclometer_mmPs = 0;
           SpeedCyclometer_revPs = SpeedCyclometer_mmPs / WHEEL_CIRCUM_MM;
-          speedHistory[speedHistIndex] = SpeedCyclometer_mmPs;
-          speedHistIndex = (speedHistIndex + 1) % SPEED_HIST_LENGTH;
        }
        else
        { // accelerating; should get new data soon
@@ -875,10 +849,7 @@ void computeSpeed(struct hist *data){
     data->oldSpeed_mmPs = SpeedCyclometer_mmPs;
     SpeedCyclometer_revPs = 1000.0 / WheelRev_ms;
     SpeedCyclometer_mmPs  = WHEEL_CIRCUM_MM * SpeedCyclometer_revPs;
-
-    speedHistory[speedHistIndex] = SpeedCyclometer_mmPs;
-    speedHistIndex = (speedHistIndex + 1) % SPEED_HIST_LENGTH;
-
+    
     data->oldTickMillis = data->tickMillis;
     data->tickMillis = millis();
     
