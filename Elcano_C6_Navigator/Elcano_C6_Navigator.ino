@@ -82,11 +82,13 @@ Serial lines:
 #include <SD.h>
 #include <IO.h>
 #include <Matrix.h>
+#include <ElcanoSerial.h>
+using namespace elcano;
 
 #include <Wire.h>
 //#include <Adafruit_LSM303.h>
 #include <Adafruit_LSM303_U.h>
-#include <Elcano_Serial.h>
+//#include <Elcano_Serial.h>
 #include <FusionData.h>
 
 /* Assign a unique ID to this sensor at the same time */
@@ -112,7 +114,7 @@ namespace C6_Navigator
 
 // Set the GPSRATE to the baud rate of the GPS module. Most are 4800
 // but some are 38400 or other. Check the datasheet!
-#define GPSRATE 4800
+#define GPSRATE 9600
 
 #define MAX_WAYPOINTS 10
 /*   There are two coordinate systems.
@@ -145,7 +147,9 @@ const char* ObstHeader ="Left,Front,Right,Busy";
 
 // Added by Varsha
 SerialData C2_Results;
-SerialData C4_Results;
+SerialData data;
+ParseState ps;
+
 
 
 //#define WHEEL_DIAMETER_MM 397
@@ -172,24 +176,24 @@ PositionData oldPos, newPos;
 */
 void displayResults(SerialData &Results)
 {
-    Serial.print("SerialData::Kind :" );
-    Serial.println(Results.kind);
-    Serial.print("SerialData::Number:");    
-    Serial.println(Results.number);    
-    Serial.print("SerialData::speed_cmPs:");
-    Serial.println(Results.speed_cmPs);
-    Serial.print("SerialData::angle_deg:");
-    Serial.println(Results.angle_deg);    // front wheels
-    Serial.print("SerialData::bearing_deg:");
-    Serial.println(Results.bearing_deg);  // compass direction
-    Serial.print("SerialData::posE_cm:");
-    Serial.println(Results.posE_cm);
-    Serial.print("SerialData::posN_cm:");
-    Serial.println(Results.posN_cm);
-    Serial.print("SerialData::probability:");
-    Serial.println(Results.probability);
-    Serial.print("SerialData::distance_travelled_cm:");
-    Serial.println(Results.distance_travelled_cm);
+//    Serial.print("SerialData::Kind :" );
+//    Serial.println(Results.kind);
+//    Serial.print("SerialData::Number:");    
+//    Serial.println(Results.number);    
+//    Serial.print("SerialData::speed_cmPs:");
+//    Serial.println(Results.speed_cmPs);
+//    Serial.print("SerialData::angle_mDeg:");
+//    Serial.println(Results.angle_mDeg);    // front wheels
+//    Serial.print("SerialData::bearing_deg:");
+//    Serial.println(Results.bearing_deg);  // compass direction
+//    Serial.print("SerialData::posE_cm:");
+//    Serial.println(Results.posE_cm);
+//    Serial.print("SerialData::posN_cm:");
+//    Serial.println(Results.posN_cm);
+//    Serial.print("SerialData::probability:");
+//    Serial.println(Results.probability);
+//    Serial.print("SerialData::distance_travelled_cm:");
+//    Serial.println(Results.distance_travelled_cm);
 }
 
 //---------------------------------------------------------------------------
@@ -221,11 +225,13 @@ long GetHeading(void)
     sensors_event_t event;
     mag.getEvent(&event);
     
-    Serial.print("X:");
-    Serial.print(event.magnetic.x);
-    Serial.print(" Y:");
-    Serial.print(event.magnetic.y);
-    Serial.println("");
+//    Serial.print("X:");
+//    Serial.print(event.magnetic.x);
+//    Serial.print(" Y:");
+//    Serial.print(event.magnetic.y);
+//    Serial.print(" z:");
+//    Serial.print(event.magnetic.z);
+//    Serial.println("");
     
     //Calculate the current heading (angle of the vector y,x)
     //Normalize the heading
@@ -236,7 +242,8 @@ long GetHeading(void)
         heading = 360 + heading;
     }
     // Converting heading to x1000
-    return ((long)(heading * HEADING_PRECISION ));
+    return ((long)(heading * HEADING_PRECISION));
+//    return heading;
 }
 
 /*
@@ -249,7 +256,7 @@ void TestSpeed ( SerialData &data )
   
   Serial.println(randNumber);
   data.clear();
-  data.kind = MSG_SENSOR;
+//  data.kind = MSG_SENSOR;
   data.speed_cmPs = randNumber;
 }
 /*
@@ -258,7 +265,6 @@ void TestSpeed ( SerialData &data )
 
 
 /*---------------------------------------------------------------------------------------*/
-
 void initialize()
 {
   pinMode(GPS_POWER, OUTPUT);
@@ -273,22 +279,23 @@ void initialize()
   Serial3.flush();
   delay(5000);
   // prints title with ending line break
-  Serial.println(" GPS parser");
+ // Serial.println(" GPS parser");
 //  Serial.print("Acquiring GPS RMC...");
-  checksum(protocol);
+  common::checksum(protocol);
   Serial3.println(protocol);
   disable[10] = '2';
-  checksum(disable);
+  common::checksum(disable);
   Serial3.println(disable);   // no GSA
 
-  GPS_available = estimated_position.AcquireGPRMC(70000);
+  GPS_available = estimated_position.AcquireGPRMC(200);
   
-  Serial.println(TimeHeader);
+ /* Serial.println(TimeHeader);
   Serial.println(StartTime);
   Serial.println(RawKF);
   Serial.print(Header);
   Serial.print(Header);
   Serial.println(ObstHeader);
+  */
   if (GPS_available)
   {
     estimated_position.sigma_mm = 1.0E4; // 10 m standard deviation
@@ -301,7 +308,8 @@ void initialize()
     estimated_position.Compute_mm();
     estimated_position.sigma_mm = 1.0E5; // 100 m standard deviation
     estimated_position.time_ms = millis();
-//    Serial.println("Failed");
+    Serial.println("Failed");
+//    while(1){}
   }
   // Set velocity and acceleration to zero.
   estimated_position.speed_mmPs = 0;
@@ -353,19 +361,18 @@ void initialize()
 void setup()
 {
   
-randomSeed(analogRead(0));
-    pinMode(Rx0, INPUT);
-    pinMode(Tx0, OUTPUT);
-    pinMode(GPS_RX, INPUT);
-    pinMode(GPS_TX, OUTPUT);
-    pinMode(C4_RX, INPUT);
-    pinMode(C4_TX, OUTPUT);
-    pinMode(INU_RX, INPUT);
-    pinMode(INU_TX, OUTPUT);
-    pinMode(GPS_POWER, OUTPUT);
-    Serial3.begin(GPSRATE); // GPS
+      //randomSeed(analogRead(0));
+//    pinMode(Rx0, INPUT);
+//    pinMode(Tx0, OUTPUT);
+//    pinMode(GPS_RX, INPUT);
+//    pinMode(GPS_TX, OUTPUT);
+//    pinMode(C4_RX, INPUT);
+//    pinMode(C4_TX, OUTPUT);
+//    pinMode(INU_RX, INPUT);
+//    pinMode(INU_TX, OUTPUT);
+//    pinMode(GPS_POWER, OUTPUT);
+   
     Serial.begin(9600);
-    Serial2.begin(9600);
     digitalWrite(GPS_POWER, LOW);         // pull low to turn on!
     // make sure that the default chip select pin is set to
     // output, even if you don't use it:
@@ -379,14 +386,26 @@ randomSeed(analogRead(0));
     /* Initializing old PositionData struct to default values
      *  Added by Varsha
      */
+    data.clear();
+    ps.dt = &data;
+   
+    ps.input = &Serial2;
+    ps.output = &Serial2;
+
+    ps.capture = MsgType::drive;
+    
+    Serial1.begin(baudrate);
+    Serial2.begin(baudrate);
+    Serial3.begin(GPSRATE); // GPS
+    pinMode(16,OUTPUT);
+  
     oldPos.Clear();
-	oldPos.time_ms = millis();
+    oldPos.time_ms = millis();
 
     //Enable auto-gain
     mag.enableAutoRange(true);
 
     //Initialise the sensor
-
     delay(100);
     if(!mag.begin())
     {
@@ -419,6 +438,7 @@ randomSeed(analogRead(0));
           dataFile.close();
       }
     }
+    
     // Commented by Varsha as low-level routine will be used from C2
     //pinMode(CYCLOMETER, INPUT);
     //attachInterrupt (5, WheelRev, RISING);
@@ -447,7 +467,8 @@ void waypoint::SetTime(char *pTime, char * pDate)
 /*---------------------------------------------------------------------------------------*/
 void loop()
 {
-    Serial.println("Inside C6 loop");
+//    Serial.println("Inside C6 loop");
+    
     unsigned long deltaT_ms;
     unsigned long time = millis();
     unsigned long endTime = time + LoopPeriod;
@@ -456,8 +477,7 @@ void loop()
     char* pData;
     char* pGPS;
     char* pObstacles;
-    bool GPS_available = GPS_reading.AcquireGPGGA(300 );
-
+    bool GPS_available = GPS_reading.AcquireGPGGA(300);
     /* Perform dead reckoning from clock and previous state
     Read compass.
     ReadINU.
@@ -468,15 +488,15 @@ void loop()
 
     // Added by Varsha - to get heading
     CurrentHeading = GetHeading();
-    Serial.print("CurrentHeading:");
-    Serial.println(CurrentHeading);
+    //Serial.print("CurrentHeading:");
+   // Serial.println(CurrentHeading);
     // End of changes
     
 /*  Read Optical Odometer;
     Read lane deviation;   
     If (message from C4)    
     { */     
-      readline(2);  // C4 Path planner on serial 2 get new route and speed
+//      readline(2);  // C4 Path planner on serial 2 get new route and speed
  /* }
     If (message from C3)
     { */
@@ -495,65 +515,97 @@ void loop()
     // Send vehicle state to C6 and C4.
 
     // Preparing Result struct to send data to C4
-    C4_Results.clear();
-    C4_Results.bearing_deg = CurrentHeading;
-    C4_Results.posE_cm = estimated_position.east_mm;
-    C4_Results.posN_cm = estimated_position.north_mm;
-    C4_Results.kind = MSG_GOAL;
+/*    data.clear();
+    data.bearing_deg = CurrentHeading;
+    data.posE_cm = estimated_position.east_mm;
+    data.posN_cm = estimated_position.north_mm;
+//    data.kind = MSG_GOAL;
 
     //Sending GPS position from C6 to C2
     C2_Results.clear();    
     C2_Results.posE_cm = estimated_position.east_mm/10;
     C2_Results.posN_cm = estimated_position.north_mm/10;
-    C2_Results.kind = MSG_SENSOR;
+//    C2_Results.kind = MSG_SENSOR;
     
     // Read data from C2 using Elcano_Serial
     C2_Results.clear();
-    readSerial(&Serial2, &C2_Results);
+//    readSerial(&Serial2, &C2_Results);
     TestSpeed(C2_Results);
     displayResults(C2_Results);
-    
-    if ( C2_Results.kind == MSG_SENSOR )
-    {
-        // Updating the C4_Results with the
-        // odometer details from C2
-        C4_Results.speed_cmPs = C2_Results.speed_cmPs;
-      
-	    newPos.speed_cmPs = C2_Results.speed_cmPs;
-	    newPos.bearing_deg = CurrentHeading;
-	    newPos.time_ms = time;
-		
-        ComputePositionWithDR(oldPos, newPos);
-	  
-	    // Populate PositionData struct
-	    PositionData gps, fuzzy_out;
-		
-		gps.x_Pos = estimated_position.latitude;
-		gps.y_Pos = estimated_position.longitude;
+      // Preparing Result struct to send data to C4
+      */
+//
+//   data.kind = MsgType::goal;
+//   data.bearing_deg = CurrentHeading;
+//   data.posE_cm = GPS_reading.latitude;
+//   data.posN_cm = GPS_reading.longitude;
+//   data.write(&Serial2);
+   data.clear();
+   
+//   Serial.print(String(estimated_position.north_mm) + "estimated_position.north_mm\t");
+//   Serial.println(String(estimated_position.east_mm) + "estimated_position.east_mm");
+   
 
-	    
-	    // Translate GPS position
-	    TranslateCoordinates(newPos, gps, 1);
-	    RotateCoordinates(gps, newPos.bearing_deg, ROTATE_CLOCKWISE);
-	    FindFuzzyCrossPointXY(gps, newPos.distance_mm, newPos.bearing_deg, fuzzy_out);
-		RotateCoordinates(fuzzy_out, newPos.bearing_deg, ROTATE_COUNTER_CLOCKWISE);
-		TranslateCoordinates(oldPos, fuzzy_out, 1);
-
-	    // Swap data
-	    CopyData(oldPos, newPos);
-
-		// Copy GPS fuzzy output to C4
-		C4_Results.posE_cm = fuzzy_out.x_Pos;
-		C4_Results.posN_cm = fuzzy_out.y_Pos;
-    }
+//     //Sending GPS position from C6 to C2
+//  data.kind = MsgType::sensor;
+//  data.bearing_deg = CurrentHeading;
+//  //C2_Results.speed_cmPs = 0;
+//  //C2_Results.angle_mDeg = 0;
+//  data.posE_cm = GPS_reading.latitude/10;
+//  data.posN_cm = GPS_reading.longitude/10;
+//    // Read data from C2 using Elcano_Serial
+//  data.write(&Serial2);
+  data.clear();
+  
+  ParseStateError r = ps.update();
+  if(r == ParseStateError::success) 
+  {
+    Serial2.end();
+    Serial2.begin(baudrate);
         
-    C4_Results.write(&Serial2);
-    C2_Results.write(&Serial2);   
+    newPos.speed_cmPs = data.speed_cmPs;
+    newPos.bearing_deg = CurrentHeading;
+    newPos.time_ms = time;
+  
+    ComputePositionWithDR(oldPos, newPos);
+  
+    // Populate PositionData struct
+    PositionData gps, fuzzy_out;
+  
+    gps.x_Pos = estimated_position.latitude;
+    gps.y_Pos = estimated_position.longitude;
+
+
     
-    Serial.print("time, gps, dt_ms = ");
-    Serial.print(time, DEC); Serial.print(", ");
-    Serial.print(GPS_reading.time_ms, DEC); Serial.print(", ");
-    Serial.println(deltaT_ms, DEC);
+    // Translate GPS position
+    TranslateCoordinates(newPos, gps, 1);
+    RotateCoordinates(gps, newPos.bearing_deg, ROTATE_CLOCKWISE);
+    FindFuzzyCrossPointXY(gps, newPos.distance_mm, newPos.bearing_deg, fuzzy_out);
+    RotateCoordinates(fuzzy_out, newPos.bearing_deg, ROTATE_COUNTER_CLOCKWISE);
+    TranslateCoordinates(oldPos, fuzzy_out, 1);
+
+    // Swap data
+    CopyData(oldPos, newPos);
+    
+    // Copy GPS fuzzy output to C4
+    data.kind = MsgType::sensor;
+    // speed already set
+    data.posE_cm = fuzzy_out.x_Pos;
+    data.posN_cm = fuzzy_out.y_Pos;
+    data.bearing_deg = CurrentHeading / HEADING_PRECISION;
+    data.angle_mDeg = 0;
+
+    Serial.println(String(fuzzy_out.x_Pos) + ", " + String(fuzzy_out.y_Pos));
+    data.write(&Serial2);
+
+  }
+    //data.write(&Serial2);
+    //C2_Results.write(&Serial2);   
+    
+//    Serial.print("time, gps, dt_ms = ");
+//    Serial.print(time, DEC); Serial.print(", ");
+//    Serial.print(GPS_reading.time_ms, DEC); Serial.print(", ");
+//    Serial.println(deltaT_ms, DEC);
 
     // Send vehicle state to C3 and C4.
 
@@ -562,28 +614,27 @@ void loop()
     dataFile = SD.open(GPSfile, FILE_WRITE);
 
     // if the file is available, write to it:
-    if (GPS_available)
-    {
+    if (GPS_available){
         digitalWrite(GPS_GREEN_LED, HIGH);
         pGPS = GPS_reading.formPointString();
         if (dataFile) dataFile.print(pGPS);
         // print to the serial port too:
-        Serial.print(pGPS);
+        //Serial.print(pGPS);
         pData = estimated_position.formPointString();
         if (dataFile) dataFile.print(pData);
-        Serial.print(pData);
+        //Serial.print(pData);
         Serial3.print(pData);  // send data to C4 path planner
         pObstacles = obstacleDetect();
         if (dataFile)
         {
           dataFile.print(pObstacles);
         }
-        Serial.print(pObstacles);
+        //Serial.print(pObstacles);
     }
     else
     {
         digitalWrite(GPS_GREEN_LED, LOW);
-        Serial.print("GPS not available");
+        //Serial.print("GPS not available");
     }
 
     work_time = millis() - time;
@@ -592,7 +643,7 @@ void loop()
     {
       dataFile.println(PerCentBusy);
     }
-    Serial.println(PerCentBusy);
+    //Serial.println(PerCentBusy);
     // if the file didn't open, pop up an error:
     if (dataFile)
     {

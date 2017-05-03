@@ -1,4 +1,4 @@
-/*  SONAR BOARD
+ /*  SONAR BOARD
 
     The board uses an Arduino Micro, with interrupts on digital pins 0, 1, 2, 3 and 7.
     
@@ -193,8 +193,6 @@ void loop()
 
     setRound(LOW, LOW); //Send a pulse on sonars, superfluous
     
-    interrupts(); // Not sure if we need this here at all
-
     //Gets the current sample index to be used for the range array
     sampleIndex = (roundCount % SAMPLE_DATA_SIZE);
 
