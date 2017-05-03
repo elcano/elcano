@@ -39,6 +39,7 @@ STATE('G', goal)
 STATE('X', seg)
 #undef STATE
     default:
+	  mostRecent = c;
       return ParseStateError::bad_type;
     }
     goto start;
@@ -96,7 +97,7 @@ STATE('X', seg)
     }
 STATES(3, 13, 23, '}', 1, number)
 STATES(4, 14, 24, '}', 1, speed_cmPs)
-STATES(5, 15, 25, '}', 1, angle_deg)
+STATES(5, 15, 25, '}', 1, angle_mDeg)
 STATES(6, 16, 26, '}', 1, bearing_deg)
 STATES(7, 17, 27, '}', 1, probability)
 STATES(8, 18, 28, ',', 9, posE_cm)
@@ -130,9 +131,9 @@ bool SerialData::write(HardwareSerial *dev) {
     dev->print(speed_cmPs);
     dev->print("}");
   }
-  if (angle_deg != NaN && (kind == MsgType::drive || kind == MsgType::sensor)) {
+  if (angle_mDeg != NaN && (kind == MsgType::drive || kind == MsgType::sensor)) {
     dev->print("{a ");
-    dev->print(angle_deg);
+    dev->print(angle_mDeg);
     dev->print("}");
   }
   if (bearing_deg != NaN && kind != MsgType::drive) {
@@ -160,7 +161,7 @@ void SerialData::clear(void) {
   kind        = MsgType::none;
   number      = NaN;
   speed_cmPs  = NaN;
-  angle_deg   = NaN;
+  angle_mDeg   = NaN;
   bearing_deg = NaN;
   posE_cm     = NaN;
   posN_cm     = NaN;
@@ -171,14 +172,14 @@ bool SerialData::verify(void) {
   switch (kind) {
   case MsgType::drive:
     if (speed_cmPs  == NaN) return false;
-    if (angle_deg   == NaN) return false;
+    if (angle_mDeg   == NaN) return false;
     break;
   case MsgType::sensor:
     if (speed_cmPs  == NaN) return false;
     if (posE_cm     == NaN) return false;
     if (posN_cm     == NaN) return false;
     if (bearing_deg == NaN) return false;
-    if (angle_deg   == NaN) return false;
+    if (angle_mDeg   == NaN) return false;
     break;
   case MsgType::goal:
     if (number      == NaN) return false;

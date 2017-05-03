@@ -1,13 +1,16 @@
 // Common.h - header included for all Elcano modules
+namespace common {bool checksum(char* msg);}
 
+namespace elcano
+{
 // latitude and longitude are multiplied by 1,000,000.
 // (47.621300, -122.350900) is Seattle Center House.
-#define LATITUDE_ORIGIN   47621300
-#define LONGITUDE_ORIGIN -122350900
+#define LATITUDE_ORIGIN   47.621300
+#define LONGITUDE_ORIGIN -122.350900
 #define EARTH_RADIUS_MM 6371000000.
 #define PIf ((float) 3.1415926)
 #define PId 3.14159265358979
-#define PI ((float) 3.1415925)
+																														//#define PI ((float) 3.1415925)
 #define TO_RADIANS (PId/180.)
 #define COS_LAT (cos(((double) LATITUDE_ORIGIN)/1000000. * TO_RADIANS))
 // The buffer size that will hold a GPS sentence. They tend to be 80 characters long.
@@ -40,7 +43,7 @@
 // 10 mph = 4.44 m/s
 #define MAX_SPEED_mmPs       4444
 
-bool checksum(char* msg);
+
 
 class waypoint // best estimate of position and state
 // used either for a waypoint or a measured navigational fix
@@ -68,7 +71,7 @@ class waypoint // best estimate of position and state
 //    int bearing;  // degrees. 0 = North; 90 = East.
     long speed_mmPs; // vehicle speed in mm per second.
     int index;       // used for passing a sequence of waypoints over serial line.
-    
+   
     void Compute_mm();
     void Compute_LatLon();
 //    bool AcquireGPRMC(unsigned long max_wait_ms);
@@ -83,14 +86,15 @@ class waypoint // best estimate of position and state
     long  distance_mm(waypoint *other);
     void  vectors(waypoint *other);
     long  distance_mm(long east_mm, long north_mm);
-#ifdef MEGA
+	
+																//#ifdef MEGA
 // The following waypoint methods exist only on the C6 Navigator module.    
     void fuse(waypoint GPS_reading, int deltaT_ms);
     char* GetLatLon(char* parseptr);
     bool AcquireGPRMC(unsigned long max_wait_ms);
     bool AcquireGPGGA(unsigned long max_wait_ms);
     void SetTime(char *pTime, char * pDate);
-#endif
+																	//#endif
 };
 
 struct curve
@@ -123,3 +127,4 @@ struct junction
 };
 
 
+}

@@ -5,7 +5,7 @@
 //   C++ version by Tyler Folsom; March 6, 2012.
 
 #define TOLERANCE (1.0e-5)
-#define ARDUINO 1
+//#define ARDUINO 1
 #define MAX_MATRIX_SIZE 36
 #define REAL double
 
