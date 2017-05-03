@@ -2,7 +2,7 @@
 #include "globals.h"
 #include <PID_v1.h>
 #include <SPI.h>
-#include <Elcano_Serial.h>
+#include <ElcanoSerial.h>
 #include <Servo.h>
 using namespace elcano;
 
@@ -29,7 +29,10 @@ PID speedPID(&SpeedCyclometer_mmPs, &PIDThrottleOutput, &desiredSpeed, proportio
  */
 /*-----------------------------------setup-----------------------------------------------*/
 void setup()
-{ //Set up pins
+{
+  startTime = millis();
+  
+  //Set up pins
   STEER_SERVO.attach(STEER_OUT_PIN);
   BRAKE_SERVO.attach(BRAKE_OUT_PIN);
 
@@ -50,7 +53,6 @@ void setup()
     DAC_Write(channel, 0); // reset did not clear previous states
   }
   // put vehicle in initial state
-  steer(STRAIGHT_TURN_OUT);
   brake(MAX_BRAKE_OUT);
   moveVehicle(MIN_ACC_OUT);
   delay(500);   // let vehicle stabilize
@@ -69,6 +71,7 @@ void setup()
 
   setupWheelRev(); // WheelRev4 addition
   CalibrateTurnAngle(32, 20);
+  calibrateSensors();
   calibrationTime_ms = millis();
         attachInterrupt(digitalPinToInterrupt(IRPT_TURN),  ISR_TURN_rise,  RISING);//turn right stick l/r turn
         attachInterrupt(digitalPinToInterrupt(IRPT_GO),    ISR_GO_rise,    RISING);//left stick l/r
@@ -94,11 +97,14 @@ void loop() {
   // If the new nextTime value is <= LOOP_TIME_MS, we've rolled over.
   nextTime = nextTime + LOOP_TIME_MS;
   byte automate = processRC();
-  // @ToDo: Verify that this should be conditional. May be moot if it is
-  // replaced in the conversion to the new Elcano Serial protocol.
+  // END TEMPORARY
   if (automate == 0x01)
   {
-    processHighLevel(&Results);
+    ParseStateError r = parseState.update();
+    if(r == ParseStateError::success)
+    {
+      processHighLevel(&Results);
+    }
   }
 
   // @ToDo: What is this doing?
@@ -280,17 +286,26 @@ void squareRoutine(unsigned long sides, unsigned long &rcAuto) {
     brake(MAX_BRAKE_OUT);
     delay(1000);
 
-    brake(MIN_BRAKE_OUT);
-    delay(100);
-    loopTime = millis();
-    while (millis() < (loopTime + turnSec)) {
-      moveVehicle(96);
-    }
+/*-----------------------------------checkEbrake-----------------------------------------*/
+// Check if ebrake is on
+// Ebrake is on if PWM of the Ebrake channel on the remote is > MIDDLE else Ebrake is off
+// Precondition: None
+// Postcondition: return true if Ebrake is on, false otherwise
+bool checkEbrake()
+{
+    if (RC_Done[RC_ESTP]) //RC_Done determines if the signal from the remote controll is done processing
+    {
+      RC_elapsed[RC_ESTP] = (RC_elapsed[RC_ESTP] > MIDDLE ? HIGH : LOW);
+      if (RC_elapsed[RC_ESTP] == HIGH)
+      {
+        E_Stop();  // already done at interrupt level
+        return true;
+      }
+      else{
+        brake(false);
+      }
   }
-  brake(MAX_BRAKE_OUT);
-  delay(1000);
-  brake(MIN_BRAKE_OUT);
-  rcAuto = LOW;
+  return false;
 }
 
 
@@ -565,6 +580,7 @@ void moveVehicle(int acc)
   throttle_control = acc;    // post most recent throttle.
 }
 
+
 /*========================================================================/
   ============================WheelRev4 code==============================/
   =======================================================================*/
@@ -822,11 +838,7 @@ int TurnAngle_degx10()
   }
   else if (OK_left)
   {
-    new_turn_degx1000 = (left_degx1000 + expected_turn_degx1000) / 2;
-  }
-  else if (OK_right)
-  {
-    new_turn_degx1000 = (right_degx1000 + expected_turn_degx1000) / 2;
+    return 0;// in future, add reverse
   }
   else
   { // No sensors; use last valid measurement
@@ -1037,6 +1049,22 @@ void setDecimals(byte decimals)
 {
   s7s.write(0x77);
   s7s.write(decimals);
+}
+/*---------------------------------------------------------------------------------------*/
+void ISR_ESTOP_fall() {
+  noInterrupts();
+  ProcessFallOfINT(RC_ESTP);
+  RC_Done[RC_ESTP] = 1;
+  attachInterrupt(digitalPinToInterrupt(IRPT_ESTOP), ISR_ESTOP_rise, RISING);
+  interrupts();
+}
+/*---------------------------------------------------------------------------------------*/
+void ISR_RVS_fall() {
+  noInterrupts();
+  ProcessFallOfINT(RC_RVS);
+  RC_Done[RC_RVS] = 1;
+  attachInterrupt(digitalPinToInterrupt(IRPT_RVS), ISR_RVS_rise, RISING);
+  interrupts();
 }
 
 

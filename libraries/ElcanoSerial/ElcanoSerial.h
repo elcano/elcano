@@ -13,7 +13,7 @@ namespace elcano {
 const int32_t NaN = 0x7FFFFFFF;
 
 //! The baudrate to be used universally across the system
-const int32_t baudrate = 9600;
+const int32_t baudrate = 74800;
 
 //! The different possible types of SerialData packets
 enum class MsgType : int8_t {
@@ -38,7 +38,7 @@ struct SerialData {
   MsgType kind;        //!< The type of message being received [0-4]
   int32_t number;      //!< The number of the unit
   int32_t speed_cmPs;  //!< The speed the bike is moving at (cm/s)
-  int32_t angle_deg;   //!< Angle (deg) of the bike
+  int32_t angle_mDeg;   //!< Angle (deg) of the bike
   int32_t bearing_deg; //!< Bearing (deg) of the camera
   int32_t posE_cm;     //!< Position (cm) on the E-W axis
   int32_t posN_cm;     //!< Position (cm) on the N-S axis
@@ -67,7 +67,7 @@ struct ParseState {
   HardwareSerial *input;  //!< Connection to read from
   HardwareSerial *output; //!< Connection to write to
   MsgType capture;        //!< MsgType(s) to capture
-
+  char mostRecent;
   ParseStateError update(void); //!< Update the state of the parser based on a single character
 private:
   uint8_t state = 0;   //!< Internal state variable
