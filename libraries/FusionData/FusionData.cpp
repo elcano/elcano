@@ -2,8 +2,8 @@
 #include <math.h>
 #include <Common.h>
 #include <FusionData.h>
-#include <Elcano_Serial.h>
-
+#include <ElcanoSerial.h>
+#include <Arduino.h>
 /* Initializes the member variables for PositionData struct */
 void PositionData::Clear()
 {
@@ -21,18 +21,19 @@ void PositionData::Clear()
 */
 void PositionData::Display()
 {
-	Serial.print("PositionData::x_Pos->");
-	Serial.println(x_Pos);
-	Serial.print("PositionData::y_Pos->");
-	Serial.println(y_Pos);
-	Serial.print("PositionData::bearing_deg->");
-	Serial.println(bearing_deg);
-	Serial.print("PositionData::time_ms->");
-	Serial.println(time_ms);
-	Serial.print("PositionData::speed_cmPs->");
-	Serial.println(speed_cmPs);
-	Serial.print("PositionData::distance_mm->");
-	Serial.println(distance_mm);
+	// //Serial.println("millis(): " + millis());
+	//Serial.print("PositionData::x_Pos->");
+	//Serial.println(x_Pos);
+	//Serial.print("PositionData::y_Pos->");
+	//Serial.println(y_Pos);
+	//Serial.print("PositionData::bearing_deg->");
+	//Serial.println(bearing_deg);
+	//Serial.print("PositionData::time_ms->");
+	//Serial.println(time_ms);
+	//Serial.print("PositionData::speed_cmPs->");
+	//Serial.println(speed_cmPs);
+	//Serial.print("PositionData::distance_mm->");
+	//Serial.println(distance_mm);
 }
 
 
@@ -40,10 +41,11 @@ void PositionData::Display()
 */
 void ComputePositionWithDR(PositionData &oldData, PositionData &newData)
 {
-	Serial.print("ComputePositionWithDR::NewTime:");
-	Serial.print(newData.time_ms);
-	Serial.print(",OldTime:");
-	Serial.println(oldData.time_ms);
+	//Serial.println("millis(): " + String(millis()));
+	//Serial.print("ComputePositionWithDR::NewTime:");
+	//Serial.print(newData.time_ms);
+	//Serial.print(",OldTime:");
+	//Serial.println(oldData.time_ms);
 	
 
 	// To check if this is new reading or the same reading
@@ -51,18 +53,18 @@ void ComputePositionWithDR(PositionData &oldData, PositionData &newData)
 		// Calculate distance
 		newData.distance_mm = (newData.time_ms - oldData.time_ms) * ((newData.speed_cmPs * 10.0) / 1000.0);
 
-		Serial.print("ComputePositionWithDR::newSpeed_cmPs:");
-		Serial.print(newData.speed_cmPs);
-		Serial.print(",distance:");
-		Serial.println(newData.distance_mm);
+		//Serial.print("ComputePositionWithDR::newSpeed_cmPs:");
+		//Serial.print(newData.speed_cmPs);
+		//Serial.print(",distance:");
+		//Serial.println(newData.distance_mm);
 
 		newData.x_Pos = oldData.x_Pos + cos((newData.bearing_deg / HEADING_PRECISION) * TO_RADIANS) * newData.distance_mm;
 		newData.y_Pos = oldData.y_Pos + sin((newData.bearing_deg / HEADING_PRECISION) * TO_RADIANS) * newData.distance_mm;
 
-		Serial.print("ComputePositionWithDR::X_pos:");
-		Serial.print(newData.x_Pos);
-		Serial.print(",Y_pos:");
-		Serial.println(newData.y_Pos);
+		//Serial.print("ComputePositionWithDR::X_pos:");
+		//Serial.print(newData.x_Pos);
+		//Serial.print(",Y_pos:");
+		//Serial.println(newData.y_Pos);
 	}
 }
 
@@ -111,10 +113,10 @@ void TranslateCoordinates(PositionData &in, PositionData &out, int shift)
 */
 void RotateCoordinates(PositionData &gps, long bearing_deg, int direction)
 {
-	Serial.print("RotateCoordinates::x_Pos(Before):");
-	Serial.println(gps.x_Pos);
-	Serial.print("RotateCoordinates::y_Pos(Before):");
-	Serial.println(gps.y_Pos);
+	//Serial.print("RotateCoordinates::x_Pos(Before):");
+	//Serial.println(gps.x_Pos);
+	//Serial.print("RotateCoordinates::y_Pos(Before):");
+	//Serial.println(gps.y_Pos);
 
 	// Rotate by the bearing
 	if (direction == 1) 
@@ -142,10 +144,10 @@ void RotateCoordinates(PositionData &gps, long bearing_deg, int direction)
 		gps.x_Pos = temp_x;
 	}
 
-	Serial.print("RotateCoordinates::x_Pos(After):");
-	Serial.println(gps.x_Pos);
-	Serial.print("RotateCoordinates::y_Pos(After):");
-	Serial.println(gps.y_Pos);
+	//Serial.print("RotateCoordinates::x_Pos(After):");
+	//Serial.println(gps.x_Pos);
+	//Serial.print("RotateCoordinates::y_Pos(After):");
+	//Serial.println(gps.y_Pos);
 }
 
 
@@ -192,20 +194,20 @@ void FindFuzzyCrossPointXY(PositionData &gps, long distance_mm, long bearing_deg
 	long sx1 = 0;
 	long gx1 = 0;
 
-	Serial.print("FindFuzzyCrossPointXY::distance_mm = ");
-	Serial.println(distance_mm);
+	//Serial.print("FindFuzzyCrossPointXY::distance_mm = ");
+	//Serial.println(distance_mm);
 	double DE = distance_mm * 100*DISTANCE_ERROR * 1.;
-	Serial.print("Distance Error = " );
-	Serial.println(DE);
+	//Serial.print("Distance Error = " );
+	//Serial.println(DE);
 
 	// Calculating 3 x-positions using the distance error and observed x-position (DR)
 	// sx0 - DE, sx0, sx0 + DE 
 	// where sx0 is observed x-position and DE is distance error
 	// sx0 as distance_mm
 	long sx0 = distance_mm*100;
-	//Serial.println(gps.sigma_mm);
+	////Serial.println(gps.sigma_mm);
 	long GE = (gps.sigma_mm)*100;
-	//Serial.println(GE);
+	////Serial.println(GE);
 	// Calculating 3 x-positions using the GPS error and observed x-position (GPS)
 	// gx0 - GE, gx0, gx0 + GE 
 	// where gx0 is observed x-position and GE is compass error
@@ -216,28 +218,28 @@ void FindFuzzyCrossPointXY(PositionData &gps, long distance_mm, long bearing_deg
 	if (sx0 <= gx0)
 	{
 		// line to be used would be sx1 -> sx0 + DE, gx1-> gx0 - GE
-		Serial.println("sx1 -> sx0 + DE, gx1 -> gx0 - GE");
+		//Serial.println("sx1 -> sx0 + DE, gx1 -> gx0 - GE");
 		sx1 = sx0 + DE;
 		gx1 = gx0 - GE;
 	}
 	else
 	{
 		// line to be used would be sx1 -> sx0 - DE, gx1 -> gx0 + GE
-		Serial.println("sx1 -> sx0 - DE, gx0 -> gx1 + GE");
+		//Serial.println("sx1 -> sx0 - DE, gx0 -> gx1 + GE");
 		sx1 = sx0 - DE;
 		gx1 = gx0 + GE;
 	}
 
-	Serial.print("FindFuzzyCrossPointXY::sx0=");
-	Serial.print(sx0);
-	Serial.print(",GE=");
-	Serial.print(GE);
-	Serial.print(",sx1=");
-	Serial.print(sx1);
-	Serial.print(",gx0=");
-	Serial.print(gx0);
-	Serial.print(",gx1=");
-	Serial.println(gx1);
+	//Serial.print("FindFuzzyCrossPointXY::sx0=");
+	//Serial.print(sx0);
+	//Serial.print(",GE=");
+	//Serial.print(GE);
+	//Serial.print(",sx1=");
+	//Serial.print(sx1);
+	//Serial.print(",gx0=");
+	//Serial.print(gx0);
+	//Serial.print(",gx1=");
+	//Serial.println(gx1);
 
 	// Get Slope of Lines 
 	// Now, we have to X-points sx0, sx1 from Compass
@@ -249,19 +251,19 @@ void FindFuzzyCrossPointXY(PositionData &gps, long distance_mm, long bearing_deg
 	double c1 = LineIntercept(sx1, 0, m1);
 	double c2 = LineIntercept(gx1, 0, m2);
 
-	Serial.print("FindFuzzyCrossPointXY::m1= ");
-	Serial.print(m1);
-	Serial.print(",m2=");
-	Serial.println(m2);
-	Serial.print("FindFuzzyCrossPointXY::c1=");
-	Serial.print(c1);
-	Serial.print(",c2=");
-	Serial.println(c2);
+	//Serial.print("FindFuzzyCrossPointXY::m1= ");
+	//Serial.print(m1);
+	//Serial.print(",m2=");
+	//Serial.println(m2);
+	//Serial.print("FindFuzzyCrossPointXY::c1=");
+	//Serial.print(c1);
+	//Serial.print(",c2=");
+	//Serial.println(c2);
 
 	// Get Cross Point X
 	out.x_Pos = CrossPointX(m1, c1, m2, c2);
-	Serial.print("FindFuzzyCrossPointXY::out.x_Pos = ");
-	Serial.println(out.x_Pos);
+	//Serial.print("FindFuzzyCrossPointXY::out.x_Pos = ");
+	//Serial.println(out.x_Pos);
 
 	// Calculating 3 y-positions using the compass error and observed y-position (DR)
 	// sy0 - CE, sy0, sy0 + CE 
@@ -269,8 +271,9 @@ void FindFuzzyCrossPointXY(PositionData &gps, long distance_mm, long bearing_deg
 	long sy1 = 0;
 	long gy1 = 0;	
 	double CE = distance_mm * sin((COMPASS_ERROR ) * TO_RADIANS)*100;
-	Serial.println(CE*100);
-	Serial.print("shailja ce");
+
+	//Serial.println(CE*100);
+	//Serial.print("shailja ce");
 
 	// Calculating 3 y-positions using the GPS error and observed y-position (GPS)
 	// gy0 - GE, gy0, gy0 + GE 
@@ -285,48 +288,45 @@ void FindFuzzyCrossPointXY(PositionData &gps, long distance_mm, long bearing_deg
 	if (sy0 <= gy0)
 	{
 		// line to be used would be sy1 -> sy0 + CE, gy1 -> gy0 - GE
-		Serial.println("sy1 -> sy0 + CE, gy1 -> gy0 - GE");
+		//Serial.println("sy1 -> sy0 + CE, gy1 -> gy0 - GE");
 		sy1 = sy0 + CE;
 		gy1 = gy0 - GE;
 	}
 	else
 	{
 		// line to be used would be sy1 -> sy0 - CE, gy1 -> gy0 + GE
-		Serial.println("sy1 -> sy0 - CE, gy1 -> gy0 + GE");
+		//Serial.println("sy1 -> sy0 - CE, gy1 -> gy0 + GE");
 		sy1 = sy0 - CE;
 		gy1 = gy0 + GE;
 	}
-
-	Serial.print("FindFuzzyCrossPointXY::sy0=");
-	Serial.print(sy0);
-	Serial.print(",CE=");
-	Serial.print(CE);
-	Serial.print(",sy1=");
-	Serial.print(sy1);
-	Serial.print(",gy0=");
-	Serial.print(gy0);
-	Serial.print(",gy1=");
-	Serial.println(gy1);
+	//Serial.print("FindFuzzyCrossPointXY::sy0=");
+	//Serial.print(sy0);
+	//Serial.print(",CE=");
+	//Serial.print(CE);
+	//Serial.print(",sy1=");
+	//Serial.print(sy1);
+	//Serial.print(",gy0=");
+	//Serial.print(gy0);
+	//Serial.print(",gy1=");
+	//Serial.println(gy1);
 
 	// Get Slope of Lines 
 	m1 = LineSlope(100, 0, sy0, sy1);
 	m2 = LineSlope(100, 0, gy0, gy1);
-
 	// Get Intercept
 	c1 = LineIntercept(100, sy1, m1);
 	c2 = LineIntercept(100, gy1, m2);
 
-	Serial.print("FindFuzzyCrossPointXY::m1= ");
-	Serial.print(m1);
-	Serial.print(",m2=");
-	Serial.println(m2);
-	Serial.print("FindFuzzyCrossPointXY::c1=");
-	Serial.print(c1);
-	Serial.print(",c2=");
-	Serial.println(c2);
-
+	//Serial.print("FindFuzzyCrossPointXY::m1= ");
+	//Serial.print(m1);
+	//Serial.print(",m2=");
+	//Serial.println(m2);
+	//Serial.print("FindFuzzyCrossPointXY::c1=");
+	//Serial.print(c1);
+	//Serial.print(",c2=");
+	//Serial.println(c2);
 	// Get CrossPoint Y
 	out.y_Pos = CrossPointY(m1, c1, m2, c2);
-	Serial.print("FindFuzzyCrossPointXY::out.y_Pos = ");
-	Serial.println(out.y_Pos);
+	//Serial.print("FindFuzzyCrossPointXY::out.y_Pos = ");
+	// Serial.println(out.y_Pos);
 }

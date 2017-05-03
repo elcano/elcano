@@ -219,7 +219,6 @@ bool ValidRange(float x1,float y1, float x2,float y2, float range)
   return retVal;
 }
 
-//-----------------------Start Hermite Cubic Functions------------------------//
 
 /*
  * FirstCoefficient calculates the first coefficient of the Hermite cubic
@@ -354,22 +353,11 @@ float ArcLength(Cubic x, Cubic y, float t,float deltaT, float current)
 
     return(current + (sqrt(sq(currentX - previousX)+sq(currentY - previousY))));
   }
-}
 
-/*
- * Calculation of the current x or y value at the time value passes in.
- */
- float ValueAtTime(Cubic x, float t)
-{
-  Cubic cubicAtT;
-  float retVal;
-  cubicAtT.a = (x.a*(pow(t,3)));
-  cubicAtT.b = (x.b*(sq(t)));
-  cubicAtT.c = (x.c * t);
-  cubicAtT.d = x.d;
-
-  retVal = (cubicAtT.a + cubicAtT.b + cubicAtT.c + cubicAtT.d);
-  return retVal;
+//  for(int i = 0; i < 100; i++)
+//  {
+//    Serial.println(String(path.valueAtTime(i/100.).x) + ", " + String(path.valueAtTime(i/100.).y));
+//  }
 }
 
 //----------------------End Hermite Cubic Functions---------------------------//

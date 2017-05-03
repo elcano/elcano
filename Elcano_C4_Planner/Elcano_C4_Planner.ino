@@ -5,8 +5,8 @@
 #include <SD.h>
 #include <ElcanoSerial.h>
 
-elcano::SerialData dt;
-elcano::ParseState ps;
+SerialData dt;
+ParseState ps;
 
 /*  
 Elcano Module C4: Path Planner.
@@ -602,7 +602,7 @@ void SendPath(waypoint *course, int count)
   {
      Results.clear();
      Results.number = i;
-     Results.kind = MSG_SEG;
+     Results.kind = MsgType::seg;
      Results.posE_cm = course->east_mm / 10;
      Results.posN_cm = course->north_mm / 10;
      float angle = atan2(course->Nvector_x1000, course->Evector_x1000) * 180 / PI + 90.;
@@ -937,7 +937,7 @@ void initialize()
   }
   Serial.println("initialization done.");
   char nearestMap[13] = "";
-  SelectMap(Start,"map_defs.txt",nearestMap);
+  SelectMap(Start,"MAP_DEFS.TXT",nearestMap);
   Serial.print("nearestMap: ");
   Serial.println(nearestMap);
   LoadMap(nearestMap);
@@ -1075,7 +1075,7 @@ void loop()
     if (DataAvailable)
     {
         // read vehicle position from C6
-        readline(0);
+        //readline(0);
         // send data to C3
         writeline(0);
         
@@ -1106,3 +1106,8 @@ void loop()
 }
 
 
+
+using namespace elcano;
+
+SerialData dt;
+ParseState ps;
