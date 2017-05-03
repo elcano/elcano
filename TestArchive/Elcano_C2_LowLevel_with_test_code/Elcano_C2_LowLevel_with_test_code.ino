@@ -279,7 +279,6 @@ void setup()
 }
 
 /*-----------------------------------loop------------------------------------------------*/
-
 void ThrottlePID(){
   speedPID.Compute();
 //  Serial.print("Throttle out value ");
@@ -377,20 +376,11 @@ void loop() {
   
   
   byte automate = processRC();
-  // TEMPORARY
-//  if(static_cast<int8_t>(r) == 0)
-//  Serial.println(Results.speed_cmPs);
-//  if(millis() > startTime + 20000)
-//  {
-    automate = 0x01;
-//    desiredSpeed = 0;
-//  }
   
   // END TEMPORARY
   if (automate == 0x01)
   {
     ParseStateError r = parseState.update();
-//    Serial.println(static_cast<int8_t>(r));
     if(r == ParseStateError::success)
     {
       processHighLevel(&Results);
@@ -489,9 +479,6 @@ void processHighLevel(SerialData * results)
 
   desiredSpeed = results->speed_cmPs * 10;
   desiredAngle = turn_signal;
-  
-//  Serial.println(String(results->speed_cmPs * 10) + " " + String(results->angle_deg));
-
 }
 
 /*-----------------------------------moveFixedDistance------------------------------------*/
@@ -594,7 +581,11 @@ void squareRoutine(unsigned long sides, unsigned long &rcAuto) {
   rcAuto = LOW;
 }
 
-
+/**
+ * Check if Ebrake has been applied
+ * Precondition:  None
+ * Postcondition: True if ebrake has been applied
+ */
 bool checkEbrake()
 {
     if (RC_Done[RC_ESTP]) //RC_Done determines if the signal from the remote controll is done processing
@@ -638,6 +629,12 @@ byte processRC()
 }
 
 /*------------------------------------isAutomatic-----------------------------------------*/
+/**
+ * Check whether to read data from high level or not
+ * Precondition:  None
+ * PostCondition: True if data should be read high level
+ * Read data from high level if RC_Brake is above the middle
+ */
 boolean isAutomatic(){
     if(RC_Done[RC_BRAKE]){
       if(RC_elapsed[RC_BRAKE] > MIDDLE + TICK_DEADZONE){
@@ -646,7 +643,6 @@ boolean isAutomatic(){
     }
     return false;
 }
-
 
 /*------------------------------------doAutoMovement--------------------------------------*/
 void doAutoMovement(){
@@ -697,7 +693,6 @@ void doManualMovement(){
   //TURN
     if (RC_Done[RC_TURN] && !on) 
     {
-//      Serial.println(String(convertTurn(RC_elapsed[RC_TURN])));
       steer(convertTurn(RC_elapsed[RC_TURN]));
     }
 }
@@ -880,7 +875,6 @@ void DAC_Write(int address, int value)
   }
 }
 
-
 /*-------------------------------------moveVehicle------------------------------------------*/
 void moveVehicle(int acc)
 {
@@ -956,7 +950,6 @@ void setupWheelRev()
 
   attachInterrupt (digitalPinToInterrupt(IRPT_WHEEL), WheelRev, RISING);//pin 3 on Mega
 }
-
 
 /*----------------------------computeSpeed-----------------------------------------------*/
 void computeSpeed(struct hist *data){
@@ -1238,7 +1231,6 @@ void Throttle_PID(long error_speed_mmPs) // DEFUNCT
               + I_TUNE * mean_speed_error
               + D_TUNE * extrapolated_error;
 
-//  Serial.println("PID_error = " + String(PID_error) + " speed_tolerance_mmPs = " + String(speed_tolerance_mmPs));
   if (PID_error > speed_tolerance_mmPs)
   { // too fast
     long throttle_decrease = (MAX_ACC_OUT - MIN_ACC_OUT) * PID_error / max_error_mmPs;
@@ -1457,9 +1449,6 @@ void allStop()
   }
 }
 
-
-
-
 //==========================================================================================
 void ISR_TURN_rise(){
   noInterrupts();
@@ -1467,6 +1456,7 @@ void ISR_TURN_rise(){
   attachInterrupt(digitalPinToInterrupt(IRPT_TURN), ISR_TURN_fall, FALLING);
   interrupts();
 }
+
 /*---------------------------------------------------------------------------------------*/
 // RDR (rudder) is currently not used.
 void ISR_RDR_rise() {
@@ -1487,7 +1477,6 @@ void ISR_RDR_fall() {
   noInterrupts();
   ProcessFallOfINT(RC_RDR);
   RC_Done[RC_TURN] = 1;
-  //Serial.println("TURN");
   attachInterrupt(digitalPinToInterrupt(IRPT_RDR), ISR_RDR_rise, RISING);
   interrupts();
 }
@@ -1591,8 +1580,3 @@ void ISR_MOTOR_FEEDBACK_rise() {
   RC_elapsed[RC_MOTOR_FEEDBACK] = RC_rise[RC_MOTOR_FEEDBACK] - old_phase_rise;
   interrupts();
 }
-
-
-
-
-

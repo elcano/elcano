@@ -1,0 +1,234 @@
+<style media="screen">
+html, body, div, span, applet, object, iframe,
+h1, h2, h3, h4, h5, h6, p, blockquote, pre,
+a, abbr, acronym, address, big, cite, code,
+del, dfn, em, img, ins, kbd, q, s, samp,
+small, strike, strong, sub, sup, tt, var,
+b, u, i, center,
+dl, dt, dd, ol, ul, li,
+fieldset, form, label, legend,
+table, caption, tbody, tfoot, thead, tr, th, td,
+article, aside, canvas, details, embed,
+figure, figcaption, footer, header, hgroup,
+menu, nav, output, ruby, section, summary,
+time, mark, audio, video {
+	margin: 0;
+	padding: 0;
+	border: 0;
+	font-size: 100%;
+	font: inherit;
+	vertical-align: baseline;
+}
+/* HTML5 display-role reset for older browsers */
+article, aside, details, figcaption, figure,
+footer, header, hgroup, menu, nav, section {
+	display: block;
+}
+#lane{
+  width: 100%;
+  height: 200px;
+  background: black;
+}
+#lane2{
+  width: 100%;
+  height: 200px;
+  margin-top: 10px;
+  background: black;
+}
+
+#lane3{
+  width: 100%;
+  height: 400px;
+  margin-top: 10px;
+  background: black;
+}
+
+.car1{
+  background: white;
+  height: 70px;
+  width: 200px;
+  top:10%;
+  margin-left: 300px;
+  position:absolute;
+  -webkit-animation:linear infinite;
+  -webkit-animation-name: run_normal;
+  -webkit-animation-duration: 5s;
+}
+
+.car2{
+  background: red;
+  height: 70px;
+  width: 150px;
+  top:10%;
+  position:absolute;
+  -webkit-animation:linear infinite;
+  -webkit-animation-name: run_natural;
+  -webkit-animation-duration: 5s;
+}
+
+.car3{
+  background: yellow;
+  height: 70px;
+  width: 150px;
+  top:10%;
+  position:absolute;
+  margin-left: -300px;
+  -webkit-animation:linear infinite;
+  -webkit-animation-name: run_natural;
+  -webkit-animation-duration: 5s;
+}
+
+#gout_car{
+  background: orange;
+  height: 150px;
+  width: 70px;
+  position:absolute;
+  -webkit-animation:linear infinite;
+  -webkit-animation-name: gout_car;
+  -webkit-animation-duration: 5s;
+
+}
+
+#goin_car{
+  background: orange;
+  height: 70px;
+  width: 150px;
+  top:65%;
+  position:absolute;
+  -webkit-animation:linear infinite;
+  -webkit-animation-name: gin_car ;
+  -webkit-animation-duration: 5s;
+
+}
+
+.parking_car{
+  background: orange;
+  height: 150px;
+  width: 70px;
+  top:10%;
+  position:absolute;
+}
+
+@-webkit-keyframes run_normal {
+    0% { left: 0;}
+    13% { left: 13%;}
+    26% { left: 26%;}
+    39% { left: 39%;}
+    52% { left: 52%;}
+    65% { left: 65%;}
+    78% { left: 78%;}
+    91% { left: 98%;}
+    100% { left: 110%;}
+}
+@-webkit-keyframes run_natural {
+    0% { left: 0;}
+    13% { left: 15%;}
+    26% { left: 28%;}
+    39% { left: 44%;}
+    52% { left: 55%;}
+    65% { left: 63%;}
+    78% { left: 75%;}
+    91% { left: 94%;}
+    100% { left: 110%;}
+}
+
+@-webkit-keyframes gout_car {
+    0% { left: 55%;}
+
+    13% { left: 55%; top:70%;
+      -ms-transform: rotate(45deg); /* IE 9 */
+      -webkit-transform: rotate(45deg); /* Chrome, Safari, Opera */
+      transform: rotate(45deg);
+    }
+
+    26% { left: 65%;top:65%;
+      -ms-transform: rotate(90deg); /* IE 9 */
+      -webkit-transform:rotate(90deg); /* Chrome, Safari, Opera */
+      transform: rotate(90deg);
+    }
+    39% { left: 70%;top:65%;
+      -ms-transform: rotate(90deg); /* IE 9 */
+      -webkit-transform: rotate(90deg); /* Chrome, Safari, Opera */
+      transform: rotate(90deg);}
+    52% { left: 110%;top:65%;
+      -ms-transform: rotate(90deg); /* IE 9 */
+      -webkit-transform: rotate(90deg); /* Chrome, Safari, Opera */
+      transform: rotate(90deg);}
+    100% { left: 150%;top:65%;
+      -ms-transform: rotate(90deg); /* IE 9 */
+      -webkit-transform: rotate(90deg); /* Chrome, Safari, Opera */
+      transform: rotate(90deg);}
+}
+
+@-webkit-keyframes gin_car {
+  0% { left: 0; top:70%;
+    -ms-transform: rotate(0deg); /* IE 9 */
+    -webkit-transform:rotate(0deg); /* Chrome, Safari, Opera */
+    transform: rotate(0deg);}
+  6% { left: 6%;top:70%
+    -ms-transform: rotate(0deg); /* IE 9 */
+    -webkit-transform:rotate(0deg); /* Chrome, Safari, Opera */
+    transform: rotate(0deg);}
+
+  12% { left: 12%;top:70%
+    -ms-transform: rotate(0deg); /* IE 9 */
+    -webkit-transform:rotate(0deg); /* Chrome, Safari, Opera */
+    transform: rotate(0deg);}
+
+  18% { left: 18%;top:70%
+    -ms-transform: rotate(0deg); /* IE 9 */
+    -webkit-transform:rotate(0deg); /* Chrome, Safari, Opera */
+    transform: rotate(0deg);}
+
+  26% { left: 26%;top:70%
+    -ms-transform: rotate(0deg); /* IE 9 */
+    -webkit-transform:rotate(0deg); /* Chrome, Safari, Opera */
+    transform: rotate(0deg);}
+
+  39% { left: 30%;top:75%
+    -ms-transform: rotate(60deg); /* IE 9 */
+    -webkit-transform:rotate(60deg); /* Chrome, Safari, Opera */
+    transform: rotate(60deg);
+  }
+  52% { left: 33%;top:80%
+    -ms-transform: rotate(90deg); /* IE 9 */
+    -webkit-transform:rotate(90deg); /* Chrome, Safari, Opera */
+    transform: rotate(90deg);
+  }
+
+  100% {left: 33%;  top:85%;
+      -ms-transform: rotate(90deg); /* IE 9 */
+      -webkit-transform:rotate(90deg); /* Chrome, Safari, Opera */
+      transform: rotate(90deg);}
+}
+
+</style>
+
+
+
+
+
+<div id="lane">
+<div class="car1">my car 1</div>
+<div class="car2">my car 2</div>
+<div class="car3">my car 3</div>
+</div>
+
+<div id="lane2">
+<div class="car2" style="top:35%">my car 1</div>
+<div class="car1" style="top:35%">my car 2</div>
+<div class="car3" style="top:35%">my car 3</div>
+</div>
+
+<div id="lane3">
+<div class="car2" style="top:55%">my car 1</div>
+<div class="car1" style="top:55%">my car 2</div>
+<div class="car3" style="top:55%">my car 3</div>
+<div id="gout_car" style="top:80%">go out car</div>
+<div id="goin_car" style="top:80%">go in car</div>
+
+<div class="parking_car" style="top:80%;margin-left:590px;">parking_car</div>
+<div class="parking_car" style="top:80%;margin-left:665px;">parking_car</div>
+
+
+</div>

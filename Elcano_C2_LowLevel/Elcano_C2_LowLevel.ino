@@ -25,7 +25,6 @@ long startTime;
  * pass through *other* commands that come from C3 but are intended for modules
  * past C2 on the ring.
  */
-
 static struct hist {
   long olderSpeed_mmPs;  // older data
   unsigned long olderTime_ms;   // time stamp of older speed
@@ -41,8 +40,6 @@ static struct hist {
   unsigned long OldTick_ms;   // Tick times may not match time stamps if we don't process
   // results of every interrupt
 } history;
-
-
 
 Servo STEER_SERVO;
 Servo BRAKE_SERVO;
@@ -122,10 +119,6 @@ float HubSpeed_kmPh;
 const float  HubSpeed2kmPh = 13000000;
 const unsigned long HubAtZero = 1159448;
 
-// int max_rc = MAX_RC;
-// int mid = MIDDLE;
-// int min_rc = MIN_RC;
-
 // Time at which this loop pass should end in order to maintain a
 // loop period of LOOP_TIME_MS.
 unsigned long nextTime = millis();
@@ -150,8 +143,6 @@ ParseState parseState;
    A cyclometer gives a click once per revolution.
    This routine computes the speed.
 */
-
-
 #define MEG 1000000
 #define MAX_SPEED_KPH 50
 #define MAX_SPEED_mmPs   ((MAX_SPEED_KPH * MEG) / 3600)
@@ -178,7 +169,6 @@ volatile unsigned long TickTime = 0;  // Time from one wheel rotation to the nex
 volatile unsigned long OldTick = 0;
 int oldClickNumber;
 
-
 /**
  * Throttle PID implementation
  */
@@ -196,7 +186,6 @@ double derivativeConstant = .00001;
 PID speedPID(&SpeedCyclometer_mmPs, &PIDThrottleOutput, &desiredSpeed, proportionalConstant, integralConstant, derivativeConstant, DIRECT);
 PID steerPID(&SteerAngle_wms, &PIDSteeringOutput, &desiredAngle, steeringP, steeringI, steeringD, DIRECT);
 
- 
 /*-----------------------------------setup-----------------------------------------------*/
 void setup()
 {
@@ -247,14 +236,13 @@ void setup()
   CalibrateTurnAngle(32, 20);
   calibrateSensors();
   calibrationTime_ms = millis();
-  //steer(STRAIGHT_TURN_OUT);
-//  attachInterrupt(digitalPinToInterrupt(IRPT_TURN),  ISR_TURN_rise,  RISING);//turn right stick l/r turn
-//  attachInterrupt(digitalPinToInterrupt(IRPT_GO),    ISR_GO_rise,    RISING);//left stick l/r
-//  attachInterrupt(digitalPinToInterrupt(IRPT_ESTOP), ISR_ESTOP_rise, RISING);//ebrake
-//  attachInterrupt(digitalPinToInterrupt(IRPT_BRAKE), ISR_BRAKE_rise, RISING);//left stick u/d mode select
+  steer(STRAIGHT_TURN_OUT);
+  attachInterrupt(digitalPinToInterrupt(IRPT_TURN),  ISR_TURN_rise,  RISING);//turn right stick l/r turn
+  attachInterrupt(digitalPinToInterrupt(IRPT_GO),    ISR_GO_rise,    RISING);//left stick l/r
+  attachInterrupt(digitalPinToInterrupt(IRPT_ESTOP), ISR_ESTOP_rise, RISING);//ebrake
+  attachInterrupt(digitalPinToInterrupt(IRPT_BRAKE), ISR_BRAKE_rise, RISING);//left stick u/d mode select
   attachInterrupt(digitalPinToInterrupt(IRPT_MOTOR_FEEDBACK), ISR_MOTOR_FEEDBACK_rise, RISING);
-
-
+  
   Serial.begin(9600);
   
   parseState.dt = &Results;
@@ -263,7 +251,6 @@ void setup()
   Serial3.begin(baudrate);
   parseState.capture = MsgType::drive;
   // msgType::drive uses `speed_cmPs` and `angle_deg`
-  
   Results.clear();
   SpeedCyclometer_mmPs = 0;
   brake(false);
@@ -280,9 +267,6 @@ void loop() {
   // end temporary
   Results.angle_mDeg = 0;
   Results.write(&Serial3);
- 
-  
-
   nextTime = nextTime + LOOP_TIME_MS;
   computeSpeed(&history);
   computeAngle();
@@ -296,11 +280,7 @@ void loop() {
   // using the micros() counter.
   // If the new nextTime value is <= LOOP_TIME_MS, we've rolled over.
 
-//   byte automate = processRC();
-  
-  // TEMPORARY
-  byte automate = 0x01;
-  
+  byte automate = processRC();
   // END TEMPORARY
   if (automate == 0x01)
   {
@@ -309,11 +289,7 @@ void loop() {
     {
       processHighLevel(&Results);
     }
-//    else Serial.println("comms error: " + String(static_cast<int8_t>(r)));
   }
-
-
-  
   calibrationTime_ms += LOOP_TIME_MS;
   straightTime_ms = (steer_control == STRAIGHT_TURN_OUT) ? straightTime_ms + LOOP_TIME_MS : 0;
   stoppedTime_ms = (throttle_control == MIN_ACC_OUT) ? stoppedTime_ms + LOOP_TIME_MS : 0;
@@ -387,35 +363,35 @@ void loop() {
   }
 }
 
-
+/*------------------------------------ThrottlePID--------------------------------*/
+// Compute PID 
+// Precondition: None
+// Postcondition: None
 void ThrottlePID(){
   speedPID.Compute();
-//  Serial.print("Throttle out value ");
-//  Serial.println(PIDThrottleOutput);
   int throttleControl = (int)PIDThrottleOutput;
-//  if(desiredSpeed > SpeedCyclometer_mmPs) SpeedCyclometer_mmPs += 10;
-//  else if(SpeedCyclometer_mmPs > 10) SpeedCyclometer_mmPs -= 10;
   //apply control value to vehicle
   moveVehicle(throttleControl);
   if(PIDThrottleOutput == MIN_ACC_OUT){
     //apply brakes
-//    brake_feather(true);
+    brake_feather(true);
   }
   else{
-//    brake_feather(false);
+    brake_feather(false);
   }
   return;
 }
 
+/*---------------------------SteeringPID--------------------------------------*/
+// Computer Steering PID
+// Precondition: None
+// Postcondition: None
 void SteeringPID(){
   if(steerPID.Compute()){
     
     int steeringControl = (int)PIDSteeringOutput;
     //apply control value to vehicle
     STEER_SERVO.writeMicroseconds(steeringControl);
-  }
-  else{
-//    Serial.println("No compute.");
   }
   return;
 }
@@ -426,14 +402,13 @@ void computeAngle(){
 
   int left_wms = map(left, leftsenseleft, leftsenseright, LEFT_TURN_OUT, RIGHT_TURN_OUT); // Left sensor spikes outside of calibrated range between setup() and loop(); temporarily disregard data
   int right_wms = map(right, rightsenseleft, rightsenseright, LEFT_TURN_OUT, RIGHT_TURN_OUT);
-//  int left_wms = right_wms;
-  
-  //Placeholder
-  SteerAngle_wms = (double)((left_wms+right_wms)/2);  
 }
 
+/*---------------------------------CalibrateSensors----------------------------------*/
+// Calibrate sensors on the trike
+// Precondition: None
+// Postcondition: None
 void calibrateSensors(){
-  
   STEER_SERVO.writeMicroseconds(LEFT_TURN_OUT); //Calibrate angle sensors for left turn
   delay(4000);
   leftsenseleft = analogRead(A2);
@@ -449,13 +424,13 @@ void calibrateSensors(){
   Serial.print("Right turn sensor readings: ");
   Serial.print(leftsenseright);
   Serial.println(rightsenseright);
-
   steerPID.SetMode(AUTOMATIC);
 }
 
-
-
 /*------------------------------------processHighLevel------------------------------------*/
+// Process information received form high level
+// Precondition: SerialData exists
+// Postcondition: desiredAngle and desiredSpeed are both set based on high level information
 void processHighLevel(SerialData * results)
 {
   Serial3.end();
@@ -465,15 +440,13 @@ void processHighLevel(SerialData * results)
   Serial.println(results->angle_mDeg);
   desiredSpeed = results->speed_cmPs * 10;
   desiredAngle = turn_signal;
-
-  
-//  if(desiredSpeed != 0) brake(MIN_BRAKE_OUT);
-//  if(desiredSpeed == 0) brake(MAX_BRAKE_OUT);
-  
-//  Serial.println(String(results->speed_cmPs * 10) + " " + String(results->angle_mDeg));
-
 }
 
+/*-----------------------------------checkEbrake-----------------------------------------*/
+// Check if ebrake is on
+// Ebrake is on if PWM of the Ebrake channel on the remote is > MIDDLE else Ebrake is off
+// Precondition: None
+// Postcondition: return true if Ebrake is on, false otherwise
 bool checkEbrake()
 {
     if (RC_Done[RC_ESTP]) //RC_Done determines if the signal from the remote controll is done processing
@@ -491,10 +464,11 @@ bool checkEbrake()
   return false;
 }
 
-
-// @ToDo: Q: What do the expressions "1st pulse", etc. mean? Is this a
-// leftover from trying to combine the RC controls into a single stream?
 /*------------------------------------processRC-------------------------------------------*/
+// Determine whether to read from remote control or process from high level
+// Process from high level if the brake channel on the remote control is > MIDDLE 
+// Precondition: None
+// Postcondition: return 0x01 if processing from high level else 0x00 if processing from remote control
 byte processRC()
 {
   //RC_TURN, RC_ESTOP, RC_BRAKE, RC_AUTO
@@ -516,6 +490,10 @@ byte processRC()
 }
 
 /*------------------------------------isAutomatic-----------------------------------------*/
+// Check whether to read from the Remote Control or to process from high level
+// The vehicle is automatic if the brake channel on the remote control is > MIDDLE 
+// Precondition: None
+// PostCondition: Return true if autonomous and false otherwise
 boolean isAutomatic(){
     if(RC_Done[RC_BRAKE]){
       if(RC_elapsed[RC_BRAKE] > MIDDLE + TICK_DEADZONE){
@@ -525,9 +503,11 @@ boolean isAutomatic(){
     return false;
 }
 
-
-
 /*------------------------------------doManualMovement------------------------------------*/
+// Act on information received from the remote control
+// Currently only does turning and straight movement
+// Precondition: None
+// PostCondition: None
 void doManualMovement(){
   //THROTTLE
     //TODO: if less than the middle, reverse, otherwise forward
@@ -545,7 +525,6 @@ void doManualMovement(){
   //TURN
     if (RC_Done[RC_TURN] && !on) 
     {
-//      Serial.println(String(convertTurn(RC_elapsed[RC_TURN])));
       steer(convertTurn(RC_elapsed[RC_TURN]));
     }
 }
@@ -568,9 +547,7 @@ int convertTurn(int input)
   // LEFT_TURN_OUT > RIGHT_TURN_OUT
   else
   {
-//    int value = map(input, MIN_RCSTEER, MAX_RCSTEER, RIGHT_TURN_OUT, LEFT_TURN_OUT);
-//    Serial.println("Value = " + String(value));
-    int value = 0;
+    int value = map(input, MIN_RCSTEER, MAX_RCSTEER, RIGHT_TURN_OUT, LEFT_TURN_OUT);
     return value;
   }
   // @ToDo: Fix this so it is correct in any case.
@@ -582,6 +559,7 @@ int convertTurn(int input)
 }
 
 /*------------------------------------convertDeg------------------------------------------*/
+// Convert PWM values from Remote Control to corresponding trike specific angle in degrees
 int convertDeg(int deg)
 {
   int result = map(deg, -TURN_MAX_DEG, TURN_MAX_DEG, RIGHT_TURN_OUT, LEFT_TURN_OUT);
@@ -591,10 +569,11 @@ int convertDeg(int deg)
 }
 
 /*------------------------------------convertThrottle-------------------------------------*/
+// Convert PWM values from Remote Control to corresponding trike specific throttle values 
+// Precondition: MIDDLE + 2 * DEAD_ZONE < input < MAX_RCGO
 int convertThrottle(int input)
 {
-//  int mapping = map(input, MIDDLE + DEAD_ZONE + DEAD_ZONE, MAX_RCGO, 80, 140);
-  int mapping = 0;
+  int mapping = map(input, MIDDLE + 2 * DEAD_ZONE, MAX_RCGO, 80, 140);
   return mapping;
 }
 
@@ -711,7 +690,6 @@ void DAC_Write(int address, int value)
   }
 }
 
-
 /*-------------------------------------moveVehicle------------------------------------------*/
 void moveVehicle(int acc)
 {
@@ -756,7 +734,6 @@ void WheelRev()
   interrupts();
 }
 /*----------------------------setupWheelRev----------------------------------------------*/
-
 void setupWheelRev()
 {
   float MinTick = WHEEL_CIRCUM_MM;
@@ -940,7 +917,6 @@ float mapThrottle(int value){
     return map(value, MIDDLE-DEAD_ZONE, MIN_RC, 0, MAX_SPEED);
 }
 
-
 /*-----------------------------------ThrottlePID------------------------------------*/
 void ThrottlePID(double desired){
   desiredSpeed = desired;
@@ -958,8 +934,6 @@ void ThrottlePID(double desired){
   
   return;
 }
-
-
 
 //==========================================================================================
 void ISR_TURN_rise(){

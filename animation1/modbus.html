@@ -1,0 +1,99 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+div {
+    width: 1000px;
+    height: 100px;
+    position: relative;
+    /* Safari 4.0 - 8.0 */
+    -webkit-animation-name: example;
+    -webkit-animation-duration: 5s;
+    -webkit-animation-timing-function: linear;
+    -webkit-animation-delay: 2s;
+    -webkit-animation-iteration-count: infinite;
+    -webkit-animation-direction: alternate;
+    /* Standard syntax */
+    animation-name: example;
+    animation-duration: 5s;
+    animation-timing-function: linear;
+    animation-delay: 2s;
+    animation-iteration-count: infinite;
+    animation-direction: alternate;
+
+}
+
+/* Safari 4.0 - 8.0 */
+@-webkit-keyframes example {
+    0%   { left:0px; top:100px;}
+    25%  { left:200px; top:1000px;
+      -ms-transform: rotate(0deg); /* IE 9 */
+      -webkit-transform: rotate(90deg); /* Chrome, Safari, Opera */
+      transform: rotate(90deg);
+    }
+    50%  { left:200px; top:200px;
+      -ms-transform: rotate(180deg); /* IE 9 */
+      -webkit-transform: rotate(180deg); /* Chrome, Safari, Opera */
+      transform: rotate(180deg);
+    }
+    75%  { left:0px; top:200px;
+      -ms-transform: rotate(270deg); /* IE 9 */
+      -webkit-transform: rotate(270deg); /* Chrome, Safari, Opera */
+      transform: rotate(270deg);
+    }
+    100% {left:0px; top:100px;
+      -ms-transform: rotate(0deg); /* IE 9 */
+      -webkit-transform: rotate(0deg); /* Chrome, Safari, Opera */
+      transform: rotate(0deg);
+    }
+}
+
+
+
+/* comment out
+/* Standard syntax */
+@keyframes example {
+    0%   {left:0px; top:0px;}
+    25%  { left:200px; top:100px;
+      -ms-transform: rotate(90deg); /* IE 9 */
+      -webkit-transform: rotate(90deg); /* Chrome, Safari, Opera */
+      transform: rotate(90deg);
+    }
+    50%  { left:200px; top:200px;
+      -ms-transform: rotate(180deg); /* IE 9 */
+      -webkit-transform: rotate(180deg); /* Chrome, Safari, Opera */
+      transform: rotate(180deg);
+    }
+    75%  {left:0px; top:200px;
+      -ms-transform: rotate(270deg); /* IE 9 */
+      -webkit-transform: rotate(270deg); /* Chrome, Safari, Opera */
+      transform: rotate(270deg);
+    }
+    100% { left:0px; top:0px;
+      -ms-transform: rotate(0deg); /* IE 9 */
+      -webkit-transform: rotate(0deg); /* Chrome, Safari, Opera */
+      transform: rotate(0deg);
+    }
+}
+
+@-moz-keyframes spin { 25% { -moz-transform: rotate(90deg); } }
+@-webkit-keyframes spin { 25% { -webkit-transform: rotate(90deg); } }
+@keyframes spin { 25% { -webkit-transform: rotate(90deg); transform:rotate(90deg); } }
+*/
+
+
+@keyframes onbusmove {
+	from {top: 0px;}
+	to {top:200px;}
+}
+</style>
+</head>
+<body>
+
+
+<div><img src="elf1.png" style="width:100px" /></div>
+
+
+</body>
+</html>

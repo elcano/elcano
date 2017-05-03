@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html>
+<!- modbus.html Modular bus animation by Steve Jackson
+	20170425 rev 0.0 Bus lane with two elfs
+	20170425 rev 0.1 Multiple lanes and regular traffic
+	20170426 rev 0.2 Elfs parked and joining the bus lane
+->
+<head>
+<style> 
+.lane {
+	width: 2000px;
+    height: 200px;
+    background: #303030;
+}
+.whiteline {
+	width: 2000px;
+    height: 5px;
+    background: #F0F0F0;
+}
+.blackline {
+	width: 2000px;
+    height: 5px;
+    background: #303030;
+}
+.dashed_line {
+	width: 2000px;
+	border-top: 5px dashed #303030;
+	background-color:#F0F0F0;
+} 
+#buslane {
+	width: 2000px;
+    height: 200px;
+    background: #303030;
+}
+#car1 {
+    width: 250px;
+    position :relative;
+    -webkit-animation: move3 5s infinite; /* Safari 4.0 - 8.0 */
+    animation: move3 10s infinite;
+    animation-delay: 0s;
+    animation-timing-function: linear;
+}
+#car2 {
+    width: 250px;
+    position :relative;
+    -webkit-animation: move4 5s infinite; /* Safari 4.0 - 8.0 */
+    animation: move4 10s infinite;
+    animation-delay: 1.2s;
+    animation-timing-function: linear;
+}
+#car3 {
+    width: 250px;
+    position :relative;
+    -webkit-animation: move3 5s infinite; /* Safari 4.0 - 8.0 */
+    animation: move3 10s infinite;
+    animation-delay: 0s;
+    animation-timing-function: linear;
+}
+#car4 {
+    width: 250px;
+    position :relative;
+    -webkit-animation: move4 5s infinite; /* Safari 4.0 - 8.0 */
+    animation: move4 10s infinite;
+    animation-delay: 1.2s;
+    animation-timing-function: linear;
+}
+#car5 {
+    width: 250px;
+    position :relative;
+    -webkit-animation: move5 5s infinite; /* Safari 4.0 - 8.0 */
+    animation: move5 15s infinite;
+    animation-delay: 11s;
+    animation-timing-function: linear;
+}
+#car6 {
+    width: 400px;
+    position :relative;
+    -webkit-animation: move6 5s infinite; /* Safari 4.0 - 8.0 */
+    animation: move4 15s infinite;
+    animation-delay: 5s;
+    animation-timing-function: linear;
+}
+#mb1 {
+    width: 200px;
+    position :relative;
+    -webkit-animation: mymove 5s infinite; /* Safari 4.0 - 8.0 */
+    animation: mymove 5s infinite;
+    animation-delay: 0s;
+    animation-timing-function: linear;
+}
+#mb2 {
+    width: 200px;
+    position :relative;
+    -webkit-animation: lcmove 5s infinite; /* Safari 4.0 - 8.0 */
+    animation: lcmove 5s infinite;
+    animation-delay: .6s;
+    animation-timing-function: linear;
+}
+
+/* Standard syntax */
+@keyframes move3 {
+    0%   {top: 0%; left: -20%;}
+    100% {top: 20%; left: 120%;}
+}
+
+@keyframes move4 {
+    0%   {top: 20%; left:-30%;}
+    100% {top: 20%; left:100%; }
+}
+@keyframes move5 {
+    0%   {top: 25%; left: -20%;}
+    100% {top: 0%; left: 120%;}
+}
+@keyframes move6 {
+    0%   {top: 20%; left:-30%;}
+    100% {top: 20%; left:100%; }
+}
+@keyframes mymove {
+    0%   {top: 5%; left: -20%;}
+    100% {top: 5%; left: 120%;}
+}
+@keyframes lcmove {
+    0%   {top: 60%; left:-20%;}
+    45%  {top: 5%; left:35%; }
+    100% {top: 5%; left:120%; }
+}
+</style>
+</head>
+<body>
+
+
+<div class="lane">
+	<img id="car3" src="car1.png" />
+	<img id="car4" src="car2.png" />
+</div>
+<div class="dashed_line"></div>
+<div class="lane">
+	<img id="car5" src="truck1.png" />
+	<img id="car6" src="bus.png" />
+</div>
+<div class="whiteline"></div><div class="blackline"></div><div class="whiteline"></div>
+<div id="buslane">
+	<img id="mb1" src="elf1.png" />
+	<img id="mb2" src="elf2.png" />
+</div>
+
+
+</body>
+</html>

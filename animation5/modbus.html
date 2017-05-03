@@ -1,0 +1,411 @@
+<style media="screen">
+html, body, div, span, applet, object, iframe,
+h1, h2, h3, h4, h5, h6, p, blockquote, pre,
+a, abbr, acronym, address, big, cite, code,
+del, dfn, em, img, ins, kbd, q, s, samp,
+small, strike, strong, sub, sup, tt, var,
+b, u, i, center,
+dl, dt, dd, ol, ul, li,
+fieldset, form, label, legend,
+table, caption, tbody, tfoot, thead, tr, th, td,
+article, aside, canvas, details, embed,
+figure, figcaption, footer, header, hgroup,
+menu, nav, output, ruby, section, summary,
+time, mark, audio, video {
+	margin: 0;
+	padding: 0;
+	border: 0;
+	font-size: 100%;
+	font: inherit;
+	vertical-align: baseline;
+	
+}
+/* HTML5 display-role reset for older browsers */
+article, aside, details, figcaption, figure,
+footer, header, hgroup, menu, nav, section {
+	display: block;
+}
+
+body {
+	max-width:1920px;
+	overflow:hidden;
+}
+#bikelaneupper {
+	height: 40px;
+	position: relative;
+    left: 90%;
+}
+#bikelanelower {
+	height: 40px;
+	position: relative;
+	top: 0%;
+    left: 5%;
+}
+#busonlyupper {
+	height: 50px;
+	position: relative;
+    left: 5%;
+}
+#busonlylower {
+	height: 50px;
+	position: relative;
+	top: 25%;
+    left: 90%;
+}
+.lane {
+	width: 100%;
+    height: 100px;
+    background: #303030;
+} 
+.median {
+	width: 100%;
+    height: 50px;
+    background: #303030;
+}
+.whiteline {
+	width: 100%;
+    height: 2px;
+    background: #F0F0F0;
+}
+.yellowline {
+	width: 100%;
+    height: 2px;
+    background: yellow;
+}
+.blackline {
+	width: 100%;
+    height: 2px;
+    background: #303030;
+}
+.dashed_line {
+	width: 100%;
+	border-top: 2px dashed #303030;
+	background-color:#F0F0F0;
+} 
+.buslane {
+	width: 100%;
+    height: 100px;
+    background: #303030;
+}
+#busstoplower {
+	width: 10%;
+	height: 100px;
+	background: #303030;
+}
+.bikelane {
+	width: 100%;
+    height: 40px;
+    background: #303030;
+}
+/*	CSS3 animation shorthand
+	animation-name
+	animation-duration
+	animation-timing-function
+	animation-delay
+	animation-iteration-count
+	animation-direction
+	animation-fill-mode
+	animation-play-state
+*/
+#car01 {
+    width: 125px;
+    position :relative;
+    -webkit-animation: move03 10s linear -9.8s infinite; /* Safari 4.0 - 8.0 */
+    animation: move03 10s linear -9.8s infinite;
+}
+#car02 {
+    width: 125px;
+    position :relative;
+    -webkit-animation: move04 10s linear -8s infinite; /* Safari 4.0 - 8.0 */
+    animation: move04 10s linear -8s infinite;
+}
+#car03 {
+    width: 124px;
+    position :relative;
+    -webkit-animation: move03 10s linear -9s infinite; /* Safari 4.0 - 8.0 */
+    animation: move05 10s linear -9s infinite;
+}
+#car04 {
+    width: 125px;
+    position :relative;
+    -webkit-animation: move04 10s linear -7s infinite; /* Safari 4.0 - 8.0 */
+    animation: move04 10s linear -7s infinite;
+}
+#car05 {
+    width: 125px;
+    position :relative;
+    -webkit-animation: move05 10s linear -10s infinite; /* Safari 4.0 - 8.0 */
+    animation: move05 10s linear -10s infinite;
+}
+#car06 {
+    width: 202px;
+    position :relative;
+    -webkit-animation: move06 10s linear -5s infinite; /* Safari 4.0 - 8.0 */
+    animation: move06 10s linear -5s infinite;
+}
+#car07 {
+    width: 202px;
+    position :relative;
+    -webkit-animation: move06 10s linear -3s infinite; /* Safari 4.0 - 8.0 */
+    animation: move06 10s linear -3s infinite;
+}
+#mb01 {
+    width: 100px;
+    position :relative;
+    -webkit-animation: mbmove01 10s linear 0s infinite; /* Safari 4.0 - 8.0 */
+    animation: mbmove01 10s linear 0s infinite;
+}
+#mb02 {
+    width: 100px;
+    position :relative;
+    -webkit-animation: mbmove01 10s linear .1s infinite; /* Safari 4.0 - 8.0 */
+    animation: mbmove01 10s linear .1s infinite;
+}
+#mb03 {
+    width: 100px;
+    position :relative;
+    -webkit-animation: mbmove01 10s linear .2s infinite; /* Safari 4.0 - 8.0 */
+    animation: mbmove01 10s linear .2s infinite;
+}
+#mb04 {
+    width: 100px;
+    position :relative;
+    -webkit-animation: mbmove01 10s linear .3s infinite; /* Safari 4.0 - 8.0 */
+    animation: mbmove01 10s linear .3s infinite;
+}
+#mb05 {
+    width: 100px;
+    position :relative;
+    -webkit-animation: mbmove01 10s linear .4s infinite; /* Safari 4.0 - 8.0 */
+    animation: mbmove01 10s linear .4s infinite;
+}
+#car41 {
+    width: 125px;
+    position :relative;
+    -webkit-animation: move43 10s linear -9.8s infinite; /* Safari 4.0 - 8.0 */
+    animation: move43 30s linear -13s infinite;
+}
+#car42 {
+    width: 125px;
+    position :relative;
+    -webkit-animation: move44 10s linear -3s infinite; /* Safari 4.0 - 8.0 */
+    animation: move44 30s linear 0s infinite;
+}
+#car43 {
+    width: 124px;
+    position :relative;
+    -webkit-animation: move43 10s linear -9s infinite; /* Safari 4.0 - 8.0 */
+    animation: move43 30s linear -9s infinite;
+}
+#car44 {
+    width: 125px;
+    position :relative;
+    -webkit-animation: move44 10s linear -3s infinite; /* Safari 4.0 - 8.0 */
+    animation: move44 30s linear -2s infinite;
+}
+#car45 {
+    width: 125px;
+    position :relative;
+    -webkit-animation: move45 10s linear -10s infinite; /* Safari 4.0 - 8.0 */
+    animation: move45 30s linear -20s infinite;
+}
+#car46 {
+    width: 125px;
+    position :relative;
+    -webkit-animation: move46 10s linear -6s infinite; /* Safari 4.0 - 8.0 */
+    animation: move44 30s linear 0s infinite;
+}
+#car47 {
+    width: 124px;
+    position :relative;
+    -webkit-animation: move43 10s linear -9s infinite; /* Safari 4.0 - 8.0 */
+    animation: move43 30s linear -23s infinite;
+}
+#car48 {
+    width: 125px;
+    position :relative;
+    -webkit-animation: move44 10s linear -3s infinite; /* Safari 4.0 - 8.0 */
+    animation: move44 30s linear -14s infinite;
+}
+#mb41 {
+    width: 100px;
+    position :relative;
+    -webkit-animation: mbmove41 10s linear -11s infinite; /* Safari 4.0 - 8.0 */
+    animation: mbmove41 10s linear -11s infinite;
+}
+#mb42 {
+    width: 100px;
+    position :relative;
+    -webkit-animation: mbmove41 10s linear -10s infinite; /* Safari 4.0 - 8.0 */
+    animation: ginmove 10s linear -10.1s infinite;
+}
+#mb43 {
+    width: 100px;
+    position :relative;
+    -webkit-animation: goutmove 10s linear -10s infinite; /* Safari 4.0 - 8.0 */
+    animation: goutmove 10s linear -10s infinite;
+}
+
+/* Standard syntax */
+@keyframes move03 {
+    0%   {top: 0%; left: 110%;}
+    100% {top: 20%; left: -20%;}
+}
+@keyframes move04 {
+    0%   {top: 20%; left:110%;}
+    100% {top: 20%; left:-30%; }
+}
+@keyframes move05 {
+    0%   {top: 25%; left: 110%;}
+    100% {top: 0%; left: -20%;}
+}
+@keyframes move06 {
+    0%   {top: 20%; left:110%;}
+    100% {top: 20%; left:-30%; }
+}
+@keyframes mbmove01 {
+    0%   {top: 23%; left: 110%;}
+    100% {top: 23%; left: -50%;}
+}
+
+@keyframes move43 {
+    0% { top: 20%; left: -30%;}
+    13% { top: 20%; left: 15%;}
+    26% { top: 20%; left: 28%;}
+    39% { top: 20%; left: 44%;}
+    52% { top: 20%; left: 55%;}
+    65% { top: 20%; left: 63%;}
+    78% { top: 20%; left: 75%;}
+    91% { top: 20%; left: 94%;}
+    100% { top: 20%; left: 110%;}
+}
+@keyframes move44 {
+    0% { top: 20%; left: -30%;}
+    13% { top: 20%; left: 15%;}
+    26% { top: 20%; left: 28%;}
+    39% { top: 20%; left: 44%;}
+    52% { top: 20%; left: 55%;}
+    65% { top: 20%; left: 63%;}
+    78% { top: 20%; left: 75%;}
+    91% { top: 20%; left: 94%;}
+    100% { top: 20%; left: 110%;}
+}
+@keyframes move45 {
+    0%   {top: 25%; left: -20%;}
+    100% {top: 0%; left: 110%;}
+}
+@keyframes move46 {
+    0%   {top: 20%; left:-30%;}
+    100% {top: 20%; left:110%; }
+}
+@keyframes mbmove41 {
+    0%   {top: 5%; left: -20%;}
+    100% {top: 5%; left: 110%;}
+}
+@keyframes lcmove42 {
+    0%   {top: 60%; left:-20%;}
+    45%  {top: 5%; left:35%; }
+    100% {top: 5%; left:110%; }
+}
+@keyframes goutmove {
+    0% { top: 120%; left: 50%;
+	 -ms-transform: rotate(-90deg); /* IE 9 */
+      -webkit-transform:rotate(-90deg); /* Chrome, Safari, Opera */
+      transform: rotate(-90deg);
+	 }	
+    42% { 
+		top: 80%; left: 50%;
+	  -ms-transform: rotate(-90deg); /* IE 9 */
+      -webkit-transform:rotate(-90deg); /* Chrome, Safari, Opera */
+      transform: rotate(-60deg);}	  
+	52% { 
+		top: 70%; left: 52%;
+	  -ms-transform: rotate(-90deg); /* IE 9 */
+      -webkit-transform:rotate(-90deg); /* Chrome, Safari, Opera */
+      transform: rotate(0deg);} 
+	  
+	75% { 
+		top: 25%; left:55%;} 
+	  
+    80% {
+		top: 5%; left:65%;}
+		
+	100% {
+		top: 5%; left:105%;}
+}
+
+@-webkit-keyframes ginmove {
+  0% { top: 5%; left: -20%; transform: rotate(0deg);}
+  20% { top: 10%; left: 20%; transform: rotate(10deg);}
+  25% { top: 25%; left: 30%; transform: rotate(10deg);}
+  48% { top: 70%; left: 33%; transform: rotate(10deg);}
+  58% { top: 80%; left: 35% transform: rotate(60deg);}
+  100% { top: 120%; left: 35%; transform: rotate(90deg);}
+}
+   
+</style>
+<head>
+<!- modbus.html Modular bus animation by Steve Jackson
+	20170425 rev 0.0 Bus lane with two elfs
+	20170425 rev 0.1 Multiple lanes and regular traffic
+	20170426 rev 0.2 Two-way traffic
+	20170427 rev 0.3 Traffic jam
+->
+</head>
+<body>
+<div class="bikelane">
+	<img id="bikelaneupper" src="bikelaneupper.png" />
+</div>
+<div class="whiteline"></div>
+<div class="buslane">
+	<img id="busonlyupper" src="busonlyupper.png" />
+	<img id="car06" src="bus3.png" />
+	<img id="car07" src="bus3.png" />
+	<img id="mb01" src="elf3.png" />
+	<img id="mb02" src="elf3.png" />
+	<img id="mb03" src="elf3.png" />
+	<img id="mb04" src="elf3.png" />
+	<img id="mb05" src="elf3.png" />
+</div>
+<div class="whiteline"></div><div class="blackline"></div><div class="whiteline"></div>
+<div class="lane">
+	<img id="car01" src="sedan3.png" />
+	<img id="car02" src="sedan4.png" />
+</div>
+<div class="dashed_line"></div>
+<div class="lane">
+	<img id="car03" src="truck3.png" />
+	<img id="car04" src="sedan3.png" />
+</div>
+
+<div class="yellowline"></div><div class="blackline"></div><div class="yellowline"></div>
+<div class="median"></div>
+<div class="yellowline"></div><div class="blackline"></div><div class="yellowline"></div>
+
+<div class="lane">
+	<img id="car41" src="sedan1.png" />
+	<img id="car42" src="sedan2.png" />
+	<img id="car45" src="truck1.png" />
+	<img id="car46" src="sedan1.png" />
+</div>
+<div class="dashed_line"></div>
+<div class="lane">
+	<img id="car43" src="truck1.png" />
+	<img id="car44" src="sedan1.png" />
+	<img id="car47" src="sedan1.png" />
+	<img id="car48" src="sedan2.png" />
+</div>
+<div class="whiteline"></div><div class="blackline"></div><div class="whiteline"></div>
+<div class="buslane">
+	<img id="busonlylower" src="busonlylower.png" />
+	<img id="mb41" src="elf1.png" />
+	<img id="mb42" src="elf2.png" />
+	<img id="mb43" src="elf2.png" />
+</div>
+
+<div class="whiteline"></div>
+<div class="bikelane">
+	<img id="bikelanelower" src="bikelanelower.png" />
+</div>
+</body>
+</html>
