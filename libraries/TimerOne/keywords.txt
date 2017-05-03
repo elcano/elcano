@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 Timer1	KEYWORD2
 TimerOne	KEYWORD1
 initialize	KEYWORD2
@@ -12,3 +13,19 @@ detachInterrupt	KEYWORD2
 setPeriod	KEYWORD2
 setPwmDuty	KEYWORD2
 isrCallback	KEYWORD2
+=======
+Timer1	KEYWORD2
+TimerOne	KEYWORD1
+initialize	KEYWORD2
+start	KEYWORD2
+stop	KEYWORD2
+restart	KEYWORD2
+resume	KEYWORD2
+pwm	KEYWORD2
+disablePwm	KEYWORD2
+attachInterrupt	KEYWORD2
+detachInterrupt	KEYWORD2
+setPeriod	KEYWORD2
+setPwmDuty	KEYWORD2
+isrCallback	KEYWORD2
+>>>>>>> aabdin01-develop

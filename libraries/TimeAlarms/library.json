@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 {
 "name": "TimeAlarms",
 "frameworks": "Arduino",
@@ -14,3 +15,21 @@
     "url": "https://github.com/PaulStoffregen/TimeAlarms"
 }
 }
+=======
+{
+"name": "TimeAlarms",
+"frameworks": "Arduino",
+"keywords": "Time, alarm, schedule, date, hour, minute, second, day, week, month, year",
+"description": "Schedule alarms to occur at specific times",
+"url": "http://playground.arduino.cc/Code/Time",
+"authors":
+{
+        "name": "Michael Margolis"
+},
+"repository":
+{
+    "type": "git",
+    "url": "https://github.com/PaulStoffregen/TimeAlarms"
+}
+}
+>>>>>>> aabdin01-develop

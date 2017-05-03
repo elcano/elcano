@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Note: because this repository is a 'fine' selection of a much larger file structure in my work directory
 # I choose to ignore all
 *
@@ -13,4 +14,21 @@
 !.gitignore
 
 #the sketch
+=======
+# Note: because this repository is a 'fine' selection of a much larger file structure in my work directory
+# I choose to ignore all
+*
+
+# As git does not ignore files specified in .gitignore that are already tracked,
+# files can be added to the repository with  git add -f. <file>
+# However, for completeness, all what should be in the repository is summed up here.
+# note: git is case insensitive to the entries in .gitignore
+
+### not ignored (hence included) are ======================
+
+#this file
+!.gitignore
+
+#the sketch
+>>>>>>> aabdin01-develop
 !RS485_USB.ino
