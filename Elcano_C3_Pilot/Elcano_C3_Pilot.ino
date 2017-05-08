@@ -7,9 +7,7 @@ using namespace elcano;
 /*
 // Elcano Contol Module C3: Pilot.
 
-The Pilot program reads a serial line that specifies the desired path and speed 
-of the vehicle. It computes the analog signals to control the throttle, brakes 
-and steering and sends these to C2.
+The Pilot program reads a serial line that specifies the desired path and speed  
 
 Input will be recieved and sent using Elcano_Serial. Inputs will be received from
 C5(sensors) and C4(planner). Output is sent to C2(Low Level).
@@ -23,8 +21,8 @@ serial line. The format of the DRIVE command is documented in the C1 code.
 data from C6 Navigator
 */
 
-SerialData serialData;
-ParseState parseState;
+SerialData data;
+ParseState ps;
 
 
 // TargetLocation struct is used to store the data of each TargetLocation of the path given by the planner.
@@ -448,7 +446,7 @@ bool ReadWaypoints(TargetLocation* TargetLocationArray)
     //check if we're done receiveing
 //    readSerial(&Serial1,&dataRead);
     // bad number there is no more data or end of data
-    ParseStateError r = parseState.update();
+    ParseStateError r = ps.update();
     if(r == ParseStateError::success)
     {
       if(dataRead.number >= 789 || count >= MAX_WAYPOINTS)
@@ -524,7 +522,7 @@ void turn(int turnAmount)
     command.kind = MsgType::drive;
     while(true) // wait until information on the bearing is recieved by C6
     {
-      ParseStateError r = parseState.update();
+      ParseStateError r = ps.update();
       if(r == ParseStateError::success)
       {
         Serial1.end();
@@ -534,7 +532,7 @@ void turn(int turnAmount)
       Serial.println("waiting for comms");
     }
 
-    int initialBearing = serialData.bearing_deg;
+    int initialBearing = data.bearing_deg;
  
     // send a slow speed to C2 and either a left or a right turn
     command.speed_cmPs = 500;
@@ -558,10 +556,10 @@ void turn(int turnAmount)
     while(currentBearing < turnAmount)
     {
       command.write(&Serial1); // send command
-      ParseStateError r = parseState.update();
+      ParseStateError r = ps.update();
       if(r == ParseStateError::success)
       {
-        currentBearing = abs((serialData.bearing_deg - initialBearing));
+        currentBearing = abs((data.bearing_deg - initialBearing));
         if(currentBearing > (360-turnAmount) 
         && oldBearing < turnAmount 
         && (initialBearing <= turnAmount 
@@ -601,32 +599,32 @@ void moveFixedDistance(long length_mm, long speed_mms)
   Serial.println("starting move fixed distance");
   while(true)
   {
-    ParseStateError r = parseState.update();
+    ParseStateError r = ps.update();
 //    Serial.println("waiting for initial location: " + String(static_cast<int8_t>(r)));
     if(r == ParseStateError::success)
     {
       Serial.println("got initial location");
-      serialData.posE_cm /= 10000; // avoid overflow
-      serialData.posN_cm /= 10000;
+      data.posE_cm /= 10000; // avoid overflow
+      data.posN_cm /= 10000;
       break;
     }
   }
-  double initialDistance_cm = sqrt(abs(abs(serialData.posE_cm) * abs(serialData.posE_cm) + abs(serialData.posN_cm) * abs(serialData.posN_cm)));
+  double initialDistance_cm = sqrt(abs(abs(data.posE_cm) * abs(data.posE_cm) + abs(data.posN_cm) * abs(data.posN_cm)));
 //  Serial.println(initialDistance_cm);
-  serialData.clear();
-  serialData.kind = MsgType::drive;
-  serialData.speed_cmPs = speed_mms/10; // The initial speed to send.
-  serialData.angle_mDeg = 0; // what should this actually be
-  serialData.write(&Serial1);
+  data.clear();
+  data.kind = MsgType::drive;
+  data.speed_cmPs = speed_mms/10; // The initial speed to send.
+  data.angle_mDeg = 0; // what should this actually be
+  data.write(&Serial1);
 
   double currentDistance_cm = 0;
   double length_cm = length_mm / 10;
   while(currentDistance_cm < length_cm + initialDistance_cm){
-    ParseStateError r = parseState.update();
+    ParseStateError r = ps.update();
     if(r == ParseStateError::success){
-      serialData.posE_cm /= 10000;
-      serialData.posN_cm /= 10000;
-      double currentLocation_cm = sqrt(abs(abs(serialData.posE_cm) * abs(serialData.posE_cm) + abs(serialData.posN_cm) * abs(serialData.posN_cm)));
+      data.posE_cm /= 10000;
+      data.posN_cm /= 10000;
+      double currentLocation_cm = sqrt(abs(abs(data.posE_cm) * abs(data.posE_cm) + abs(data.posN_cm) * abs(data.posN_cm)));
       double delta_cm = abs(currentLocation_cm - initialDistance_cm);
       currentDistance_cm += delta_cm;
 //      Serial.println("Current: " + String(currentDistance_cm));
@@ -634,10 +632,10 @@ void moveFixedDistance(long length_mm, long speed_mms)
     }    
   }
 //  Serial.println("Done moving fixed distance");
-  serialData.kind = MsgType::drive;
-  serialData.speed_cmPs = 0;
-  serialData.angle_mDeg = 0;
-  serialData.write(&Serial1);
+  data.kind = MsgType::drive;
+  data.speed_cmPs = 0;
+  data.angle_mDeg = 0;
+  data.write(&Serial1);
 }
 
 
@@ -657,9 +655,9 @@ void RotateToAngle(int targetAngle, int currentHeading)
   }
 
   //if not we set the steering angle and conitune turning.
-  if(ShortestAngle(targetAngle, currentHeading))
-  {
-  }
+//  if(ShortestAngle(targetAngle, currentHeading))
+//  {
+//  }
 
   //was is our max steering angle?
   
@@ -675,57 +673,57 @@ float ShortestAngle(float currentAngle, float targetAngle)
 {
      // handle cases of positve past 180 and negative past -180
      // This simplifies our calulations of smallest angle
-     currentAngle = UniformAngle(currentAngle);
-     targetAngle = UniformAngle(targetAngle);
-
-     //find the lowest angle
-
-     // case of positive positve
-     if( currentAngle >= 0 && targetAngle >= 0)
-     {
-        if(currentAngle > targetAngle)
-        {
-          return (currentAngle - targetAngle) * -1;
-        }
-        else
-        {
-          return (targetAngle - currentAngle);
-        }
-     }
-     
-     // case of negative negative
-     else if( currentAngle <= 0 && targetAngle <= 0)
-     {
-        if(currentAngle > targetAngle)
-        {
-          return (targetAngle - currentAngle);
-        }
-        else
-        {
-          return (currentAngle - targetAngle) * -1;
-        }
-     }
-     
-     // case of positve negative
-     else if( currentAngle >= 0 && targetAngle <= 0)
-     {
-        float retVal = (-currentAngle + targetAngle);
-        if(abs((180 - currentAngle) - (-180 - targetAngle)) < abs(retVal))
-        {
-          retVal = ((180 - currentAngle) - (-180 - targetAngle));
-        }
-        return retVal;
-     }
-     //case of negative positve
-     else if( currentAngle <= 0 && targetAngle >= 0)
-     {
-        float retVal = (-currentAngle + targetAngle);
-        if(abs(-(180 + currentAngle) - (180 - targetAngle)) < abs(retVal))
-        {
-          retVal = (-(180 + currentAngle) - (180 - targetAngle));
-        }
-        return retVal;
-     }
+//     currentAngle = UniformAngle(currentAngle);
+//     targetAngle = UniformAngle(targetAngle);
+//
+//     //find the lowest angle
+//
+//     // case of positive positve
+//     if( currentAngle >= 0 && targetAngle >= 0)
+//     {
+//        if(currentAngle > targetAngle)
+//        {
+//          return (currentAngle - targetAngle) * -1;
+//        }
+//        else
+//        {
+//          return (targetAngle - currentAngle);
+//        }
+//     }
+//     
+//     // case of negative negative
+//     else if( currentAngle <= 0 && targetAngle <= 0)
+//     {
+//        if(currentAngle > targetAngle)
+//        {
+//          return (targetAngle - currentAngle);
+//        }
+//        else
+//        {
+//          return (currentAngle - targetAngle) * -1;
+//        }
+//     }
+//     
+//     // case of positve negative
+//     else if( currentAngle >= 0 && targetAngle <= 0)
+//     {
+//        float retVal = (-currentAngle + targetAngle);
+//        if(abs((180 - currentAngle) - (-180 - targetAngle)) < abs(retVal))
+//        {
+//          retVal = ((180 - currentAngle) - (-180 - targetAngle));
+//        }
+//        return retVal;
+//     }
+//     //case of negative positve
+//     else if( currentAngle <= 0 && targetAngle >= 0)
+//     {
+//        float retVal = (-currentAngle + targetAngle);
+//        if(abs(-(180 + currentAngle) - (180 - targetAngle)) < abs(retVal))
+//        {
+//          retVal = (-(180 + currentAngle) - (180 - targetAngle));
+//        }
+        return 0.0;
+     //}
 }
 
 /* This function converts any angle we are dealing with to be from 0 to 180 and 
@@ -833,12 +831,13 @@ void setup()
 {  
 
   Serial.begin(9600);
+  Serial.flush();
   Serial1.begin(baudrate);
   /* 
    *  this for loop is so that there is time between uploading
    *  the program and the program moving the trike (for debugging purposes)
    */
-  pinMode(13, OUTPUT);
+ /* pinMode(13, OUTPUT);
   digitalWrite(13, LOW);
   for(int i = 5; i >= 0; i--)
   {
@@ -848,18 +847,18 @@ void setup()
     digitalWrite(13,LOW); 
     delay(800);
   }
-  
-  parseState.dt       = &serialData;
-  parseState.input    = &Serial1;
-  parseState.output   = &Serial1;
-  parseState.capture = MsgType::sensor | MsgType::seg;
-  serialData.clear();
-  pinMode(8,OUTPUT);
-  
-  long length_mm = 2000;     // default value
-  long speed_mms = 5000;
+  */
+  ps.dt       = &data;
+  ps.input    = &Serial1;
+  ps.output   = &Serial1;
+  ps.capture  = MsgType::seg;// | MsgType::sensor ;
+
+//  pinMode(8,OUTPUT);
+//  pinMode(13, OUTPUT);
+//  long length_mm = 2000;     // default value
+//  long speed_mms = 5000;
 //  squareRoutine();
-  noCompasTurn(90);
+  //noCompasTurn(90);
 }
 
 void go20mNorth()
@@ -868,12 +867,12 @@ void go20mNorth()
   int startBearing;
 //  while(true)
 //  {
-//    ParseStateError r = parseState.update();
+//    ParseStateError r = ps.update();
 //    if(r == ParseStateError::success)
 //    {
-//      start.x = serialData.posE_cm/100.;
-//      start.y = serialData.posN_cm/100.;
-//      startBearing = serialData.bearing_deg;
+//      start.x = data.posE_cm/100.;
+//      start.y = data.posN_cm/100.;
+//      startBearing = data.bearing_deg;
 //      break;
 //    }
 //    Serial.println("waiting");
@@ -893,7 +892,7 @@ void go20mNorth()
     command.kind = MsgType::drive;
     command.speed_cmPs = 0; // The initial speed to send.
     command.angle_mDeg = turns[i].steeringAngle_deg * -1 * 5 * 1000; // the 5 is to exadurate it for more visual results
-    Serial.println(command.angle_mDeg);
+    //Serial.println(command.angle_mDeg);
     command.write(&Serial1);
 //    Serial.println(String(turns[i].distance_mm) + ", " + String(turns[i].steeringAngle_deg));
     delay(500);
@@ -905,25 +904,25 @@ void go20mNorth()
 //    Serial.println(String(path.valueAtTime(i/100.).x) + ", " + String(path.valueAtTime(i/100.).y));
 //  }
 }
-
-void loop() 
+bool lightState = LOW;
+void loop(void) 
 {
-
-  //-----------------------Input from C6--------------------//
-  ParseStateError r = parseState.update();
+ 
+ParseStateError r = ps.update();
+//if(Serial1.available() > 0){Serial.println((char) Serial1.read());}
   if(r == ParseStateError::success)
   {
-    Serial.print(serialData.posN_cm);
-    Serial.print("\t");
-    Serial.println(serialData.posE_cm);
+     Serial.println("time = " + String(millis()));
+     Serial.println(String(static_cast<int8_t>(data.kind)) + " " + String(data.speed_cmPs) + " " + String(data.bearing_deg) + " " + String(data.number) + " " + String(data.posE_cm));
+     data.clear();
   }
-
+//  digitalWrite(13, lightState);
   //-----------------------Output to C2-----------------------//
-  serialData.kind = MsgType::drive;
-  serialData.angle_mDeg = 0;
-  serialData.speed_cmPs = 0;
-  serialData.write(&Serial1);
+  else 
+  data.kind = MsgType::drive;
+  data.angle_mDeg = 0;
+  data.speed_cmPs = 0;
 
-
+  data.write(&Serial1);
 
 }
