@@ -6,18 +6,21 @@ To get started, fork and clone the repository:
 https://github.com/elcano/elcano
 
 Parameters and settings for each trike are defined in:
-arduino/libraries/Settings/Settings.h
+/libraries/Settings/Settings.h
+
+Place the contents of the libraries folder into your libraries folder under
+Arduino/libraries
 
 The repository includes examples in the file:
-arduino/libraries/Settings/SettingsTemplate.h
+Arduino/libraries/Settings/SettingsTemplate.h
 
 Only libraries/Settings/SettingsTemplate.h should be committed in the
-repository -- the arduino/libraries/Settings/Settings.h file is site-specific.
+repository -- the Arduino/libraries/Settings/Settings.h file is site-specific.
 
 -- Copy
-   arduino/libraries/Settings/SettingsTemplate.h
+   Arduino/libraries/Settings/SettingsTemplate.h
    to
-   arduino/libraries/Settings/Settings.h
+   Arduino/libraries/Settings/Settings.h
 -- Give your trike a different VEHICLE_NUMBER value.
 -- Add your own trike's settings, following the examples.
 -- Put your settings in a conditional for your new VEHICLE_NUMBER value.
