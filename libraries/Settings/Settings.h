@@ -81,6 +81,11 @@ VEHICLE_NUMBER to your own new number.
 #define TICK2 1764
 #define TICK3 1900
 
+#define MIDDLE_STEER 1400		//Check to make sure this is correct
+#define MIN_RCSTEER 1100		// Check to make sure this is correct
+#define MAX_RCSTEER 1640		// Check to make sure this is correct
+
+#define MAX_RCGO 2100			// Check to make sure this is correct
 // Inaccuracy
 #define TICK_DEADZONE 40
 
