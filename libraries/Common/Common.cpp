@@ -231,12 +231,15 @@ bool waypoint::readPointString(unsigned long max_wait_ms, int channel)
      parsePtr = buffer+7;
      east_mm =  ReadDecimal(parsePtr);
      north_mm = ReadDecimal(parsePtr);
+	 Serial.println("East_mm " + String(east_mm) + " \t  North_mm" + String(north_mm));
      sigma_mm = ReadDecimal(parsePtr);
      time_ms  = ReadDecimal(parsePtr);
      speed_mmPs=ReadDecimal(parsePtr);
      Evector_x1000 =  ReadDecimal(parsePtr);
      Nvector_x1000 =  ReadDecimal(parsePtr);
      index    = ReadDecimal(parsePtr);
+	 east_mm += 100;
+	 north_mm += 100;
      return true;
     }
   }
