@@ -46,7 +46,7 @@ long goal_lon[CONES] = {-122349894, -122352120, -122351987, -122351087, -1223498
 #define MAX_MAPS 10         // The maximum number of map files stored to SD card.
 #define MAX_WAYPOINTS 40    // The maximum number of waypoints in each map file.
 
-int map_points = 16;
+int map_points =  4;//16;
 
 struct junction Nodes[MAX_WAYPOINTS];
 
@@ -70,18 +70,18 @@ int waypoints = CONES;
 void ConstructNetwork(junction *Map, int MapPoints)
 {
   double deltaX, deltaY;
-  int jj;
+  int destination;
   for (int i = 0; i < MapPoints; i++)
   {
       if( Map[i].east_mm == INVALID)  continue;
       for (int j = 0;  j< 4; j++)
       {
-        jj = Map[i].destination[j];
-        if (jj == END) continue;
+        destination = Map[i].destination[j];
+        if (destination == END) continue;
         deltaX = Map[i].east_mm;
-        deltaX -= Map[jj].east_mm;
+        deltaX -= Map[destination].east_mm;
         deltaY = Map[i].north_mm;
-        deltaY -= Map[jj].north_mm;
+        deltaY -= Map[destination].north_mm;
        
         Map[i].Distance[j] *= sqrt(deltaX * deltaX + deltaY * deltaY); //in rough scale
       }
@@ -96,7 +96,7 @@ void GetGoals(junction *nodes , int Goals)
   {
     mission[i].latitude  = nodes[i].east_mm;//goal_lat[i];
     mission[i].longitude = nodes[i].north_mm;//goal_lon[i];
-    //mission[i].Compute_mm();  
+    mission[i].Compute_mm();  
     mission[i].speed_mmPs = DESIRED_SPEED_mmPs;
     mission[i].index = 1 | GOAL;
     mission[i].sigma_mm = 1000;
@@ -132,7 +132,7 @@ void GetGoals(junction *nodes , int Goals)
 //k =  index into Nodes[]
 long distance(int i, int *k,  long east_mm, long north_mm, int* perCent)  
 {
-  float deltaX, deltaY, dist_mm; //change in lat and longitude from the start to i:
+  float deltaX, deltaY, dist_mm;
   int j, jj;
   long Eunit_x1000, Nunit_x1000;
   long closest_mm = MAX_DISTANCE; 
@@ -143,30 +143,29 @@ long distance(int i, int *k,  long east_mm, long north_mm, int* perCent)
   *perCent = 0;
   *k = 0;
   closest_mm = MAX_DISTANCE;
-  for (j=0; j < 4; j++)  // Don't make computations twice.
+
+ 
+  for (j=0; j < 2 /*4*/; j++)  // Don't make computations twice.
   {   
       jj = Nodes[i].destination[j];
-      //Serial.println("jj = " + String(jj));
       if (jj == END || jj < i) continue;  
         
       // compute road unit vectors from i to j
-//      Serial.println(" Nodes[i].east_mm = " + String(Nodes[i].east_mm) +  " Nodes[jj].east_mm = " + String(Nodes[jj].east_mm));
-
-      
-      RoadDX_mm = -Nodes[i].east_mm + Nodes[jj].east_mm; //Difference in nodes in east_mm
+      RoadDX_mm = -Nodes[i].east_mm + Nodes[jj].east_mm;
       int Eunit_x1000 = RoadDX_mm  * 1000 / Nodes[i].Distance[j];
-      
       RoadDY_mm = -Nodes[i].north_mm + Nodes[jj].north_mm;
       int Nunit_x1000 = RoadDY_mm * 1000 / Nodes[i].Distance[j];
 
       // normal vector is (Nunit, -Eunit)
+      //Answers: What would be the change in X/Y from my current Node.
       deltaX = -Nodes[i].east_mm + east_mm ;
       deltaY = -Nodes[i].north_mm + north_mm;
-      
-//      Serial.println("deltaX " + String(deltaX) + " \t delatY " + String(deltaY));
 
+      
       // sign of return value gives which side of road it is on.
-      Road_distance = (-deltaY * Eunit_x1000 + deltaX * Nunit_x1000) / 1000;
+      Road_distance = (-deltaY * Eunit_x1000 + deltaX * Nunit_x1000) / 1000; 
+
+      //Why do percentage computation like this?
       pc = (deltaX * Eunit_x1000 + deltaY * Nunit_x1000) / (Nodes[i].Distance[j] * 10);
 
 //     Serial.println("Closest_mm " + String(closest_mm) + "\t Road_distance " + String(Road_distance));
@@ -174,17 +173,16 @@ long distance(int i, int *k,  long east_mm, long north_mm, int* perCent)
       if (abs(Road_distance) < abs(closest_mm) && pc >= 0 && pc <= 100)
       {
           closest_mm = Road_distance;
-          *k = jj;
+          *k = destination;
           *perCent = pc;
           
       }
   }
-//  Serial.println("closest_mm " + String(closest_mm));
   return closest_mm;
 }
 /*---------------------------------------------------------------------------------------*/
 
-void FindClosestRoad(waypoint *start, waypoint *road)  // information returned
+void FindClosestRoad(waypoint *start, waypoint *road)  //populate road with best road from start 
 {
   long closest_mm = MAX_DISTANCE;
   long dist;
@@ -192,26 +190,30 @@ void FindClosestRoad(waypoint *start, waypoint *road)  // information returned
   int perCent;
   long done = 2000;
   int i, j;
-  for (i = 0; i < map_points; i++)  // find closest distance
+  for (i = 0; i < map_points; i++)  // find closest road.
   {
-    dist = distance(i, &j, start->east_mm, start->north_mm, &perCent); //shortest Distance from start to i;
-   // Serial.println("i = " + String(i) + " J = " + String(j) + " dist = " + String(dist));
+    dist = distance(i, &j, start->east_mm, start->north_mm, &perCent);
+    
     if (abs(dist) < abs(closest_mm))
     {
       close_index = j;
       closest_mm = dist;
-      done = perCent;
+      done = perCent; //Not really true amount of nodes done?
       road->index = i;
       road->sigma_mm = j;
     }
   }
+
   if (closest_mm < MAX_DISTANCE)
   {
-    i = road->index;
-    j = close_index;
+    i = road->index; //0
+    j = close_index; //0
+
+    //
     road->east_mm =  Nodes[i].east_mm  + 
       done *(Nodes[j].east_mm  - Nodes[i].east_mm) / 100;
-      
+
+    //
     road->north_mm = Nodes[i].north_mm + 
       done *(Nodes[j].north_mm - Nodes[i].north_mm) / 100;
  }
@@ -219,7 +221,7 @@ void FindClosestRoad(waypoint *start, waypoint *road)  // information returned
  
   else
   {
-     for (i = 0; i < map_points; i++) // find closest node
+     for (i = 0; i < 2/*map_points*/; i++) // find closest node
     {
       dist = start->distance_mm(Nodes[i].east_mm, Nodes[i].north_mm);
       if (dist < closest_mm)
@@ -237,6 +239,10 @@ void FindClosestRoad(waypoint *start, waypoint *road)  // information returned
   road->Nvector_x1000 = 0;
   road->time_ms = 0;
   road->speed_mmPs = DESIRED_SPEED_mmPs;
+
+  //Test FindClosest Road:
+//  Serial.println("FindClosestRoad:  East_mm " + String(road->east_mm) + "\t North_mm " + String(road->north_mm));
+  
 }
 /*---------------------------------------------------------------------------------------*/
 // start and destination are on the road network given in Nodes.
@@ -384,16 +390,15 @@ int FindPath(waypoint *start, waypoint *destination)
 //start = currentlocation: destination = heading to;
 int PlanPath (waypoint *start, waypoint *destination)
  {
+
+     //Serial.println("PlanPath: East_mm = " + String(start->east_mm) + "\t North_mm =  " + String(start->north_mm));
      waypoint roadOrigin, roadDestination;
      int last = 0;
      Path[0] = start;
      Path[0].index = 0;
-
-    Serial.println("Start->east_mm " + String(start->east_mm) + " Start_north_mm " + String(start->north_mm));
-    FindClosestRoad( start, &roadOrigin );
-    FindClosestRoad( destination, &roadDestination ); 
-
-    Serial.println("destination->east_mm " + String(destination->east_mm) + " destination_north_mm " + String(destination->north_mm));
+     FindClosestRoad( start, &roadOrigin );
+     FindClosestRoad( destination, &roadDestination ); 
+     
    if  (abs(start->east_mm  - roadOrigin.east_mm)
       + abs(start->north_mm - roadOrigin.north_mm)
       + abs(destination->east_mm  - roadDestination.east_mm)
@@ -403,6 +408,7 @@ int PlanPath (waypoint *start, waypoint *destination)
       {  // don't use roads; go direct
         last = 1;
       }
+      
       else   // use A* with the road network
       {
         Path[1] = roadOrigin;
@@ -475,7 +481,7 @@ boolean LoadMap(char* fileName)
     char delimiter[2] = ", \n";
     char* token;
     int col = 0;
-    int row = 0;
+    int row = 1;
     
     // get the first token 
     token = strtok(buffer, delimiter);
@@ -575,28 +581,28 @@ boolean LoadMap(char* fileName)
     map_points = row;
 
     //To test LoadMap:
-//    for (int i = 0; i < map_points; i++)
-//    {
-//      Serial.print(Nodes[i].east_mm);
-//      Serial.print(",");
-//      Serial.print(Nodes[i].north_mm);
-//      Serial.print(",");
-//      Serial.print(Nodes[i].destination[0]);
-//      Serial.print(",");
-//      Serial.print(Nodes[i].destination[1]);
-//      Serial.print(",");
-//      Serial.print(Nodes[i].destination[2]);
-//      Serial.print(",");
-//      Serial.print(Nodes[i].destination[3]);
-//      Serial.print(",");
-//      Serial.print(Nodes[i].Distance[0]);
-//      Serial.print(",");
-//      Serial.print(Nodes[i].Distance[1]);
-//      Serial.print(",");
-//      Serial.print(Nodes[i].Distance[2]);
-//      Serial.print(",");
-//      Serial.println(Nodes[i].Distance[3]);
-//    }
+    for (int i = 0; i < map_points; i++)
+    {
+      Serial.print(Nodes[i].east_mm);
+      Serial.print(",");
+      Serial.print(Nodes[i].north_mm);
+      Serial.print(",");
+      Serial.print(Nodes[i].destination[0]);
+      Serial.print(",");
+      Serial.print(Nodes[i].destination[1]);
+      Serial.print(",");
+      Serial.print(Nodes[i].destination[2]);
+      Serial.print(",");
+      Serial.print(Nodes[i].destination[3]);
+      Serial.print(",");
+      Serial.print(Nodes[i].Distance[0]);
+      Serial.print(",");
+      Serial.print(Nodes[i].Distance[1]);
+      Serial.print(",");
+      Serial.print(Nodes[i].Distance[2]);
+      Serial.print(",");
+      Serial.println(Nodes[i].Distance[3]);
+    }
 //  
 // 
     
@@ -632,9 +638,9 @@ void SelectMap(waypoint currentLocation, char* fileName, char* nearestMap)
     
     // Initialize a string buffer to read lines from the file into
     // Allocate an extra char at the end to add null terminator
-    char* buffer = (char*)malloc(myFile.size()+1);  
-
-    Serial.println("Printing file info");
+    char* buffer = (char*)malloc(myFile.size()+1);    
+    
+    //Serial.println("Printing file info");
     // index for the next character to read into buffer
     char* ptr = buffer;
     
@@ -765,7 +771,7 @@ void initialize()
 
   SelectMap(Start,"MAPDEFS.TXT",nearestMap); //pollutes info from map_def to nearestMap
   
-  LoadMap("MOCKMAP.TXT");// use nearestMap:: pollutes the Node, juction with the nearestMap
+  LoadMap("UWB_MAP.TXT");// use nearestMap:: pollutes the Node, juction with the nearestMap
 
   
   ConstructNetwork(Nodes, map_points); //To fill out the rest of the nodes info
@@ -775,12 +781,15 @@ void initialize()
   
  // SendPath(mission, CONES); //send mission to C3
 
+  SendPath(mission, CONES); //send mission to C3
    
   last = PlanPath (&mission[0], &mission[2]);
   Path[last].index |= GOAL; //number of waypoint sequences
    //SendPath(Path, MAX_WAYPOINTS); //Send a complete Path to C3
    
-   //Serial.println();     
+   SendPath(Path, MAX_WAYPOINTS); //Send a complete Path to C3
+   
+   Serial.println();     
 
 }
 /*---------------------------------------------------------------------------------------*/ 
@@ -815,17 +824,18 @@ void loop()
   */
 //     if (DataAvailable)
 //        {
-            //data.clear();                                      
-            //ParseStateError r = ps.update();// read vehicle estimated position from C6
-//            if(r == ParseStateError::success) 
-//            {
-//              digitalWrite(C4_DATA_SENT, HIGH);  // transition interrupts the processor
-//              digitalWrite(C4_DATA_SENT, LOW);
-//              
-              Start.readPointString(1000, 0); //Current vehicle location
-              last = PlanPath (&Start, &mission[GOAL]);//Which node to visit next?
+            data.clear();                                      
+            ParseStateError r = ps.update();// read vehicle estimated position from C6
+            if(r == ParseStateError::success) 
+            {
+              digitalWrite(C4_DATA_SENT, HIGH);  // transition interrupts the processor
+              digitalWrite(C4_DATA_SENT, LOW);
+              
+              Start.readPointString(1000, 0);  
+              
+              last = PlanPath (&Start, &mission[Goal]);
               Path[last].index |= GOAL;
-
+              
               // TO DO: Make a fine path, providing proper curve path
               if (last < MAX_WAYPOINTS / 2 && Goal < CONES)
               {
@@ -835,7 +845,7 @@ void loop()
               Serial.println( "Last = " + String(last));
               //SendPath(Path, 2); // send data to C3
               
-             // }
+              }
               
               long end_time = millis() + 1000;// delay for 1 sec, waiting for data
               
@@ -844,3 +854,84 @@ void loop()
                 if (DataAvailable) break;
               }
 }
+
+    mission[i].latitude  = nodes[i].east_mm;//goal_lat[i];
+    mission[i].longitude = nodes[i].north_mm;//goal_lon[i];
+    //mission[i].Compute_mm();  
+    mission[i].latitude  = goal_lat[i];//nodes[i].east_mm;//
+    mission[i].longitude = goal_lon[i];//nodes[i].north_mm;//
+    mission[i].Compute_mm();  
+  float deltaX, deltaY, dist_mm;
+  int j, destination;
+      destination = Nodes[i].destination[j];
+      if (destination == END || destination < i) continue;  
+      RoadDX_mm = -Nodes[i].east_mm + Nodes[destination].east_mm;//latitude difference from here to the next node
+      
+      
+      RoadDY_mm = -Nodes[i].north_mm + Nodes[destination].north_mm;//longitude difference from here to the next node
+      
+      
+  
+  return closest_mm; //closest distance that can be covered based on latitude and longitude
+  for (i = 0; i < 4/*map_points*/; i++)  // find closest road.
+    //recalculate the shortest distance based on latitude and longitude
+    dist = distance(i, &j, start->east_mm, start->north_mm, &perCent);
+    Serial.println( "i " + String(i) + "  dist " + String(dist) + " " + String(closest_mm));
+
+     Serial.println("PlanPath: East_mm = " + String(start->east_mm) + "\t North_mm =  " + String(start->north_mm));
+     FindClosestRoad(start, &roadOrigin ); //roadOrigin: next node to be covered
+     Serial.println("PlanPath: East_mm = " + String(roadOrigin.east_mm) + "\t North_mm =  " + String(roadOrigin.north_mm));
+     
+     Serial.println();
+     
+    // FindClosestRoad( destination, &roadDestination ); //populate the roadDestination
+    // Serial.println("PlanPath: East_mm = " + String(destination->east_mm) + "\t North_mm =  " + String(destination->north_mm));
+    // Serial.println("PlanPath: East_mm = " + String(roadDestination.east_mm) + "\t North_mm =  " + String(roadDestination.north_mm));
+     //Serial.println();
+
+     
+   if  (abs(start->east_mm  - roadOrigin.east_mm) //Is it shorter to driver straight or need to shift directions?
+      + abs(start->north_mm - roadOrigin.north_mm) 
+    int row = 0; //1:: start indexing from 0:
+//    for (int i = 0; i < 2 /*map_points*/; i++)
+//    {
+//      Serial.print(Nodes[i].east_mm);
+//      Serial.print(",");
+//      Serial.print(Nodes[i].north_mm);
+//      Serial.print(",");
+//      Serial.print(Nodes[i].destination[0]);
+//      Serial.print(",");
+//      Serial.print(Nodes[i].destination[1]);
+//      Serial.print(",");
+//      Serial.print(Nodes[i].destination[2]);
+//      Serial.print(",");
+//      Serial.print(Nodes[i].destination[3]);
+//      Serial.print(",");
+//      Serial.print(Nodes[i].Distance[0]);
+//      Serial.print(",");
+//      Serial.print(Nodes[i].Distance[1]);
+//      Serial.print(",");
+//      Serial.print(Nodes[i].Distance[2]);
+//      Serial.print(",");
+//      Serial.println(Nodes[i].Distance[3]);
+//    }
+  LoadMap("UWB_MAP.TXT");// use nearestMap:: populates the Node, juction with the nearestMap
+  // SendPath(mission, CONES); //send mission to C3: Why need to send numbers to hit to C3?
+  SendPath(Path, MAX_WAYPOINTS); //Send a complete Path to C3
+   
+  Serial.println();     
+//      
+            data.clear();                                      
+//            ParseStateError r = ps.update();// read vehicle estimated position from C6
+//            if(r == ParseStateError::success) 
+//            {
+             
+              digitalWrite(C4_DATA_SENT, HIGH);  // transition interrupts the processor
+              digitalWrite(C4_DATA_SENT, LOW);
+              
+              Start.readPointString(1000, 0);  //What is the info from Channel 0?
+              
+              last = PlanPath (&Start, &mission[Goal]);
+
+              Serial.println(last);
+          //}
