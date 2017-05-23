@@ -23,9 +23,11 @@ extern bool DataAvailable;
 /*---------------------------------------------------------------------------------------*/ 
 // EDIT for route
 // CONES includes start and stop
-#define CONES 5
-long goal_lat[CONES] = {  47621881,   47621825,   47623144,   47620616,   47621881};
-long goal_lon[CONES] = {-122349894, -122352120, -122351987, -122351087, -122349894};
+#define CONES 1
+long goal_lat[CONES] = {47760818}
+long goal_lon[CONES] = {-122190441}
+//long goal_lat[CONES] = {  47621881,   47621825,   47623144,   47620616,   47621881};
+//long goal_lon[CONES] = {-122349894, -122352120, -122351987, -122351087, -122349894};
 /*  mph   mm/s
      3    1341
      5    2235
@@ -92,12 +94,12 @@ void ConstructNetwork(junction *Map, int MapPoints)
 void GetGoals(junction *nodes , int Goals)
 {
   double deltaX, deltaY, Distance;
-  for (int i = 0; i < 4;/*CONES;*/ i++)
+  for (int i = 0; i < CONES; i++)
   {
 //    mission[i].latitude  = Nodes[i].east_mm;//goal_lat[i];
 //    mission[i].longitude = Nodes[i].north_mm;//goal_lon[i];
-    mission[i].east_mm  = Nodes[i].east_mm;//goal_lat[i];
-    mission[i].north_mm = Nodes[i].north_mm;//goal_lon[i];
+    mission[i].east_mm  = goal_lat[i];
+    mission[i].north_mm = goal_lon[i];
 //    mission[i].Compute_mm();  
     mission[i].speed_mmPs = DESIRED_SPEED_mmPs;
     mission[i].index = 1 | GOAL;
@@ -117,12 +119,12 @@ void GetGoals(junction *nodes , int Goals)
       mission[i-1].Evector_x1000 = (deltaX * 1000.) / Distance;
       mission[i-1].Nvector_x1000 = (deltaY * 1000.) / Distance;
     }
-    if (i == CONES - 1)
-    {
-      mission[i].Evector_x1000 = mission[i-1].Evector_x1000;
-      mission[i].Nvector_x1000 = mission[i-1].Nvector_x1000;
-      mission[i].index |= END;
-    }
+//    if (i == CONES - 1)
+//    {
+//      mission[i].Evector_x1000 = mission[i-1].Evector_x1000;
+//      mission[i].Nvector_x1000 = mission[i-1].Nvector_x1000;
+//      mission[i].index |= END;
+//    }
   }
 }
 /*---------------------------------------------------------------------------------------*/
@@ -155,7 +157,7 @@ long distance(int cur_node, int *k,  long cur_east_mm, long cur_north_mm, int* p
       if (destination == 0 || destination < cur_node) continue;  //replace Destination with END
       // compute road unit vectors from i to cur
       RoadDX_mm = Nodes[destination].east_mm - Nodes[cur_node].east_mm;
-//      
+            
 //      Serial.println("RoadX_mm " + String(RoadDX_mm));
 //      Serial.println("Destination " + String(destination));
 //      Serial.println("Nodes[destination].east_mm " + String(Nodes[destination].east_mm));
@@ -538,13 +540,14 @@ boolean LoadMap(char* fileName)
     *ptr = '\0';
     
     // Set up tokenizer for the file buffer string
-    char delimiter[2] = ", \n";
+    char delimiter[2] = ",\n";
     char* token;
     int col = 0;
     int row = 0;
     
     // get the first token 
-    token = strtok(buffer, delimiter);    
+    token = strtok(buffer, delimiter);
+
     // walk through other tokens
     while( token != NULL ) 
     {
@@ -605,7 +608,7 @@ boolean LoadMap(char* fileName)
           {
             Nodes[row].destination[3] = atoi(token);
           }
-        col++;
+          col++;
         break;
 
         case 6:  // filename
@@ -614,8 +617,8 @@ boolean LoadMap(char* fileName)
         break;
 
         case 7:  // filename
-        Nodes[row].Distance[1] = atol(token);
-        col++;
+          Nodes[row].Distance[1] = atol(token);
+          col++;
         break;
 
         case 8:  // filename
@@ -633,7 +636,7 @@ boolean LoadMap(char* fileName)
           Serial.print("Unexpected error happened while reading map description file.");
           Serial.print("Please verify the file is in the correct format.");
           Serial.println("Planner may not work correctly if this message appears.");
-        break;
+          break;
       }
       token = strtok(NULL, delimiter);
     }
@@ -662,8 +665,6 @@ boolean LoadMap(char* fileName)
       Serial.print(",");
       Serial.println(Nodes[i].Distance[3]);
     }
-//  
-// 
     
     // If file loaded, read data into Nodes[]
     free(buffer);
@@ -834,14 +835,13 @@ void initialize()
 
 //  SelectMap(Start,"MAPDEFS.TXT",nearestMap); //pollutes info from map_def to nearestMap
   
- LoadMap("MOCK_MAP.TXT");// use nearestMap:: pollutes the Node, juction with the nearestMap
+ LoadMap("MOCKMAP.TXT");// use nearestMap:: pollutes the Node, juction with the nearestMap
 
   
   ConstructNetwork(Nodes, map_points); //To fill out the rest of the nodes info
 /* Convert latitude and longitude positions to flat earth coordinates.
    Fill in waypoint structure  */
   GetGoals(Nodes, CONES); 
-  
  // SendPath(mission, CONES); //send mission to C3
 
 //  SendPath(mission, CONES); //send mission to C3
@@ -895,8 +895,7 @@ void loop()
   */
 //     if (DataAvailable)
 //        {
-            data.clear();                                      
-            ParseStateError r = ps.update();// read vehicle estimated position from C6
+//            ParseStateError r = ps.update();// read vehicle estimated position from C6
 //            if(r == ParseStateError::success) 
 //            {
 //              digitalWrite(C4_DATA_SENT, HIGH);  // transition interrupts the processor
@@ -935,6 +934,8 @@ void loop()
               }
 }
 
+
+///MOCK_MAP.TXTT
 void test_path(){
   
   for(int i = 0; i < 4; i++){
