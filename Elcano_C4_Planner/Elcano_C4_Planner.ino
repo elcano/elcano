@@ -24,8 +24,8 @@ extern bool DataAvailable;
 // EDIT for route
 // CONES includes start and stop
 #define CONES 1
-long goal_lat[CONES] = {47760818}
-long goal_lon[CONES] = {-122190441}
+long goal_lat[CONES] = {47760934};
+long goal_lon[CONES] = {-122189963};
 //long goal_lat[CONES] = {  47621881,   47621825,   47623144,   47620616,   47621881};
 //long goal_lon[CONES] = {-122349894, -122352120, -122351987, -122351087, -122349894};
 /*  mph   mm/s
@@ -343,6 +343,7 @@ int FindPath(waypoint *start, waypoint *destination)//While OpenSet is not empty
 {
 
   Serial.println("Start East_mm " + String(start->east_mm) + "\t North " + String(start->north_mm));
+  Serial.println("Start East_mm " + String(destination->east_mm) + "\t North " + String(destination->north_mm));
   long ClosedCost[map_points];
   int  i, neighbor, k;
   long NewCost, NewStartCost, NewCostToGoal;
@@ -469,7 +470,7 @@ int PlanPath (waypoint *start, waypoint *destination)
 //        Serial.println("In Else");
         Path[1] = roadOrigin;
         Path[1].index = 1;
-        destination -> index = 3;
+        destination -> index = 7;
 //        last = FindPath(roadOrigin, roadDestination);
         last = FindPath(start, destination);
 //      }
@@ -508,6 +509,21 @@ void SendPath(waypoint *course, int count)
   
   }
   
+}
+
+//Converts provided Longitude and Latitude to MM
+boolean convertLatLonToMM(long latitude, long longitude){
+  long scaledOriginLat = LATITUDE_ORIGIN*1000000;
+  long scaledOriginLon = LONGITUDE_ORIGIN*1000000;
+
+  double dLat = (latitude) * (PI/180.0) - (scaledOriginLat)* (PI / 180.0);
+  double dLon = latitude * (PI/180.0) - scaledOriginLon * (PI / 180.0);
+
+  Serial.println("dLat = " + String(dLat) + " dLon = " + String(dLon));
+  double soln = sin(dLat/2) * cos(dLat/2) + cos(scaledOriginLat * PI / 180) * cos(latitude * PI / 180) * sin(dLon/2) * sin(dLon/2);
+  double ans = 2 * atan2(sqrt(soln), sqrt(1-soln));
+  double finalAns = EARTH_RADIUS_MM * ans;
+  return true;
 }
 /*---------------------------------------------------------------------------------------*/
 // LoadMap
@@ -628,6 +644,7 @@ boolean LoadMap(char* fileName)
 
         case 9:  // filename
           Nodes[row].Distance[3] = atol(token);
+          convertLatLonToMM(Nodes[row].east_mm, Nodes[row].north_mm);
           col++;
           row++;
         break;
@@ -903,9 +920,10 @@ void loop()
               
               //Start.readPointString(1000, 0);  
 //              last = 0;
-              Start.east_mm = mission[0].east_mm;//Path[last].east_mm;
+              Start.east_mm = Nodes[0].east_mm;//Path[last].east_mm;
+              Start.north_mm = Nodes[0].north_mm;
               
-              last = PlanPath (&Start, &mission[3]);
+              last = PlanPath (&Start, &mission[0]);
 //              Serial.println(last);
 //              Path[last].index |= GOAL;
 
