@@ -1,0 +1,6 @@
+Data 2: 1.3 sec to first reaction
+Data 3: 0.6 sec to first reaction
+Data 4: 2.7 sec to first reaction
+Data 5: 2.3 sec to first reaction 
+
+average 1.725 seconds to first reaction
