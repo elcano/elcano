@@ -4,6 +4,7 @@
 #include <SPI.h>
 #include <ElcanoSerial.h>
 #include <Servo.h>
+#include <SD.h>
 using namespace elcano;
 
 long startTime;
@@ -361,6 +362,11 @@ void loop() {
     // No, pause til the next loop start time.
     delay(delayTime);
   }
+
+
+  // DATA LOGGING: OUTPUT TO SD CARD
+  logData();
+  
 }
 
 /*------------------------------------ThrottlePID--------------------------------*/
@@ -1065,6 +1071,65 @@ void ISR_MOTOR_FEEDBACK_rise() {
   ProcessRiseOfINT(RC_MOTOR_FEEDBACK);
   RC_elapsed[RC_MOTOR_FEEDBACK] = RC_rise[RC_MOTOR_FEEDBACK] - old_phase_rise;
   interrupts();
+}
+
+// SD CARD
+// logData() outputs throttle, brake, steer,
+// speed and distance data to an SD card
+// into a file with filename defined below
+void logData() {
+
+  // Name of data file on SD card
+  char* FILENAME = "datalog.txt";
+ 
+  // open the file. note that only one file can be open at a time,
+  // so you have to close this one before opening another.
+  File dataFile = SD.open(FILENAME, FILE_WRITE);
+
+  // Create a string with data information
+  String dataString = "";
+
+  dataString += "(ms) Time\t";
+  dataString += "(km/h) Speed\t";
+  dataString += "(km/h) HubSpeed\t";
+  dataString += "(ms) Angle\t";
+  dataString += "Right\t";
+  dataString += "Left\t";
+  dataString += "Throttle\t";
+  dataString += "Brake\t";
+  dataString += "Steer\t";
+  dataString += "(m) Distance \n";
+  
+  dataString += millis() + "\t";                            //(ms) Time
+  dataString += String(history.currentSpeed_kmPh) + "\t";   //(km/h) Speed
+  dataString += String(HubSpeed_kmPh) + "\t";               //(km/h) Hub Speed
+  dataString += String(SteerAngle_wms) + "\t";              //(microseconds) Angle
+
+  // TODO replace these pins with something labaled, idk what is going on here
+  int right = analogRead(A3);
+  int left = analogRead(A2);
+  dataString += right + "\t";                               //Right turn sensor
+  dataString += left + "\t";                                //Left turn sensor
+  dataString += throttle_control + "\t";                    //Throttle
+  dataString += brake_control + "\t";                       //Brake
+  dataString += steer_control + "\t";                       //Steer
+  dataString += String(Odometer_m) + "\n";                  //(m) Distance
+      
+  // if the file opened okay, write to it
+  if (dataFile) {
+    dataFile.print(dataString);
+    dataFile.close();
+    // print to the serial port too:
+    Serial.print("Data Logger: Logged data to ");
+    Serial.print(FILENAME);
+    Serial.println(".txt");
+  }
+  // if the file isn't opening, pop up an error:
+  else {
+    Serial.print("Data logger: error opening ");
+    Serial.print(FILENAME);
+    Serial.println(".txt");
+  }
 }
 
 
