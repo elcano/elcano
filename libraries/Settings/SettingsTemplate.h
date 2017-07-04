@@ -5,7 +5,7 @@
 Settings.h is a site-specific set of trike parameters.
 The file SettingsTemplate.h provides examples of how to define parameters,
 and shows the necessary parameters.
-Only Settings.h should be included from sketches.
+Only Settings.h should be included from sketches, but not saved in the git repository.
 Only SettingsTemplate.h should be saved in the git repository.
 
 After downloading the elcano repository for the first time, copy
@@ -27,23 +27,28 @@ VEHICLE_NUMBER to your own new number.
 #define RC_SPEKTRUM 
 #undef  RC_HITEC
 
-// Values (0-255) represent digital values that get convered into PWM signals by analogWrite.
+// Values (0-255) represent digital values that are PWM signals used by analogWrite.
 
 // MIN and MAX ACC set the minimum signal to get the motor going, and maximum allowable acceleration for the motor
 #define MIN_ACC_OUT 50
 #define MAX_ACC_OUT 235
 
 // MIN and MAX BRAKE_OUT set values to be sent to the brake actuator that controls the brakes on the front wheels
-#define MIN_BRAKE_OUT 160
-#define MAX_BRAKE_OUT 207
+#define MIN_BRAKE_OUT 202
+#define MAX_BRAKE_OUT 250
 
 // RIGHT, STRAIGHT, and LEFT TURN_OUT set values to be sent to the steer actuator that changes the direction of the front wheels
-#define RIGHT_TURN_OUT 1000
-#define LEFT_TURN_OUT 2000
-#define STRAIGHT_TURN_OUT 1500
+#define RIGHT_TURN_OUT 229
+#define LEFT_TURN_OUT 127
+#define STRAIGHT_TURN_OUT 178
+
+// RIGHT, STRAIGHT, and LEFT TURN_MS are pulse widths in msec received from the RC controller
+#define RIGHT_TURN_MS 1000
+#define LEFT_TURN_MS 2000
+#define STRAIGHT_TURN_MS 1500
 
 // Turn sensors are believed if they are in this range while wheels are straight
-// MAX values here are for the safety of the actuator so as not to break/overload it
+// These numbers vary considerably, depending on which sensor angle is set to straight.
 #define RIGHT_MIN_COUNT 80
 #define RIGHT_MAX_COUNT 284
 #define LEFT_MIN_COUNT  80
@@ -53,14 +58,15 @@ VEHICLE_NUMBER to your own new number.
 // Output to motor actuator
 #define DAC_CHANNEL 0
 // Output to steer actuator
-#define STEER_OUT_PIN 7
+#define STEER_OUT_PIN 9
 // Output to brake actuator
 #define BRAKE_OUT_PIN 6
+// DISK_BRAKE is deprecated, use BRAKE_OUT_PIN
 
 // Trike-specific physical parameters
 #define WHEEL_DIAMETER_MM 482
-// Wheel Cirumference
-#define WHEEL_CIRCUM_MM WHEEL_DIAMETER_MM * PI
+// Wheel Circumference
+#define WHEEL_CIRCUM_MM (long) (WHEEL_DIAMETER_MM * PI)
 //		Turning radius in cm.
 #define TURN_RADIUS_CM 209
 //		Turning speed in degrees per ms.
@@ -71,10 +77,9 @@ VEHICLE_NUMBER to your own new number.
 #define TURN_MAX_DEG 30
 //	Motor
 #define MOTOR_POLE_PAIRS 23
+// maximum allowed speed
+#define MAX_SPEED_KPH 15
 
-// Parameters used by MoveActuator
-// external PWM output
-// DISK_BRAKE is deprecated, use BRAKE_OUT_PIN
 // Use DAC A
 #define THROTTLE_CHANNEL 0
 
@@ -122,7 +127,7 @@ VEHICLE_NUMBER to your own new number.
 #undef RC_SPEKTRUM 
 #define  RC_HITEC
 
-// Values (0-255) represent digital values that get convered into PWM signals by analogWrite.
+// Values (0-255) represent digital values that get converted into PWM signals by analogWrite.
 
 // MIN and MAX ACC set the minimum signal to get the motor going, and maximum allowable acceleration for the motor
 #define MIN_ACC_OUT 50
@@ -138,7 +143,6 @@ VEHICLE_NUMBER to your own new number.
 #define STRAIGHT_TURN_OUT 192
 
 // Turn sensors are believed if they are in this range while wheels are straight
-// MAX values here are for the safety of the actuator so as not to break/overload it
 #define RIGHT_MIN_COUNT 725
 #define RIGHT_MAX_COUNT 785
 #define LEFT_MIN_COUNT  880
@@ -153,7 +157,7 @@ VEHICLE_NUMBER to your own new number.
 
 // Trike specific physical parameters
 #define WHEEL_DIAMETER_MM 500
-// Wheel Cirumference
+// Wheel Circumference
 #define WHEEL_CIRCUM_MM WHEEL_DIAMETER_MM * PI
 //Turning radius in cm.
 #define TURN_RADIUS 214
@@ -224,11 +228,11 @@ VEHICLE_NUMBER to your own new number.
 // in the stick mechanism. We may need a calibration procedure to run periodically.
 // Since changes in these values are ephemral, changes should not be made here,
 // but only in Settings.h.
-// RC input values - pulse widths in microseconds
+// RC input values - pulse widths in milliseconds
 #define DEAD_ZONE 75
 // was 1322; new stable value = 1510
 #define MIDDLE 1510
-// extremes of RC pulse width
+// extremes of RC pulse width in millisec
 // was 911:
 #define MIN_RC 1090
 // was 1730:
@@ -238,10 +242,10 @@ VEHICLE_NUMBER to your own new number.
 
 #ifdef RC_HITEC
 
-// RC input values - pulse widths in microseconds
+// RC input values - pulse widths in milliseconds
 #define DEAD_ZONE 75
 #define MIDDLE 1380
-// extremes of RC pulse width
+// extremes of RC pulse width in millisec
 #define MIN_RC 960
 #define MAX_RC 1800
 
