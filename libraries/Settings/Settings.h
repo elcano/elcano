@@ -36,6 +36,8 @@ VEHICLE_NUMBER to your own new number.
 // MIN and MAX BRAKE_OUT set values to be sent to the brake actuator that controls the brakes on the front wheels
 #define MIN_BRAKE_OUT 202
 #define MAX_BRAKE_OUT 250
+#define MIN_BRAKE_MS 1250 
+#define MAX_BRAKE_MS 1980 
 
 // RIGHT, STRAIGHT, and LEFT TURN_OUT set values to be sent to the steer actuator that changes the direction of the front wheels
 #define RIGHT_TURN_OUT 229
@@ -43,9 +45,9 @@ VEHICLE_NUMBER to your own new number.
 #define STRAIGHT_TURN_OUT 178
 
 // RIGHT, STRAIGHT, and LEFT TURN_MS are pulse widths in msec received from the RC controller
-#define RIGHT_TURN_MS 1000
-#define LEFT_TURN_MS 2000
-#define STRAIGHT_TURN_MS 1500
+#define RIGHT_TURN_MS 1100
+#define LEFT_TURN_MS 2100
+#define STRAIGHT_TURN_MS 1600
 
 // Turn sensors are believed if they are in this range while wheels are straight
 // These numbers vary considerably, depending on which sensor angle is set to straight.
