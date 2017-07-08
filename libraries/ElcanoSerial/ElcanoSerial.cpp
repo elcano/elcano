@@ -88,8 +88,8 @@ STATE('X', seg)
     case '6' :
     case '7' :
     case '8' :
-    case '9' : state = 40; checksum = CRC8.smbus(buffer, i - 1); msgChecksum = c - '0'; goto start;
-    case '-' : state = 41; checksum = CRC8.smbus(buffer, i - 1); goto start;
+    case '9' : state = 40; checksum = CRC8.smbus((const uint8_t*)buffer, i - 1); msgChecksum = c - '0'; goto start;
+    case '-' : state = 41; checksum = CRC8.smbus((const uint8_t*)buffer, i - 1); goto start;
     default  : state =  0; return ParseStateError::bad_lcurly;
     }
   case 2:
@@ -306,7 +306,7 @@ bool SerialData::write(HardwareSerial *dev) {
   }
   // At this point the max value of i is 106. A bounds check is necessary
   FastCRC8 CRC8;
-  int checksum = CRC8.smbus(buffer, i);
+  int checksum = CRC8.smbus((const uint8_t*)buffer, i);
   String chksumStr = String(checksum);
   int chksumLen = chksumStr.length();
   if (i == MAX_MSG_SIZE - chksumLen - 1)
