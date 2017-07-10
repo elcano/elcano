@@ -71,9 +71,10 @@ int Left_Max_Count = 980;
 int Right_Min_Count = 698;
 int Right_Max_Count = 808;
 
-double SteerAngle_wms = STRAIGHT_TURN_OUT; //Steering angle in microseconds used by writeMicroseconds function. Note: doubles on Arduinos are the same thing as floats, 4bytes, single precision
+// TCF 6/27/17  Why is steering angle in milliseconds? Degrees would be more appropriate.
+double SteerAngle_wms = STRAIGHT_TURN_MS; //Steering angle in microseconds used by writeMicroseconds function. Note: doubles on Arduinos are the same thing as floats, 4bytes, single precision
 double PIDSteeringOutput; //Output from steerPID.Compute() in microseconds (used by Servo.writeMicroseconds())
-double desiredAngle = STRAIGHT_TURN_OUT;
+double desiredAngle = STRAIGHT_TURN_MS;
 double steeringP = 1.5;
 double steeringI = 1.35; 
 double steeringD = .005;
@@ -117,7 +118,7 @@ int  brake_control = MIN_BRAKE_OUT;
 int  steer_control = STRAIGHT_TURN_OUT;
 float Odometer_m = 0;
 float HubSpeed_kmPh;
-const float  HubSpeed2kmPh = 13000000;
+//const float  HubSpeed2kmPh = 13000000;
 const unsigned long HubAtZero = 1159448;
 
 // Time at which this loop pass should end in order to maintain a
@@ -415,7 +416,7 @@ void computeAngle(){
 // Precondition: None
 // Postcondition: None
 void calibrateSensors(){
-  STEER_SERVO.writeMicroseconds(LEFT_TURN_OUT); //Calibrate angle sensors for left turn
+  STEER_SERVO.writeMicroseconds(LEFT_TURN_MS); //Calibrate angle sensors for left turn
   delay(4000);
   leftsenseleft = analogRead(A2);
   rightsenseleft = analogRead(A3);
@@ -423,7 +424,7 @@ void calibrateSensors(){
   Serial.print(leftsenseleft);
   Serial.println(rightsenseleft);
   
-  STEER_SERVO.writeMicroseconds(RIGHT_TURN_OUT); //Calibrate angle sensors for right turn
+  STEER_SERVO.writeMicroseconds(RIGHT_TURN_MS); //Calibrate angle sensors for right turn
   delay(4000);
   leftsenseright = analogRead(A2);
   rightsenseright = analogRead(A3);
@@ -502,7 +503,7 @@ byte processRC()
 // PostCondition: Return true if autonomous and false otherwise
 boolean isAutomatic(){
     if(RC_Done[RC_BRAKE]){
-      if(RC_elapsed[RC_BRAKE] > MIDDLE + TICK_DEADZONE){
+      if(RC_elapsed[RC_BRAKE] > MIDDLE + DEAD_ZONE){
         return true;           // It is manual control and not autonomous control
       }
     }
@@ -519,7 +520,7 @@ void doManualMovement(){
     //TODO: if less than the middle, reverse, otherwise forward
     bool doFeather = false;
     bool on = checkEbrake();
-    if(RC_Done[RC_GO]&& !on)
+    if(RC_Done[RC_GO] && !on)
     {
       if(RC_elapsed[RC_GO] > MIDDLE +  2 * DEAD_ZONE){
         moveVehicle(convertThrottle(RC_elapsed[RC_GO]));
@@ -539,7 +540,6 @@ void doManualMovement(){
 //Converts RC values to corresponding values for the PWM output
 int convertTurn(int input)
 {
-  
   long int steerRange, rcRange;
   long output;
   int trueOut;
@@ -550,10 +550,10 @@ int convertTurn(int input)
   }
   // On SPEKTRUM, MIN_RC = 1 msec = stick right; MAX_RC = 2 msec = stick left
   // On HI_TEC, MIN_RC = 1 msec = stick left; MAX_RC = 2 msec = stick right
-  // LEFT_TURN_OUT > RIGHT_TURN_OUT
+  // LEFT_TURN_MS > RIGHT_TURN_MS
   else
   {
-    int value = map(input, MIN_RCSTEER, MAX_RCSTEER, RIGHT_TURN_OUT, LEFT_TURN_OUT);
+    int value = map(input, MIN_RC, MAX_RC, RIGHT_TURN_OUT, LEFT_TURN_OUT);
     return value;
   }
   // @ToDo: Fix this so it is correct in any case.
@@ -579,7 +579,7 @@ int convertDeg(int deg)
 // Precondition: MIDDLE + 2 * DEAD_ZONE < input < MAX_RCGO
 int convertThrottle(int input)
 {
-  int mapping = map(input, MIDDLE + 2 * DEAD_ZONE, MAX_RCGO, 80, 140);
+  int mapping = map(input, MIDDLE + 2 * DEAD_ZONE, MAX_RC, 80, 140);
   return mapping;
 }
 
@@ -920,7 +920,7 @@ float mapThrottle(int value){
     return 0;// in future, add reverse
   }
   else
-    return map(value, MIDDLE-DEAD_ZONE, MIN_RC, 0, MAX_SPEED);
+    return map(value, MIDDLE-DEAD_ZONE, MIN_RC, 0, MAX_SPEED_KPH);
 }
 
 /*-----------------------------------ThrottlePID------------------------------------*/

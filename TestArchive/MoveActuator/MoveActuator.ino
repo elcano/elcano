@@ -165,7 +165,7 @@ const int MinimumThrottle = MIN_ACC_OUT;  // Throttle has no effect until 1.2 V
 // Vehicles #1 and #2 are reversed.
 // On #1. the actuator pushes the brake lever to bake.
 // On #2, the actuator pulls on the brake cable to brake.
-const int FullBrake = MIN_BRAKE_OUT;  
+const int FullBrake = MIN_BRAKE_OUT;  // FLIP THESE TWO
 const int NoBrake = MAX_BRAKE_OUT;
 // Steering
 const int HardLeft = LEFT_TURN_OUT;
@@ -266,12 +266,13 @@ void loop()
     if (BrakePosition > NoBrake || BrakePosition < FullBrake)
         BrakeIncrement = -BrakeIncrement;
     moveBrake(BrakePosition);
+      //moveBrake(250);
 #endif  // BRAKE_RAMP  
   
  // apply steering
 #ifdef STEER_RAMP
     SteerPosition += SteerIncrement;
-    if (SteerPosition > HardLeft || SteerPosition < HardRight)
+    if (SteerPosition > HardRight || SteerPosition < HardLeft)
         SteerIncrement = -SteerIncrement;
     moveSteer(SteerPosition);
 #endif  // Steer_RAMP
