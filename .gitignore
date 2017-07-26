@@ -10,6 +10,7 @@
 # --no-ignore-removal
 # --no-all
 # --ignore-removal
+libraries/Settings/Settings.h
 
 ###################
 .dropbox.cache
