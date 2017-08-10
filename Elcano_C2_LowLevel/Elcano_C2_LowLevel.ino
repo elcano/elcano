@@ -123,7 +123,7 @@ const unsigned long HubAtZero = 1159448;
 
 // Time at which this loop pass should end in order to maintain a
 // loop period of LOOP_TIME_MS.
-unsigned long nextTime = millis();
+unsigned long nextTime;
 // Time at which we reach the end of loop(), which should be before
 // nextTime if we have set the loop period long enough.
 unsigned long endTime;
@@ -256,10 +256,24 @@ void setup()
   Results.clear();
   SpeedCyclometer_mmPs = 0;
   brake(false);
+
+  // THIS MUST BE THE LAST LINE IN setup().
+  nextTime = millis()
 }
 
 /*-----------------------------------loop------------------------------------------------*/
 void loop() {
+
+  // Get the next loop start time. Note this (and the millis() counter) will
+  // roll over back to zero after they exceed the 32-bit size of unsigned long,
+  // which happens after about 1.5 months of operation (should check this).
+  // But leave the overflow computation in place, in case we need to go back to
+  // using the micros() counter.
+  // If the new nextTime value is <= LOOP_TIME_MS, we've rolled over.
+  nextTime = nextTime + LOOP_TIME_MS;
+
+  // DO NOT INSERT ANY LOOP CODE ABOVE THIS LINE.
+ 
   // send data to C6
   Results.clear();
   Results.kind = MsgType::drive;
@@ -269,18 +283,10 @@ void loop() {
   // end temporary
   Results.angle_mDeg = 0;
   Results.write(&Serial3);
-  nextTime = nextTime + LOOP_TIME_MS;
   computeSpeed(&history);
   computeAngle();
   ThrottlePID();
   SteeringPID();
-
-    // Get the next loop start time. Note this (and the millis() counter) will
-  // roll over back to zero after they exceed the 32-bit size of unsigned long,
-  // which happens after about 1.5 months of operation (should check this).
-  // But leave the overflow computation in place, in case we need to go back to
-  // using the micros() counter.
-  // If the new nextTime value is <= LOOP_TIME_MS, we've rolled over.
 
   byte automate = processRC();
   // END TEMPORARY
@@ -303,6 +309,11 @@ void loop() {
 
   // @ToDo: What information do we need to send to C6? Is that communication already
   // hiding in here somewhere, or does it need to be added?
+
+  // DATA LOGGING: OUTPUT TO SD CARD
+  logData();
+
+  // DO NOT INSERT ANY LOOP CODE BELOW THIS POINT.
 
   // Figure out how long we need to wait to reach the desired end time
   // for this loop pass. First, get the actual end time. Note: Beyond this
@@ -363,11 +374,6 @@ void loop() {
     // No, pause til the next loop start time.
     delay(delayTime);
   }
-
-
-  // DATA LOGGING: OUTPUT TO SD CARD
-  logData();
-  
 }
 
 /*------------------------------------ThrottlePID--------------------------------*/
