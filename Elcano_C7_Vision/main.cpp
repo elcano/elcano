@@ -45,52 +45,52 @@ int main(int argc, char* argv[]) {
 
 	usleep(2000000);  /* waits 2000ms for stable condition */
 
-    int stateSize = 6;
-    int measSize = 4;
+	int stateSize = 6;
+	int measSize = 4;
 
-    cv::KalmanFilter kf(stateSize, measSize);
+	cv::KalmanFilter kf(stateSize, measSize);
 
-    cv::Mat state(stateSize, 1, CV_32F);  // [x,y,v_x,v_y,w,h]
-    cv::Mat meas(measSize, 1, CV_32F);    // [z_x,z_y,z_w,z_h]
-    // [E_x,E_y,E_v_x,E_v_y,E_w,E_h]
+	cv::Mat state(stateSize, 1, CV_32F);  // [x,y,v_x,v_y,w,h]
+	cv::Mat meas(measSize, 1, CV_32F);    // [z_x,z_y,z_w,z_h]
+	// [E_x,E_y,E_v_x,E_v_y,E_w,E_h]
 
-    // Transition State Matrix A
-    // Note: set dT at each processing step!
-    // [ 1 0 dT 0  0 0 ]
-    // [ 0 1 0  dT 0 0 ]
-    // [ 0 0 1  0  0 0 ]
-    // [ 0 0 0  1  0 0 ]
-    // [ 0 0 0  0  1 0 ]
-    // [ 0 0 0  0  0 1 ]
-    cv::setIdentity(kf.transitionMatrix);
+	// Transition State Matrix A
+	// Note: set dT at each processing step!
+	// [ 1 0 dT 0  0 0 ]
+	// [ 0 1 0  dT 0 0 ]
+	// [ 0 0 1  0  0 0 ]
+	// [ 0 0 0  1  0 0 ]
+	// [ 0 0 0  0  1 0 ]
+	// [ 0 0 0  0  0 1 ]
+	cv::setIdentity(kf.transitionMatrix);
 
-    // Measure Matrix H
-    // [ 1 0 0 0 0 0 ]
-    // [ 0 1 0 0 0 0 ]
-    // [ 0 0 0 0 1 0 ]
-    // [ 0 0 0 0 0 1 ]
-    kf.measurementMatrix = cv::Mat::zeros(measSize, stateSize, CV_32F);
-    kf.measurementMatrix.at<float>(0) = 1.0f;
-    kf.measurementMatrix.at<float>(7) = 1.0f;
-    kf.measurementMatrix.at<float>(16) = 1.0f;
-    kf.measurementMatrix.at<float>(23) = 1.0f;
+	// Measure Matrix H
+	// [ 1 0 0 0 0 0 ]
+	// [ 0 1 0 0 0 0 ]
+	// [ 0 0 0 0 1 0 ]
+	// [ 0 0 0 0 0 1 ]
+	kf.measurementMatrix = cv::Mat::zeros(measSize, stateSize, CV_32F);
+	kf.measurementMatrix.at<float>(0) = 1.0f;
+	kf.measurementMatrix.at<float>(7) = 1.0f;
+	kf.measurementMatrix.at<float>(16) = 1.0f;
+	kf.measurementMatrix.at<float>(23) = 1.0f;
 
-    // Process Noise Covariance Matrix Q
-    // [ Ex   0   0     0     0    0  ]
-    // [ 0    Ey  0     0     0    0  ]
-    // [ 0    0   Ev_x  0     0    0  ]
-    // [ 0    0   0     Ev_y  0    0  ]	cout << "Img center = " << imgXCenter << endl;
-    // [ 0    0   0     0     Ew   0  ]
-    // [ 0    0   0     0     0    Eh ]
-    kf.processNoiseCov.at<float>(0) = 1e-2;
-    kf.processNoiseCov.at<float>(7) = 1e-2;
-    kf.processNoiseCov.at<float>(14) = 5.0f;
-    kf.processNoiseCov.at<float>(21) = 5.0f;
-    kf.processNoiseCov.at<float>(28) = 1e-2;
-    kf.processNoiseCov.at<float>(35) = 1e-2;
+	// Process Noise Covariance Matrix Q
+	// [ Ex   0   0     0     0    0  ]
+	// [ 0    Ey  0     0     0    0  ]
+	// [ 0    0   Ev_x  0     0    0  ]
+	// [ 0    0   0     Ev_y  0    0  ]	cout << "Img center = " << imgXCenter << endl;
+	// [ 0    0   0     0     Ew   0  ]
+	// [ 0    0   0     0     0    Eh ]
+	kf.processNoiseCov.at<float>(0) = 1e-2;
+	kf.processNoiseCov.at<float>(7) = 1e-2;
+	kf.processNoiseCov.at<float>(14) = 5.0f;
+	kf.processNoiseCov.at<float>(21) = 5.0f;
+	kf.processNoiseCov.at<float>(28) = 1e-2;
+	kf.processNoiseCov.at<float>(35) = 1e-2;
 
-    // Measures Noise Covariance Matrix R
-    cv::setIdentity(kf.measurementNoiseCov, cv::Scalar(1e-1));
+	// Measures Noise Covariance Matrix R
+	cv::setIdentity(kf.measurementNoiseCov, cv::Scalar(1e-1));
 
 	VideoCapture capture(0);
 	Mat frame;
