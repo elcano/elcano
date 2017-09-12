@@ -50,7 +50,7 @@ class WebcamVideoStream:
         # be stopped
         self.stopped = False
 
-        def start(self):
+    def start(self):
         # start the thread to read frames from the video stream
         Thread(target=self.update, args=()).start()
         return self
@@ -88,23 +88,15 @@ coneHeightM = 0.4953 # 0.4953 meters = 19.5 inches; this is specific to a partic
 camConstant = 1583.5 # equal to FL m / PS m; this is specific to an individual camera
 distConstant = coneHeightM * camConstant # range (m) = dC / N (px)
 degPerPx = 0.09 # this is NOT accurate towards edge of frame
-imgCenterX = 640/2.0
+imgCenterX = 640/2
 
 coneLocationString = "no cone location data yet..."
-# a point to store cone distance and angle
-coneLocation = {0.0,0.0}
 
 # font variables
 fontFace = 0 # this is an enum for a font in openCV
 fontScale = 1.0
 
-# the buffer stores the center points from frame to frame.
-# these are displayed on the screen as a tracer line
-# buffer length = number of stored points in history
-pts = deque(maxlen=args["buffer"])
-
 # timing variables
-startTime = time.time()
 loopStartTime = time.time()
 loopEndTime = time.time()
 duration = time.time()
@@ -153,8 +145,8 @@ while True:
         else:
             # use RGB
             mask = cv2.inRange(frame, orangeLowerRGB, orangeUpperRGB)
-            mask = cv2.erode(mask, None, iterations=1)
-            mask = cv2.dilate(mask, None, iterations=1)
+            #mask = cv2.erode(mask, None, iterations=1)
+            #mask = cv2.dilate(mask, None, iterations=1)
 
         # find contours in the mask and initialize the current
         # (x, y) center of the cone
@@ -178,32 +170,12 @@ while True:
             coneLocation = {degrees, distance} # TODO: write this to UART
             coneLocationString = "Angle: {0:.1f} (deg), distance: {1:.2f} (m)".format(degrees, distance)
 
-
-        # update the points queue
-        pts.appendleft(center)
-
-        # loop over the set of tracked points
         if args.get("gui"):
-            for i in range(1, len(pts)):
-                # if either of the tracked points are None, ignore them
-                if pts[i - 1] is None or pts[i] is None:
-                    continue
-                # otherwise, compute the thickness of the line and
-                # draw the connecting lines
-                thickness = 5
-                cv2.line(frame, pts[i - 1], pts[i], (0,153,204), thickness)
-
-            #mask = cv2.resize(mask, (0,0), fx=0.25, fy=0.25)
-            # show the frame to our screen
             cv2.putText(frame, coneLocationString, (5,15), fontFace, 0.5,(255,255,255,255), 1)
 
             cv2.imshow("Frame", frame)
-            #cv2.putText(img,'Hello World!',(10,500), fontFace, 1,(255,255,255),2)
-            # comment this out to remove the mask window
-            # cv2.imshow("Mask", mask)
 
         key = cv2.waitKey(1) & 0xFF
-
         # if the 'q' key is pressed, stop the loop
         if key == ord("q"):
             break
@@ -212,23 +184,23 @@ while True:
         duration = loopEndTime - loopStartTime
         frames = frames + 1
         if args.get("verbose"):
-            print("FPS", 1 / duration, coneLocationString)
+            print("FPS", np.divide(1.0, duration), coneLocationString)
     except KeyboardInterrupt:
     # if keyboard inturrupt (Crtl+C) stop loop
         break
-totalTime= time.time() - startTime
+totalTime = time.time() - startTime
 # cleanup the IO streams and close any open windows
 cv2.destroyAllWindows()
 vs.stop()
 # report time data
-if frames:
-    meanTime = totalTime / float(frames)
+if (frames != 0):
+    meanTime = np.divide(totalTime ,frames)
 else:
     print("no frames found!")
 print("Average frame time:", meanTime)
-if meanTime:
-    print("Average FPS:", (1 / meanTime))
+if (meanTime != 0):
+    print("Average FPS:", np.divide(1.0, meanTime))
 print("Frames:", frames)
 print("Frames with a cone:", coneFrames)
-if (coneFrames and frames):
-    print("Frames with a cone (%):", (coneFrames / frames) * 100)
+if (coneFrames != 0) and (frames != 0):
+    print("Frames with a cone (%):", np.divide(coneFrames, frames) * 100)
