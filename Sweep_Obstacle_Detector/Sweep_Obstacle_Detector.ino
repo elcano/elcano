@@ -9,16 +9,17 @@
  * Sweep Obstacle Detector
  * by B. Johnson
  *
- * A simple obstacle detection sketch for use with the Scanse Sweep lidar
- * sensor.
+ * A simple obstacle detection sketch for use with the Arduino Micro and the
+ * Scanse Sweep lidar sensor.
  *
  * Searches for obstacles within the arc formed by the left and right
  * boundaries. If a reading within this arc has a distance which is
- * less than the calculated range, an obstacle has been found.
+ * less than the calculated range, and the signal is strong enough, an obstacle
+ * has been found.
  *
- * The left and right boundaries are determined by the width of the vehicle. The
- * range is determined by the vehicle speed and the time it takes for the vehicle
- * to fully stop after braking.
+ * The left and right boundaries are determined by the width of the vehicle.
+ * The range is determined by the vehicle speed and the time it takes for the
+ * vehicle to fully stop after braking.
  */
 
 const uint8_t  POWER_PIN         = 2; // Power Enable pin
@@ -35,7 +36,7 @@ const uint16_t READING_DELAY_US       = 500;    // Delay between readings
 const uint16_t vehicleSpeed_cmPs      = 100;    // Speed of vehicle (centimeters per second)
 const uint16_t brakeTime_ms           = 1000;   // Time needed to fully stop after applying brake
 const uint16_t RANGE_CM = ((brakeTime_ms / 1000) * vehicleSpeed_cmPs) * 2; // Range within which to scan for obstacles
-const uint16_t VEHICLE_WIDTH_CM       = 76;     // Width of vehicle
+const uint16_t VEHICLE_WIDTH_CM       = 76;     // Width of vehicle (in centimeters)
 
 const uint8_t  (&MOTOR_SPEED_CODE)[2] = MOTOR_SPEED_CODE_8_HZ;   // Number of rotations per second
 const uint8_t  (&SAMPLE_RATE_CODE)[2] = SAMPLE_RATE_CODE_500_HZ; // Number of samples per second
