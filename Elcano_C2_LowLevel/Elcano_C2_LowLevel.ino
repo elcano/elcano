@@ -258,7 +258,7 @@ void setup()
   brake(false);
 
   // THIS MUST BE THE LAST LINE IN setup().
-  nextTime = millis()
+  nextTime = millis();
 }
 
 /*-----------------------------------loop------------------------------------------------*/
