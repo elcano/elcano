@@ -12,6 +12,14 @@
 # --ignore-removal
 libraries/Settings/Settings.h
 
+# Add any required Arduino or 3rd party libraries here, so they do not
+# show up in git status.
+libraries/ArduinoUnit
+libraries/PID
+libraries/SD
+libraries/Servo
+libraries/TimerOne
+
 ###################
 .dropbox.cache
 
