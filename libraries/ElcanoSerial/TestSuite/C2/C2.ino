@@ -24,28 +24,10 @@ void setup() {
 
 void loop() {
   elcano::ParseStateError err = ps1.update();
-  if (err == elcano::ParseStateError::success) {
+  Serial.println(static_cast<int8_t>(err));
+
+  if (err == elcano::ParseStateError::passthru ||
+      err == elcano::ParseStateError::unavailable) {
     dt2.write(&Serial2);
-  } else if (err != elcano::ParseStateError::passthru) {
-    Serial.print("Error: recieved ");
-    switch (err) {
-    case elcano::ParseStateError::inval_comb:
-      Serial.println("an invalid combination of attributes for a type!");
-      break;
-    case elcano::ParseStateError::bad_type:
-      Serial.println("a bad type!");
-      break;
-    case elcano::ParseStateError::bad_lcurly:
-      Serial.println("a bad left `{'!");
-      break;
-    case elcano::ParseStateError::bad_attrib:
-      Serial.println("a bad attribute!");
-      break;
-    case elcano::ParseStateError::bad_number:
-      Serial.println("a bad number!");
-      break;
-    default:
-      Serial.println("an unknown error!");
-    }
   }
 }

@@ -33,28 +33,7 @@ void loop() {
     start = millis();
   } else if (err != elcano::ParseStateError::passthru && err != elcano::ParseStateError::unavailable) {
     dt1.write(&Serial);
-    Serial.print("Error (");
-    Serial.print(static_cast<int8_t>(err));
-    Serial.print("): recieved ");
-    switch (err) {
-    case elcano::ParseStateError::inval_comb:
-      Serial.println("an invalid combination of attributes for a type!");
-      break;
-    case elcano::ParseStateError::bad_type:
-      Serial.println("a bad type!");
-      break;
-    case elcano::ParseStateError::bad_lcurly:
-      Serial.println("a bad left `{'!");
-      break;
-    case elcano::ParseStateError::bad_attrib:
-      Serial.println("a bad attribute!");
-      break;
-    case elcano::ParseStateError::bad_number:
-      Serial.println("a bad number!");
-      break;
-    default:
-      Serial.println("an unknown error!");
-    }
+    Serial.println(static_cast<int8_t>(err));
   }
 
   err = ps2.update();
@@ -62,27 +41,6 @@ void loop() {
     start = millis();
   } else if (err != elcano::ParseStateError::unavailable) {
     dt1.write(&Serial);
-    Serial.print("Error (");
-    Serial.print(static_cast<int8_t>(err));
-    Serial.print("): recieved ");
-    switch (err) {
-    case elcano::ParseStateError::inval_comb:
-      Serial.println("an invalid combination of attributes for a type!");
-      break;
-    case elcano::ParseStateError::bad_type:
-      Serial.println("a bad type!");
-      break;
-    case elcano::ParseStateError::bad_lcurly:
-      Serial.println("a bad left `{'!");
-      break;
-    case elcano::ParseStateError::bad_attrib:
-      Serial.println("a bad attribute!");
-      break;
-    case elcano::ParseStateError::bad_number:
-      Serial.println("a bad number!");
-      break;
-    default:
-      Serial.println("an unknown error!");
-    }
+    Serial.println(static_cast<int8_t>(err));
   }
 }
