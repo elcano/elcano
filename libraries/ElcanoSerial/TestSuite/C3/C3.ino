@@ -16,7 +16,7 @@ void setup() {
   dt2.clear();
   dt2.kind = elcano::MsgType::drive;
   dt2.speed_cmPs = 123456;
-  dt2.angle_deg = 32;
+  dt2.angle_mDeg = 32;
 }
 
 void loop() {

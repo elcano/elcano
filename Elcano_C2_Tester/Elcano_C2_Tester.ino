@@ -135,7 +135,7 @@ void setup()  {
   parseState.output = &Serial3;
   Serial3.begin(baudrate);
   parseState.capture = MsgType::drive;
-  // msgType::drive uses `speed_cmPs` and `angle_deg`
+  // msgType::drive uses `speed_cmPs` and `angle_mDeg`
 
   //set up for transmitting data from C2
   SendData.clear();

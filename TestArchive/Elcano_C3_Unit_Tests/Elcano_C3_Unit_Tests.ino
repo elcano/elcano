@@ -625,7 +625,7 @@ void loop()
     //Send data to low level.
     SerialData toLowLevel;
     toLowLevel.kind = MSG_DRIVE;
-    toLowLevel.angle_deg = steeringAngle;
+    toLowLevel.angle_mDeg = steeringAngle;
     toLowLevel.speed_cmPs = speedSetting;
     toLowLevel.write(&Serial1);
 
@@ -645,7 +645,7 @@ void loop()
     /*
      sensorData.kind = 2;
      sensorData.speedcmPs = 100;
-     sensorData.angle_deg = 12;
+     sensorData.angle_mDeg = 12;
      sensorData.posE_cm = 50;
      sensorData.posN_cm = 50;
      sensorData.bearing_deg = 15;
@@ -655,7 +655,7 @@ void loop()
     /*
     toLowLevel.kind = 1;
     toLowLevel.speed_cmPs = 400;
-    toLowLevel.angle_deg = 35;
+    toLowLevel.angle_mDeg = 35;
      */
     
     

@@ -352,49 +352,49 @@ void loop()
   static bool e_stop = 0, auto_mode = 0;
   brake.Check();
 
-// get data from serial
-// get desired steering and speed
-   if (auto_mode)
-   {
-   // Receiving data from High Level 
-     ParseStateError r = RxStateHiLevel.update();
-     if (r == ParseStateError::success) {
-       desired_speed_cmPs = RxDataHiLevel.speed_cmPs; 
-       desired_angle = RxDataHiLevel.angle_deg; 
-     } 
-   }
-    computeSpeed(&history);
-    computeAngle(); // TO DO: Convert angle to right units for PID and for sending to High Level.
-    
-    // Write data to High Level
-    TxDataHiLevel.speed_cmPs = (speedCyclometerInput_mmPs + 5) / 10;
-    TxDataHiLevel.write(TxStateHiLevel.output);
-
-    // Get data from RC unit
-    ParseStateError r = RC_State.update();
+  // get data from serial
+  // get desired steering and speed
+  if (auto_mode)
+  {
+    // Receiving data from High Level
+    ParseStateError r = RxStateHiLevel.update();
     if (r == ParseStateError::success) {
-      e_stop = RC_Data.number & 0x01;
-      auto_mode = RC_Data.number & 0x02;
-      if (!auto_mode)
-      {
-        desired_speed_cmPs = RC_Data.speed_cmPs; 
-        desired_angle = RC_Data.angle_deg; 
-      }
-    } 
-    if (e_stop)
+      desired_speed_cmPs = RxDataHiLevel.speed_cmPs;
+      desired_angle = RxDataHiLevel.angle_mDeg;
+    }
+  }
+  computeSpeed(&history);
+  computeAngle(); // TO DO: Convert angle to right units for PID and for sending to High Level.
+  
+  // Write data to High Level
+  TxDataHiLevel.speed_cmPs = (speedCyclometerInput_mmPs + 5) / 10;
+  TxDataHiLevel.write(TxStateHiLevel.output);
+
+  // Get data from RC unit
+  ParseStateError r = RC_State.update();
+  if (r == ParseStateError::success) {
+    e_stop = RC_Data.number & 0x01;
+    auto_mode = RC_Data.number & 0x02;
+    if (!auto_mode)
     {
-      brake.Stop();
-      engageWheel(0); // Turn off wheel
+      desired_speed_cmPs = RC_Data.speed_cmPs; 
+      desired_angle = RC_Data.angle_mDeg; 
     }
-    else
-    { // Control trike to desired speed and angle 
-      SteeringPID(convertHLToTurn(desired_angle));
-      ThrottlePID(desired_speed_cmPs);
-    }
-    
+  } 
+  if (e_stop)
+  {
+    brake.Stop();
+    engageWheel(0); // Turn off wheel
+  }
+  else
+  { // Control trike to desired speed and angle 
+    SteeringPID(convertHLToTurn(desired_angle));
+    ThrottlePID(desired_speed_cmPs);
+  }
+
   // DO NOT INSERT ANY LOOP CODE BELOW THIS POINT !!
 
-   unsigned long delay_ms = millis() - (timeStart_ms + LOOP_TIME_MS);
+  unsigned long delay_ms = millis() - (timeStart_ms + LOOP_TIME_MS);
   // Did we spend long enough in the loop that we should immediately start
   // the next pass?
   if(delay_ms > 0L)

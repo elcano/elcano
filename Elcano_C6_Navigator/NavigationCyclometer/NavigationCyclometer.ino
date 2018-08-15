@@ -254,8 +254,8 @@
 ////  Serial.println(Results.number);
 ////  Serial.print("SerialData::speed_cmPs:");
 ////  Serial.println(Results.speed_cmPs);
-////  Serial.print("SerialData::angle_deg:");
-////  Serial.println(Results.angle_deg);    // front wheels
+////  Serial.print("SerialData::angle_mDeg:");
+////  Serial.println(Results.angle_mDeg);    // front wheels
 ////  Serial.print("SerialData::bearing_deg:");
 ////  Serial.println(Results.bearing_deg);  // compass direction
 ////  Serial.print("SerialData::posE_cm:");
