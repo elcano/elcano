@@ -340,7 +340,7 @@ void loop() {
 
   // @ToDo: What is this doing?
   Results.kind = MsgType::sensor;
-  Results.angle_deg = TurnAngle_degx10() / 10;
+  Results.angle_mDeg = TurnAngle_degx10() / 10;
   // @ToDo: Is this working and should it be uncommented?
   
   calibrationTime_ms += LOOP_TIME_MS;
@@ -462,7 +462,7 @@ void LogData(unsigned long commands[7], SerialData *sensors)  // data for spread
   Serial.print(sensors->speed_cmPs); Serial.print("\t");             //(cm/s) Speed
   Serial.print(sensors->speed_cmPs * 36.0 / 1000.); Serial.print("\t"); //(km/h) Speed
   Serial.print(HubSpeed_kmPh); Serial.print("\t");                   //(km/h) Hub Speed
-  Serial.print(sensors->angle_deg); Serial.print("\t");              //(deg) Angle
+  Serial.print(sensors->angle_mDeg); Serial.print("\t");              //(deg) Angle
   int right = analogRead(A3);
   int left = analogRead(A2);
   Serial.print(right); Serial.print("\t");                           //Right turn sensor
@@ -709,7 +709,7 @@ void doManualMovement(){
 void processHighLevel(SerialData * results)
 {
   //Steer
-  int turn_signal = convertDeg(results->angle_deg);
+  int turn_signal = convertDeg(results->angle_mDeg);
   steer(turn_signal);
   //End Steer
   //Throttle

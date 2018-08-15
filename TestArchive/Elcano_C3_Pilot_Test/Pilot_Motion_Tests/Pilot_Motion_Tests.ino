@@ -268,7 +268,7 @@ void loop()
 {
     //Most basic test of output to the low level
     SerialData lowLevelData;
-    lowLevelData.angle_deg = 15;
+    lowLevelData.angle_mDeg = 15;
     lowLevelData.speed_cmPs = 120;
     lowLevelData.write(&Serial1);
 

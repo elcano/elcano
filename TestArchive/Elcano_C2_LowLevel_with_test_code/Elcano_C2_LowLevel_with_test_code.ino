@@ -272,7 +272,7 @@ void setup()
   parseState.output = &Serial3;
   Serial3.begin(baudrate);
   parseState.capture = MsgType::drive;
-  // msgType::drive uses `speed_cmPs` and `angle_deg`
+  // msgType::drive uses `speed_cmPs` and `angle_mDeg`
   
   Results.clear();
   SpeedCyclometer_mmPs = 0;
@@ -353,7 +353,7 @@ void loop() {
   // temporary
 //  Results.speed_cmPs = 0;
   // end temporary
-  Results.angle_deg = 0;
+  Results.angle_mDeg = 0;
   Results.write(&Serial3);
  
 //  delay(100);
@@ -393,7 +393,7 @@ void loop() {
 
 //  // @ToDo: What is this doing?
 //  Results.kind = MsgType::sensor;
-//  Results.angle_deg = TurnAngle_degx10() / 10;
+//  Results.angle_mDeg = TurnAngle_degx10() / 10;
 //  // @ToDo: Is this working and should it be uncommented?
   
   calibrationTime_ms += LOOP_TIME_MS;
@@ -475,7 +475,7 @@ void processHighLevel(SerialData * results)
   Serial3.end();
   Serial3.begin(baudrate);  // clear the buffer
   
-  int turn_signal = convertDeg(results->angle_deg);
+  int turn_signal = convertDeg(results->angle_mDeg);
 
   desiredSpeed = results->speed_cmPs * 10;
   desiredAngle = turn_signal;
@@ -1410,7 +1410,7 @@ void LogData(unsigned long commands[7], SerialData *sensors)  // data for spread
   Serial.print(sensors->speed_cmPs); Serial.print("\t");             //(cm/s) Speed
   Serial.print(sensors->speed_cmPs * 36.0 / 1000.); Serial.print("\t"); //(km/h) Speed
   Serial.print(HubSpeed_kmPh); Serial.print("\t");                   //(km/h) Hub Speed
-  Serial.print(sensors->angle_deg); Serial.print("\t");              //(deg) Angle
+  Serial.print(sensors->angle_mDeg); Serial.print("\t");              //(deg) Angle
   int right = analogRead(A3);
   int left = analogRead(A2);
   Serial.print(right); Serial.print("\t");                           //Right turn sensor

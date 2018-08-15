@@ -182,8 +182,8 @@ void displayResults(SerialData &Results)
 //    Serial.println(Results.number);    
 //    Serial.print("SerialData::speed_cmPs:");
 //    Serial.println(Results.speed_cmPs);
-//    Serial.print("SerialData::angle_deg:");
-//    Serial.println(Results.angle_deg);    // front wheels
+//    Serial.print("SerialData::angle_mDeg:");
+//    Serial.println(Results.angle_mDeg);    // front wheels
 //    Serial.print("SerialData::bearing_deg:");
 //    Serial.println(Results.bearing_deg);  // compass direction
 //    Serial.print("SerialData::posE_cm:");
@@ -562,7 +562,7 @@ void loop()
   data.kind = MsgType::sensor;
   data.bearing_deg = CurrentHeading;
   //C2_Results.speed_cmPs = 0;
-  //C2_Results.angle_deg = 0;
+  //C2_Results.angle_mDeg = 0;
   data.posE_cm = GPS_reading.latitude/10;
   data.posN_cm = GPS_reading.longitude/10;
 	// Read data from C2 using Elcano_Serial
@@ -616,7 +616,7 @@ void loop()
 	data.posE_cm = fuzzy_out.x_Pos;
 	data.posN_cm = fuzzy_out.y_Pos;
 	data.bearing_deg = CurrentHeading;
-	data.angle_deg = 0;
+	data.angle_mDeg = 0;
 	// data.write(&Serial2);
 //	Serial.println("\t\t\t\t\tx_Pos" + String(fuzzy_out.x_Pos) + "   y_Pos" + String(fuzzy_out.y_Pos));
   }

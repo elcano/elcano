@@ -67,7 +67,7 @@ STATE('G', goal)
 STATE('X', seg)
 #undef STATE
     default:
-	  mostRecent = c;
+      mostRecent = c;
       state = 0;
       return ParseStateError::bad_type;
     }
@@ -99,7 +99,7 @@ STATE('X', seg)
     case 'n': state = 3; goto start;
     case 's': state = 4; goto start;
     case 'a': state = 5; goto start;
-	case 'o': state = 6; goto start;
+    case 'o': state = 6; goto start;
     case 'b': state = 7; goto start;
     case 'r': state = 8; goto start;
     case 'p': state = 9; goto start;
@@ -346,7 +346,7 @@ bool SerialData::verify(void) {
     if (speed_cmPs  == NaN) return false;
     if (posE_cm     == NaN) return false;
     if (posN_cm     == NaN) return false;
-	if (obstacle_mm == NaN) return false;
+    if (obstacle_mm == NaN) return false;
     if (bearing_deg == NaN) return false;
     if (angle_mDeg  == NaN) return false;
     break;

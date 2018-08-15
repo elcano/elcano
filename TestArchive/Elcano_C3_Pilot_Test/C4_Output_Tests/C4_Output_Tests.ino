@@ -14,7 +14,7 @@ void loop()
   testResult.kind = 1;
   testResult.number = 2;
   testResult.speed_cmPs = 3;
-  testResult.angle_deg = 4;
+  testResult.angle_mDeg = 4;
   testResult.bearing_deg = 5;
   testResult.posE_cm = 6;
   testResult.posN_cm = 7;

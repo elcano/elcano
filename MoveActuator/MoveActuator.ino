@@ -257,7 +257,7 @@ class Brakes
 // For normal operation
 const long int loop_time_ms = 100;  // Limits time in the loop.
 
- Brakes brake = Brakes();
+Brakes brake = Brakes();
  
 
 /*---------------------------------------------------------------------------------------*/
