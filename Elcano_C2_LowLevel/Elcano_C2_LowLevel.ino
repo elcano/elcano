@@ -339,7 +339,7 @@ void setup()
     RC_State.dt  = &RC_Data;
     RC_State.input = &Serial1;
     RC_State.output = &Serial1;  // not used
-    RC_State.capture = MsgType::sensor;
+    RC_State.capture = MsgType::drive; // match to RadioControl.INO
 
   speedCyclometerInput_mmPs = 0;
 
