@@ -1,29 +1,29 @@
-#include <Settings.h>
-#include <PID_v1.h>
+#include "Settings.h"     // in Elcano repository
+#include "ElcanoSerial.h" // in Elcano Repository
+#include <PID_v1.h>       // external library
 #include <SPI.h>
 #include <Servo.h>
 #include <SD.h>
 using namespace elcano;
 
-long startTime;
 
 /*
- * C2 is the low-level controller that sends control signals to the hub motor,
- * brake servo, and steering servo.  It is (or will be) a PID controller, but
- * may also impose limits on control values for the motor and servos as a safety
- * measure to protect against incorrect PID settings.
- *
- * It receives desired speed and heading from either of two sources, an RC
- * controller operated by a person, or the C3 pilot module.  These are mutually
- * exclusive.
- *
- * RC commands are received directly as interrupts on a bank of pins.  C3 commands
- * are received over a serial line using the Elcano Serial protocol.  Heading and
- * speed commands do not need to be passed through to other modules, but because
- * the Elcano Serial protocol uses a unidirectional ring structure, C2 may need to
- * pass through *other* commands that come from C3 but are intended for modules
- * past C2 on the ring.
- */
+   C2 is the low-level controller that sends control signals to the hub motor,
+   brake servo, and steering servo.  It is (or will be) a PID controller, but
+   may also impose limits on control values for the motor and servos as a safety
+   measure to protect against incorrect PID settings.
+
+   It receives desired speed and heading from either of two sources, an RC
+   controller operated by a person, or the C3 pilot module.  These are mutually
+   exclusive.
+
+   RC commands are received directly as interrupts on a bank of pins.  C3 commands
+   are received over a serial line using the Elcano Serial protocol.  Heading and
+   speed commands do not need to be passed through to other modules, but because
+   the Elcano Serial protocol uses a unidirectional ring structure, C2 may need to
+   pass through *other* commands that come from C3 but are intended for modules
+   past C2 on the ring.
+*/
 static struct hist
 {
   long olderSpeed_mmPs;  // older data
@@ -47,6 +47,8 @@ Servo STEER_SERVO;
 #define LOOP_TIME_MS 100
 #define ERROR_HISTORY 20 //number of errors to accumulate
 #define ULONG_MAX 0x7FFFFFFF
+
+static unsigned long loopEnd; // this is set to millis() at the end of a loop
 
 static long distance_mm = 0;  // odometer
 
@@ -108,8 +110,8 @@ volatile unsigned long OldTick = 0;
 int oldClickNumber;
 
 /**
- * Throttle PID implementation
- */
+   Throttle PID implementation
+*/
 //PID update frequency in milliseconds
 #define PID_CALCULATE_TIME 50
 /* double on Arduino AVR is the same as a float. */
@@ -123,7 +125,7 @@ double steerAngleUS = WHEEL_STRAIGHT_US; //Steering angle in microseconds used b
 double PIDSteeringOutput_us; //Output from steerPID.Compute() in microseconds (used by Servo.writeMicroseconds())
 double desiredTurn_us = WHEEL_STRAIGHT_US;
 double proportional_steering = .0175;
-double integral_steering = .5; 
+double integral_steering = .5;
 double derivative_steering = .00001;
 
 // PID setup block
@@ -148,63 +150,63 @@ const int SWEEP_PIN = 17;
 
 ParseState TxStateHiLevel, RxStateHiLevel, RC_State;
 SerialData TxDataHiLevel,  RxDataHiLevel,  RC_Data;
-/*---------------------------------------------------------------------------------------*/ 
+/*---------------------------------------------------------------------------------------*/
 
 /* Solenoid controlled Brakes.
- *  
- *  Solenoid (Johnson Electic model 150 174432-024) 
- *  can be kept at lower voltage (12V) indefinitely. 
- *  It has a holding force of 14.5 lb.
- *  At the higher voltage, data sheet expects it to be high (24V) for
- *  25% of the time and low for 75%. However, it can stay high for 100 sec.
- *  The solenoid typically reacts in less than a second.
- *  For 0.25 inch throw and 24V it can pull 7 lb.
- *  We are using the part with 0.3 inch throw, 12V in low state and 24V in high
- *  state, but keeping voltage high for only a second or two.
- *  
- *  The solenoid brake on Elcano replaces the earlier linear actuator.
- *  Solenoid advantages:
- *      Faster: Typically 0.2 seconds vs 2 in/sec for no load. 
- *      Slightly Lighter: 482 grams each vs. 1.16 kg
- *      Available; Linear actuator is no longer available for 2 or 4 inch throw.
- *      Less expensive: 2 * $70 vs. $250
- *      More durable; 5 of the linear actutors have failed.
- *  Linear actuator advantages:
- *      Single unit can pull both brakes (25 lb. thrust); solenoid requires a unit for each brake.
- *      No restriction on throw length; solenoid will not work with > 0.3 inch throw.
- *      Maintains last position without power.   
- *      Do not need to worry about heat dissipation.
- *      
- *  The linear actuator was controlled by pulse width on one digital line.    
- *  The solenoids are controlled by relays on two digital lines.
- *      
- *    Tyler Folsom   April 2018  
- *    
-     *  Expected behavior
-     *  When Green LED is on, NO is connected to COM; NC is not
-     *  Writing HIGH to a relay will turn LED on, and connect NO to COM
-     *  When green LED is off, NC is connected to COM; NO is not.
-     *  Writing LOW to a relay will turn LED off, and connect NC to COM.
-     *  You shoud hear a click when the relay operates.
-     *  If there is a change in LED, but no click, the relay does not have enough power.
-     */
-   
+
+    Solenoid (Johnson Electic model 150 174432-024)
+    can be kept at lower voltage (12V) indefinitely.
+    It has a holding force of 14.5 lb.
+    At the higher voltage, data sheet expects it to be high (24V) for
+    25% of the time and low for 75%. However, it can stay high for 100 sec.
+    The solenoid typically reacts in less than a second.
+    For 0.25 inch throw and 24V it can pull 7 lb.
+    We are using the part with 0.3 inch throw, 12V in low state and 24V in high
+    state, but keeping voltage high for only a second or two.
+
+    The solenoid brake on Elcano replaces the earlier linear actuator.
+    Solenoid advantages:
+        Faster: Typically 0.2 seconds vs 2 in/sec for no load.
+        Slightly Lighter: 482 grams each vs. 1.16 kg
+        Available; Linear actuator is no longer available for 2 or 4 inch throw.
+        Less expensive: 2 * $70 vs. $250
+        More durable; 5 of the linear actutors have failed.
+    Linear actuator advantages:
+        Single unit can pull both brakes (25 lb. thrust); solenoid requires a unit for each brake.
+        No restriction on throw length; solenoid will not work with > 0.3 inch throw.
+        Maintains last position without power.
+        Do not need to worry about heat dissipation.
+
+    The linear actuator was controlled by pulse width on one digital line.
+    The solenoids are controlled by relays on two digital lines.
+
+      Tyler Folsom   April 2018
+
+        Expected behavior
+        When Green LED is on, NO is connected to COM; NC is not
+        Writing HIGH to a relay will turn LED on, and connect NO to COM
+        When green LED is off, NC is connected to COM; NO is not.
+        Writing LOW to a relay will turn LED off, and connect NC to COM.
+        You shoud hear a click when the relay operates.
+        If there is a change in LED, but no click, the relay does not have enough power.
+*/
+
 class Brakes
 {
- public:
-  Brakes();
-  void Stop();
-  void Release();
-  void Check();
- private:
-  enum brake_state {BR_OFF, BR_HI_VOLTS, BR_LO_VOLTS} state;
-  unsigned long clock_hi_ms;
-  const int LeftBrakeOnPin = 10;
-  const int RightBrakeOnPin = 2;
-  const int LeftBrakeVoltPin = 8;
-  const int RightBrakeVoltPin = 7;
-  const unsigned long MaxHi_ms = 800;
- } ;
+  public:
+    Brakes();
+    void Stop();
+    void Release();
+    void Check();
+  private:
+    enum brake_state {BR_OFF, BR_HI_VOLTS, BR_LO_VOLTS} state;
+    unsigned long clock_hi_ms;
+    const int LeftBrakeOnPin = 10;
+    const int RightBrakeOnPin = 2;
+    const int LeftBrakeVoltPin = 8;
+    const int RightBrakeVoltPin = 7;
+    const unsigned long MaxHi_ms = 800;
+} ;
 
 // For normal operation
 const long int loop_time_ms = 100;  // Limits time in the loop.
@@ -221,10 +223,10 @@ Brakes::Brakes()
 void Brakes::Release()
 {
   /*  Expected behavior:
-   * LEDs go off for relays 2 and 3;
-   * Relay 2 has NO (connected to solenoids) open, and there is no power to solenoids.
-   * Relay 3 connects COM (other end of solenoid) to NO (12V) 
-   */
+     LEDs go off for relays 2 and 3;
+     Relay 2 has NO (connected to solenoids) open, and there is no power to solenoids.
+     Relay 3 connects COM (other end of solenoid) to NO (12V)
+  */
   digitalWrite(LeftBrakeOnPin, LOW);
   digitalWrite(LeftBrakeVoltPin, LOW);
   digitalWrite(RightBrakeOnPin, LOW);
@@ -234,12 +236,12 @@ void Brakes::Release()
 void Brakes::Stop()
 {
   /*  Expected behavior:
-   *  Both LEDs come on for Relays 2 and 3
-   *  Relay 2 connects NO (solenoids) to COM (ground)
-   *  Relay 3 connects COM (other end of solenoids) to NC (36V)
-   */
+      Both LEDs come on for Relays 2 and 3
+      Relay 2 connects NO (solenoids) to COM (ground)
+      Relay 3 connects COM (other end of solenoids) to NC (36V)
+  */
   digitalWrite(LeftBrakeVoltPin, HIGH);  // Need the higher voltage to activate the solenoid.
-  digitalWrite(RightBrakeVoltPin, HIGH); 
+  digitalWrite(RightBrakeVoltPin, HIGH);
   if (state != BR_HI_VOLTS)
   {
     clock_hi_ms = millis();  // keep track of when the higher voltage was applied.
@@ -251,23 +253,23 @@ void Brakes::Stop()
 void Brakes::Check()
 {
   /* Expected behavior
-   *  If 36V has been on too long, relay 3 changes LED on to off, switching from 24 to 12V
-   *  If the switch is high, brakes will be released, with both LEDs off.
-   */
- 
+      If 36V has been on too long, relay 3 changes LED on to off, switching from 24 to 12V
+      If the switch is high, brakes will be released, with both LEDs off.
+  */
+
   unsigned long tick = millis();
   if (state == BR_HI_VOLTS && tick - clock_hi_ms > MaxHi_ms)
-  {  // Have reached maximum time to keep voltage high
+  { // Have reached maximum time to keep voltage high
     digitalWrite(LeftBrakeVoltPin, LOW); // Set to lower voltage, which will keep brakes applied
     digitalWrite(RightBrakeVoltPin, LOW);
     state = BR_LO_VOLTS;
   }
 }
 
- Brakes brake = Brakes();
- 
+Brakes brake = Brakes();
+
 void setup()
-{ 
+{
   //Set up pins
   STEER_SERVO.attach(STEER_OUT_PIN);
 
@@ -289,7 +291,7 @@ void setup()
   steerPID.SetOutputLimits(WHEEL_MAX_LEFT_US, WHEEL_MAX_RIGHT_US); //useful if we want to change the limits on what values the output can be set to
   steerPID.SetSampleTime(PID_CALCULATE_TIME); //useful if we want to change the compute period
   steerPID.SetMode(AUTOMATIC); //initializes PID controller and allows it to run Compute
- 
+
   // **********************************************************
 
   for (int channel = 0; channel < 4; channel++)
@@ -301,50 +303,52 @@ void setup()
   testBrakes();
   delay(1000);
   // ******* END: System Test and Calibration Cycle ******** \\
-  
+
   for (int i = 0; i < ERROR_HISTORY; i++)
   {
     speed_errors[i] = 0;
   }
 
   setupWheelRev(); // WheelRev4 addition
-    // Setting up data for sending to high level
-    Serial.begin(9600); 
-    Serial3.begin(baudrate);
-    Serial2.begin(baudrate);
-    Serial1.begin(baudrate);
-    TxDataHiLevel.clear();
-    TxStateHiLevel.dt  = &TxDataHiLevel;
-    TxStateHiLevel.input = &Serial2;  // not used
-    TxStateHiLevel.output = &Serial3;
-    TxStateHiLevel.capture = MsgType::sensor;
-  
-    //setup for receiving data from High level
-    RxDataHiLevel.clear();
-    RxStateHiLevel.dt  = &RxDataHiLevel;
-    RxStateHiLevel.input = &Serial3;
-    RxStateHiLevel.output = &Serial2; // not used
-    RxStateHiLevel.capture = MsgType::drive;
+  // Setting up data for sending to high level
+  Serial.begin(9600);
+  Serial3.begin(baudrate);
+  Serial2.begin(baudrate);
+  Serial1.begin(baudrate);
+  TxDataHiLevel.clear();
+  TxStateHiLevel.dt  = &TxDataHiLevel;
+  TxStateHiLevel.input = &Serial2;  // not used
+  TxStateHiLevel.output = &Serial3;
+  TxStateHiLevel.capture = MsgType::sensor;
 
-    // receive data indirectly from RC unit.
-    RC_Data.clear();
-    RC_State.dt  = &RC_Data;
-    RC_State.input = &Serial1;
-    RC_State.output = &Serial1;  // not used
-    RC_State.capture = MsgType::drive; // match to RadioControl.INO
+  //setup for receiving data from High level
+  RxDataHiLevel.clear();
+  RxStateHiLevel.dt  = &RxDataHiLevel;
+  RxStateHiLevel.input = &Serial3;
+  RxStateHiLevel.output = &Serial2; // not used
+  RxStateHiLevel.capture = MsgType::drive;
+
+  // receive data indirectly from RC unit.
+  RC_Data.clear();
+  RC_State.dt  = &RC_Data;
+  RC_State.input = &Serial1;
+  RC_State.output = &Serial1;  // not used
+  RC_State.capture = MsgType::drive; // match to RadioControl.INO
 
   speedCyclometerInput_mmPs = 0;
 
   // Sweep
   pinMode(SWEEP_PIN, INPUT);
-  
+
+  loopEnd = 0UL;
+
 }
 
 void loop()
-{  
+{
   // Get the next loop start time. Note this (and the millis() counter) will
   // roll over back to zero after they exceed the 32-bit size of unsigned long,
-  // which happens after about 1.5 months of operation 
+  // which happens after about 1.5 months of operation
   unsigned long timeStart_ms = millis();
   // INSERT ANY LOOP CODE BELOW THIS POINT !!
 
@@ -365,7 +369,7 @@ void loop()
   }
   computeSpeed(&history);
   computeAngle(); // TO DO: Convert angle to right units for PID and for sending to High Level.
-  
+
   // Write data to High Level
   TxDataHiLevel.speed_cmPs = (speedCyclometerInput_mmPs + 5) / 10;
   TxDataHiLevel.write(TxStateHiLevel.output);
@@ -377,37 +381,39 @@ void loop()
     auto_mode = RC_Data.number & 0x02;
     if (!auto_mode)
     {
-      desired_speed_cmPs = RC_Data.speed_cmPs; 
-      desired_angle = RC_Data.angle_mDeg; 
+      desired_speed_cmPs = RC_Data.speed_cmPs;
+      desired_angle = RC_Data.angle_mDeg;
     }
-  } 
+  }
   if (e_stop)
   {
     brake.Stop();
     engageWheel(0); // Turn off wheel
   }
   else
-  { // Control trike to desired speed and angle 
+  { // Control trike to desired speed and angle
     SteeringPID(convertHLToTurn(desired_angle));
     ThrottlePID(desired_speed_cmPs);
   }
 
   // DO NOT INSERT ANY LOOP CODE BELOW THIS POINT !!
 
-  unsigned long delay_ms = millis() - (timeStart_ms + LOOP_TIME_MS);
-  // Did we spend long enough in the loop that we should immediately start
-  // the next pass?
-  if(delay_ms > 0L)
-  {
-    // No, pause til the next loop start time.
-    delay(delay_ms);
+  if (loopEnd != 0) {
+    // loopEnd is set to 0 in setup() and we do not need to delay the first loop
+    while (millis() < loopEnd + LOOP_TIME_MS) {
+      // this passes through if we have a long loop
+      delay(1);
+    }
   }
+  unsigned long now = millis();
+  // we never want loopEnd to be zero after the first loop
+  loopEnd = max(now, 1UL); // do not perform math in the max() function
 }
 
 /*-------------------------------------testBrakes-------------------------------------------*/
 /*
- * Purely for testing during setup if brake actuator is responding. Delay is to allow enough
- * time for actuator to move
+   Purely for testing during setup if brake actuator is responding. Delay is to allow enough
+   time for actuator to move
 */
 void testBrakes()
 {
@@ -419,8 +425,8 @@ void testBrakes()
 
 /*-------------------------------------testWheel-------------------------------------------*/
 /*
- * Purely for testing during setup if wheel motor is responding. Delay is to allow enough
- * time for motor to run at low speed
+   Purely for testing during setup if wheel motor is responding. Delay is to allow enough
+   time for motor to run at low speed
 */
 void testWheel()
 {
@@ -432,8 +438,8 @@ void testWheel()
 
 /*-------------------------------------testSteering-------------------------------------------*/
 /*
- * Purely for testing during setup if wheels actuator is responding. Delay is to allow enough
- * time for actuator to move
+   Purely for testing during setup if wheels actuator is responding. Delay is to allow enough
+   time for actuator to move
 */
 void testSteering()
 {
@@ -447,15 +453,15 @@ void testSteering()
 }
 /*-------------------------------------engageWheel-------------------------------------------*/
 /*
- * Used as a more friendly way to engage the back wheel by passing the PWM value to DAC_Write
- * (TCF June 1, 2018) None of this is really PWM. It is a digital value from 0 to 255 that is 
- * converted to a true analog voltage.
- * Input: PWM value corresponding to desired speed (0-255 : min-max)
- * Output: None
+   Used as a more friendly way to engage the back wheel by passing the PWM value to DAC_Write
+   (TCF June 1, 2018) None of this is really PWM. It is a digital value from 0 to 255 that is
+   converted to a true analog voltage.
+   Input: PWM value corresponding to desired speed (0-255 : min-max)
+   Output: None
 */
 void engageWheel(int inputPWM)
 {
-    /* !UPDATE THIS OBSERVED INFO! (LAST UPDATE: May 10, 2013, TCF)
+  /* !UPDATE THIS OBSERVED INFO! (LAST UPDATE: May 10, 2013, TCF)
     0.831 V at rest 52 counts
     1.20 V: nothing 75
     1.27 V: just starting 79
@@ -464,9 +470,9 @@ void engageWheel(int inputPWM)
     3.63 V: max 227 counts
     255 counts = 4.08 V
   */
-  if(inputPWM != currentThrottlePWM)
+  if (inputPWM != currentThrottlePWM)
   {
-    DAC_Write(DAC_CHANNEL, inputPWM); // Pass PWM value and correct channel to DAC_Write 
+    DAC_Write(DAC_CHANNEL, inputPWM); // Pass PWM value and correct channel to DAC_Write
     currentThrottlePWM = inputPWM;  // Remember most recent throttle PWM value.
     Serial.print("Wheel engaged = ");
     Serial.println(currentThrottlePWM);
@@ -475,19 +481,19 @@ void engageWheel(int inputPWM)
 
 /*-------------------------------------engageSteering-------------------------------------------*/
 /*
- * Engages the steering system by extending or retracting the actuator. Input value is in
- * microseconds (~1000-2000 : min-max), where the min value positions the brake into standby
- * (or near disk grab) position
- * Input: Int for microseconds to move the actuator
- * Output: None
+   Engages the steering system by extending or retracting the actuator. Input value is in
+   microseconds (~1000-2000 : min-max), where the min value positions the brake into standby
+   (or near disk grab) position
+   Input: Int for microseconds to move the actuator
+   Output: None
 */
 void engageSteering(int inputMicroseconds)
 {
   // 1 sensor tick = 1.7 us of servo
-  if(inputMicroseconds != currentSteeringUS)
+  if (inputMicroseconds != currentSteeringUS)
   {
     STEER_SERVO.writeMicroseconds(inputMicroseconds);
-//    Results.angle_mDeg = inputMicroseconds; // Need to do some kind of backwards conversion to C6
+    //    Results.angle_mDeg = inputMicroseconds; // Need to do some kind of backwards conversion to C6
     currentSteeringUS = inputMicroseconds;
     Serial.print("Steering engaged = ");
     Serial.println(inputMicroseconds);
@@ -544,9 +550,9 @@ void DAC_Write(int address, int value)
   {
     // take the SS pin low to select the chip:
     digitalWrite(SelectCD, LOW);
-    if(address <= 3)
+    if (address <= 3)
     {
-      if(address == 3)
+      if (address == 3)
       {
         byte1 |= 0x80; // second channnel
       }
@@ -590,13 +596,13 @@ void WheelRev()
   unsigned long tick;
   noInterrupts();
   tick = millis();
-  if(InterruptState != IRQ_RUNNING)
+  if (InterruptState != IRQ_RUNNING)
   {
     // Need to process 1st two interrupts before results are meaningful.
     InterruptState++;
   }
-  
-  if((tick - TickTime) > MinTickTime_ms)
+
+  if ((tick - TickTime) > MinTickTime_ms)
   {
     OldTick = TickTime;
     TickTime = tick;
@@ -610,12 +616,12 @@ void computeSpeed(struct hist *data)
 {
   unsigned long WheelRev_ms = TickTime - OldTick;
   float SpeedCyclometer_revPs = 0.0; //revolutions per sec
-  if((InterruptState == IRQ_NONE) || (InterruptState == IRQ_FIRST))
+  if ((InterruptState == IRQ_NONE) || (InterruptState == IRQ_FIRST))
   { // No data
     speedCyclometerInput_mmPs = 0;
     SpeedCyclometer_revPs = 0;
   }
-  else if(InterruptState == IRQ_SECOND)
+  else if (InterruptState == IRQ_SECOND)
   { //  first computed speed
     SpeedCyclometer_revPs = 1000.0 / WheelRev_ms;
     speedCyclometerInput_mmPs = data->oldSpeed_mmPs = data->olderSpeed_mmPs = WHEEL_CIRCUM_MM * SpeedCyclometer_revPs;
@@ -623,17 +629,17 @@ void computeSpeed(struct hist *data)
     data->nowTime_ms = TickTime;  // time stamp for oldSpeed_mmPs
     data->oldClickNumber = data->nowClickNumber = ClickNumber;
   }
-  else if(InterruptState == IRQ_RUNNING)
+  else if (InterruptState == IRQ_RUNNING)
   { //  new data for second and following computed speeds
-    if(TickTime == data->nowTime_ms)
-    {//no new data
+    if (TickTime == data->nowTime_ms)
+    { //no new data
       //check to see if stopped first
       unsigned long timeStamp = millis();
-      if((timeStamp - data->nowTime_ms) > MaxTickTime_ms)
+      if ((timeStamp - data->nowTime_ms) > MaxTickTime_ms)
       { // too long without getting a tick
         speedCyclometerInput_mmPs = 0;
         SpeedCyclometer_revPs = 0;
-        if((timeStamp - data->nowTime_ms) > (2 * MaxTickTime_ms))
+        if ((timeStamp - data->nowTime_ms) > (2 * MaxTickTime_ms))
         {
           InterruptState = IRQ_FIRST;  //  Invalidate old data
           data->oldSpeed_mmPs = NO_DATA;
@@ -641,16 +647,16 @@ void computeSpeed(struct hist *data)
         }
         return;
       }
-      if(data->oldSpeed_mmPs > speedCyclometerInput_mmPs)
+      if (data->oldSpeed_mmPs > speedCyclometerInput_mmPs)
       { // decelerrating, extrapolate new speed using a linear model
-//       Serial.println("data->oldSpeed_mmPs > speedCyclometerInput_mmPs");
-       float deceleration = ((float)(data->oldSpeed_mmPs - speedCyclometerInput_mmPs) / (float)(timeStamp - data->nowTime_ms));
-       speedCyclometerInput_mmPs = (data->oldSpeed_mmPs - deceleration * (timeStamp - data->nowTime_ms));
-       if(speedCyclometerInput_mmPs < 0)
-       {
-         speedCyclometerInput_mmPs = 0;
-       }
-       SpeedCyclometer_revPs = (speedCyclometerInput_mmPs / WHEEL_CIRCUM_MM);
+        //       Serial.println("data->oldSpeed_mmPs > speedCyclometerInput_mmPs");
+        float deceleration = ((float)(data->oldSpeed_mmPs - speedCyclometerInput_mmPs) / (float)(timeStamp - data->nowTime_ms));
+        speedCyclometerInput_mmPs = (data->oldSpeed_mmPs - deceleration * (timeStamp - data->nowTime_ms));
+        if (speedCyclometerInput_mmPs < 0)
+        {
+          speedCyclometerInput_mmPs = 0;
+        }
+        SpeedCyclometer_revPs = (speedCyclometerInput_mmPs / WHEEL_CIRCUM_MM);
       }
     }
     else // data is different from last
@@ -661,20 +667,20 @@ void computeSpeed(struct hist *data)
       data->nowTime_ms = TickTime;
       data->oldClickNumber = data->nowClickNumber;
       data->nowClickNumber = ClickNumber;
-  
+
       //update speed block
       data->olderSpeed_mmPs = data->oldSpeed_mmPs;
       data->oldSpeed_mmPs = speedCyclometerInput_mmPs;
       SpeedCyclometer_revPs = (1000.0 / WheelRev_ms);
       speedCyclometerInput_mmPs  = (WHEEL_CIRCUM_MM * SpeedCyclometer_revPs);
-  
+
       data->oldTickMillis = data->tickMillis;
       data->tickMillis = millis();
-      
-      data->currentSpeed_kmPh = speedCyclometerInput_mmPs/260.0;
-      distance_mm += ((data->oldTime_ms - data->olderTime_ms)/1000.0) * (data->oldSpeed_mmPs);
-  
-      if(data->TickTime_ms-data->OldTick_ms > 1000)
+
+      data->currentSpeed_kmPh = speedCyclometerInput_mmPs / 260.0;
+      distance_mm += ((data->oldTime_ms - data->olderTime_ms) / 1000.0) * (data->oldSpeed_mmPs);
+
+      if (data->TickTime_ms - data->OldTick_ms > 1000)
       {
         data->currentSpeed_kmPh = 0;
       }
@@ -695,7 +701,7 @@ int convertHLToTurn(int turnValue)
 int convertHLToSpeed(int speedValue)
 {
   // TO DO: FIGURE OUT WHAT MIN MAX VALUES ARE INPUTTED
- // return map(speedValue, 0, MAX_SPEED_CMS, MIN_ACC_OUT, MAX_ACC_OUT);
+  // return map(speedValue, 0, MAX_SPEED_CMS, MIN_ACC_OUT, MAX_ACC_OUT);
 }
 
 /*---------------------------SteeringPID--------------------------------------*/
@@ -712,7 +718,7 @@ void SteeringPID(int desiredValue)
   engageSteering((int)PIDSteeringOutput_us);
 }
 /*------------------------------------ThrottlePID--------------------------------*/
-// Compute PID 
+// Compute PID
 // Precondition: None
 // Postcondition: None
 void ThrottlePID(int desiredValue)
@@ -723,9 +729,9 @@ void ThrottlePID(int desiredValue)
   Serial.print(" DESIRED SPEED = ");
   Serial.print(desiredSpeed_mmPs);
   // Input into PID is PWM and output is PWM
-  if(desiredSpeed_mmPs < (speedCyclometerInput_mmPs + 10))
+  if (desiredSpeed_mmPs < (speedCyclometerInput_mmPs + 10))
   {
-     brake.Stop();
+    brake.Stop();
   }
   else
   {
@@ -743,8 +749,8 @@ void computeAngle()
   int left = analogRead(A2);
   int right = analogRead(A3);
 
-   steerAngleUS = map(analogRead(A3), calibratedWheelSensorMaxLeft, calibratedWheelSensorMaxRight, calibratedWheelMaxLeft_us, calibratedWheelMaxRight_us);
- }
+  steerAngleUS = map(analogRead(A3), calibratedWheelSensorMaxLeft, calibratedWheelSensorMaxRight, calibratedWheelMaxLeft_us, calibratedWheelMaxRight_us);
+}
 
 /*************************** END HIGH LEVEL PROCESSING SECTION ********************************/
 
