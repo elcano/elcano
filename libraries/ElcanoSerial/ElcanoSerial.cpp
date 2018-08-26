@@ -221,7 +221,7 @@ bool SerialData::write(HardwareSerial *dev) {
   };
 
   // At this point the value of i will be 1. No bounds check necessary
-  if (number != NaN && (kind == MsgType::goal || kind == MsgType::seg)) {
+  if (number != NaN && (kind == MsgType::goal || kind == MsgType::seg || kind == MsgType::drive)) {
     success = append_datum('n', number);
     if (! success) return false;
   }
