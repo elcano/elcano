@@ -74,6 +74,7 @@ void setupReceiver() {
   driver.init();
   driver.setModeRx();
   PC.begin(9600);
+  ESERIAL.begin(baudrate);
 }
 
 void waitInputByte(int timeout) {
