@@ -381,8 +381,9 @@ void loop()
     auto_mode = RC_Data.number & 0x02;
     if (!auto_mode)
     {
-      desired_speed_cmPs = RC_Data.speed_cmPs;
-      desired_angle = RC_Data.angle_mDeg;
+		// the values stored in the RC packet are not converted, they are just 0-255 so we need to convert them
+      desired_speed_cmPs = convertRCToThrottle(RC_Data.speed_cmPs);
+      desired_angle = convertRCToTurn(RC_Data.angle_mDeg);
     }
   }
   if (e_stop)
