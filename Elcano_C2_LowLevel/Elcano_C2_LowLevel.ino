@@ -24,6 +24,9 @@ using namespace elcano;
    pass through *other* commands that come from C3 but are intended for modules
    past C2 on the ring.
 */
+
+#define DEBUG 0 // prints to Serial, will change code execution times
+
 static struct hist
 {
   long olderSpeed_mmPs;  // older data
@@ -311,7 +314,7 @@ void setup()
 
   setupWheelRev(); // WheelRev4 addition
   // Setting up data for sending to high level
-  Serial.begin(9600);
+  Serial.begin(baudrate); // 9.6k slows down execution, ES uses 74.8k
   Serial3.begin(baudrate);
   Serial2.begin(baudrate);
   Serial1.begin(baudrate);
@@ -349,13 +352,10 @@ void loop()
   // Get the next loop start time. Note this (and the millis() counter) will
   // roll over back to zero after they exceed the 32-bit size of unsigned long,
   // which happens after about 1.5 months of operation
-  unsigned long timeStart_ms = millis();
   // INSERT ANY LOOP CODE BELOW THIS POINT !!
-
   static long int desired_speed_cmPs, desired_angle;
   static bool e_stop = 0, auto_mode = 0;
   brake.Check();
-
   // get data from serial
   // get desired steering and speed
   if (auto_mode)
@@ -395,8 +395,8 @@ void loop()
     SteeringPID(convertHLToTurn(desired_angle));
     ThrottlePID(desired_speed_cmPs);
   }
-
   // DO NOT INSERT ANY LOOP CODE BELOW THIS POINT !!
+
 
   if (loopEnd != 0) {
     // loopEnd is set to 0 in setup() and we do not need to delay the first loop
@@ -420,7 +420,9 @@ void testBrakes()
   brake.Stop();
   delay(1000);
   brake.Release();
-  Serial.println("**** Brake test Complete! ****");
+  if (DEBUG) {
+    Serial.println("**** Brake test Complete! ****");
+  }
 }
 
 /*-------------------------------------testWheel-------------------------------------------*/
@@ -433,7 +435,9 @@ void testWheel()
   engageWheel(MIN_ACC_OUT); // Min speed (~85 PWM)
   delay(2000);
   engageWheel(0); // Turn off wheel
-  Serial.println("**** Wheel test Complete! ****");
+  if (DEBUG) {
+    Serial.println("**** Wheel test Complete! ****");
+  }
 }
 
 /*-------------------------------------testSteering-------------------------------------------*/
@@ -449,7 +453,9 @@ void testSteering()
   delay(6000);
   engageSteering(WHEEL_STRAIGHT_US);
   delay(1000);
-  Serial.println("**** Steering test Complete! ****");
+  if (DEBUG) {
+    Serial.println("**** Steering test Complete! ****");
+  }
 }
 /*-------------------------------------engageWheel-------------------------------------------*/
 /*
@@ -474,8 +480,10 @@ void engageWheel(int inputPWM)
   {
     DAC_Write(DAC_CHANNEL, inputPWM); // Pass PWM value and correct channel to DAC_Write
     currentThrottlePWM = inputPWM;  // Remember most recent throttle PWM value.
-    Serial.print("Wheel engaged = ");
-    Serial.println(currentThrottlePWM);
+    if (DEBUG) {
+      Serial.print("Wheel engaged = ");
+      Serial.println(currentThrottlePWM);
+    }
   }
 }
 
@@ -495,8 +503,10 @@ void engageSteering(int inputMicroseconds)
     STEER_SERVO.writeMicroseconds(inputMicroseconds);
     //    Results.angle_mDeg = inputMicroseconds; // Need to do some kind of backwards conversion to C6
     currentSteeringUS = inputMicroseconds;
-    Serial.print("Steering engaged = ");
-    Serial.println(inputMicroseconds);
+    if (DEBUG) {
+      Serial.print("Steering engaged = ");
+      Serial.println(inputMicroseconds);
+    }
   }
 }
 
@@ -649,7 +659,6 @@ void computeSpeed(struct hist *data)
       }
       if (data->oldSpeed_mmPs > speedCyclometerInput_mmPs)
       { // decelerrating, extrapolate new speed using a linear model
-        //       Serial.println("data->oldSpeed_mmPs > speedCyclometerInput_mmPs");
         float deceleration = ((float)(data->oldSpeed_mmPs - speedCyclometerInput_mmPs) / (float)(timeStamp - data->nowTime_ms));
         speedCyclometerInput_mmPs = (data->oldSpeed_mmPs - deceleration * (timeStamp - data->nowTime_ms));
         if (speedCyclometerInput_mmPs < 0)
@@ -713,9 +722,11 @@ void SteeringPID(int desiredValue)
   desiredTurn_us = desiredValue;
   // Input into PID is microseconds and output is US
   steerPID.Compute();
-  Serial.print("  PID STEER OUT = ");
-  Serial.println(PIDSteeringOutput_us);
   engageSteering((int)PIDSteeringOutput_us);
+  if (DEBUG) {
+    Serial.print("  PID STEER OUT = ");
+    Serial.println(PIDSteeringOutput_us);
+  }
 }
 /*------------------------------------ThrottlePID--------------------------------*/
 // Compute PID
@@ -724,10 +735,6 @@ void SteeringPID(int desiredValue)
 void ThrottlePID(int desiredValue)
 {
   desiredSpeed_mmPs = desiredValue;
-  Serial.print("SPEED MMPS = ");
-  Serial.print(speedCyclometerInput_mmPs);
-  Serial.print(" DESIRED SPEED = ");
-  Serial.print(desiredSpeed_mmPs);
   // Input into PID is PWM and output is PWM
   if (desiredSpeed_mmPs < (speedCyclometerInput_mmPs + 10))
   {
@@ -736,11 +743,19 @@ void ThrottlePID(int desiredValue)
   else
   {
     speedPID.Compute();
-    Serial.print("  PID THROTTLE OUT = ");
-    Serial.println(PIDThrottleOutput_pwm);
     currentThrottlePWM = (int)PIDThrottleOutput_pwm;
     brake.Release();
     engageWheel(currentThrottlePWM);
+    if (DEBUG) {
+      Serial.print("  PID THROTTLE OUT = ");
+      Serial.println(PIDThrottleOutput_pwm);
+    }
+  }
+  if (DEBUG) {
+    Serial.print("SPEED MMPS = ");
+    Serial.print(speedCyclometerInput_mmPs);
+    Serial.print(" DESIRED SPEED = ");
+    Serial.print(desiredSpeed_mmPs);
   }
 }
 
