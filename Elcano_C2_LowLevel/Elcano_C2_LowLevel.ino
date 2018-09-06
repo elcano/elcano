@@ -25,7 +25,7 @@ using namespace elcano;
    past C2 on the ring.
 */
 
-#define DEBUG 0 // prints to Serial, will change code execution times
+#define DEBUG 1 // prints to Serial, will change code execution times
 
 static struct hist
 {
@@ -353,6 +353,10 @@ void loop()
   // roll over back to zero after they exceed the 32-bit size of unsigned long,
   // which happens after about 1.5 months of operation
   // INSERT ANY LOOP CODE BELOW THIS POINT !!
+  if (DEBUG){
+    Serial.print("\nLoop start: ");
+    Serial.println(millis());
+  }
   static long int desired_speed_cmPs, desired_angle;
   static bool e_stop = 0, auto_mode = 0;
   brake.Check();
@@ -777,7 +781,7 @@ void ThrottlePID(int desiredValue)
     Serial.print("SPEED MMPS = ");
     Serial.print(speedCyclometerInput_mmPs);
     Serial.print(" DESIRED SPEED = ");
-    Serial.print(desiredSpeed_mmPs);
+    Serial.println(desiredSpeed_mmPs);
   }
 }
 
