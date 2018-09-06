@@ -706,8 +706,11 @@ void computeSpeed(struct hist *data)
 /*------------------------------------convertHLToTurn------------------------------------------*/
 int convertRCToTurn(int RCturn) {
 	// we convert byte values (0-255) to microseconds (1000-2000)
-	int turn = (RCturn * 500) / 127 + 1000;
+ 
+	int turn = (int)((RCturn * 500.0) / 127.0 + 1000.0);
 	if (DEBUG) {
+    Serial.print("RC turn input: ");
+    Serial.println(RCturn);
 		Serial.print("RC turn us: ");
 		Serial.println(turn);
 	}
@@ -719,6 +722,8 @@ int convertRCToThrottle(int RCthrottle) {
 	// remember this will return negative throttle values
 	int throttle = (RCthrottle - 127) * 2;
 	if (DEBUG) {
+    Serial.print("RC throttle input: ");
+    Serial.println(RCthrottle);
 		Serial.print("RC throttle: ");
 		Serial.println(throttle);
 	}
