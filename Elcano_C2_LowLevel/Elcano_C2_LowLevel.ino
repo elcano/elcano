@@ -235,6 +235,9 @@ void Brakes::Release()
   digitalWrite(RightBrakeOnPin, LOW);
   digitalWrite(RightBrakeVoltPin, LOW);
   state = BR_OFF;
+  if (DEBUG) {
+    Serial.println("Releasing brakes...");
+  }
 }
 void Brakes::Stop()
 {
@@ -252,6 +255,9 @@ void Brakes::Stop()
   digitalWrite(LeftBrakeOnPin, HIGH); // Activate solenoid to apply brakes.
   digitalWrite(RightBrakeOnPin, HIGH);
   state = BR_HI_VOLTS;
+  if (DEBUG) {
+    Serial.println("Applying brakes...");
+  }
 }
 void Brakes::Check()
 {
@@ -353,12 +359,13 @@ void loop()
   // roll over back to zero after they exceed the 32-bit size of unsigned long,
   // which happens after about 1.5 months of operation
   // INSERT ANY LOOP CODE BELOW THIS POINT !!
-  if (DEBUG){
+  if (DEBUG) {
     Serial.print("\nLoop start: ");
     Serial.println(millis());
   }
   static long int desired_speed_cmPs, desired_angle;
   static bool e_stop = 0, auto_mode = 0;
+  static unsigned long lastRCms = millis(), lastHLms = millis();
   brake.Check();
   // get data from serial
   // get desired steering and speed
@@ -367,6 +374,7 @@ void loop()
     // Receiving data from High Level
     ParseStateError r = RxStateHiLevel.update();
     if (r == ParseStateError::success) {
+      lastHLms = millis();
       desired_speed_cmPs = RxDataHiLevel.speed_cmPs;
       desired_angle = RxDataHiLevel.angle_mDeg;
     }
@@ -381,15 +389,23 @@ void loop()
   // Get data from RC unit
   ParseStateError r = RC_State.update();
   if (r == ParseStateError::success) {
+    lastRCms = millis();
     e_stop = RC_Data.number & 0x01;
     auto_mode = RC_Data.number & 0x02;
     if (!auto_mode)
     {
-		// the values stored in the RC packet are not converted, they are just 0-255 so we need to convert them
+      // the values stored in the RC packet are not converted, they are just 0-255 so we need to convert them
       desired_speed_cmPs = convertRCToThrottle(RC_Data.speed_cmPs);
       desired_angle = convertRCToTurn(RC_Data.angle_mDeg);
     }
   }
+  const unsigned long timeout_ms = 500UL;
+  // Discuss: will we run the trike in auto mode without RC connection? Only expecting 20ft/6m reliable range on RC.
+  // what happens when the HL routine is finished? Does the trike stop?
+  
+  // todo: check RC performance and determine what a good watchdog timeout value is to prevent unnessisary braking
+  // todo: e-stop when RC signal is lost or when HL signal is lost, if this is proper
+
   if (e_stop)
   {
     brake.Stop();
@@ -397,12 +413,33 @@ void loop()
   }
   else
   { // Control trike to desired speed and angle
-    SteeringPID(convertHLToTurn(desired_angle));
-    ThrottlePID(desired_speed_cmPs);
+    if (auto_mode) {
+      // convert HL values
+      SteeringPID(convertHLToTurn(desired_angle));
+      ThrottlePID(desired_speed_cmPs);
+    }
+    else {
+      // using RC
+      if (desired_speed_cmPs < -10) {
+        // throttle control is negative/reverse
+        brake.Stop();
+        engageWheel(0);
+      }
+      else {
+        brake.Release();
+        engageWheel(desired_speed_cmPs);
+      }
+      engageSteering(desired_angle);
+    }
   }
+  if (DEBUG){
+    // this shows how long it took for all our code and I/O to finish before we wait
+    // our target loop time is 100ms, but too much I/O will make our loops run long
+    Serial.print(F("Loop code end: "));
+    Serial.println(millis());
+  }
+
   // DO NOT INSERT ANY LOOP CODE BELOW THIS POINT !!
-
-
   if (loopEnd != 0) {
     // loopEnd is set to 0 in setup() and we do not need to delay the first loop
     while (millis() < loopEnd + LOOP_TIME_MS) {
@@ -426,7 +463,7 @@ void testBrakes()
   delay(1000);
   brake.Release();
   if (DEBUG) {
-    Serial.println("**** Brake test Complete! ****");
+    Serial.println(F("**** Brake test Complete! ****"));
   }
 }
 
@@ -441,7 +478,7 @@ void testWheel()
   delay(2000);
   engageWheel(0); // Turn off wheel
   if (DEBUG) {
-    Serial.println("**** Wheel test Complete! ****");
+    Serial.println(F("**** Wheel test Complete! ****"));
   }
 }
 
@@ -459,7 +496,7 @@ void testSteering()
   engageSteering(WHEEL_STRAIGHT_US);
   delay(1000);
   if (DEBUG) {
-    Serial.println("**** Steering test Complete! ****");
+    Serial.println(F("**** Steering test Complete! ****"));
   }
 }
 /*-------------------------------------engageWheel-------------------------------------------*/
@@ -627,7 +664,7 @@ void WheelRev()
 }
 
 /*----------------------------computeSpeed-----------------------------------------------*/
-void computeSpeed(struct hist *data)
+void computeSpeed(struct hist * data)
 {
   unsigned long WheelRev_ms = TickTime - OldTick;
   float SpeedCyclometer_revPs = 0.0; //revolutions per sec
@@ -701,35 +738,37 @@ void computeSpeed(struct hist *data)
     }
   }
 }
-/*************************** START HIGH LEVEL PROCESSING SECTION ********************************/
 
-/*------------------------------------convertHLToTurn------------------------------------------*/
 int convertRCToTurn(int RCturn) {
-	// we convert byte values (0-255) to microseconds (1000-2000)
- 
-	int turn = (int)((RCturn * 500.0) / 127.0 + 1000.0);
-	if (DEBUG) {
+  // we convert byte values (0-255) to microseconds (1000-2000)
+
+  int turn = (int)(RCturn * 3.9370) + 1000; // 3.9370 = 500/127, i.e. us/byte = slope 
+  if (DEBUG) {
     Serial.print("RC turn input: ");
     Serial.println(RCturn);
-		Serial.print("RC turn us: ");
-		Serial.println(turn);
-	}
-	return turn;
+    Serial.print("RC turn us: ");
+    Serial.println(turn);
+  }
+  return turn;
 }
 
 int convertRCToThrottle(int RCthrottle) {
-	// we convert byte values (0-255, with center = 127) to throttle (~50-255)
-	// remember this will return negative throttle values
-	int throttle = (RCthrottle - 127) * 2;
-	if (DEBUG) {
+  // we convert byte values (0-255, with center = 127) to throttle (~50-255)
+  // remember this will return negative throttle values
+  int throttle = (RCthrottle - 127) * 2;
+  if (DEBUG) {
     Serial.print("RC throttle input: ");
     Serial.println(RCthrottle);
-		Serial.print("RC throttle: ");
-		Serial.println(throttle);
-	}
-	return throttle;
+    Serial.print("RC throttle: ");
+    Serial.println(throttle);
+  }
+  return throttle;
 }
 
+
+/*************************** START HIGH LEVEL PROCESSING SECTION ********************************/
+
+/*------------------------------------convertHLToTurn------------------------------------------*/
 
 int convertHLToTurn(int turnValue)
 {
@@ -755,7 +794,7 @@ void SteeringPID(int desiredValue)
   steerPID.Compute();
   engageSteering((int)PIDSteeringOutput_us);
   if (DEBUG) {
-    Serial.print("  PID STEER OUT = ");
+    Serial.print("PID STEER OUT = ");
     Serial.println(PIDSteeringOutput_us);
   }
 }
@@ -778,7 +817,7 @@ void ThrottlePID(int desiredValue)
     brake.Release();
     engageWheel(currentThrottlePWM);
     if (DEBUG) {
-      Serial.print("  PID THROTTLE OUT = ");
+      Serial.print("PID THROTTLE OUT = ");
       Serial.println(PIDThrottleOutput_pwm);
     }
   }
@@ -792,8 +831,17 @@ void ThrottlePID(int desiredValue)
 
 void computeAngle()
 {
+  int noise = analogRead(A1);
+  float noise_volts = (float)(noise / 205.0);
   int left = analogRead(A2);
   int right = analogRead(A3);
+  float right_volts = (right / 205.0);
+  if (DEBUG) {
+    Serial.print("Noise value(Volts): ");
+    Serial.println(noise_volts);
+    Serial.print("Right turn sensor value(Volts): ");
+    Serial.println(right_volts);
+  }
 
   steerAngleUS = map(analogRead(A3), calibratedWheelSensorMaxLeft, calibratedWheelSensorMaxRight, calibratedWheelMaxLeft_us, calibratedWheelMaxRight_us);
 }
