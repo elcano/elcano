@@ -49,9 +49,9 @@
 // Output to motor actuator
 #define DAC_CHANNEL 0
 // Output to steer actuator
-#define STEER_OUT_PIN 9
+#define STEER_OUT_PIN 7
 // Output to brake actuator
-#define BRAKE_OUT_PIN 6
+//#define BRAKE_OUT_PIN 6
 // DISK_BRAKE is deprecated, use BRAKE_OUT_PIN
 
 // Trike-specific physical parameters
@@ -257,7 +257,7 @@ class Brakes
 // For normal operation
 const long int loop_time_ms = 100;  // Limits time in the loop.
 
-Brakes brake = Brakes();
+ Brakes brake = Brakes();
  
 
 /*---------------------------------------------------------------------------------------*/
