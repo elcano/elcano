@@ -44,7 +44,10 @@
 #define RIGHT_MAX_COUNT 284
 #define LEFT_MIN_COUNT  80
 #define LEFT_MAX_COUNT  284
-
+/*******************************************************************************
+In Joe's version STEER_OUT_PIN = 9
+and BRAKE_OUT_PIN is not commented out
+********************************************************************************/
 // Trike specific pins/channels
 // Output to motor actuator
 #define DAC_CHANNEL 0
