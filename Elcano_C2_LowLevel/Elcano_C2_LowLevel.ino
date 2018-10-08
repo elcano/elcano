@@ -4,7 +4,7 @@
 #include <ElcanoSerial.h>
 #include <Servo.h>
 #include <SD.h>
-using namespace elcano;
+//using namespace elcano;
 
 /*
  * C2 is the low-level controller that sends control signals to the hub motor,
@@ -375,44 +375,42 @@ void loop()
   static bool e_stop = 0, auto_mode = 0;
   brake.Check();
 
-  // get data from serial
-  // get desired steering and speed
-  if (auto_mode)
-  {
-    // Receiving data from High Level
-    ParseStateError r = RxStateHiLevel.update();
-    if (r == ParseStateError::success) {
-      desired_speed_cmPs = RxDataHiLevel.speed_cmPs;
-      desired_angle = RxDataHiLevel.angle_mDeg;
-    }
-  }
-  computeSpeed(&history);
-  computeAngle(); // TO DO: Convert angle to right units for PID and for sending to High Level.
-  
-  // Write data to High Level
-  TxDataHiLevel.speed_cmPs = (speedCyclometerInput_mmPs + 5) / 10;
-  TxDataHiLevel.write(TxStateHiLevel.output);
+// get data from serial
+// get desired steering and speed
+   if (auto_mode)
+   {
+   // Receiving data from High Level 
+     ParseStateError r = RxStateHiLevel.update();
+     if (r == ParseStateError::success) {
+       desired_speed_cmPs = RxDataHiLevel.speed_cmPs; 
+       desired_angle = RxDataHiLevel.angle_deg; 
+     } 
+   }
+    computeSpeed(&history);
+    computeAngle(); // TO DO: Convert angle to right units for PID and for sending to High Level.
+    
+    // Write data to High Level
+    TxDataHiLevel.speed_cmPs = (speedCyclometerInput_mmPs + 5) / 10;
+    TxDataHiLevel.write(TxStateHiLevel.output);
 
-  // Get data from RC unit
-  ParseStateError r = RC_State.update();
-  if (r == ParseStateError::success) {
-    e_stop = RC_Data.number & 0x01;
-    auto_mode = RC_Data.number & 0x02;
-    if (!auto_mode)
+    // Get data from RC unit
+    ParseStateError r = RC_State.update();
+    if (r == ParseStateError::success) {
+      e_stop = RC_Data.number & 0x01;
+      auto_mode = RC_Data.number & 0x02;
+      if (!auto_mode)
+      {
+        desired_speed_cmPs = RC_Data.speed_cmPs; 
+        desired_angle = RC_Data.angle_deg; 
+      }
+    } 
+    if (e_stop)
     {
-      desired_speed_cmPs = RC_Data.speed_cmPs; 
-      desired_angle = RC_Data.angle_mDeg; 
+      brake.Stop();
+      engageWheel(0); // Turn off wheel
     }
-  } 
-  if (e_stop)
-  {
-    brake.Stop();
-    engageWheel(0); // Turn off wheel
-  }
-  else
-  { // Control trike to desired speed and angle
-    if (auto_mode) {
-      // convert HL values
+    else
+    { // Control trike to desired speed and angle 
       SteeringPID(convertHLToTurn(desired_angle));
       ThrottlePID(desired_speed_cmPs);
     }
@@ -881,4 +879,3 @@ void computeAngle()
  }
 
 /*************************** END HIGH LEVEL PROCESSING SECTION ********************************/
-
