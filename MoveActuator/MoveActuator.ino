@@ -1,27 +1,34 @@
-/*
+/********************************************************************************
  Move Actuator: Reduced version of Elcano_C2_Base for testing actuators
  
- Elcano Contol Module C2 Basic: Bare bones low level control of vehicle.
+ Elcano Control Module C2 Basic: Bare bones low level control of vehicle.
  
  Outputs are
  1) Analog 0-4 V signal for traction motor speed
  2) Four relay signals for brakes.
  3) PWM signal for steering.
-  */
+ ********************************************************************************/
 
 // Input/Output (IO) pin names for the MegaShieldDB printed circuit board (PCB)
-// #include <IOPCB.h>
-/*==========================================================================*/
-// @ToDo: Fix this fix. If there are variant systems, they should be selected
-// in Settings.h, and then IO.h can be included *after* that, and test the
-// selector, or use values defined in Settings.h.
-// Temporary fix 10/7/15:   IOPCB.h is here
-/*==========================================================================*/
-/* IO_PCB.h:  I/O pin assignments for Arduino Mega 2560 on MegaShieldDB
-*/
+ #include "IOPCB.h"
+// Contains trike definitions 
+ #include "Settings.h"
+// When setting up the project, select
+//   Sketch  |  Import Library ... |  SPI
+// include the Serial Periferal Interface (SPI) library:
+#include <SPI.h>
 
-//#include <Settings.h>
+/********************************************************************************
+@ToDo: Fix this fix. If there are variant systems, they should be selected
+in Settings.h, and then IO.h can be included *after* that, and test the
+selector, or use values defined in Settings.h.
+Temporary fix 10/7/15:   IOPCB.h is here
+Possibly fixed: 10/8/18
+IOCPB.h section has been commented out and code compiles with the include 
+Settings.h section has also been commented out and code compiles with the include 
+*********************************************************************************/
 
+/********************************************************************************
 // Values (0-255) represent digital values that are PWM signals used by analogWrite.
 
 // MIN and MAX ACC set the minimum signal to get the motor going, and maximum allowable acceleration for the motor
@@ -44,10 +51,7 @@
 #define RIGHT_MAX_COUNT 284
 #define LEFT_MIN_COUNT  80
 #define LEFT_MAX_COUNT  284
-/*******************************************************************************
-In Joe's version STEER_OUT_PIN = 9
-and BRAKE_OUT_PIN is not commented out
-********************************************************************************/
+
 // Trike specific pins/channels
 // Output to motor actuator
 #define DAC_CHANNEL 0
@@ -78,6 +82,8 @@ and BRAKE_OUT_PIN is not commented out
 #define THROTTLE_CHANNEL 0
 
 // ====== End Settings.h ======================
+********************************************************************************/
+
 
 // Define the tests to do.
 #define BRAKE_RAMP
@@ -90,7 +96,7 @@ and BRAKE_OUT_PIN is not commented out
 The Mega is designed to be used with a data-logging shield.
 The nonMega shield uses A4 and A5 for RTC and D10,11,12,and 13 for MOSI data logging.
 */
-
+/********************************************************************************
 // @ToDo: There are declarations here that are per-trike, and some that are common.
 // Parameters have been added to Settings.h for the per-trike values.
 // Should the common parameters also be defined in Settings.h?
@@ -99,9 +105,9 @@ The nonMega shield uses A4 and A5 for RTC and D10,11,12,and 13 for MOSI data log
 
 // D0-7 Connector -------------------------------
 // On the Mega, any of D0 to D13 can be PWM.
-/* D0 is (Rx0) Read Serial Data. */
+// D0 is (Rx0) Read Serial Data. 
 const int Rx0 = 0;      // external input
-/* [out] Digital Signal 1: (Tx0). Transmit Serial Data.  */
+// [out] Digital Signal 1: (Tx0). Transmit Serial Data.  
 const int Tx0 = 1;      // external output
 
 // This is the 5V supply produced by the E-bike controller.
@@ -131,20 +137,18 @@ This supply goes away when either the key switch is turned off or RC4 is pressed
 Lack of 5V from the motor controller is an emergency stop.
 Interrupts are on 2,3,18,19,20 and 21.
 */
+/********************************************************************************
 const int SelectCD     = 49;  // Select IC 3 DAC (channels C and D)
 const int ThrottleMISO = 50;
 const int ThrottleMOSI = 51;
 const int ThrottleSCK  = 52;
 const int SelectAB     = 53;  // Select IC 2 DAC (channels A and B)
 
-/*==========================================================================*/
+//==========================================================================
 // End of IOPCB.h
-/*==========================================================================*/
+//==========================================================================
+********************************************************************************/
 
-// When setting up the project, select
-//   Sketch  |  Import Library ... |  SPI
-// include the Serial Periferal Interface (SPI) library:
-#include <SPI.h>
 // The MegaShieldDB has a four channel Digital to Analog Converter (DAC).
 // Basic Arduino cannot write a true analog signal, but only PWM.
 // Many servos take PWM.
@@ -498,3 +502,4 @@ void Brakes::Check()
     state = BR_LO_VOLTS;
   }
 }
+
