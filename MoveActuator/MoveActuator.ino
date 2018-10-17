@@ -105,9 +105,9 @@ The nonMega shield uses A4 and A5 for RTC and D10,11,12,and 13 for MOSI data log
 
 // D0-7 Connector -------------------------------
 // On the Mega, any of D0 to D13 can be PWM.
-// D0 is (Rx0) Read Serial Data. 
+/* D0 is (Rx0) Read Serial Data. */
 const int Rx0 = 0;      // external input
-// [out] Digital Signal 1: (Tx0). Transmit Serial Data.  
+/* [out] Digital Signal 1: (Tx0). Transmit Serial Data.  */
 const int Tx0 = 1;      // external output
 
 // This is the 5V supply produced by the E-bike controller.
