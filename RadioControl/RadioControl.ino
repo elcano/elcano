@@ -73,7 +73,8 @@ const uint8_t RX_LED_NOSIGNAL = 12; // D60 is A6 on the Mega
 void setupReceiver() {
   driver.init();
   driver.setModeRx();
-  PC.begin(9600);
+  PC.begin(baudrate);
+  ESERIAL.begin(baudrate);
 }
 
 void waitInputByte(int timeout) {
@@ -157,19 +158,6 @@ void loopReceiver()
 void sendElcanoSerial() {
   SerialData command;
   command.kind = MsgType::drive;
-  if (!using_us_units) {
-    const int T_OFFSET = 0; // throttle trim
-    inputData.throttle -= T_OFFSET;
-    const int A_OFFSET = 3; // angle trim
-    inputData.angle -= A_OFFSET;
-    const int DEADZONE = 2;
-    if (abs(inputData.throttle) < DEADZONE) {
-      inputData.throttle = 0;
-    }
-    if (abs(inputData.angle) < DEADZONE) {
-      inputData.angle = 0;
-    }
-  }
   command.speed_cmPs = inputData.throttle;
   command.angle_mDeg = inputData.angle;
   command.number =
@@ -242,8 +230,16 @@ void setupTransmitter() {
 void loopTransmitter() {
   unsigned long start = millis();
   digitalWrite(TX_LED_POWER, HIGH);
-  uint16_t turn = analogRead(A1) >> 2;
-  uint16_t throttle = analogRead(A0) >> 2;
+  int16_t turn = analogRead(A1) >> 2;
+  int turn_trim = -3;
+  turn -= turn_trim;
+  if (turn < 0){turn = 0;}
+  if (turn > 255){turn = 255;}
+  int16_t throttle = analogRead(A0) >> 2;
+  int thr_trim = 0;
+  throttle -= thr_trim;
+  if (throttle < 0){throttle = 0;}
+  if (throttle > 255){throttle = 255;}
   uint8_t autoMode = digitalRead(A2);
   uint8_t eBrake = digitalRead(A3);
   uint8_t msg[MSG_SIZE] = {0};
