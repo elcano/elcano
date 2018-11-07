@@ -17,6 +17,8 @@
 //   Sketch  |  Import Library ... |  SPI
 // include the Serial Periferal Interface (SPI) library:
 #include <SPI.h>
+#include <Servo.h>
+//#include <Settings.h>
 
 /********************************************************************************
 @ToDo: Fix this fix. If there are variant systems, they should be selected
@@ -155,12 +157,6 @@ const int SelectAB     = 53;  // Select IC 2 DAC (channels A and B)
 // An electric bicycle (E-bike) throttle expects an analog signal.
 // We have found that feeding a pwm signal to an e-bike controller makes the motor chug at low speed.
 
-#ifndef TRUE
-#define TRUE 1
-#define FALSE 0
-#endif
-
-
 // Values to send over DAC
 const int FullThrottle =  MAX_ACC_OUT;   // 3.63 V
 const int MinimumThrottle = MIN_ACC_OUT;  // Throttle has no effect until 1.2 V
@@ -183,118 +179,119 @@ int ThrottleIncrement = 1;
     Elcano servo has a hardware controller that moves to a
     particular position based on an input PWM signal from Arduino.
     The Arduino PWM signal is a square wave at a base frequency of 490 Hz or 2.04 ms.
-    PWM changes the duty cycle to encode   
+    PWM changes the duty cycle to encode
     0 is always off; 255 always on. One step is 7.92 us.
-    
+
     Elcano servo is fully retracted on a pulse width of 2 ms;
     fully extended at 1 ms and centered at 1.5 ms.
     There is a deadband of 8 us.
     At 12v, servo operating speed is 56mm/s with no load or
     35 mm/s at maximum load.
-    
+
     Output from hardware servo controller to either servo has five wires, with observed bahavior of:
     White: 0V
     Yellow: 5V
     Blue: 0-5V depending on position of servo.
     Black: 12V while servo extends; 0V at rest or retracting.
     Red:   12V while retracting; 0V at rest or extending.
-    The reading on the Blue line has hysteresis when Elcano sends a PWM signal; 
+    The reading on the Blue line has hysteresis when Elcano sends a PWM signal;
     there appear to be different (PWM, position) pairs when retracting or extending.
-    Motor speed is probably controlled by the current on the red or black line.   
+    Motor speed is probably controlled by the current on the red or black line.
 */
-/*---------------------------------------------------------------------------------------*/ 
+Servo steeringActuator;
+/*---------------------------------------------------------------------------------------*/
 
 /* Solenoid controlled Brakes.
- *  
- *  Solenoid (Johnson Electic model 150 174432-024) 
- *  can be kept at lower voltage (12V) indefinitely. 
- *  It has a holding force of 14.5 lb.
- *  At the higher voltage, data sheet expects it to be high (24V) for
- *  25% of the time and low for 75%. However, it can stay high for 100 sec.
- *  The solenoid typically reacts in less than a second.
- *  For 0.25 inch throw and 24V it can pull 7 lb.
- *  We are using the part with 0.3 inch throw, 12V in low state and 36V in high
- *  state, but keeping voltage high for only a second or two.
- *  This appears to be within the part's capabilities.
- *  
- *  The solenoid brake on Elcano replaces the earlier linear actuator.
- *  Solenoid advantages:
- *      Faster: Typically 0.2 seconds vs 2 in/sec for no load. 
- *      Slightly Lighter: 482 grams each vs. 1.16 kg
- *      Available; Linear actuator is no longer available for 2 or 4 inch throw.
- *      Less expensive: 2 * $70 vs. $250
- *      More durable; 5 of the linear actutors have failed.
- *  Linear actuator advantages:
- *      Single unit can pull both brakes (25 lb. thrust); solenoid requires a unit for each brake.
- *      No restriction on throw length; solenoid will not work with > 0.3 inch throw.
- *      Maintains last position without power.   
- *      Do not need to worry about heat dissipation.
- *      
- *  The linear actuator was controlled by pulse width on one digital line.    
- *  The solenoids are controlled by relays on two digital lines.
- *      
- *    Tyler Folsom   April 2018  
- *    
-     *  Expected behavior
-     *  When Green LED is on, NO is connected to COM; NC is not
-     *  Writing HIGH to a relay will turn LED on, and connect NO to COM
-     *  When green LED is off, NC is connected to COM; NO is not.
-     *  Writing LOW to a relay will turn LED off, and connect NC to COM.
-     *  You shoud hear a click when the relay operates.
-     *  If there is a change in LED, but no click, the relay does not have enough power.
-     */
-   
+
+    Solenoid (Johnson Electic model 150 174432-024)
+    can be kept at lower voltage (12V) indefinitely.
+    It has a holding force of 14.5 lb.
+    At the higher voltage, data sheet expects it to be high (24V) for
+    25% of the time and low for 75%. However, it can stay high for 100 sec.
+    The solenoid typically reacts in less than a second.
+    For 0.25 inch throw and 24V it can pull 7 lb.
+    We are using the part with 0.3 inch throw, 12V in low state and 36V in high
+    state, but keeping voltage high for only a second or two.
+    This appears to be within the part's capabilities.
+
+    The solenoid brake on Elcano replaces the earlier linear actuator.
+    Solenoid advantages:
+        Faster: Typically 0.2 seconds vs 2 in/sec for no load.
+        Slightly Lighter: 482 grams each vs. 1.16 kg
+        Available; Linear actuator is no longer available for 2 or 4 inch throw.
+        Less expensive: 2 * $70 vs. $250
+        More durable; 5 of the linear actutors have failed.
+    Linear actuator advantages:
+        Single unit can pull both brakes (25 lb. thrust); solenoid requires a unit for each brake.
+        No restriction on throw length; solenoid will not work with > 0.3 inch throw.
+        Maintains last position without power.
+        Do not need to worry about heat dissipation.
+
+    The linear actuator was controlled by pulse width on one digital line.
+    The solenoids are controlled by relays on two digital lines.
+
+      Tyler Folsom   April 2018
+
+        Expected behavior
+        When Green LED is on, NO is connected to COM; NC is not
+        Writing HIGH to a relay will turn LED on, and connect NO to COM
+        When green LED is off, NC is connected to COM; NO is not.
+        Writing LOW to a relay will turn LED off, and connect NC to COM.
+        You shoud hear a click when the relay operates.
+        If there is a change in LED, but no click, the relay does not have enough power.
+*/
+
 class Brakes
 {
- public:
-  Brakes();
-  void Stop();
-  void Release();
-  void Check();
- private:
-  enum brake_state {BR_OFF, BR_HI_VOLTS, BR_LO_VOLTS} state;
-  unsigned long clock_hi_ms;
-  const int LeftBrakeOnPin = 10;
-  const int RightBrakeOnPin = 4;
-  const int LeftBrakeVoltPin = 8;
-  const int RightBrakeVoltPin = 7;
-  const unsigned long MaxHi_ms = 800;
- } ;
+  public:
+    Brakes();
+    void Stop();
+    void Release();
+    void Check();
+  private:
+    enum brake_state {BR_OFF, BR_HI_VOLTS, BR_LO_VOLTS} state;
+    unsigned long clock_hi_ms;
+    const int brakePower = 9; // LOW means on, HIGH means off
+    const int brakeOn = 10; // LOW means 24v, HIGH means 12v
+    const unsigned long MaxHi_ms = 800;
+} ;
 
 // For normal operation
 const long int loop_time_ms = 100;  // Limits time in the loop.
 
- Brakes brake = Brakes();
- 
+Brakes brake = Brakes();
+
 
 /*---------------------------------------------------------------------------------------*/
-void setup()
-{
-    //Set up pin modes and interrupts, call serial.begin and call initialize.
-    Serial.begin(9600);
-    
-    // SPI: set the slaveSelectPin as an output:
-    pinMode (SelectAB, OUTPUT);
-    pinMode (SelectCD, OUTPUT);
-    pinMode (10, OUTPUT);
-    SPI.setDataMode( SPI_MODE0);
-    SPI.setBitOrder( MSBFIRST);
-    // initialize SPI:
-    // The following line should not be neccessary. It uses a system library.
-//    PRR0 &= ~4;  // turn off PRR0.PRSPI bit so power isn't off
-    SPI.begin(); 
-    for (int channel = 0; channel < 4; channel++)
-        DAC_Write (channel, 0);   // reset did not clear previous states
- 
-    pinMode(STEER_OUT_PIN, OUTPUT);
+void setup() {
+  //Set up pin modes and interrupts, call //Serial.begin and call initialize.
+  Serial.begin(115200);
 
-    brake.Release();   // release brake
-    moveSteer(SteerPosition);
-    moveVehicle(MinimumThrottle); 
-    Serial.println("Initialized");
-    Serial.print("Left\t");   
-    Serial.print("Right\t");
-    Serial.println("Time");   
+  // SPI: set the slaveSelectPin as an output:
+  pinMode (SelectAB, OUTPUT);
+  pinMode (SelectCD, OUTPUT);
+  pinMode (10, OUTPUT);
+
+  steeringActuator.attach(STEER_OUT_PIN); // connect servo object to output
+  
+  SPI.setDataMode( SPI_MODE0);
+  SPI.setBitOrder( MSBFIRST);
+  // initialize SPI:
+  // The following line should not be neccessary. It uses a system library.
+  //    PRR0 &= ~4;  // turn off PRR0.PRSPI bit so power isn't off
+  SPI.begin();
+  for (int channel = 0; channel < 4; channel++)
+    DAC_Write (channel, 0);   // reset did not clear previous states
+
+  pinMode(STEER_OUT_PIN, OUTPUT);
+
+  brake.Release();   // release brake
+  moveSteer(SteerPosition);
+  moveVehicle(MinimumThrottle);
+  //Serial.println("Initialized");
+  //Serial.print("Left\t");
+  //Serial.print("Right\t");
+  //Serial.println("Time");
 }
 /*---------------------------------------------------------------------------------------*/
 void loop()
@@ -304,201 +301,189 @@ void loop()
   const unsigned long MinTimeStep_msec = 100;
   unsigned long delay_ms = 0;
   unsigned long timeStart_ms = millis();
-// Put no new code before here
-  
+  // Put no new code before here
+
   // apply throttle
 #ifdef MOTOR_RAMP
-    ThrottlePosition += ThrottleIncrement;
-    if (ThrottlePosition > FullThrottle || ThrottlePosition < MinimumThrottle)
-        ThrottleIncrement = -ThrottleIncrement; 
-    moveVehicle(ThrottlePosition);
+  ThrottlePosition += ThrottleIncrement;
+  if (ThrottlePosition > FullThrottle || ThrottlePosition < MinimumThrottle)
+    ThrottleIncrement = -ThrottleIncrement;
+  moveVehicle(ThrottlePosition);
 #endif  // MOTOR_RAMP  
-  
+
   // apply brakes
 #ifdef BRAKE_RAMP
- if (BrakeStep == 1)
-   brake.Stop();
- if (BrakeStep == 40)
-   brake.Release();
- brake.Check();
- if (++BrakeStep > 80)
+  if (BrakeStep == 1)
+    brake.Stop();
+  if (BrakeStep == 40)
+    brake.Release();
+  brake.Check();
+  if (++BrakeStep > 80)
     BrakeStep = 0;
- 
+
 #endif  // BRAKE_RAMP  
-  
- // apply steering
+
+  // apply steering
 #ifdef STEER_RAMP
-    SteerPosition += SteerIncrement;
-    if (SteerPosition > HardRight || SteerPosition < HardLeft)
-        SteerIncrement = -SteerIncrement;
-    moveSteer(SteerPosition);
+  SteerPosition += SteerIncrement;
+  if (SteerPosition > HardRight || SteerPosition < HardLeft)
+    SteerIncrement = -SteerIncrement;
+  moveSteer(SteerPosition);
 #endif  // Steer_RAMP
   outputToSerial();
 
-// Put no new code after here.
+  // Put no new code after here.
   unsigned long execution_ms = millis() - timeStart_ms;
   delay_ms = MinTimeStep_msec - execution_ms;
   if (delay_ms > 0) delay(delay_ms);
 }
 /*---------------------------------------------------------------------------------------*/
-void moveSteer(int i)
-{
-     Serial.print ("Steer "); Serial.print(i);
-     Serial.print (" on ");   Serial.println (STEER_OUT_PIN);
-     analogWrite(STEER_OUT_PIN, i);
+void moveSteer(int i) {
+  //Serial.print ("Steer "); //Serial.print(i);
+  //Serial.print (" on ");   //Serial.println (STEER_OUT_PIN);
+  steeringActuator.write(i);
 }
 /*---------------------------------------------------------------------------------------*/
-void outputToSerial()
-{
+void outputToSerial() {
 #ifdef MOTOR_RAMP
   //put output data for motor here
 #endif  // MOTOR_RAMP  
-  
+
 #ifdef BRAKE_RAMP
   //put output data for brake here
 #endif  // BRAKE_RAMP
 
-#ifdef STEER_RAMP 
-     int left = analogRead(A2);               //Steer
-     int right = analogRead(A3);
-     Serial.print(left);   Serial.print("\t"); //Left turn sensor
-     Serial.print(right);  Serial.print("\t"); //Right turn sensor
+#ifdef STEER_RAMP
+  int left = analogRead(A2);               //Steer
+  int right = analogRead(A3);
+  //Serial.print(left);   //Serial.print("\t"); //Left turn sensor
+  //Serial.print(right);  //Serial.print("\t"); //Right turn sensor
 #endif //STEER_RAMP
-  Serial.println(micros()); //Current time and end line
+  //Serial.println(micros()); //Current time and end line
 }
 /*---------------------------------------------------------------------------------------*/
-void moveVehicle(int counts)
-{
-    /* Observed behavior on ElCano #1 E-bike no load (May 10, 2013, TCF)
-      0.831 V at rest       52 counts
-      1.20 V: nothing       75
-      1.27 V: just starting 79
-      1.40 V: slow, steady  87
-      1.50 V: brisker       94
-      3.63 V: max          227 counts     
-      255 counts = 4.08 V      
-      */
-     Serial.print ("Motor "); Serial.print(counts);
-     Serial.print (" on ");   Serial.println (THROTTLE_CHANNEL);
-#ifdef DAC      
-   DAC_Write(THROTTLE_CHANNEL, counts);
+void moveVehicle(int counts) {
+  /* Observed behavior on ElCano #1 E-bike no load (May 10, 2013, TCF)
+    0.831 V at rest       52 counts
+    1.20 V: nothing       75
+    1.27 V: just starting 79
+    1.40 V: slow, steady  87
+    1.50 V: brisker       94
+    3.63 V: max          227 counts
+    255 counts = 4.08 V
+  */
+  //Serial.print ("Motor "); //Serial.print(counts);
+  //Serial.print (" on ");   //Serial.println (THROTTLE_CHANNEL);
+#ifdef DAC
+  DAC_Write(THROTTLE_CHANNEL, counts);
 #endif
 }
 /*---------------------------------------------------------------------------------------*/
 /* DAC_Write applies value to address, producing an analog voltage.
-// address: 0 for chan A; 1 for chan B; 2 for chan C; 3 for chan D
-// value: digital value converted to analog voltage
-// Output goes to mcp 4802 Digital-Analog Converter Chip via SPI
-// There is no input back from the chip.
+  // address: 0 for chan A; 1 for chan B; 2 for chan C; 3 for chan D
+  // value: digital value converted to analog voltage
+  // Output goes to mcp 4802 Digital-Analog Converter Chip via SPI
+  // There is no input back from the chip.
 */
-void DAC_Write(int address, int value)
+void DAC_Write(int address, int value) {
 
 /*
-REGISTER 5-3: WRITE COMMAND REGISTER FOR MCP4802 (8-BIT DAC)
-A/B  —  GA  SHDN  D7 D6 D5 D4 D3 D2 D1 D0 x x x x
-bit 15                                       bit 0
+  REGISTER 5-3: WRITE COMMAND REGISTER FOR MCP4802 (8-BIT DAC)
+  A/B  —  GA  SHDN  D7 D6 D5 D4 D3 D2 D1 D0 x x x x
+  bit 15                                       bit 0
 
-bit 15   A/B: DACA or DACB Selection bit
+  bit 15   A/B: DACA or DACB Selection bit
          1 = Write to DACB
          0 = Write to DACA
-bit 14   — Don’t Care
-bit 13   GA: Output Gain Selection bit
+  bit 14   — Don’t Care
+  bit 13   GA: Output Gain Selection bit
          1 = 1x (VOUT = VREF * D/4096)
          0 = 2x (VOUT = 2 * VREF * D/4096), where internal VREF = 2.048V.
-bit 12   SHDN: Output Shutdown Control bit
-         1 = Active mode operation. VOUT is available. 
+  bit 12   SHDN: Output Shutdown Control bit
+         1 = Active mode operation. VOUT is available.
          0 = Shutdown the selected DAC channel. Analog output is not available at the channel that was shut down.
          VOUT pin is connected to 500 k (typical)
-bit 11-0 D11:D0: DAC Input Data bits. Bit x is ignored.
+  bit 11-0 D11:D0: DAC Input Data bits. Bit x is ignored.
 
-With 4.95 V on Vcc, observed output for 255 is 4.08V.
-This is as documented; with gain of 2, maximum output is 2 * Vref
+  With 4.95 V on Vcc, observed output for 255 is 4.08V.
+  This is as documented; with gain of 2, maximum output is 2 * Vref
 */
 
-{
-  int byte1 = ((value & 0xF0)>>4) | 0x10; // acitve mode, bits D7-D4
-  int byte2 = (value & 0x0F)<<4;           // D3-D0
+
+  int byte1 = ((value & 0xF0) >> 4) | 0x10; // acitve mode, bits D7-D4
+  int byte2 = (value & 0x0F) << 4;         // D3-D0
   if (address < 2)
   {
-      // take the SS pin low to select the chip:
-      digitalWrite(SelectAB,LOW);
-      if (address >= 0)
-      { 
-        if (address == 1)
-          byte1 |= 0x80;  // second channnel
-        SPI.transfer(byte1);
-        SPI.transfer(byte2);
-       }
-      // take the SS pin high to de-select the chip:
-      digitalWrite(SelectAB,HIGH);
+    // take the SS pin low to select the chip:
+    digitalWrite(SelectAB, LOW);
+    if (address >= 0)
+    {
+      if (address == 1)
+        byte1 |= 0x80;  // second channnel
+      SPI.transfer(byte1);
+      SPI.transfer(byte2);
+    }
+    // take the SS pin high to de-select the chip:
+    digitalWrite(SelectAB, HIGH);
   }
   else
   {
-      // take the SS pin low to select the chip:
-      digitalWrite(SelectCD,LOW);
-      if (address <= 3)
-      {
-        if (address == 3)
-          byte1 |= 0x80;  // second channnel
-        SPI.transfer(byte1);
-        SPI.transfer(byte2);
-      }
-       // take the SS pin high to de-select the chip:
-      digitalWrite(SelectCD,HIGH);
+    // take the SS pin low to select the chip:
+    digitalWrite(SelectCD, LOW);
+    if (address <= 3)
+    {
+      if (address == 3)
+        byte1 |= 0x80;  // second channnel
+      SPI.transfer(byte1);
+      SPI.transfer(byte2);
+    }
+    // take the SS pin high to de-select the chip:
+    digitalWrite(SelectCD, HIGH);
   }
 }
- 
-Brakes::Brakes()
-{
-  pinMode( LeftBrakeOnPin, OUTPUT);
-  pinMode( RightBrakeOnPin, OUTPUT);
-  pinMode( LeftBrakeVoltPin, OUTPUT);
-  pinMode( RightBrakeVoltPin, OUTPUT);
+
+Brakes::Brakes() {
+  pinMode( brakeOn, OUTPUT);
+  pinMode( brakePower, OUTPUT);
   clock_hi_ms = millis();
   state = BR_OFF;
 }
-void Brakes::Release()
-{
+
+void Brakes::Release() {
   /*  Expected behavior:
-   * LEDs go off for relays 2 and 3;
-   * Relay 2 has NO (connected to solenoids) open, and there is no power to solenoids.
-   * Relay 3 connects COM (other end of solenoid) to NO (12V) 
-   */
-  digitalWrite(LeftBrakeOnPin, LOW);
-  digitalWrite(LeftBrakeVoltPin, LOW);
-  digitalWrite(RightBrakeOnPin, LOW);
-  digitalWrite(RightBrakeVoltPin, LOW);
+     LEDs go off for relays 2 and 3;
+     Relay 2 has NO (connected to solenoids) open, and there is no power to solenoids.
+     Relay 3 connects COM (other end of solenoid) to NO (12V)
+  */
+  digitalWrite(brakeOn, HIGH);
+  digitalWrite(brakePower, HIGH);
   state = BR_OFF;
 }
-void Brakes::Stop()
-{
+
+void Brakes::Stop() {
   /*  Expected behavior:
-   *  Both LEDs come on for Relays 2 and 3
-   *  Relay 2 connects NO (solenoids) to COM (ground)
-   *  Relay 3 connects COM (other end of solenoids) to NC (36V)
-   */
-  digitalWrite(LeftBrakeVoltPin, HIGH);  // Need the higher voltage to activate the solenoid.
-  digitalWrite(RightBrakeVoltPin, HIGH); 
-  if (state != BR_HI_VOLTS)
-  {
+      The voltage selection relay switches to 24v
+      The power-on relay turns on the solenoids
+      After a short delay, the voltage selection switches to 12v
+  */
+  digitalWrite(brakePower, LOW);  // Select 24v
+
+  if (state != BR_HI_VOLTS) {
     clock_hi_ms = millis();  // keep track of when the higher voltage was applied.
   }
-  digitalWrite(LeftBrakeOnPin, HIGH); // Activate solenoid to apply brakes.
-  digitalWrite(RightBrakeOnPin, HIGH);
+  digitalWrite(brakeOn, LOW); // activate solenoids
   state = BR_HI_VOLTS;
 }
-void Brakes::Check()
-{
+void Brakes::Check() {
   /* Expected behavior
-   *  If 36V has been on too long, relay 3 changes LED on to off, switching from 24 to 12V
-   *  If the switch is high, brakes will be released, with both LEDs off.
-   */
- 
+      If 36V has been on too long, relay 3 changes LED on to off, switching from 24 to 12V
+      If the switch is high, brakes will be released, with both LEDs off.
+  */
+
   unsigned long tick = millis();
   if (state == BR_HI_VOLTS && tick - clock_hi_ms > MaxHi_ms)
-  {  // Have reached maximum time to keep voltage high
-    digitalWrite(LeftBrakeVoltPin, LOW); // Set to lower voltage, which will keep brakes applied
-    digitalWrite(RightBrakeVoltPin, LOW);
+  { // Have reached maximum time to keep voltage high
+    digitalWrite(brakePower, HIGH); // Set to lower voltage, which will keep brakes applied
     state = BR_LO_VOLTS;
   }
 }
