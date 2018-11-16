@@ -1,11 +1,10 @@
 #include <Settings.h>
 #include <PID_v1.h>
 #include <SPI.h>
+#include <ElcanoSerial.h>
 #include <Servo.h>
 #include <SD.h>
 using namespace elcano;
-
-long startTime;
 
 /*
  * C2 is the low-level controller that sends control signals to the hub motor,
@@ -43,7 +42,7 @@ static struct hist
 
 Servo STEER_SERVO;
 // 100 milliseconds -- adjust to accomodate the fastest needed response or
-// sensor data capture.
+// sensor data capture or PID updates.
 #define LOOP_TIME_MS 100
 #define ERROR_HISTORY 20 //number of errors to accumulate
 #define ULONG_MAX 0x7FFFFFFF
@@ -73,6 +72,15 @@ const unsigned long HubAtZero = 1159448;
 void DAC_Write(int address, int value);
 void testBrakes();
 void setupWheelRev();
+
+// Time at which this loop pass should end in order to maintain a
+// loop period of LOOP_TIME_MS.
+unsigned long nextTime;
+// Time at which we reach the end of loop(), which should be before
+// nextTime if we have set the loop period long enough.
+unsigned long endTime;
+// How much time we need to wait to finish out this loop pass.
+unsigned long delayTime;
 /*========================================================================/
   ============================WheelRev4 code==============================/
   =======================================================================*/
@@ -338,15 +346,21 @@ void setup()
   // Sweep
   pinMode(SWEEP_PIN, INPUT);
   
+  // THIS MUST BE THE LAST LINE IN setup().
+  nextTime = millis();
 }
 
 void loop()
 {  
   // Get the next loop start time. Note this (and the millis() counter) will
   // roll over back to zero after they exceed the 32-bit size of unsigned long,
-  // which happens after about 1.5 months of operation 
-  unsigned long timeStart_ms = millis();
-  // INSERT ANY LOOP CODE BELOW THIS POINT !!
+  // which happens after about 1.5 months of operation (should check this).
+  // But leave the overflow computation in place, in case we need to go back to
+  // using the micros() counter.
+  // If the new nextTime value is <= LOOP_TIME_MS, we've rolled over.
+  nextTime = nextTime + LOOP_TIME_MS;
+
+  // DO NOT INSERT ANY LOOP CODE ABOVE THIS LINE.
 
   static long int desired_speed_cmPs, desired_angle;
   static bool e_stop = 0, auto_mode = 0;
@@ -392,15 +406,66 @@ void loop()
     ThrottlePID(desired_speed_cmPs);
   }
 
-  // DO NOT INSERT ANY LOOP CODE BELOW THIS POINT !!
+  // DO NOT INSERT ANY LOOP CODE BELOW THIS POINT.
 
-  unsigned long delay_ms = millis() - (timeStart_ms + LOOP_TIME_MS);
+  // Figure out how long we need to wait to reach the desired end time
+  // for this loop pass. First, get the actual end time. Note: Beyond this
+  // point, there should be *no* more controller activity -- we want
+  // minimal time between now, when we capture the actual loop end time,
+  // and when we pause til the desired loop end time.
+  endTime = millis();
+  delayTime = 0L;
+
+  // Did the millis() counter or nextTime overflow and roll over during
+  // this loop pass? Did the loop's processing time overrun the desired
+  // loop period? We have different computations for the delay time in
+  // various cases:
+  if ((nextTime >= endTime) &&
+      (((endTime < LOOP_TIME_MS) && (nextTime < LOOP_TIME_MS)) ||
+       ((endTime >= LOOP_TIME_MS) && (nextTime >= LOOP_TIME_MS)))) {
+    // 1) Neither millis() nor nextTime rolled over --or-- millis() rolled
+    // over *and* nextTime rolled over when we incremented it. For this case,
+    // endTime and nextTime will be in their usual relationship, with
+    // nextTime >= endTime, and both nextTime and endTime are either greater
+    // than the desired loop period, or both are smaller than that.
+    // In this case, we want a delayTime of nextTime - endTime here.
+    delayTime = nextTime - endTime;
+  } else {
+    // (We get here if:
+    // nextTime < endTime -or- exactly one of nextTime or endTime rolled over.
+    // Negate the first if condition and use DeMorgan's laws...
+    // Now pick out the "nextTime rolled over" case. We don't need to test both
+    // nextTime and endTime as we know only one rolled over.)
+    if (nextTime < LOOP_TIME_MS) {
+      // 2) nextTime rolled over when we incremented it, but the millis() timer
+      // hasn't yet rolled over.
+      // In this case, we know we didn't exhaust the loop time, and the time we
+      // need to wait is the remaining time til millis() will roll over, i.e.
+      // from endTime until the max long value, plus the time from zero to
+      // nextTime.
+      delayTime = ULONG_MAX - endTime + nextTime;
+    } else {
+      // (We get here if:
+      // nextTime < endTime -or-
+      // nextTime >= endTime -and- nextTime did not roll over but endTime did.)
+      // What remains are these two cases:
+      // 3) nextTime hasn't rolled over, but millis() has.
+      // In this case, we overran the loop time. Since millis() has rolled over,
+      // we can just use the normal overrun fixup. So combine this with...
+      // 4) Neither nextTime nor millis rolled over, but we overran the desired
+      // loop period.
+      // In this case, we have no delay, but instead extend the allowed time for
+      // this loop pass to the actual time it took.
+      nextTime = endTime;
+      delayTime = 0L;
+    }
+  }
+  
   // Did we spend long enough in the loop that we should immediately start
   // the next pass?
-  if(delay_ms > 0L)
-  {
+  if (delayTime > 0L) {
     // No, pause til the next loop start time.
-    delay(delay_ms);
+    delay(delayTime);
   }
 }
 
