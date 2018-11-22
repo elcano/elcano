@@ -414,7 +414,7 @@ void loop()
   // minimal time between now, when we capture the actual loop end time,
   // and when we pause til the desired loop end time.
   endTime = millis();
-  delayTime = 0L;
+  delayTime = 0UL;
 
   // Did the millis() counter or nextTime overflow and roll over during
   // this loop pass? Did the loop's processing time overrun the desired
@@ -457,13 +457,13 @@ void loop()
       // In this case, we have no delay, but instead extend the allowed time for
       // this loop pass to the actual time it took.
       nextTime = endTime;
-      delayTime = 0L;
+      delayTime = 0UL;
     }
   }
   
   // Did we spend long enough in the loop that we should immediately start
   // the next pass?
-  if (delayTime > 0L) {
+  if (delayTime > 0UL) {
     // No, pause til the next loop start time.
     delay(delayTime);
   }
