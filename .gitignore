@@ -55,6 +55,9 @@ libraries/TimerOne
 *.log
 *.sql
 *.sqlite
+*.b#*
+*.s#*
+*.job
 
 # OS generated files #
 ######################
