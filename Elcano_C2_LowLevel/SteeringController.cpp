@@ -10,6 +10,7 @@ SteeringController::SteeringController(double min_turn_out, double max_turn_out,
 	steerPID.SetOutputLimits(min_turn_out, max_turn_out);
 	steerPID.SetSampleTime(sampleTime);
 	steerPID.SetMode(AUTOMATIC);
+	Steer_Servo.attach(servoPin);
 }
 
 SteeringController::~SteeringController()
