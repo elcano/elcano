@@ -37,6 +37,13 @@ libraries/TimerOne
 *.pyc
 *.gch
 
+# Visual Studio Files
+########################
+*.vcxproj
+*_vm/
+*.user
+*.filters
+
 # Packages #
 ############
 # it's better to unpack these files and commit the raw source

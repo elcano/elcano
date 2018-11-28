@@ -1,22 +1,24 @@
 #pragma once
-#include <Servo.h>
-#include "PID_v1.h"
 
 
-class SteeringController{
+class SteeringController
+{
+	
 	Servo Steer_Servo;
 	PID steerPID;
 	double steerAngleUS;
 	double PIDSteeringOutput_us;
 	double desiredTurn_us;
-	int32_t currentSteeringUS =0;
-	void turnOn(int32_t input);
-	void SteeringPID(int32_t input);
+	int currentSteeringUS;
+	const double proportional_steering = .0175;
+	const double integral_steering = .5;
+	const double derivative_steering = .00001;
+
+	void SteeringPID(int input);
 public:
-	SteeringController();
+	SteeringController(double, double, int, int);
 	~SteeringController();
-	void initialize(int32_t input);
-	void engageSteering(int32_t input);
-	void updateAngle(int32_t input) { steerAngleUS = input; };
-	void setDesiredTurn(int32_t input) { SteeringPID(input); };
+	void setSteerAngleUS(double input) { steerAngleUS = input; };
+	void setDesiredTurn(int input) { SteeringPID(input); };
 };
+
