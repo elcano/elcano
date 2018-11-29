@@ -1,12 +1,10 @@
+#include "Settings.h"
 #include <Arduino.h>
 #include "Brakes.h"
 
-Brakes::Brakes()
-{
-  pinMode( LeftBrakeOnPin, OUTPUT);
-  pinMode( RightBrakeOnPin, OUTPUT);
-  pinMode( LeftBrakeVoltPin, OUTPUT);
-  pinMode( RightBrakeVoltPin, OUTPUT);
+Brakes::Brakes(){
+  pinMode( BrakeOnPin, OUTPUT);
+  pinMode( BrakeVoltPin, OUTPUT);
   clock_hi_ms = millis();
   state = BR_OFF;
 }
@@ -17,10 +15,8 @@ void Brakes::Release()
    * Relay 2 has NO (connected to solenoids) open, and there is no power to solenoids.
    * Relay 3 connects COM (other end of solenoid) to NO (12V) 
    */
-  digitalWrite(LeftBrakeOnPin, LOW);
-  digitalWrite(LeftBrakeVoltPin, LOW);
-  digitalWrite(RightBrakeOnPin, LOW);
-  digitalWrite(RightBrakeVoltPin, LOW);
+  digitalWrite(BrakeOnPin, LOW);
+  digitalWrite(BrakeVoltPin, LOW);
   state = BR_OFF;
 }
 void Brakes::Stop()
@@ -30,14 +26,12 @@ void Brakes::Stop()
    *  Relay 2 connects NO (solenoids) to COM (ground)
    *  Relay 3 connects COM (other end of solenoids) to NC (36V)
    */
-  digitalWrite(LeftBrakeVoltPin, HIGH);  // Need the higher voltage to activate the solenoid.
-  digitalWrite(RightBrakeVoltPin, HIGH); 
+  digitalWrite(BrakeVoltPin, HIGH);  // Need the higher voltage to activate the solenoid.
   if (state != BR_HI_VOLTS)
   {
     clock_hi_ms = millis();  // keep track of when the higher voltage was applied.
   }
-  digitalWrite(LeftBrakeOnPin, HIGH); // Activate solenoid to apply brakes.
-  digitalWrite(RightBrakeOnPin, HIGH);
+  digitalWrite(BrakeOnPin, HIGH); // Activate solenoid to apply brakes.
   state = BR_HI_VOLTS;
 }
 void Brakes::Check()
@@ -50,8 +44,7 @@ void Brakes::Check()
   unsigned long tick = millis();
   if (state == BR_HI_VOLTS && tick - clock_hi_ms > MaxHi_ms)
   {  // Have reached maximum time to keep voltage high
-    digitalWrite(LeftBrakeVoltPin, LOW); // Set to lower voltage, which will keep brakes applied
-    digitalWrite(RightBrakeVoltPin, LOW);
+    digitalWrite(BrakeVoltPin, LOW); // Set to lower voltage, which will keep brakes applied
     state = BR_LO_VOLTS;
   }
 }
