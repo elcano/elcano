@@ -1,16 +1,15 @@
-#include "PID_v1.h"  
-#include <Servo.h>
+#include "Settings.h"
 #include "SteeringController.h"
 #include <Arduino.h>
 
 
-SteeringController::SteeringController(double min_turn_out, double max_turn_out, int sampleTime, int servoPin) :
+SteeringController::SteeringController():
 	steerPID(&steerAngleUS, &PIDSteeringOutput_us, &desiredTurn_us, proportional_steering, integral_steering, derivative_steering, DIRECT)
 {
-	steerPID.SetOutputLimits(min_turn_out, max_turn_out);
-	steerPID.SetSampleTime(sampleTime);
+	steerPID.SetOutputLimits(MIN_TURN, MAX_TURN);
+	steerPID.SetSampleTime(PID_CALCULATE_TIME);
 	steerPID.SetMode(AUTOMATIC);
-	Steer_Servo.attach(servoPin);
+	Steer_Servo.attach(STEER_OUT_PIN);
 }
 
 SteeringController::~SteeringController()

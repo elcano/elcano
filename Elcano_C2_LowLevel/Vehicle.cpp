@@ -1,14 +1,9 @@
-#include "trike_settings.h"
-#include "pin_settings.h"
+#include "Settings.h"
 #include <Arduino.h>
 #include "Vehicle.h"
 
-#define PID_CALCULATE_TIME 50
 
-
-Vehicle::Vehicle():
-	throttle(MIN_ACC_OUT,MAX_ACC_OUT,PID_CALCULATE_TIME,SelectAB,SelectCD,DAC_CHANNEL)
-{
+Vehicle::Vehicle(){
 	
 	
 }
@@ -30,9 +25,23 @@ void Vehicle::move(double dAngle, double dSpeed) {
 		brake.Release();
 		throttle.setDesiredSpeed__mmPs(dSpeed);
 	}
-	//steer.setDesiredTurn(dAngle);
+	steer.setDesiredTurn(dAngle);
 }
 
 void Vehicle::update() {
 	brake.Check();
+	throttle.updateSpeed();
+	steer.updateAngle(computeAngleLeft());
+	}
+
+long Vehicle::computeAngleLeft() {
+	long val = analogRead(AngleSensorLeft);
+	val = map(val, MIN_Left_Sensor, MAX_Left_Sensor, MIN_TURN, MAX_TURN);
+	return val;
+}
+
+long Vehicle::computeAngleRight() {
+	long val = analogRead(AngleSensorRight);
+	val = map(val, MIN_Right_Sensor, MAX_Right_Sensor, MIN_TURN, MAX_TURN);
+	return val;
 }
