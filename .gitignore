@@ -62,9 +62,6 @@ libraries/TimerOne
 *.log
 *.sql
 *.sqlite
-*.b#*
-*.s#*
-*.job
 
 # OS generated files #
 ######################
@@ -76,7 +73,9 @@ libraries/TimerOne
 Icon?
 ehthumbs.db
 Thumbs.db
-*.b##
-*.s##
-*.b#1
-*.s#1
+
+
+
+#Elcano files
+*/Debug/
+
