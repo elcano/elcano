@@ -1,7 +1,5 @@
 
-#include "PID_v1.h" 
-#include <Arduino.h>
-#include <SPI.h>
+
 #include "ThrottleController.h"
 
 
@@ -19,6 +17,11 @@ ThrottleController::ThrottleController(double min_acc_out, double max_acc_out, i
 	SelectAB = selectAB;
 	SelectCD = selectCD;
 	dacAddress = dacChannel;
+	tickTime_ms[0] = 0;
+	tickTime_ms[1] = 0;
+	calcTime_ms[0] = 0;
+	calcTime_ms[1] = 0;
+	prevSpeed_mmPs = 0;
 }
 
 ThrottleController::~ThrottleController()
@@ -115,4 +118,38 @@ void ThrottleController::write(int address, int value) {
 
 void ThrottleController::stop() {
 	engageThrottle(0);
+}
+
+void ThrottleController::updateSpeed() {
+	if (tickTime_ms[1] == 0)
+		speedCyclometerInput_mmPs = 0;
+	else if (calcTime_ms[0] == 0) {
+		speedCyclometerInput_mmPs = WHEEL_CIRCUM_MM * (1000.0 / (tickTime_ms[0] - tickTime_ms[1]));
+		prevSpeed_mmPs = speedCyclometerInput_mmPs;
+		calcTime_ms[1] = tickTime_ms[1];
+		calcTime_ms[0] = tickTime_ms[0];
+	}
+	else {
+		if (calcTime_ms[1] == tickTime_ms[1]) {
+			unsigned long timeDiff = millis() - calcTime_ms[0];
+			if (timeDiff > MAX_TICK_TIME_ms) {
+				speedCyclometerInput_mmPs = 0;
+				if (timeDiff > (2 * MAX_TICK_TIME_ms)) {
+					prevSpeed_mmPs = 0;
+					tickTime_ms[1] = 0;
+				}
+			}
+			else if (prevSpeed_mmPs > speedCyclometerInput_mmPs) {
+				//interpolate
+				double tempSpeed; 
+				if (tempSpeed < 0)
+					speedCyclometerInput_mmPs = 0;
+				else
+					speedCyclometerInput_mmPs = tempSpeed;
+			}
+		}
+		else {
+
+		}
+	}
 }
