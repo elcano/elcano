@@ -1,22 +1,18 @@
-
-
+#include "Settings.h"
 #include "ThrottleController.h"
 
 
-ThrottleController::ThrottleController(double min_acc_out, double max_acc_out, int sampleTime, int selectAB, int selectCD, int dacChannel) :
+ThrottleController::ThrottleController() :
 	speedPID(&speedCyclometerInput_mmPs, &PIDThrottleOutput_pwm, &desiredSpeed_mmPs, proportional_throttle, integral_throttle, derivative_throttle, DIRECT)
 {
-	speedPID.SetOutputLimits(min_acc_out, max_acc_out);
-	speedPID.SetSampleTime(sampleTime);
+	speedPID.SetOutputLimits(MIN_ACC_OUT, MAX_ACC_OUT);
+	speedPID.SetSampleTime(PID_CALCULATE_TIME);
 	speedPID.SetMode(AUTOMATIC);
-	pinMode(selectAB, OUTPUT);
-	pinMode(selectCD, OUTPUT);
+	pinMode(SelectAB, OUTPUT);
+	pinMode(SelectCD, OUTPUT);
 	SPI.setDataMode(SPI_MODE0);
 	SPI.setBitOrder(MSBFIRST);
 	SPI.begin();
-	SelectAB = selectAB;
-	SelectCD = selectCD;
-	dacAddress = dacChannel;
 	tickTime_ms[0] = 0;
 	tickTime_ms[1] = 0;
 	calcTime_ms[0] = 0;
@@ -39,7 +35,7 @@ ThrottleController::~ThrottleController()
 */
 void ThrottleController::engageThrottle(int input) {
 	if (input != currentThrottlePWM) {
-		write(dacAddress, input);
+		write(DAC_CHANNEL, input);
 		currentThrottlePWM = input;  // Remember most recent throttle PWM value.
 	}
 }
@@ -140,16 +136,29 @@ void ThrottleController::updateSpeed() {
 				}
 			}
 			else if (prevSpeed_mmPs > speedCyclometerInput_mmPs) {
-				//interpolate
-				double tempSpeed; 
-				if (tempSpeed < 0)
-					speedCyclometerInput_mmPs = 0;
-				else
-					speedCyclometerInput_mmPs = tempSpeed;
+				speedCyclometerInput_mmPs = extrapolateSpeed();
 			}
 		}
 		else {
-
+			calcTime_ms[1] = calcTime_ms[0];
+			calcTime_ms[0] = tickTime_ms[0];
+			prevSpeed_mmPs = speedCyclometerInput_mmPs;
+			speedCyclometerInput_mmPs = WHEEL_CIRCUM_MM * (1000.0 / (tickTime_ms[0] - tickTime_ms[1]));
 		}
 	}
+}
+
+double ThrottleController::extrapolateSpeed() {
+	double y;
+	double t = millis();
+	//slope calculation
+	y = (speedCyclometerInput_mmPs - prevSpeed_mmPs) / (calcTime_ms[0] - calcTime_ms[1]);
+	// * change in time 
+	y *= (t - calcTime_ms[0]);
+	// + current speed
+	y += speedCyclometerInput_mmPs;
+	
+	if (y < 0)
+		y = 0;
+	return y;
 }
