@@ -1,8 +1,9 @@
 #include "trike_settings.h"
-#include "Brakes.h"
-#include "ThrottleController.h"
+#include "pin_settings.h"
 #include <Arduino.h>
 #include "Vehicle.h"
+
+#define PID_CALCULATE_TIME 50
 
 
 Vehicle::Vehicle():

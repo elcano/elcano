@@ -1,5 +1,8 @@
 #pragma once
 
+#include "Brakes.h"
+#include "ThrottleController.h"
+
 class Vehicle{
 private:
 	Brakes brake;
