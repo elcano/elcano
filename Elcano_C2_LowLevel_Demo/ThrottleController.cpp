@@ -41,6 +41,8 @@ void ThrottleController::engageThrottle(int input) {
 	if (input != currentThrottlePWM) {
 		write(DAC_CHANNEL, input);
 		currentThrottlePWM = input;  // Remember most recent throttle PWM value.
+		Serial.print("Throttle: ");
+		Serial.println(currentThrottlePWM);
 	}
 }
 
@@ -82,6 +84,7 @@ void ThrottleController::write(int address, int value) {
 
 	int byte1 = ((value & 0xF0) >> 4) | 0x10; // active mode, bits D7-D4
 	int byte2 = (value & 0x0F) << 4; // D3-D0
+	SPI.beginTransaction(SPISettings(14000000,MSBFIRST,SPI_MODE0));
 	if (address < 2)
 	{
 		// take the SS pin low to select the chip:
@@ -92,6 +95,7 @@ void ThrottleController::write(int address, int value) {
 			{
 				byte1 |= 0x80; // second channnel
 			}
+			
 			SPI.transfer(byte1);
 			SPI.transfer(byte2);
 		}
@@ -114,6 +118,7 @@ void ThrottleController::write(int address, int value) {
 		// take the SS pin high to de-select the chip:
 		digitalWrite(SelectCD, HIGH);
 	}
+	SPI.endTransaction();
 }
 
 void ThrottleController::stop() {
