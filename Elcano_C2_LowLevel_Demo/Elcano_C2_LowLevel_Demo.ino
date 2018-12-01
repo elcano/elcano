@@ -3,75 +3,52 @@
 
 
 Vehicle myTrike  = Vehicle();
-
-//Timing stuff
 #define LOOP_TIME_MS 100
+unsigned long SectionStart;
+int section = 0;
 unsigned long nextTime;
 unsigned long endTime;
 unsigned long delayTime;
 #define ULONG_MAX 0x7FFFFFFF
 
-//Code for demo
-unsigned long SectionStart;
-int section = 0;
-
-//Do we want to print to the serial port?
-//Is a define so that it is constant in all code
-#define SerialPrint false
 
 void setup() {
-
-Serial.begin(baud);
-myTrike.initialize();
-
-//for demo
+  
+Serial.begin(115200);
 SectionStart = floor(millis()/1000); //seconds
 section = 0;  
+myTrike.initialize();
+Serial.println("Setup complete");
 
-if (SerialPrint)
-	Serial.println("Setup complete");
 }
 
+
 void loop() {
-//Timing code
   nextTime = nextTime + LOOP_TIME_MS;
   unsigned long timeStart_ms = millis();
-
-//Checks if the brakes are on too long
-//If enabled computes the current angle and speed
-  myTrike.update();
-
-
-/***********START OF DEMO SECTION**********************************/
-  //local vars 
   static long int desired_speed_cmPs, desired_angle;
-  int secs = floor(timeStart_ms / 1000) - SectionStart;
-    
-//Each section is 5 seconds
-  if (secs >= 5){
-	  if (section < 2) {
-// wait for 10 sec before starting the routine
-	}
-    else if(section < 9){
-//dancing section
-    desired_angle = ChooseAngle(section-2);
-    desired_speed_cmPs = ChooseSpeed(section-2);
-    myTrike.noPID(desired_angle, desired_speed_cmPs);  
-    }
-    else if (section == 9)
-//reduces speed, argument is by how quickly large numbers stop quicker
-    myTrike.stop(0.25);
+  static bool e_stop = 0;
+  myTrike.update();
+  unsigned long secs = SectionStart - floor(timeStart_ms / 1000);
+
+
+  
+  if (secs >= 20){
+    desired_angle = ChooseAngle(section);
+    desired_speed_cmPs = ChooseSpeed(section);
+    myTrike.noPID(desired_angle, desired_speed_cmPs);
     
     section++;
+    Serial.println(section);
     SectionStart= floor(timeStart_ms / 1000);
   }
-  //once we run the routine and have probably stopped, exit
-  if (section > 15)
-	  exit(1);
-  /***********END OF DEMO SECTION**********************************/
+  if(section > 5)
+  section=0;
 
 
-//Timing code
+
+
+  
    endTime = millis();
  delayTime = 0UL;
   if((nextTime >= endTime) && (((endTime < LOOP_TIME_MS)&&(nextTime < LOOP_TIME_MS)) || ((endTime >= LOOP_TIME_MS) && (nextTime >= LOOP_TIME_MS)))){
@@ -88,36 +65,9 @@ void loop() {
 
 }
 
-/*
-for demo: 
-speeds up and then default is 8
-*/
-int ChooseSpeed(int section){
-    int s = 0;
-  switch(section){
-    case 0:
-      s = 2;
-      break;
-     case 1:
-      s = 4;
-      break;
-     case 2:
-      s = 6;
-      break;
-     default:
-      s = 8;
-  }
 
-  s = s* KmPh_mmPs;
-  return s;
-}
 
-/*
-for demo: goes 
-straight, left, left,
-straight, right, right
-default is straight
-*/
+
 int ChooseAngle(int section){
   int angle = 0;
   switch(section){
@@ -140,4 +90,28 @@ int ChooseAngle(int section){
   }
   return angle;
   
+}
+
+
+int ChooseSpeed(int section){
+    int s = 0;
+  switch(section){
+    case 0:
+      s = 20 * KmPh_mmPs;
+      break;
+     case 1:
+     case 2:
+      s = 10 * KmPh_mmPs;
+      break;
+     case 3:
+      s = 20 * KmPh_mmPs;
+      break;
+     case 4:
+     case 5:
+      s = 10 * KmPh_mmPs;
+      break;
+     default:
+      s = 20 * KmPh_mmPs;
+  }
+  return s;
 }
