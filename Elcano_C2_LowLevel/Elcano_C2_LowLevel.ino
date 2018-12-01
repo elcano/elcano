@@ -1,6 +1,5 @@
-#include "Settings.h"     // in Elcano repository
-#include "ElcanoSerial.h" // in Elcano Repository
-#include <PID_v1.h>       // external library
+#include <Settings.h>
+#include <PID_v1.h>
 #include <SPI.h>
 #include <ElcanoSerial.h>
 #include <Servo.h>
