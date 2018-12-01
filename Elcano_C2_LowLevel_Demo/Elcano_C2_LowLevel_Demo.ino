@@ -33,7 +33,7 @@ void loop() {
 
 
   
-  if (secs >= 20){
+  if (secs >= 30){
     desired_angle = ChooseAngle(section);
     desired_speed_cmPs = ChooseSpeed(section);
     myTrike.noPID(desired_angle, desired_speed_cmPs);

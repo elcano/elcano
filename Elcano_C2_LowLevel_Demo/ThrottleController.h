@@ -17,8 +17,8 @@ private:
 	void write(int address, int value);
 	void ThrottlePID(int desiredValue);
 
-	volatile unsigned long tickTime_ms[2];
-	volatile unsigned long calcTime_ms[2];
+	unsigned long tickTime_ms[2];
+	unsigned long calcTime_ms[2];
 	double prevSpeed_mmPs;
 	double extrapolateSpeed();
 

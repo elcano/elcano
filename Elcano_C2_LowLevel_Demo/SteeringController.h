@@ -25,7 +25,6 @@ public:
     else if (input < MIN_TURN)
       input = MIN_TURN;
     if (currentSteeringUS != input){
-      Serial.println(input);
       Steer_Servo.write(input);
       currentSteeringUS = input;
     }
