@@ -14,12 +14,11 @@ private:
 public:
 	Vehicle();
 	~Vehicle();
-	void initialize();
 	void eStop();
-	void stop(double strength);
 	void move(double, double);
-    void noPID(double,double);
+  void noPID(double,double);
 	void update();
 	double getSpeed() { return throttle.getSpeedInput_mmPs(); };
 	void tick() { throttle.tick(millis()); };
-};
+  void initialize(){throttle.initialize(); steer.initialize();};
+	};
