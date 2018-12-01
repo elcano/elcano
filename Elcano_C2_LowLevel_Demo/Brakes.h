@@ -46,7 +46,6 @@ class Brakes
   void Stop();
   void Release();
   void Check();
-  void initialize();
  private:
   enum brake_state {BR_OFF, BR_HI_VOLTS, BR_LO_VOLTS} state;
   unsigned long clock_hi_ms;
