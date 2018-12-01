@@ -243,7 +243,7 @@ void Brakes::Release()
   digitalWrite(RightBrakeVoltPin, LOW);
   state = BR_OFF;
   if (DEBUG) {
-    Serial.println("Releasing brakes...");
+    Serial.println("Brakes off!");
   }
 }
 void Brakes::Stop()
@@ -263,7 +263,7 @@ void Brakes::Stop()
   digitalWrite(RightBrakeOnPin, HIGH);
   state = BR_HI_VOLTS;
   if (DEBUG) {
-    Serial.println("Applying brakes...");
+    Serial.println("Brakes on!");
   }
 }
 void Brakes::Check()
@@ -426,18 +426,12 @@ void loop()
       }
       else {
         brake.Release();
-        engageWheel(desired_speed_cmPs);
+        engageWheel( convertRCToThrottle(desired_speed_cmPs) );
       }
-      engageSteering(desired_angle);
+      engageSteering( convertRCToTurn(desired_angle) );
     }
   }
-  if (DEBUG){
-    // this shows how long it took for all our code and I/O to finish before we wait
-    // our target loop time is 100ms, but too much I/O will make our loops run long
-    Serial.print(F("Loop code end: "));
-    Serial.println(millis());
-  }
-
+  
   // DO NOT INSERT ANY LOOP CODE BELOW THIS POINT.
 
   // Figure out how long we need to wait to reach the desired end time
@@ -492,7 +486,7 @@ void loop()
       delayTime = 0UL;
     }
   }
-  
+
   // Did we spend long enough in the loop that we should immediately start
   // the next pass?
   if (delayTime > 0UL) {
@@ -512,7 +506,7 @@ void testBrakes()
   delay(1000);
   brake.Release();
   if (DEBUG) {
-    Serial.println(F("**** Brake test Complete! ****"));
+    Serial.println(F("Brake test Complete!"));
   }
 }
 
@@ -527,7 +521,7 @@ void testWheel()
   delay(2000);
   engageWheel(0); // Turn off wheel
   if (DEBUG) {
-    Serial.println(F("**** Wheel test Complete! ****"));
+    Serial.println(F("Wheel test Complete!"));
   }
 }
 
@@ -545,7 +539,7 @@ void testSteering()
   engageSteering(WHEEL_STRAIGHT_US);
   delay(1000);
   if (DEBUG) {
-    Serial.println(F("**** Steering test Complete! ****"));
+    Serial.println(F("Steering test Complete!"));
   }
 }
 /*-------------------------------------engageWheel-------------------------------------------*/
@@ -791,7 +785,6 @@ void computeSpeed(struct hist *data)
 
 int convertRCToTurn(int RCturn) {
   // we convert byte values (0-255) to microseconds (1000-2000)
-
   int turn = (int)(RCturn * 3.9370) + 1000; // 3.9370 = 500/127, i.e. us/byte = slope 
   if (DEBUG) {
     Serial.print("RC turn input: ");
@@ -814,7 +807,6 @@ int convertRCToThrottle(int RCthrottle) {
   }
   return throttle;
 }
-
 
 /*************************** START HIGH LEVEL PROCESSING SECTION ********************************/
 
