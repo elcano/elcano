@@ -32,7 +32,7 @@ const int baud  = 9600;
 #define MIN_ACC_OUT 50
 #define MAX_ACC_OUT 227
 
-#define MAX_SPEED_KmPh 40
+#define MAX_SPEED_KmPh 20
 
 // max speed 
 const double KmPh_mmPs = 1000000/3600;
