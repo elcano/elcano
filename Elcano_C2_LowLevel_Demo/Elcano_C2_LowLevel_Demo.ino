@@ -29,20 +29,21 @@ void loop() {
   static long int desired_speed_cmPs, desired_angle;
   static bool e_stop = 0;
   myTrike.update();
-  unsigned long secs = SectionStart - floor(timeStart_ms / 1000);
-
-
+  int secs = floor(timeStart_ms / 1000) - SectionStart;
+    
   
-  if (secs >= 30){
-    desired_angle = ChooseAngle(section);
+  if (secs >= 5){
+desired_angle = ChooseAngle(section);
     desired_speed_cmPs = ChooseSpeed(section);
-    myTrike.noPID(desired_angle, desired_speed_cmPs);
+    myTrike.noPID(desired_angle, desired_speed_cmPs);  
+
+
     
     section++;
-    Serial.println(section);
+    //Serial.println(section);
     SectionStart= floor(timeStart_ms / 1000);
   }
-  if(section > 5)
+  if(section > 10)
   section=0;
 
 
@@ -97,21 +98,24 @@ int ChooseSpeed(int section){
     int s = 0;
   switch(section){
     case 0:
-      s = 20 * KmPh_mmPs;
+      s = 10;
       break;
      case 1:
      case 2:
-      s = 10 * KmPh_mmPs;
+      s = 5;
       break;
      case 3:
-      s = 20 * KmPh_mmPs;
+      s = 10;
       break;
      case 4:
      case 5:
-      s = 10 * KmPh_mmPs;
+      s = 5;
       break;
      default:
-      s = 20 * KmPh_mmPs;
+      s = 0;
   }
+  Serial.print("Speed: ");
+  Serial.println(s);
+  s = s* KmPh_mmPs;
   return s;
 }
