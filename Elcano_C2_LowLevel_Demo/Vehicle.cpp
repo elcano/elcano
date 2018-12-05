@@ -9,15 +9,31 @@ Vehicle::Vehicle(){
 }
 
 
-Vehicle::~Vehicle()
-{
+Vehicle::~Vehicle(){
+}
+
+//Calls the initialization of all 3 objects
+void Vehicle::initialize() {
+	throttle.initialize();
+	brake.initialize();
+	steer.initialize(computeAngleLeft());
 }
 
 void Vehicle::eStop() {
+	if (SerialPrint)
+		Serial.println("Brake");
 	brake.Stop();
 	throttle.stop();
 }
 
+void Vehicle::stop(double strength) {
+	throttle.stop(strength);
+}
+
+/*
+Side note: if the brakes are more emergency brakes
+should we be calling the brakes here?
+*/
 void Vehicle::move(double dAngle, double dSpeed) {
 	if (dSpeed < (throttle.getSpeedInput_mmPs() + 10))
 		brake.Stop();
@@ -28,12 +44,20 @@ void Vehicle::move(double dAngle, double dSpeed) {
 	steer.setDesiredTurn(dAngle);
 }
 
-
+/*
+This is part of our demo code that 
+does not use the pids
+*/
 void Vehicle::noPID(double dAngle,double dSpeed){
   steer.engageSteering(dAngle);
+  brake.Release();
   throttle.engageThrottle(dSpeed);
 }
 
+/*
+Checks if the brakes have been on too long
+Computes the speed and angle
+*/
 void Vehicle::update() {
 	brake.Check();
 	throttle.updateSpeed();
