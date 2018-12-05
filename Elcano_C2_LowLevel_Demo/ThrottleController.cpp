@@ -6,6 +6,8 @@ ThrottleController::ThrottleController() :
   speedPID(&speedCyclometerInput_mmPs, &PIDThrottleOutput_pwm, &desiredSpeed_mmPs, proportional_throttle, integral_throttle, derivative_throttle, DIRECT)
 {}
   
+ThrottleController::~ThrottleController(){
+}
 
 void ThrottleController::initialize(){
   speedPID.SetOutputLimits(MIN_ACC_OUT, MAX_ACC_OUT);
@@ -24,8 +26,27 @@ void ThrottleController::initialize(){
 
 }
 
-ThrottleController::~ThrottleController()
-{
+/*
+sets the throttle signal to zero
+*/
+void ThrottleController::stop() {
+	engageThrottle(0);
+	currentThrottlePWM = 0;
+}
+
+/*
+decreases the pwm
+new signal = previous (1-strength)
+if strength > 1, we use 0
+*/
+void ThrottleController::stop(double strength) {
+	if (strength >= 1)
+		stop();
+	else {
+		double decelerateTo = currentThrottlePWM *(1 - strength);
+		engageThrottle(decelerateTo);
+		currentThrottlePWM = decelerateTo;
+	}
 }
 
 /* !UPDATE THIS OBSERVED INFO! (LAST UPDATE: May 10, 2013, TCF)
@@ -45,39 +66,10 @@ void ThrottleController::engageThrottle(int input) {
 	if (input != currentThrottlePWM) {
 		write(DAC_CHANNEL, input);
 		currentThrottlePWM = input;  // Remember most recent throttle PWM value.
-		Serial.print("Throttle: ");
-		Serial.println(input);
+
 	}
 }
 
-void ThrottleController::ThrottlePID(int desiredValue) {
-	if (desiredValue >= (speedCyclometerInput_mmPs + 10)) {
-		speedPID.Compute();
-		//currentThrottlePWM = (int)PIDThrottleOutput_pwm;
-		engageThrottle(PIDThrottleOutput_pwm);
-	}
-}
-
-void ThrottleController::write(int address, int value) {
-
-	int byte1 = ((value & 0xF0) >> 4) | 0x10; 
-	int byte2 = (value & 0x0F) << 4;
-  if (address == 0){
-		digitalWrite(SelectAB, LOW);
-			SPI.transfer(byte1);
-			SPI.transfer(byte2);
-		// take the SS pin high to de-select the chip:
-		digitalWrite(SelectAB, HIGH);
-  }
-	
-}
-
-
-
-
-void ThrottleController::stop() {
-	engageThrottle(0);
-}
 
 void ThrottleController::updateSpeed() {
 	if (tickTime_ms[1] == 0)
@@ -111,6 +103,41 @@ void ThrottleController::updateSpeed() {
 	}
 }
 
+/*
+Uses previous two speeds to extrapolate the current speed
+Used to determine when we have stopped
+*/
+void ThrottleController::tick(unsigned long tick) {
+	if ((tick - tickTime_ms[0]) > MIN_TICK_TIME_ms) {
+		tickTime_ms[1] = tickTime_ms[0];
+		tickTime_ms[0] = tick;
+	}
+}
+
+
+//Private functions
+void ThrottleController::write(int address, int value) {
+
+	int byte1 = ((value & 0xF0) >> 4) | 0x10; 
+	int byte2 = (value & 0x0F) << 4;
+  if (address == 0){
+		digitalWrite(SelectAB, LOW);
+			SPI.transfer(byte1);
+			SPI.transfer(byte2);
+		// take the SS pin high to de-select the chip:
+		digitalWrite(SelectAB, HIGH);
+  }
+	
+}
+
+void ThrottleController::ThrottlePID(int desiredValue) {
+	if (desiredValue >= (speedCyclometerInput_mmPs + 10)) {
+		speedPID.Compute();
+		//currentThrottlePWM = (int)PIDThrottleOutput_pwm;
+		engageThrottle(PIDThrottleOutput_pwm);
+	}
+}
+
 double ThrottleController::extrapolateSpeed() {
 	double y;
 	double t = millis();
@@ -120,8 +147,9 @@ double ThrottleController::extrapolateSpeed() {
 	y *= (t - calcTime_ms[0]);
 	// + current speed
 	y += speedCyclometerInput_mmPs;
-	
+
 	if (y < 0)
 		y = 0;
 	return y;
 }
+
