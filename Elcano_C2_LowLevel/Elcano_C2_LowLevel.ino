@@ -784,7 +784,7 @@ void computeSpeed(struct hist *data)
 
 int convertRCToTurn(int RCturn) {
   // we convert byte values (0-255) to microseconds (1000-2000)
-  int turn = (int)(RCturn * 3.9370) + 1000; // 3.9370 = 500/127, i.e. us/byte = slope 
+  int turn = (RCturn) * (LEFT_TURN_MS - RIGHT_TURN_MS) / 255.0 + RIGHT_TURN_MS;
   if (DEBUG) {
     Serial.print("RC turn input: ");
     Serial.println(RCturn);
