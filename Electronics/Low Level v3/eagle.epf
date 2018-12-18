@@ -195,7 +195,6 @@ UsedLibraryUrn="urn:adsk.eagle:library:530"
 UsedLibraryUrn="urn:adsk.eagle:library:531"
 UsedLibraryUrn="urn:adsk.eagle:library:532"
 UsedLibraryUrn="urn:adsk.eagle:library:533"
-UsedLibraryUrn="urn:adsk.eagle:library:534"
 UsedLibraryUrn="urn:adsk.eagle:library:535"
 UsedLibraryUrn="urn:adsk.eagle:library:348"
 UsedLibraryUrn="urn:adsk.eagle:library:119"
@@ -277,7 +276,7 @@ UsedLibrary="elcanoParts.lbr"
 Type="Board Editor"
 Number=2
 File="LowLevelv3.brd"
-View="105.868 17.6719 111.997 43.7387"
+View="24.3606 -2.64897 146.257 79.0114"
 WireWidths=" 0.0762 0.1016 0.127 0.15 0.2 0.2032 0.3048 0.4064 0.508 0.6096 0.8128 1.016 1.27 2.54 0.1524 0.254"
 PadDiameters=" 0.254 0.3048 0.4064 0.6096 0.8128 1.016 1.27 1.4224 1.6764 1.778 1.9304 2.1844 2.54 3.81 6.4516 0"
 PadDrills=" 0.2 0.25 0.3 0.35 0.4 0.45 0.5 0.55 0.65 0.7 0.75 0.8 0.85 0.9 1 0.6"
@@ -318,14 +317,10 @@ PadsSameType=0
 Layer=1
 
 [Win_2]
-Type="Control Panel"
-Number=0
-
-[Win_3]
 Type="Schematic Editor"
 Number=1
 File="LowLevelv3.sch"
-View="-62.6854 9.18119 316.52 167.468"
+View="-45.8524 -66.2564 225.752 120.816"
 WireWidths=" 0.0762 0.1016 0.127 0.15 0.2 0.2032 0.254 0.3048 0.4064 0.508 0.6096 0.8128 1.016 1.27 2.54 0.1524"
 PadDiameters=" 0.254 0.3048 0.4064 0.6096 0.8128 1.016 1.27 1.4224 1.6764 1.778 1.9304 2.1844 2.54 3.81 6.4516 0"
 PadDrills=" 0.2 0.25 0.3 0.35 0.4 0.45 0.5 0.55 0.65 0.7 0.75 0.8 0.85 0.9 1 0.6"
@@ -364,8 +359,12 @@ ArcDirection=0
 AddLevel=2
 PadsSameType=0
 Layer=91
-Views=" 1: -62.6854 9.18119 316.52 167.468 2: -16.6475 -7.74412 295.363 192.833 3: -44.7469 -70.4987 415.373 225.293"
-Sheet="1"
+Views=" 1: 93.965 -20.8141 419.889 203.672 2: -45.8524 -66.2564 225.752 120.816 3: 51.4818 35.301 208.66 143.561"
+Sheet="2"
+
+[Win_3]
+Type="Control Panel"
+Number=0
 
 [Desktop]
 Screen="2560 2130"
