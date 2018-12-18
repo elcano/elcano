@@ -3,7 +3,7 @@
 <eagle version="9.2.2">
 <drawing>
 <settings>
-<setting alwaysvectorfont="no"/>
+<setting alwaysvectorfont="yes"/>
 <setting keepoldvectorfont="yes"/>
 <setting verticaltext="up"/>
 </settings>
@@ -1965,6 +1965,10 @@
 <vertex x="6.858" y="43.688"/>
 <vertex x="3.048" y="43.688"/>
 </polygon>
+<dimension x1="0" y1="0" x2="116.84" y2="0" x3="58.42" y3="-6.858" textsize="1.778" layer="20" unit="inch"/>
+<dimension x1="116.84" y1="0" x2="116.84" y2="69.85" x3="124.46" y3="34.925" textsize="1.778" layer="20" unit="inch"/>
+<dimension x1="0" y1="0" x2="116.84" y2="0" x3="58.42" y3="-12.7" textsize="1.778" layer="20"/>
+<dimension x1="116.84" y1="0" x2="116.84" y2="69.85" x3="132.588" y3="34.925" textsize="1.778" layer="20"/>
 </plain>
 <libraries>
 <library name="pinhead" urn="urn:adsk.eagle:library:325">
