@@ -3,7 +3,7 @@
 <eagle version="9.2.2">
 <drawing>
 <settings>
-<setting alwaysvectorfont="yes"/>
+<setting alwaysvectorfont="no"/>
 <setting keepoldvectorfont="yes"/>
 <setting verticaltext="up"/>
 </settings>
@@ -15665,15 +15665,17 @@ BUZZER</description>
 <variantdefs>
 </variantdefs>
 <classes>
-<class number="0" name="default" width="0" drill="0">
+<class number="0" name="default" width="0.254" drill="0.3048">
+<clearance class="0" value="0.254"/>
 </class>
 <class number="1" name="Power" width="0.508" drill="0.3048">
 <clearance class="1" value="0.254"/>
 </class>
-<class number="2" name="High Current" width="0.508" drill="0">
+<class number="2" name="High Current" width="0.508" drill="0.3048">
+<clearance class="2" value="0.508"/>
 </class>
 <class number="3" name="SPI_Signals" width="0.254" drill="0">
-<clearance class="3" value="0.508"/>
+<clearance class="3" value="0.254"/>
 </class>
 <class number="4" name="Oscillator" width="0.254" drill="0">
 <clearance class="4" value="0.508"/>
