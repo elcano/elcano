@@ -37,13 +37,6 @@ libraries/TimerOne
 *.pyc
 *.gch
 
-# Visual Studio Files
-########################
-*.vcxproj
-*_vm/
-*.user
-*.filters
-
 # Packages #
 ############
 # it's better to unpack these files and commit the raw source
@@ -62,6 +55,10 @@ libraries/TimerOne
 *.log
 *.sql
 *.sqlite
+*.b#*
+*.s#*
+*.job
+*.pro
 
 # OS generated files #
 ######################
@@ -73,9 +70,4 @@ libraries/TimerOne
 Icon?
 ehthumbs.db
 Thumbs.db
-
-
-
-#Elcano files
-*/Debug/
-
+Elcano_C2_LowLevel/Settings.h
