@@ -3,7 +3,7 @@
 <eagle version="9.2.2">
 <drawing>
 <settings>
-<setting alwaysvectorfont="no"/>
+<setting alwaysvectorfont="yes"/>
 <setting keepoldvectorfont="yes"/>
 <setting verticaltext="up"/>
 </settings>
@@ -786,32 +786,6 @@
 <package3dinstances>
 <package3dinstance package3d_urn="urn:adsk.eagle:package:22437/2"/>
 </package3dinstances>
-<technologies>
-<technology name=""/>
-</technologies>
-</device>
-</devices>
-</deviceset>
-</devicesets>
-</library>
-<library name="supply1" urn="urn:adsk.eagle:library:371">
-<packages>
-</packages>
-<symbols>
-<symbol name="GND" urn="urn:adsk.eagle:symbol:26925/1" library_version="1">
-<wire x1="-1.905" y1="0" x2="1.905" y2="0" width="0.254" layer="94"/>
-<text x="-2.54" y="-2.54" size="1.778" layer="96">&gt;VALUE</text>
-<pin name="GND" x="0" y="2.54" visible="off" length="short" direction="sup" rot="R270"/>
-</symbol>
-</symbols>
-<devicesets>
-<deviceset name="GND" urn="urn:adsk.eagle:component:26954/1" prefix="GND" library_version="1">
-<description>&lt;b&gt;SUPPLY SYMBOL&lt;/b&gt;</description>
-<gates>
-<gate name="1" symbol="GND" x="0" y="0"/>
-</gates>
-<devices>
-<device name="">
 <technologies>
 <technology name=""/>
 </technologies>
@@ -15702,7 +15676,6 @@ BUZZER</description>
 <part name="C8" library="resistor" library_urn="urn:adsk.eagle:library:348" deviceset="C-US" device="C1206" package3d_urn="urn:adsk.eagle:package:23618/2" value="1 uF"/>
 <part name="C9" library="resistor" library_urn="urn:adsk.eagle:library:348" deviceset="C-US" device="C1206" package3d_urn="urn:adsk.eagle:package:23618/2" value="1 uF"/>
 <part name="DIGITAL_8-13" library="pinhead" library_urn="urn:adsk.eagle:library:325" deviceset="PINHD-1X8" device="" package3d_urn="urn:adsk.eagle:package:22409/2" value="Digital 8-13"/>
-<part name="GND5" library="supply1" library_urn="urn:adsk.eagle:library:371" deviceset="GND" device=""/>
 <part name="P+10" library="SparkFun-Aesthetics" library_urn="urn:adsk.eagle:library:507" deviceset="5V" device="">
 <attribute name="SPICEPREFIX" value="G"/>
 </part>
@@ -15773,6 +15746,7 @@ BUZZER</description>
 <part name="R17" library="resistor" library_urn="urn:adsk.eagle:library:348" deviceset="R-US_" device="R1206" package3d_urn="urn:adsk.eagle:package:23540/2" value="10k"/>
 <part name="R18" library="resistor" library_urn="urn:adsk.eagle:library:348" deviceset="R-US_" device="R1206" package3d_urn="urn:adsk.eagle:package:23540/2" value="10k"/>
 <part name="C16" library="resistor" library_urn="urn:adsk.eagle:library:348" deviceset="C-US" device="C1206" package3d_urn="urn:adsk.eagle:package:23618/2" value="200nF"/>
+<part name="R19" library="resistor" library_urn="urn:adsk.eagle:library:348" deviceset="R-US_" device="R1206" package3d_urn="urn:adsk.eagle:package:23540/2" value="4.7K"/>
 </parts>
 <sheets>
 <sheet>
@@ -16500,9 +16474,6 @@ BUZZER</description>
 <attribute name="NAME" x="31.75" y="151.13" size="1.778" layer="95"/>
 <attribute name="VALUE" x="31.75" y="140.97" size="1.778" layer="96"/>
 </instance>
-<instance part="GND5" gate="1" x="68.58" y="139.954" smashed="yes">
-<attribute name="VALUE" x="66.04" y="137.414" size="1.778" layer="96"/>
-</instance>
 <instance part="P+10" gate="G$1" x="101.6" y="71.12" smashed="yes" rot="R270">
 <attribute name="VALUE" x="101.6" y="73.66" size="1.778" layer="96"/>
 </instance>
@@ -16627,6 +16598,10 @@ BUZZER</description>
 <attribute name="NAME" x="219.456" y="81.915" size="1.778" layer="95"/>
 <attribute name="VALUE" x="219.456" y="79.629" size="1.778" layer="96"/>
 </instance>
+<instance part="R19" gate="G$1" x="55.88" y="161.29" smashed="yes" rot="R270">
+<attribute name="NAME" x="57.3786" y="165.1" size="1.778" layer="95" rot="R270"/>
+<attribute name="VALUE" x="52.578" y="165.1" size="1.778" layer="96" rot="R270"/>
+</instance>
 </instances>
 <busses>
 </busses>
@@ -16677,22 +16652,14 @@ BUZZER</description>
 <wire x1="205.74" y1="104.14" x2="187.96" y2="104.14" width="0.1524" layer="91"/>
 <label x="187.96" y="104.14" size="1.778" layer="95"/>
 </segment>
+<segment>
+<pinref part="R19" gate="G$1" pin="1"/>
+<wire x1="55.88" y1="166.37" x2="55.88" y2="167.64" width="0.1524" layer="91"/>
+<wire x1="55.88" y1="167.64" x2="66.04" y2="167.64" width="0.1524" layer="91"/>
+<label x="66.04" y="167.64" size="1.778" layer="95"/>
+</segment>
 </net>
 <net name="GND" class="1">
-<segment>
-<pinref part="C4" gate="G$1" pin="2"/>
-<wire x1="48.26" y1="144.78" x2="55.88" y2="144.78" width="0.1524" layer="91"/>
-<junction x="55.88" y="144.78"/>
-<pinref part="X4" gate="G$1" pin="3"/>
-<wire x1="48.26" y1="147.32" x2="48.26" y2="144.78" width="0.1524" layer="91"/>
-<wire x1="48.26" y1="144.78" x2="41.91" y2="144.78" width="0.1524" layer="91"/>
-<pinref part="X4" gate="G$1" pin="2"/>
-<wire x1="41.91" y1="147.32" x2="48.26" y2="147.32" width="0.1524" layer="91"/>
-<junction x="48.26" y="144.78"/>
-<pinref part="GND5" gate="1" pin="GND"/>
-<wire x1="68.58" y1="144.78" x2="68.58" y2="142.494" width="0.1524" layer="91"/>
-<wire x1="55.88" y1="144.78" x2="68.58" y2="144.78" width="0.1524" layer="91"/>
-</segment>
 <segment>
 <pinref part="IC2" gate="G$1" pin="5"/>
 <pinref part="IC2" gate="G$1" pin="7"/>
@@ -16799,6 +16766,19 @@ BUZZER</description>
 <junction x="68.58" y="22.86"/>
 <label x="66.04" y="25.4" size="1.778" layer="95"/>
 </segment>
+<segment>
+<pinref part="C4" gate="G$1" pin="2"/>
+<wire x1="48.26" y1="144.78" x2="55.88" y2="144.78" width="0.1524" layer="91"/>
+<junction x="55.88" y="144.78"/>
+<pinref part="X4" gate="G$1" pin="3"/>
+<wire x1="48.26" y1="147.32" x2="48.26" y2="144.78" width="0.1524" layer="91"/>
+<wire x1="48.26" y1="144.78" x2="41.91" y2="144.78" width="0.1524" layer="91"/>
+<pinref part="X4" gate="G$1" pin="2"/>
+<wire x1="41.91" y1="147.32" x2="48.26" y2="147.32" width="0.1524" layer="91"/>
+<junction x="48.26" y="144.78"/>
+<wire x1="55.88" y1="144.78" x2="68.58" y2="144.78" width="0.1524" layer="91"/>
+<label x="68.58" y="144.78" size="1.778" layer="95"/>
+</segment>
 </net>
 <net name="DAC_SS" class="3">
 <segment>
@@ -16832,6 +16812,8 @@ BUZZER</description>
 <wire x1="71.12" y1="154.94" x2="55.88" y2="154.94" width="0.1524" layer="91"/>
 <wire x1="55.88" y1="154.94" x2="55.88" y2="152.4" width="0.1524" layer="91"/>
 <junction x="55.88" y="154.94"/>
+<pinref part="R19" gate="G$1" pin="2"/>
+<wire x1="55.88" y1="156.21" x2="55.88" y2="154.94" width="0.1524" layer="91"/>
 </segment>
 </net>
 <net name="SCK" class="3">
