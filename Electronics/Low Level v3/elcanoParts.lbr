@@ -1283,42 +1283,42 @@ SOIC, 0.3 inch width</description>
 <wire x1="8.89" y1="-25.4" x2="8.89" y2="22.86" width="0.4064" layer="94"/>
 <wire x1="8.89" y1="22.86" x2="-6.35" y2="22.86" width="0.4064" layer="94"/>
 <wire x1="-6.35" y1="22.86" x2="-6.35" y2="-25.4" width="0.4064" layer="94"/>
-<pin name="1" x="-2.54" y="20.32" visible="pad" length="short" direction="pas" function="dot"/>
-<pin name="2" x="5.08" y="20.32" visible="pad" length="short" direction="pas" function="dot" rot="R180"/>
-<pin name="3" x="-2.54" y="17.78" visible="pad" length="short" direction="pas" function="dot"/>
-<pin name="4" x="5.08" y="17.78" visible="pad" length="short" direction="pas" function="dot" rot="R180"/>
-<pin name="5" x="-2.54" y="15.24" visible="pad" length="short" direction="pas" function="dot"/>
-<pin name="6" x="5.08" y="15.24" visible="pad" length="short" direction="pas" function="dot" rot="R180"/>
-<pin name="7" x="-2.54" y="12.7" visible="pad" length="short" direction="pas" function="dot"/>
-<pin name="8" x="5.08" y="12.7" visible="pad" length="short" direction="pas" function="dot" rot="R180"/>
-<pin name="9" x="-2.54" y="10.16" visible="pad" length="short" direction="pas" function="dot"/>
-<pin name="10" x="5.08" y="10.16" visible="pad" length="short" direction="pas" function="dot" rot="R180"/>
-<pin name="11" x="-2.54" y="7.62" visible="pad" length="short" direction="pas" function="dot"/>
-<pin name="12" x="5.08" y="7.62" visible="pad" length="short" direction="pas" function="dot" rot="R180"/>
-<pin name="13" x="-2.54" y="5.08" visible="pad" length="short" direction="pas" function="dot"/>
-<pin name="14" x="5.08" y="5.08" visible="pad" length="short" direction="pas" function="dot" rot="R180"/>
-<pin name="15" x="-2.54" y="2.54" visible="pad" length="short" direction="pas" function="dot"/>
-<pin name="16" x="5.08" y="2.54" visible="pad" length="short" direction="pas" function="dot" rot="R180"/>
-<pin name="17" x="-2.54" y="0" visible="pad" length="short" direction="pas" function="dot"/>
-<pin name="18" x="5.08" y="0" visible="pad" length="short" direction="pas" function="dot" rot="R180"/>
-<pin name="19" x="-2.54" y="-2.54" visible="pad" length="short" direction="pas" function="dot"/>
-<pin name="20" x="5.08" y="-2.54" visible="pad" length="short" direction="pas" function="dot" rot="R180"/>
-<pin name="21" x="-2.54" y="-5.08" visible="pad" length="short" direction="pas" function="dot"/>
-<pin name="22" x="5.08" y="-5.08" visible="pad" length="short" direction="pas" function="dot" rot="R180"/>
-<pin name="23" x="-2.54" y="-7.62" visible="pad" length="short" direction="pas" function="dot"/>
-<pin name="24" x="5.08" y="-7.62" visible="pad" length="short" direction="pas" function="dot" rot="R180"/>
-<pin name="25" x="-2.54" y="-10.16" visible="pad" length="short" direction="pas" function="dot"/>
-<pin name="26" x="5.08" y="-10.16" visible="pad" length="short" direction="pas" function="dot" rot="R180"/>
-<pin name="27" x="-2.54" y="-12.7" visible="pad" length="short" direction="pas" function="dot"/>
+<pin name="GND1" x="-2.54" y="20.32" visible="pad" length="short" direction="pas" function="dot"/>
+<pin name="GND2" x="5.08" y="20.32" visible="pad" length="short" direction="pas" function="dot" rot="R180"/>
+<pin name="53" x="-2.54" y="17.78" visible="pad" length="short" direction="pas" function="dot"/>
+<pin name="52" x="5.08" y="17.78" visible="pad" length="short" direction="pas" function="dot" rot="R180"/>
+<pin name="51" x="-2.54" y="15.24" visible="pad" length="short" direction="pas" function="dot"/>
+<pin name="50" x="5.08" y="15.24" visible="pad" length="short" direction="pas" function="dot" rot="R180"/>
+<pin name="49" x="-2.54" y="12.7" visible="pad" length="short" direction="pas" function="dot"/>
+<pin name="48" x="5.08" y="12.7" visible="pad" length="short" direction="pas" function="dot" rot="R180"/>
+<pin name="47" x="-2.54" y="10.16" visible="pad" length="short" direction="pas" function="dot"/>
+<pin name="46" x="5.08" y="10.16" visible="pad" length="short" direction="pas" function="dot" rot="R180"/>
+<pin name="45" x="-2.54" y="7.62" visible="pad" length="short" direction="pas" function="dot"/>
+<pin name="44" x="5.08" y="7.62" visible="pad" length="short" direction="pas" function="dot" rot="R180"/>
+<pin name="43" x="-2.54" y="5.08" visible="pad" length="short" direction="pas" function="dot"/>
+<pin name="42" x="5.08" y="5.08" visible="pad" length="short" direction="pas" function="dot" rot="R180"/>
+<pin name="41" x="-2.54" y="2.54" visible="pad" length="short" direction="pas" function="dot"/>
+<pin name="40" x="5.08" y="2.54" visible="pad" length="short" direction="pas" function="dot" rot="R180"/>
+<pin name="39" x="-2.54" y="0" visible="pad" length="short" direction="pas" function="dot"/>
+<pin name="38" x="5.08" y="0" visible="pad" length="short" direction="pas" function="dot" rot="R180"/>
+<pin name="37" x="-2.54" y="-2.54" visible="pad" length="short" direction="pas" function="dot"/>
+<pin name="36" x="5.08" y="-2.54" visible="pad" length="short" direction="pas" function="dot" rot="R180"/>
+<pin name="35" x="-2.54" y="-5.08" visible="pad" length="short" direction="pas" function="dot"/>
+<pin name="34" x="5.08" y="-5.08" visible="pad" length="short" direction="pas" function="dot" rot="R180"/>
+<pin name="33" x="-2.54" y="-7.62" visible="pad" length="short" direction="pas" function="dot"/>
+<pin name="32" x="5.08" y="-7.62" visible="pad" length="short" direction="pas" function="dot" rot="R180"/>
+<pin name="31" x="-2.54" y="-10.16" visible="pad" length="short" direction="pas" function="dot"/>
+<pin name="30" x="5.08" y="-10.16" visible="pad" length="short" direction="pas" function="dot" rot="R180"/>
+<pin name="29" x="-2.54" y="-12.7" visible="pad" length="short" direction="pas" function="dot"/>
 <pin name="28" x="5.08" y="-12.7" visible="pad" length="short" direction="pas" function="dot" rot="R180"/>
-<pin name="29" x="-2.54" y="-15.24" visible="pad" length="short" direction="pas" function="dot"/>
-<pin name="30" x="5.08" y="-15.24" visible="pad" length="short" direction="pas" function="dot" rot="R180"/>
-<pin name="31" x="-2.54" y="-17.78" visible="pad" length="short" direction="pas" function="dot"/>
-<pin name="32" x="5.08" y="-17.78" visible="pad" length="short" direction="pas" function="dot" rot="R180"/>
-<pin name="33" x="-2.54" y="-20.32" visible="pad" length="short" direction="pas" function="dot"/>
-<pin name="34" x="5.08" y="-20.32" visible="pad" length="short" direction="pas" function="dot" rot="R180"/>
-<pin name="35" x="-2.54" y="-22.86" visible="pad" length="short" direction="pas" function="dot"/>
-<pin name="36" x="5.08" y="-22.86" visible="pad" length="short" direction="pas" function="dot" rot="R180"/>
+<pin name="27" x="-2.54" y="-15.24" visible="pad" length="short" direction="pas" function="dot"/>
+<pin name="26" x="5.08" y="-15.24" visible="pad" length="short" direction="pas" function="dot" rot="R180"/>
+<pin name="25" x="-2.54" y="-17.78" visible="pad" length="short" direction="pas" function="dot"/>
+<pin name="24" x="5.08" y="-17.78" visible="pad" length="short" direction="pas" function="dot" rot="R180"/>
+<pin name="23" x="-2.54" y="-20.32" visible="pad" length="short" direction="pas" function="dot"/>
+<pin name="22" x="5.08" y="-20.32" visible="pad" length="short" direction="pas" function="dot" rot="R180"/>
+<pin name="5V1" x="-2.54" y="-22.86" visible="pad" length="short" direction="pas" function="dot"/>
+<pin name="5V2" x="5.08" y="-22.86" visible="pad" length="short" direction="pas" function="dot" rot="R180"/>
 <text x="-6.35" y="23.495" size="1.778" layer="95">&gt;NAME</text>
 <text x="-6.35" y="-27.94" size="1.778" layer="96">&gt;VALUE</text>
 </symbol>
@@ -1810,47 +1810,45 @@ SOIC, 0.3 inch width</description>
 <deviceset name="PINHEAD_PINHD-2X18" prefix="JP" uservalue="yes">
 <description>&lt;b&gt;PIN HEADER&lt;/b&gt;</description>
 <gates>
-<gate name="A" symbol="PINHEAD_PINH2X18" x="0" y="0"/>
+<gate name="DIGITAL22-53" symbol="PINHEAD_PINH2X18" x="0" y="0"/>
 </gates>
 <devices>
 <device name="" package="PINHEAD_2X18">
 <connects>
-<connect gate="A" pin="1" pad="1"/>
-<connect gate="A" pin="10" pad="10"/>
-<connect gate="A" pin="11" pad="11"/>
-<connect gate="A" pin="12" pad="12"/>
-<connect gate="A" pin="13" pad="13"/>
-<connect gate="A" pin="14" pad="14"/>
-<connect gate="A" pin="15" pad="15"/>
-<connect gate="A" pin="16" pad="16"/>
-<connect gate="A" pin="17" pad="17"/>
-<connect gate="A" pin="18" pad="18"/>
-<connect gate="A" pin="19" pad="19"/>
-<connect gate="A" pin="2" pad="2"/>
-<connect gate="A" pin="20" pad="20"/>
-<connect gate="A" pin="21" pad="21"/>
-<connect gate="A" pin="22" pad="22"/>
-<connect gate="A" pin="23" pad="23"/>
-<connect gate="A" pin="24" pad="24"/>
-<connect gate="A" pin="25" pad="25"/>
-<connect gate="A" pin="26" pad="26"/>
-<connect gate="A" pin="27" pad="27"/>
-<connect gate="A" pin="28" pad="28"/>
-<connect gate="A" pin="29" pad="29"/>
-<connect gate="A" pin="3" pad="3"/>
-<connect gate="A" pin="30" pad="30"/>
-<connect gate="A" pin="31" pad="31"/>
-<connect gate="A" pin="32" pad="32"/>
-<connect gate="A" pin="33" pad="33"/>
-<connect gate="A" pin="34" pad="34"/>
-<connect gate="A" pin="35" pad="35"/>
-<connect gate="A" pin="36" pad="36"/>
-<connect gate="A" pin="4" pad="4"/>
-<connect gate="A" pin="5" pad="5"/>
-<connect gate="A" pin="6" pad="6"/>
-<connect gate="A" pin="7" pad="7"/>
-<connect gate="A" pin="8" pad="8"/>
-<connect gate="A" pin="9" pad="9"/>
+<connect gate="DIGITAL22-53" pin="22" pad="34"/>
+<connect gate="DIGITAL22-53" pin="23" pad="33"/>
+<connect gate="DIGITAL22-53" pin="24" pad="32"/>
+<connect gate="DIGITAL22-53" pin="25" pad="31"/>
+<connect gate="DIGITAL22-53" pin="26" pad="30"/>
+<connect gate="DIGITAL22-53" pin="27" pad="29"/>
+<connect gate="DIGITAL22-53" pin="28" pad="28"/>
+<connect gate="DIGITAL22-53" pin="29" pad="27"/>
+<connect gate="DIGITAL22-53" pin="30" pad="26"/>
+<connect gate="DIGITAL22-53" pin="31" pad="25"/>
+<connect gate="DIGITAL22-53" pin="32" pad="24"/>
+<connect gate="DIGITAL22-53" pin="33" pad="23"/>
+<connect gate="DIGITAL22-53" pin="34" pad="22"/>
+<connect gate="DIGITAL22-53" pin="35" pad="21"/>
+<connect gate="DIGITAL22-53" pin="36" pad="20"/>
+<connect gate="DIGITAL22-53" pin="37" pad="19"/>
+<connect gate="DIGITAL22-53" pin="38" pad="18"/>
+<connect gate="DIGITAL22-53" pin="39" pad="17"/>
+<connect gate="DIGITAL22-53" pin="40" pad="16"/>
+<connect gate="DIGITAL22-53" pin="41" pad="15"/>
+<connect gate="DIGITAL22-53" pin="42" pad="14"/>
+<connect gate="DIGITAL22-53" pin="43" pad="13"/>
+<connect gate="DIGITAL22-53" pin="44" pad="12"/>
+<connect gate="DIGITAL22-53" pin="45" pad="11"/>
+<connect gate="DIGITAL22-53" pin="46" pad="10"/>
+<connect gate="DIGITAL22-53" pin="47" pad="9"/>
+<connect gate="DIGITAL22-53" pin="48" pad="8"/>
+<connect gate="DIGITAL22-53" pin="49" pad="7"/>
+<connect gate="DIGITAL22-53" pin="50" pad="6"/>
+<connect gate="DIGITAL22-53" pin="51" pad="5"/>
+<connect gate="DIGITAL22-53" pin="52" pad="4"/>
+<connect gate="DIGITAL22-53" pin="53" pad="3"/>
+<connect gate="DIGITAL22-53" pin="5V1" pad="35 36"/>
+<connect gate="DIGITAL22-53" pin="GND1" pad="1 2"/>
 </connects>
 <technologies>
 <technology name=""/>
@@ -1858,42 +1856,42 @@ SOIC, 0.3 inch width</description>
 </device>
 <device name="/90" package="PINHEAD_2X18/90">
 <connects>
-<connect gate="A" pin="1" pad="1"/>
-<connect gate="A" pin="10" pad="10"/>
-<connect gate="A" pin="11" pad="11"/>
-<connect gate="A" pin="12" pad="12"/>
-<connect gate="A" pin="13" pad="13"/>
-<connect gate="A" pin="14" pad="14"/>
-<connect gate="A" pin="15" pad="15"/>
-<connect gate="A" pin="16" pad="16"/>
-<connect gate="A" pin="17" pad="17"/>
-<connect gate="A" pin="18" pad="18"/>
-<connect gate="A" pin="19" pad="19"/>
-<connect gate="A" pin="2" pad="2"/>
-<connect gate="A" pin="20" pad="20"/>
-<connect gate="A" pin="21" pad="21"/>
-<connect gate="A" pin="22" pad="22"/>
-<connect gate="A" pin="23" pad="23"/>
-<connect gate="A" pin="24" pad="24"/>
-<connect gate="A" pin="25" pad="25"/>
-<connect gate="A" pin="26" pad="26"/>
-<connect gate="A" pin="27" pad="27"/>
-<connect gate="A" pin="28" pad="28"/>
-<connect gate="A" pin="29" pad="29"/>
-<connect gate="A" pin="3" pad="3"/>
-<connect gate="A" pin="30" pad="30"/>
-<connect gate="A" pin="31" pad="31"/>
-<connect gate="A" pin="32" pad="32"/>
-<connect gate="A" pin="33" pad="33"/>
-<connect gate="A" pin="34" pad="34"/>
-<connect gate="A" pin="35" pad="35"/>
-<connect gate="A" pin="36" pad="36"/>
-<connect gate="A" pin="4" pad="4"/>
-<connect gate="A" pin="5" pad="5"/>
-<connect gate="A" pin="6" pad="6"/>
-<connect gate="A" pin="7" pad="7"/>
-<connect gate="A" pin="8" pad="8"/>
-<connect gate="A" pin="9" pad="9"/>
+<connect gate="DIGITAL22-53" pin="22" pad="34"/>
+<connect gate="DIGITAL22-53" pin="23" pad="33"/>
+<connect gate="DIGITAL22-53" pin="24" pad="32"/>
+<connect gate="DIGITAL22-53" pin="25" pad="31"/>
+<connect gate="DIGITAL22-53" pin="26" pad="30"/>
+<connect gate="DIGITAL22-53" pin="27" pad="29"/>
+<connect gate="DIGITAL22-53" pin="28" pad="28"/>
+<connect gate="DIGITAL22-53" pin="29" pad="27"/>
+<connect gate="DIGITAL22-53" pin="30" pad="26"/>
+<connect gate="DIGITAL22-53" pin="31" pad="25"/>
+<connect gate="DIGITAL22-53" pin="32" pad="24"/>
+<connect gate="DIGITAL22-53" pin="33" pad="23"/>
+<connect gate="DIGITAL22-53" pin="34" pad="22"/>
+<connect gate="DIGITAL22-53" pin="35" pad="21"/>
+<connect gate="DIGITAL22-53" pin="36" pad="20"/>
+<connect gate="DIGITAL22-53" pin="37" pad="19"/>
+<connect gate="DIGITAL22-53" pin="38" pad="18"/>
+<connect gate="DIGITAL22-53" pin="39" pad="17"/>
+<connect gate="DIGITAL22-53" pin="40" pad="16"/>
+<connect gate="DIGITAL22-53" pin="41" pad="15"/>
+<connect gate="DIGITAL22-53" pin="42" pad="14"/>
+<connect gate="DIGITAL22-53" pin="43" pad="13"/>
+<connect gate="DIGITAL22-53" pin="44" pad="12"/>
+<connect gate="DIGITAL22-53" pin="45" pad="11"/>
+<connect gate="DIGITAL22-53" pin="46" pad="10"/>
+<connect gate="DIGITAL22-53" pin="47" pad="9"/>
+<connect gate="DIGITAL22-53" pin="48" pad="8"/>
+<connect gate="DIGITAL22-53" pin="49" pad="7"/>
+<connect gate="DIGITAL22-53" pin="50" pad="6"/>
+<connect gate="DIGITAL22-53" pin="51" pad="5"/>
+<connect gate="DIGITAL22-53" pin="52" pad="4"/>
+<connect gate="DIGITAL22-53" pin="53" pad="3"/>
+<connect gate="DIGITAL22-53" pin="5V1" pad="35"/>
+<connect gate="DIGITAL22-53" pin="5V2" pad="36"/>
+<connect gate="DIGITAL22-53" pin="GND1" pad="1"/>
+<connect gate="DIGITAL22-53" pin="GND2" pad="2"/>
 </connects>
 <technologies>
 <technology name=""/>
