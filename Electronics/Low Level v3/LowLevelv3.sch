@@ -16006,16 +16006,16 @@ BUZZER</description>
 <label x="180.34" y="104.14" size="1.778" layer="95"/>
 </segment>
 <segment>
-<label x="22.86" y="66.04" size="1.778" layer="95"/>
-<pinref part="DIGITAL_8-13" gate="A" pin="1"/>
-<wire x1="53.34" y1="66.04" x2="22.86" y2="66.04" width="0.1524" layer="91"/>
+<label x="109.22" y="88.9" size="1.778" layer="95"/>
+<pinref part="ADCH" gate="A" pin="5"/>
+<wire x1="127" y1="88.9" x2="96.52" y2="88.9" width="0.1524" layer="91"/>
 </segment>
 </net>
 <net name="HALLPHASEB" class="0">
 <segment>
-<label x="22.86" y="55.88" size="1.778" layer="95"/>
-<pinref part="DIGITAL_8-13" gate="A" pin="5"/>
-<wire x1="53.34" y1="55.88" x2="22.86" y2="55.88" width="0.1524" layer="91"/>
+<label x="109.22" y="81.28" size="1.778" layer="95"/>
+<pinref part="ADCH" gate="A" pin="2"/>
+<wire x1="96.52" y1="81.28" x2="127" y2="81.28" width="0.1524" layer="91"/>
 </segment>
 <segment>
 <pinref part="X3" gate="-1" pin="3"/>
@@ -16063,9 +16063,9 @@ BUZZER</description>
 </net>
 <net name="WHEELROTATION" class="0">
 <segment>
-<label x="22.86" y="63.5" size="1.778" layer="95"/>
-<pinref part="DIGITAL_8-13" gate="A" pin="2"/>
-<wire x1="53.34" y1="63.5" x2="22.86" y2="63.5" width="0.1524" layer="91"/>
+<label x="109.22" y="96.52" size="1.778" layer="95"/>
+<pinref part="ADCH" gate="A" pin="8"/>
+<wire x1="96.52" y1="96.52" x2="127" y2="96.52" width="0.1524" layer="91"/>
 </segment>
 </net>
 <net name="R_STR" class="0">
@@ -16176,9 +16176,9 @@ BUZZER</description>
 </net>
 <net name="HALLPHASEA" class="0">
 <segment>
-<label x="22.86" y="53.34" size="1.778" layer="95"/>
-<pinref part="DIGITAL_8-13" gate="A" pin="6"/>
-<wire x1="53.34" y1="53.34" x2="22.86" y2="53.34" width="0.1524" layer="91"/>
+<label x="109.22" y="78.74" size="1.778" layer="95"/>
+<pinref part="ADCH" gate="A" pin="1"/>
+<wire x1="96.52" y1="78.74" x2="127" y2="78.74" width="0.1524" layer="91"/>
 </segment>
 <segment>
 <pinref part="X3" gate="-1" pin="2"/>
@@ -16188,9 +16188,9 @@ BUZZER</description>
 </net>
 <net name="HALLPHASEC" class="0">
 <segment>
-<label x="22.86" y="58.42" size="1.778" layer="95"/>
-<pinref part="DIGITAL_8-13" gate="A" pin="4"/>
-<wire x1="53.34" y1="58.42" x2="22.86" y2="58.42" width="0.1524" layer="91"/>
+<label x="109.22" y="86.36" size="1.778" layer="95"/>
+<pinref part="ADCH" gate="A" pin="4"/>
+<wire x1="96.52" y1="86.36" x2="127" y2="86.36" width="0.1524" layer="91"/>
 </segment>
 <segment>
 <pinref part="X3" gate="-1" pin="8"/>
@@ -16212,9 +16212,9 @@ BUZZER</description>
 </net>
 <net name="EBIKECONTRL" class="0">
 <segment>
-<label x="22.86" y="60.96" size="1.778" layer="95"/>
-<pinref part="DIGITAL_8-13" gate="A" pin="3"/>
-<wire x1="53.34" y1="60.96" x2="22.86" y2="60.96" width="0.1524" layer="91"/>
+<label x="109.22" y="83.82" size="1.778" layer="95"/>
+<pinref part="ADCH" gate="A" pin="3"/>
+<wire x1="96.52" y1="83.82" x2="127" y2="83.82" width="0.1524" layer="91"/>
 </segment>
 <segment>
 <pinref part="X3" gate="-1" pin="10"/>
@@ -16378,9 +16378,9 @@ BUZZER</description>
 </net>
 <net name="CAN_INT" class="0">
 <segment>
-<label x="27.94" y="25.4" size="1.778" layer="95"/>
-<pinref part="DIGITAL_0-7" gate="A" pin="5"/>
-<wire x1="53.34" y1="25.4" x2="27.94" y2="25.4" width="0.1524" layer="91"/>
+<label x="109.22" y="91.44" size="1.778" layer="95"/>
+<pinref part="ADCH" gate="A" pin="6"/>
+<wire x1="96.52" y1="91.44" x2="127" y2="91.44" width="0.1524" layer="91"/>
 </segment>
 </net>
 <net name="BUZZER" class="0">
@@ -16392,9 +16392,9 @@ BUZZER</description>
 </net>
 <net name="ESTOP_INT" class="0">
 <segment>
-<pinref part="DIGITAL_0-7" gate="A" pin="4"/>
-<wire x1="53.34" y1="22.86" x2="27.94" y2="22.86" width="0.1524" layer="91"/>
-<label x="27.94" y="22.86" size="1.778" layer="95"/>
+<label x="109.22" y="93.98" size="1.778" layer="95"/>
+<pinref part="ADCH" gate="A" pin="7"/>
+<wire x1="96.52" y1="93.98" x2="127" y2="93.98" width="0.1524" layer="91"/>
 </segment>
 <segment>
 <pinref part="X3" gate="-1" pin="6"/>
