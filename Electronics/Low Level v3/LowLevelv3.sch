@@ -15662,27 +15662,27 @@ BUZZER</description>
 <part name="ADCL" library="pinhead" library_urn="urn:adsk.eagle:library:325" deviceset="PINHD-1X8" device="" package3d_urn="urn:adsk.eagle:package:22409/2" value="Analog In 0-7"/>
 <part name="DIGITAL_14-21" library="pinhead" library_urn="urn:adsk.eagle:library:325" deviceset="PINHD-1X8" device="" package3d_urn="urn:adsk.eagle:package:22409/2" value="Digital 14-21"/>
 <part name="ADCH" library="pinhead" library_urn="urn:adsk.eagle:library:325" deviceset="PINHD-1X8" device="" package3d_urn="urn:adsk.eagle:package:22409/2" value="Analog In 8-15"/>
-<part name="IC2" library="ic-package" deviceset="DIL8" device="" value="MCP4802"/>
+<part name="IC3_4802" library="ic-package" deviceset="DIL8" device="" value="MCP4802"/>
 <part name="X3" library="con-subd" library_urn="urn:adsk.eagle:library:189" deviceset="M15" device="-182" package3d_urn="urn:adsk.eagle:package:10309/1" value="Motor"/>
 <part name="C2" library="resistor" library_urn="urn:adsk.eagle:library:348" deviceset="C-US" device="C1206" package3d_urn="urn:adsk.eagle:package:23618/2" value="0.1uF"/>
 <part name="C4" library="resistor" library_urn="urn:adsk.eagle:library:348" deviceset="C-US" device="C1206" package3d_urn="urn:adsk.eagle:package:23618/2" value="1 uF"/>
 <part name="X4" library="elcanoParts" deviceset="ODO_JACK" device="" value="CLICK"/>
-<part name="C5" library="resistor" library_urn="urn:adsk.eagle:library:348" deviceset="C-US" device="C1206" package3d_urn="urn:adsk.eagle:package:23618/2" value="1 uF"/>
-<part name="R4" library="resistor" library_urn="urn:adsk.eagle:library:348" deviceset="R-US_" device="R1206" package3d_urn="urn:adsk.eagle:package:23540/2" value="4.7 K"/>
-<part name="R3" library="resistor" library_urn="urn:adsk.eagle:library:348" deviceset="R-US_" device="R1206" package3d_urn="urn:adsk.eagle:package:23540/2" value="4.7 K"/>
-<part name="C3" library="resistor" library_urn="urn:adsk.eagle:library:348" deviceset="C-US" device="C1206" package3d_urn="urn:adsk.eagle:package:23618/2" value="1 uF"/>
-<part name="R8" library="resistor" library_urn="urn:adsk.eagle:library:348" deviceset="R-US_" device="R1206" package3d_urn="urn:adsk.eagle:package:23540/2" value="4.7 K"/>
-<part name="R9" library="resistor" library_urn="urn:adsk.eagle:library:348" deviceset="R-US_" device="R1206" package3d_urn="urn:adsk.eagle:package:23540/2" value="4.7 K"/>
-<part name="C8" library="resistor" library_urn="urn:adsk.eagle:library:348" deviceset="C-US" device="C1206" package3d_urn="urn:adsk.eagle:package:23618/2" value="1 uF"/>
-<part name="C9" library="resistor" library_urn="urn:adsk.eagle:library:348" deviceset="C-US" device="C1206" package3d_urn="urn:adsk.eagle:package:23618/2" value="1 uF"/>
+<part name="C5" library="resistor" library_urn="urn:adsk.eagle:library:348" deviceset="C-US" device="C1206" package3d_urn="urn:adsk.eagle:package:23618/2" value="1uF"/>
+<part name="R4" library="resistor" library_urn="urn:adsk.eagle:library:348" deviceset="R-US_" device="R1206" package3d_urn="urn:adsk.eagle:package:23540/2" value="4.7K"/>
+<part name="R3" library="resistor" library_urn="urn:adsk.eagle:library:348" deviceset="R-US_" device="R1206" package3d_urn="urn:adsk.eagle:package:23540/2" value="4.7K"/>
+<part name="C3" library="resistor" library_urn="urn:adsk.eagle:library:348" deviceset="C-US" device="C1206" package3d_urn="urn:adsk.eagle:package:23618/2" value="1uF"/>
+<part name="R8" library="resistor" library_urn="urn:adsk.eagle:library:348" deviceset="R-US_" device="R1206" package3d_urn="urn:adsk.eagle:package:23540/2" value="4.7K"/>
+<part name="R9" library="resistor" library_urn="urn:adsk.eagle:library:348" deviceset="R-US_" device="R1206" package3d_urn="urn:adsk.eagle:package:23540/2" value="4.7K"/>
+<part name="C8" library="resistor" library_urn="urn:adsk.eagle:library:348" deviceset="C-US" device="C1206" package3d_urn="urn:adsk.eagle:package:23618/2" value="1uF"/>
+<part name="C9" library="resistor" library_urn="urn:adsk.eagle:library:348" deviceset="C-US" device="C1206" package3d_urn="urn:adsk.eagle:package:23618/2" value="1uF"/>
 <part name="DIGITAL_8-13" library="pinhead" library_urn="urn:adsk.eagle:library:325" deviceset="PINHD-1X8" device="" package3d_urn="urn:adsk.eagle:package:22409/2" value="Digital 8-13"/>
 <part name="P+10" library="SparkFun-Aesthetics" library_urn="urn:adsk.eagle:library:507" deviceset="5V" device="">
 <attribute name="SPICEPREFIX" value="G"/>
 </part>
-<part name="U4" library="SparkFun-IC-Comms" library_urn="urn:adsk.eagle:library:521" deviceset="MCP2515(MCP2510)" device="P" package3d_urn="urn:adsk.eagle:package:38724/1" value=" MCP2515">
+<part name="IC1_2515" library="SparkFun-IC-Comms" library_urn="urn:adsk.eagle:library:521" deviceset="MCP2515(MCP2510)" device="P" package3d_urn="urn:adsk.eagle:package:38724/1" value=" MCP2515">
 <attribute name="SPICEPREFIX" value="X"/>
 </part>
-<part name="U5" library="elcanoParts" deviceset="MCP2551" device="DIL08">
+<part name="IC2_2551" library="elcanoParts" deviceset="MCP2551" device="DIL08">
 <attribute name="SPICEPREFIX" value="X"/>
 </part>
 <part name="GND21" library="SparkFun-Aesthetics" library_urn="urn:adsk.eagle:library:507" deviceset="GND" device="">
@@ -15710,14 +15710,14 @@ BUZZER</description>
 <part name="R2" library="resistor" library_urn="urn:adsk.eagle:library:348" deviceset="R-US_" device="R1206" package3d_urn="urn:adsk.eagle:package:23540/2" value="1K"/>
 <part name="R5" library="resistor" library_urn="urn:adsk.eagle:library:348" deviceset="R-US_" device="R1206" package3d_urn="urn:adsk.eagle:package:23540/2" value="1K"/>
 <part name="T1" library="transistor" library_urn="urn:adsk.eagle:library:402" deviceset="2N3904" device="" package3d_urn="urn:adsk.eagle:package:28523/2"/>
-<part name="K1" library="elcanoParts" deviceset="ORWH-SH-105D1F,000" device=""/>
-<part name="U1" library="elcanoParts" deviceset="284512-4" device=""/>
+<part name="PB2_12/24" library="elcanoParts" deviceset="ORWH-SH-105D1F,000" device=""/>
+<part name="X1" library="elcanoParts" deviceset="284512-4" device=""/>
 <part name="D2" library="diode" library_urn="urn:adsk.eagle:library:210" deviceset="1N4148" device="DO35-7" package3d_urn="urn:adsk.eagle:package:43339/1"/>
 <part name="BRAKES_ON" library="led" library_urn="urn:adsk.eagle:library:259" deviceset="LED" device="3MM" package3d_urn="urn:adsk.eagle:package:15797/1"/>
 <part name="R1" library="resistor" library_urn="urn:adsk.eagle:library:348" deviceset="R-US_" device="R1206" package3d_urn="urn:adsk.eagle:package:23540/2" value="1K"/>
 <part name="R6" library="resistor" library_urn="urn:adsk.eagle:library:348" deviceset="R-US_" device="R1206" package3d_urn="urn:adsk.eagle:package:23540/2" value="1K"/>
 <part name="T2" library="transistor" library_urn="urn:adsk.eagle:library:402" deviceset="2N3904" device="" package3d_urn="urn:adsk.eagle:package:28523/2"/>
-<part name="K3" library="elcanoParts" deviceset="ORWH-SH-105D1F,000" device=""/>
+<part name="PB1_BRAKE_ON" library="elcanoParts" deviceset="ORWH-SH-105D1F,000" device=""/>
 <part name="STEERING_IO" library="elcanoParts" deviceset="5-104069-4" device=""/>
 <part name="C7" library="resistor" library_urn="urn:adsk.eagle:library:348" deviceset="C-US" device="C1206" package3d_urn="urn:adsk.eagle:package:23618/2" value="560pF"/>
 <part name="C13" library="resistor" library_urn="urn:adsk.eagle:library:348" deviceset="C-US" device="C1206" package3d_urn="urn:adsk.eagle:package:23618/2" value="560pF"/>
@@ -16458,7 +16458,7 @@ BUZZER</description>
 <plain>
 </plain>
 <instances>
-<instance part="IC2" gate="G$1" x="60.96" y="96.52" smashed="yes">
+<instance part="IC3_4802" gate="G$1" x="60.96" y="96.52" smashed="yes">
 <attribute name="NAME" x="61.595" y="92.075" size="1.778" layer="95" rot="R90"/>
 <attribute name="VALUE" x="55.499" y="101.854" size="1.778" layer="96"/>
 </instance>
@@ -16477,14 +16477,14 @@ BUZZER</description>
 <instance part="P+10" gate="G$1" x="101.6" y="71.12" smashed="yes" rot="R270">
 <attribute name="VALUE" x="101.6" y="73.66" size="1.778" layer="96"/>
 </instance>
-<instance part="U4" gate="&gt;NAME" x="86.36" y="43.18" smashed="yes">
+<instance part="IC1_2515" gate="&gt;NAME" x="86.36" y="43.18" smashed="yes">
 <attribute name="NAME" x="76.2" y="59.69" size="1.778" layer="95"/>
 <attribute name="VALUE" x="76.2" y="13.97" size="1.778" layer="96"/>
 </instance>
-<instance part="U4" gate="P" x="86.36" y="66.04" smashed="yes" rot="R270">
+<instance part="IC1_2515" gate="P" x="86.36" y="66.04" smashed="yes" rot="R270">
 <attribute name="NAME" x="83.82" y="66.04" size="1.778" layer="95"/>
 </instance>
-<instance part="U5" gate="MCP2551" x="160.02" y="154.94" smashed="yes" rot="MR180">
+<instance part="IC2_2551" gate="MCP2551" x="160.02" y="154.94" smashed="yes" rot="MR180">
 <attribute name="NAME" x="155.575" y="144.145" size="1.778" layer="95" rot="MR180"/>
 <attribute name="VALUE" x="155.575" y="160.02" size="1.778" layer="96" rot="MR180"/>
 </instance>
@@ -16608,7 +16608,7 @@ BUZZER</description>
 <nets>
 <net name="5V" class="1">
 <segment>
-<pinref part="IC2" gate="G$1" pin="1"/>
+<pinref part="IC3_4802" gate="G$1" pin="1"/>
 <wire x1="40.64" y1="99.06" x2="53.34" y2="99.06" width="0.1524" layer="91"/>
 <wire x1="40.64" y1="99.06" x2="40.64" y2="109.22" width="0.1524" layer="91"/>
 <wire x1="40.64" y1="109.22" x2="58.42" y2="109.22" width="0.1524" layer="91"/>
@@ -16626,14 +16626,14 @@ BUZZER</description>
 <wire x1="96.52" y1="66.04" x2="93.98" y2="66.04" width="0.1524" layer="91"/>
 <wire x1="96.52" y1="71.12" x2="96.52" y2="76.2" width="0.1524" layer="91"/>
 <junction x="96.52" y="71.12"/>
-<pinref part="U4" gate="P" pin="VDD"/>
+<pinref part="IC1_2515" gate="P" pin="VDD"/>
 <pinref part="P+10" gate="G$1" pin="5V"/>
 <pinref part="C10" gate="G$1" pin="1"/>
 </segment>
 <segment>
 <wire x1="127" y1="152.4" x2="149.86" y2="152.4" width="0.1524" layer="91"/>
 <wire x1="127" y1="152.4" x2="127" y2="147.32" width="0.1524" layer="91"/>
-<pinref part="U5" gate="MCP2551" pin="VDD"/>
+<pinref part="IC2_2551" gate="MCP2551" pin="VDD"/>
 <label x="139.7" y="152.4" size="1.778" layer="95"/>
 <pinref part="C1" gate="G$1" pin="1"/>
 </segment>
@@ -16661,8 +16661,8 @@ BUZZER</description>
 </net>
 <net name="GND" class="1">
 <segment>
-<pinref part="IC2" gate="G$1" pin="5"/>
-<pinref part="IC2" gate="G$1" pin="7"/>
+<pinref part="IC3_4802" gate="G$1" pin="5"/>
+<pinref part="IC3_4802" gate="G$1" pin="7"/>
 <wire x1="68.58" y1="96.52" x2="81.28" y2="96.52" width="0.1524" layer="91"/>
 <junction x="81.28" y="96.52"/>
 <wire x1="81.28" y1="91.44" x2="81.28" y2="96.52" width="0.1524" layer="91"/>
@@ -16717,7 +16717,7 @@ BUZZER</description>
 <wire x1="76.2" y1="66.04" x2="78.74" y2="66.04" width="0.1524" layer="91"/>
 <wire x1="73.66" y1="68.58" x2="76.2" y2="68.58" width="0.1524" layer="91"/>
 <junction x="76.2" y="68.58"/>
-<pinref part="U4" gate="P" pin="VSS"/>
+<pinref part="IC1_2515" gate="P" pin="VSS"/>
 <pinref part="GND25" gate="1" pin="GND"/>
 <pinref part="C10" gate="G$1" pin="2"/>
 </segment>
@@ -16725,7 +16725,7 @@ BUZZER</description>
 <wire x1="149.86" y1="149.86" x2="134.62" y2="149.86" width="0.1524" layer="91"/>
 <wire x1="134.62" y1="149.86" x2="134.62" y2="137.16" width="0.1524" layer="91"/>
 <wire x1="161.29" y1="137.16" x2="134.62" y2="137.16" width="0.1524" layer="91"/>
-<pinref part="U5" gate="MCP2551" pin="VSS"/>
+<pinref part="IC2_2551" gate="MCP2551" pin="VSS"/>
 <label x="139.7" y="149.86" size="1.778" layer="95"/>
 <pinref part="R11" gate="G$1" pin="2"/>
 </segment>
@@ -16755,12 +16755,12 @@ BUZZER</description>
 <label x="190.5" y="76.2" size="1.778" layer="95"/>
 </segment>
 <segment>
-<pinref part="U4" gate="&gt;NAME" pin="TX0RTS"/>
+<pinref part="IC1_2515" gate="&gt;NAME" pin="TX0RTS"/>
 <wire x1="71.12" y1="25.4" x2="68.58" y2="25.4" width="0.1524" layer="91"/>
-<pinref part="U4" gate="&gt;NAME" pin="TX1RTS"/>
+<pinref part="IC1_2515" gate="&gt;NAME" pin="TX1RTS"/>
 <wire x1="68.58" y1="25.4" x2="68.58" y2="22.86" width="0.1524" layer="91"/>
 <wire x1="68.58" y1="22.86" x2="71.12" y2="22.86" width="0.1524" layer="91"/>
-<pinref part="U4" gate="&gt;NAME" pin="TX2RTS"/>
+<pinref part="IC1_2515" gate="&gt;NAME" pin="TX2RTS"/>
 <wire x1="68.58" y1="22.86" x2="68.58" y2="20.32" width="0.1524" layer="91"/>
 <wire x1="68.58" y1="20.32" x2="71.12" y2="20.32" width="0.1524" layer="91"/>
 <junction x="68.58" y="22.86"/>
@@ -16782,21 +16782,21 @@ BUZZER</description>
 </net>
 <net name="DAC_SS" class="3">
 <segment>
-<pinref part="IC2" gate="G$1" pin="2"/>
+<pinref part="IC3_4802" gate="G$1" pin="2"/>
 <wire x1="40.64" y1="96.52" x2="53.34" y2="96.52" width="0.1524" layer="91"/>
 <label x="40.64" y="96.52" size="1.778" layer="95"/>
 </segment>
 </net>
 <net name="DACA" class="0">
 <segment>
-<pinref part="IC2" gate="G$1" pin="8"/>
+<pinref part="IC3_4802" gate="G$1" pin="8"/>
 <wire x1="68.58" y1="99.06" x2="71.12" y2="99.06" width="0.1524" layer="91"/>
 <label x="71.12" y="99.06" size="1.778" layer="95"/>
 </segment>
 </net>
 <net name="DACB" class="0">
 <segment>
-<pinref part="IC2" gate="G$1" pin="6"/>
+<pinref part="IC3_4802" gate="G$1" pin="6"/>
 <wire x1="68.58" y1="93.98" x2="71.12" y2="93.98" width="0.1524" layer="91"/>
 <label x="71.12" y="93.98" size="1.778" layer="95"/>
 </segment>
@@ -16818,38 +16818,38 @@ BUZZER</description>
 </net>
 <net name="SCK" class="3">
 <segment>
-<pinref part="IC2" gate="G$1" pin="3"/>
+<pinref part="IC3_4802" gate="G$1" pin="3"/>
 <wire x1="40.64" y1="93.98" x2="53.34" y2="93.98" width="0.1524" layer="91"/>
 <label x="48.26" y="93.98" size="1.778" layer="95"/>
 </segment>
 <segment>
 <wire x1="71.12" y1="43.18" x2="63.5" y2="43.18" width="0.1524" layer="91"/>
-<pinref part="U4" gate="&gt;NAME" pin="SCK"/>
+<pinref part="IC1_2515" gate="&gt;NAME" pin="SCK"/>
 <label x="63.5" y="43.18" size="1.778" layer="95"/>
 </segment>
 </net>
 <net name="MISO" class="3">
 <segment>
 <wire x1="71.12" y1="38.1" x2="63.5" y2="38.1" width="0.1524" layer="91"/>
-<pinref part="U4" gate="&gt;NAME" pin="SO"/>
+<pinref part="IC1_2515" gate="&gt;NAME" pin="SO"/>
 <label x="63.5" y="38.1" size="1.778" layer="95"/>
 </segment>
 </net>
 <net name="MOSI" class="3">
 <segment>
 <wire x1="71.12" y1="40.64" x2="63.5" y2="40.64" width="0.1524" layer="91"/>
-<pinref part="U4" gate="&gt;NAME" pin="SI"/>
+<pinref part="IC1_2515" gate="&gt;NAME" pin="SI"/>
 <label x="63.5" y="40.64" size="1.778" layer="95"/>
 </segment>
 <segment>
-<pinref part="IC2" gate="G$1" pin="4"/>
+<pinref part="IC3_4802" gate="G$1" pin="4"/>
 <wire x1="40.64" y1="91.44" x2="53.34" y2="91.44" width="0.1524" layer="91"/>
 <label x="45.72" y="91.44" size="1.778" layer="95"/>
 </segment>
 </net>
 <net name="RS" class="0">
 <segment>
-<pinref part="U4" gate="&gt;NAME" pin="RESET"/>
+<pinref part="IC1_2515" gate="&gt;NAME" pin="RESET"/>
 <label x="63.5" y="33.02" size="1.778" layer="95"/>
 <wire x1="71.12" y1="33.02" x2="58.42" y2="33.02" width="0.1524" layer="91"/>
 <wire x1="58.42" y1="33.02" x2="58.42" y2="22.86" width="0.1524" layer="91"/>
@@ -16860,24 +16860,24 @@ BUZZER</description>
 <net name="CAN_RXD" class="0">
 <segment>
 <wire x1="149.86" y1="154.94" x2="137.16" y2="154.94" width="0.1524" layer="91"/>
-<pinref part="U5" gate="MCP2551" pin="RXD"/>
+<pinref part="IC2_2551" gate="MCP2551" pin="RXD"/>
 <label x="137.16" y="154.94" size="1.778" layer="95"/>
 </segment>
 <segment>
 <wire x1="104.14" y1="48.26" x2="116.84" y2="48.26" width="0.1524" layer="91"/>
-<pinref part="U4" gate="&gt;NAME" pin="RXCAN"/>
+<pinref part="IC1_2515" gate="&gt;NAME" pin="RXCAN"/>
 <label x="106.68" y="48.26" size="1.778" layer="95"/>
 </segment>
 </net>
 <net name="CAN_TXD" class="0">
 <segment>
 <wire x1="149.86" y1="147.32" x2="137.16" y2="147.32" width="0.1524" layer="91"/>
-<pinref part="U5" gate="MCP2551" pin="TXD"/>
+<pinref part="IC2_2551" gate="MCP2551" pin="TXD"/>
 <label x="137.16" y="147.32" size="1.778" layer="95"/>
 </segment>
 <segment>
 <wire x1="104.14" y1="43.18" x2="116.84" y2="43.18" width="0.1524" layer="91"/>
-<pinref part="U4" gate="&gt;NAME" pin="TXCAN"/>
+<pinref part="IC1_2515" gate="&gt;NAME" pin="TXCAN"/>
 <label x="106.68" y="43.18" size="1.778" layer="95"/>
 </segment>
 </net>
@@ -16903,7 +16903,7 @@ BUZZER</description>
 <segment>
 <wire x1="180.34" y1="147.32" x2="180.34" y2="137.16" width="0.1524" layer="91"/>
 <wire x1="180.34" y1="137.16" x2="171.45" y2="137.16" width="0.1524" layer="91"/>
-<pinref part="U5" gate="MCP2551" pin="RS"/>
+<pinref part="IC2_2551" gate="MCP2551" pin="RS"/>
 <pinref part="R11" gate="G$1" pin="1"/>
 <wire x1="171.45" y1="137.16" x2="170.18" y2="137.16" width="0.1524" layer="91"/>
 <junction x="171.45" y="137.16"/>
@@ -16918,7 +16918,7 @@ BUZZER</description>
 <wire x1="63.5" y1="58.42" x2="50.8" y2="58.42" width="0.1524" layer="91"/>
 <junction x="50.8" y="58.42"/>
 <pinref part="Q1" gate="G$1" pin="2"/>
-<pinref part="U4" gate="&gt;NAME" pin="OSC1"/>
+<pinref part="IC1_2515" gate="&gt;NAME" pin="OSC1"/>
 <pinref part="C6" gate="G$1" pin="1"/>
 <label x="63.5" y="55.88" size="1.778" layer="95"/>
 </segment>
@@ -16932,7 +16932,7 @@ BUZZER</description>
 <wire x1="63.5" y1="48.26" x2="50.8" y2="48.26" width="0.1524" layer="91"/>
 <junction x="50.8" y="48.26"/>
 <pinref part="Q1" gate="G$1" pin="1"/>
-<pinref part="U4" gate="&gt;NAME" pin="OSC2"/>
+<pinref part="IC1_2515" gate="&gt;NAME" pin="OSC2"/>
 <pinref part="C11" gate="G$1" pin="1"/>
 <label x="63.5" y="53.34" size="1.778" layer="95"/>
 </segment>
@@ -16940,14 +16940,14 @@ BUZZER</description>
 <net name="CAN_SS" class="3">
 <segment>
 <wire x1="71.12" y1="45.72" x2="60.96" y2="45.72" width="0.1524" layer="91"/>
-<pinref part="U4" gate="&gt;NAME" pin="CS"/>
+<pinref part="IC1_2515" gate="&gt;NAME" pin="CS"/>
 <label x="60.96" y="45.72" size="1.778" layer="95"/>
 </segment>
 </net>
 <net name="CAN_INT" class="0">
 <segment>
 <wire x1="104.14" y1="33.02" x2="116.84" y2="33.02" width="0.1524" layer="91"/>
-<pinref part="U4" gate="&gt;NAME" pin="INT"/>
+<pinref part="IC1_2515" gate="&gt;NAME" pin="INT"/>
 <label x="106.68" y="33.02" size="1.778" layer="95"/>
 </segment>
 </net>
@@ -16955,7 +16955,7 @@ BUZZER</description>
 <segment>
 <wire x1="208.28" y1="149.86" x2="180.34" y2="149.86" width="0.1524" layer="91"/>
 <wire x1="228.6" y1="143.51" x2="228.6" y2="149.86" width="0.1524" layer="91"/>
-<pinref part="U5" gate="MCP2551" pin="CANH"/>
+<pinref part="IC2_2551" gate="MCP2551" pin="CANH"/>
 <wire x1="228.6" y1="149.86" x2="208.28" y2="149.86" width="0.1524" layer="91"/>
 <wire x1="208.28" y1="149.86" x2="208.28" y2="139.7" width="0.1524" layer="91"/>
 <pinref part="D5" gate="G$1" pin="1"/>
@@ -16968,7 +16968,7 @@ BUZZER</description>
 <segment>
 <wire x1="190.5" y1="152.4" x2="180.34" y2="152.4" width="0.1524" layer="91"/>
 <wire x1="190.5" y1="143.51" x2="190.5" y2="147.32" width="0.1524" layer="91"/>
-<pinref part="U5" gate="MCP2551" pin="CANL"/>
+<pinref part="IC2_2551" gate="MCP2551" pin="CANL"/>
 <wire x1="190.5" y1="152.4" x2="190.5" y2="147.32" width="0.1524" layer="91"/>
 <wire x1="190.5" y1="147.32" x2="203.2" y2="147.32" width="0.1524" layer="91"/>
 <wire x1="203.2" y1="147.32" x2="203.2" y2="139.7" width="0.1524" layer="91"/>
@@ -17070,11 +17070,11 @@ BUZZER</description>
 <attribute name="NAME" x="43.18" y="81.28" size="1.778" layer="95"/>
 <attribute name="VALUE" x="43.18" y="78.74" size="1.778" layer="96"/>
 </instance>
-<instance part="K1" gate="G$1" x="127" y="111.76" smashed="yes">
+<instance part="PB2_12/24" gate="G$1" x="127" y="111.76" smashed="yes">
 <attribute name="NAME" x="121.883059375" y="117.38563125" size="1.78041875" layer="95"/>
 <attribute name="VALUE" x="121.90096875" y="104.368259375" size="1.77906875" layer="96"/>
 </instance>
-<instance part="U1" gate="A" x="220.98" y="111.76" smashed="yes" rot="R270">
+<instance part="X1" gate="A" x="220.98" y="111.76" smashed="yes" rot="R270">
 <attribute name="NAME" x="218.7956" y="90.3986" size="2.0828" layer="95" ratio="6" rot="SR0"/>
 <attribute name="VALUE" x="218.1606" y="85.3186" size="2.0828" layer="96" ratio="6" rot="SR0"/>
 </instance>
@@ -17098,7 +17098,7 @@ BUZZER</description>
 <attribute name="NAME" x="104.14" y="40.64" size="1.778" layer="95"/>
 <attribute name="VALUE" x="104.14" y="38.1" size="1.778" layer="96"/>
 </instance>
-<instance part="K3" gate="G$1" x="127" y="71.12" smashed="yes">
+<instance part="PB1_BRAKE_ON" gate="G$1" x="127" y="71.12" smashed="yes">
 <attribute name="NAME" x="121.883059375" y="76.74563125" size="1.78041875" layer="95"/>
 <attribute name="VALUE" x="121.90096875" y="63.728259375" size="1.77906875" layer="96"/>
 </instance>
@@ -17124,7 +17124,7 @@ BUZZER</description>
 </segment>
 <segment>
 <pinref part="D2" gate="G$1" pin="C"/>
-<pinref part="K3" gate="G$1" pin="C1"/>
+<pinref part="PB1_BRAKE_ON" gate="G$1" pin="C1"/>
 <wire x1="116.84" y1="73.66" x2="111.76" y2="73.66" width="0.1524" layer="91"/>
 <label x="104.14" y="73.66" size="1.778" layer="95"/>
 <wire x1="111.76" y1="73.66" x2="104.14" y2="73.66" width="0.1524" layer="91"/>
@@ -17132,7 +17132,7 @@ BUZZER</description>
 </segment>
 <segment>
 <pinref part="D3" gate="G$1" pin="C"/>
-<pinref part="K1" gate="G$1" pin="C1"/>
+<pinref part="PB2_12/24" gate="G$1" pin="C1"/>
 <wire x1="116.84" y1="114.3" x2="111.76" y2="114.3" width="0.1524" layer="91"/>
 <wire x1="111.76" y1="114.3" x2="104.14" y2="114.3" width="0.1524" layer="91"/>
 <junction x="111.76" y="114.3"/>
@@ -17174,7 +17174,7 @@ BUZZER</description>
 <pinref part="D3" gate="G$1" pin="A"/>
 <wire x1="111.76" y1="109.22" x2="55.88" y2="109.22" width="0.1524" layer="91"/>
 <junction x="55.88" y="78.74"/>
-<pinref part="K1" gate="G$1" pin="C2"/>
+<pinref part="PB2_12/24" gate="G$1" pin="C2"/>
 <wire x1="55.88" y1="109.22" x2="55.88" y2="78.74" width="0.1524" layer="91"/>
 <wire x1="55.88" y1="109.22" x2="116.84" y2="109.22" width="0.1524" layer="91"/>
 <junction x="55.88" y="109.22"/>
@@ -17209,7 +17209,7 @@ BUZZER</description>
 <pinref part="D2" gate="G$1" pin="A"/>
 <wire x1="111.76" y1="68.58" x2="116.84" y2="68.58" width="0.1524" layer="91"/>
 <junction x="116.84" y="38.1"/>
-<pinref part="K3" gate="G$1" pin="C2"/>
+<pinref part="PB1_BRAKE_ON" gate="G$1" pin="C2"/>
 <wire x1="116.84" y1="68.58" x2="116.84" y2="38.1" width="0.1524" layer="91"/>
 <junction x="116.84" y="68.58"/>
 </segment>
@@ -17223,18 +17223,18 @@ BUZZER</description>
 </net>
 <net name="12V" class="2">
 <segment>
-<pinref part="K1" gate="G$1" pin="NC"/>
+<pinref part="PB2_12/24" gate="G$1" pin="NC"/>
 <label x="154.94" y="114.3" size="1.778" layer="95"/>
-<pinref part="U1" gate="A" pin="1"/>
+<pinref part="X1" gate="A" pin="1"/>
 <wire x1="142.24" y1="114.3" x2="220.98" y2="114.3" width="0.1524" layer="91"/>
 <wire x1="220.98" y1="114.3" x2="220.98" y2="109.22" width="0.1524" layer="91"/>
 </segment>
 </net>
 <net name="SOLENOID_POWER" class="2">
 <segment>
-<pinref part="K1" gate="G$1" pin="C"/>
+<pinref part="PB2_12/24" gate="G$1" pin="C"/>
 <wire x1="142.24" y1="111.76" x2="152.4" y2="111.76" width="0.1524" layer="91"/>
-<pinref part="K3" gate="G$1" pin="NO"/>
+<pinref part="PB1_BRAKE_ON" gate="G$1" pin="NO"/>
 <wire x1="142.24" y1="68.58" x2="152.4" y2="68.58" width="0.1524" layer="91"/>
 <wire x1="152.4" y1="68.58" x2="152.4" y2="111.76" width="0.1524" layer="91"/>
 <label x="152.4" y="91.44" size="1.778" layer="95"/>
@@ -17242,9 +17242,9 @@ BUZZER</description>
 </net>
 <net name="24V" class="2">
 <segment>
-<pinref part="K1" gate="G$1" pin="NO"/>
+<pinref part="PB2_12/24" gate="G$1" pin="NO"/>
 <label x="154.94" y="109.22" size="1.778" layer="95"/>
-<pinref part="U1" gate="A" pin="2"/>
+<pinref part="X1" gate="A" pin="2"/>
 <wire x1="142.24" y1="109.22" x2="218.44" y2="109.22" width="0.1524" layer="91"/>
 </segment>
 </net>
@@ -17254,10 +17254,10 @@ BUZZER</description>
 <wire x1="210.82" y1="73.66" x2="210.82" y2="63.5" width="0.1524" layer="91"/>
 <wire x1="210.82" y1="63.5" x2="215.9" y2="63.5" width="0.1524" layer="91"/>
 <label x="154.94" y="73.66" size="1.778" layer="95"/>
-<pinref part="K3" gate="G$1" pin="NC"/>
+<pinref part="PB1_BRAKE_ON" gate="G$1" pin="NC"/>
 <wire x1="142.24" y1="73.66" x2="210.82" y2="73.66" width="0.1524" layer="91"/>
 <wire x1="215.9" y1="55.88" x2="215.9" y2="63.5" width="0.1524" layer="91"/>
-<pinref part="U1" gate="A" pin="4"/>
+<pinref part="X1" gate="A" pin="4"/>
 <wire x1="215.9" y1="63.5" x2="220.98" y2="63.5" width="0.1524" layer="91"/>
 <wire x1="220.98" y1="63.5" x2="220.98" y2="68.58" width="0.1524" layer="91"/>
 <junction x="215.9" y="63.5"/>
@@ -17265,7 +17265,7 @@ BUZZER</description>
 </net>
 <net name="SOLENOID_OUT" class="2">
 <segment>
-<pinref part="K3" gate="G$1" pin="C"/>
+<pinref part="PB1_BRAKE_ON" gate="G$1" pin="C"/>
 <wire x1="142.24" y1="71.12" x2="185.42" y2="71.12" width="0.1524" layer="91"/>
 <wire x1="185.42" y1="71.12" x2="185.42" y2="68.58" width="0.1524" layer="91"/>
 <wire x1="185.42" y1="68.58" x2="218.44" y2="68.58" width="0.1524" layer="91"/>
@@ -17275,7 +17275,7 @@ BUZZER</description>
 <pinref part="D1" gate="1" pin="C"/>
 <label x="154.94" y="71.12" size="1.778" layer="95"/>
 <junction x="218.44" y="68.58"/>
-<pinref part="U1" gate="A" pin="3"/>
+<pinref part="X1" gate="A" pin="3"/>
 </segment>
 </net>
 </nets>
