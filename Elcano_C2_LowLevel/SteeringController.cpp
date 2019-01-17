@@ -13,7 +13,7 @@ SteeringController::~SteeringController()
 {
 }
 
-void SteeringController::initialize(double input){
+void SteeringController::initialize(int32_t input){
   
   //Hacky fix for not burning servo circuit
   pinMode( STEER_ON, OUTPUT);
@@ -29,13 +29,13 @@ void SteeringController::initialize(double input){
   turnOn(input);
 }
 
-void SteeringController::engageSteering(double input) {
+void SteeringController::engageSteering(int32_t input) {
 	if (input > MAX_TURN)
 		input = MAX_TURN;
 	else if (input < MIN_TURN)
 		input = MIN_TURN;
 	if (currentSteeringUS != input) {
-		if (SerialPrint) {
+		if (DEBUG) {
 			Serial.print("Steering: ");
 			Serial.println(input);
 		}
@@ -45,7 +45,7 @@ void SteeringController::engageSteering(double input) {
 }
 
 //Private
-void SteeringController::turnOn(double input) {
+void SteeringController::turnOn(int32_t input) {
 	//sets the current angle
 	updateAngle(input);
 	//maps to turn signal
@@ -55,13 +55,13 @@ void SteeringController::turnOn(double input) {
 	
 	//enable power
 	digitalWrite(STEER_ON, RELAYInversion ? LOW : HIGH);
-	if(SerialPrint)
+	if(DEBUG)
 		Serial.println("Steering On");
 	
 
 }
 
-void SteeringController::SteeringPID(int input) {
+void SteeringController::SteeringPID(int32_t input) {
 	desiredTurn_us = input;
 	steerPID.Compute();
 	if (PIDSteeringOutput_us != currentSteeringUS) {
