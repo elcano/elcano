@@ -20,7 +20,7 @@ void Brakes::initialize(){
    * Relay 3 connects COM (other end of solenoid) to NO (12V) 
    */
 void Brakes::Release(){
-if (SerialPrint)
+if (DEBUG)
 	Serial.println("release");
   digitalWrite(BrakeOnPin, RELAYInversion ? HIGH : LOW);
   digitalWrite(BrakeVoltPin, RELAYInversion ? HIGH : LOW);
@@ -34,7 +34,7 @@ if (SerialPrint)
    *  Relay 3 connects COM (other end of solenoids) to NC (36V)
    */
 void Brakes::Stop(){
-	if (SerialPrint)
+	if (DEBUG)
 		Serial.println("stop");
   digitalWrite(BrakeVoltPin, RELAYInversion ? LOW :HIGH);  // Need the higher voltage to activate the solenoid.
   if (state != BR_HI_VOLTS){
@@ -53,7 +53,7 @@ void Brakes::Check(){
   unsigned long tick = millis();
   if (state == BR_HI_VOLTS && tick - clock_hi_ms > MaxHi_ms){  
 	  // Have reached maximum time to keep voltage high
-		if (SerialPrint)
+		if (DEBUG)
 			Serial.println("BRAKE SWITCH");
     digitalWrite(BrakeVoltPin, RELAYInversion ? HIGH : LOW); // Set to lower voltage, which will keep brakes applied
     state = BR_LO_VOLTS;
