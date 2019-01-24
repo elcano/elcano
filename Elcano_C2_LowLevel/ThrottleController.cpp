@@ -1,6 +1,9 @@
 #include "Settings.h"
 #include "ThrottleController.h"
+#include <Arduino.h>
 
+
+volatile uint32_t ThrottleController::tickTime_ms[2];
 
 ThrottleController::ThrottleController() :
   speedPID(&speedCyclometerInput_mmPs, &PIDThrottleOutput_pwm, &desiredSpeed_mmPs, proportional_throttle, integral_throttle, derivative_throttle, DIRECT)
@@ -18,12 +21,12 @@ void ThrottleController::initialize(){
   SPI.setDataMode(SPI_MODE0);
   SPI.setBitOrder(MSBFIRST);
   SPI.begin();
-  tickTime_ms[0] = 0;
-  tickTime_ms[1] = 0;
+
   calcTime_ms[0] = 0;
   calcTime_ms[1] = 0;
   prevSpeed_mmPs = 0;
-
+  
+  attachInterrupt(digitalPinToInterrupt(IRPT_WHEEL), tick, RISING);//pin 3 on Mega
 }
 
 /*
@@ -108,12 +111,17 @@ void ThrottleController::updateSpeed() {
 Uses previous two speeds to extrapolate the current speed
 Used to determine when we have stopped
 */
-void ThrottleController::tick(uint32_t tick) {
+
+void ThrottleController::tick() {
+	uint32_t tick = millis();
+	noInterrupts();
 	if ((tick - tickTime_ms[0]) > MIN_TICK_TIME_ms) {
 		tickTime_ms[1] = tickTime_ms[0];
 		tickTime_ms[0] = tick;
 	}
+	interrupts();
 }
+
 
 
 //Private functions

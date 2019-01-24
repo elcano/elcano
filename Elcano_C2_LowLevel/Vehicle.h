@@ -20,7 +20,7 @@ public:
 	void move(int32_t, int32_t);
 	void update();
 	int32_t getSpeed() { return throttle.getSpeedInput_mmPs(); };
-	void tick() { throttle.tick(millis()); };
+	
 	
 	void noPID(int32_t,int32_t);
 };
