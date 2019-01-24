@@ -1,3 +1,5 @@
+
+#include <SPI.h>
 #include "Settings.h"
 #include "Vehicle.h"
 #include "ElcanoSerial.h"
@@ -27,7 +29,7 @@ SerialData TxDataHiLevel, RxDataHiLevel, RC_Data;
 
 void setup(){
 
-	attachInterrupt(digitalPinToInterrupt(IRPT_WHEEL), WheelRev, RISING);//pin 3 on Mega
+	
 	
 	myTrike.initialize();
 	if (DEBUG)
@@ -121,8 +123,4 @@ void loop()
 }
 
 
-void WheelRev(){
- noInterrupts();
- myTrike.tick();
- interrupts();
-}
+
