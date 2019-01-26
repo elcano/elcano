@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!DOCTYPE eagle SYSTEM "eagle.dtd">
-<eagle version="9.2.2">
+<eagle version="9.3.0">
 <drawing>
 <settings>
 <setting alwaysvectorfont="yes"/>
@@ -1812,8 +1812,8 @@
 <hole x="113.538" y="5.08" drill="3.2"/>
 <hole x="32.258" y="53.34" drill="3.2"/>
 <hole x="114.808" y="53.34" drill="3.2"/>
-<hole x="91.186" y="67.818" drill="3.2"/>
-<hole x="100.838" y="67.818" drill="3.2"/>
+<hole x="91.186" y="66.294" drill="3.2"/>
+<hole x="100.838" y="66.294" drill="3.2"/>
 <hole x="62.738" y="48.26" drill="3.2"/>
 <hole x="62.738" y="20.32" drill="3.2"/>
 <circle x="60.325" y="9.525" radius="0.315628125" width="0.254" layer="25"/>
@@ -1838,111 +1838,87 @@
 <polygon width="0.254" layer="41">
 <vertex x="0" y="3.81"/>
 <vertex x="4.826" y="3.81"/>
-<vertex x="10.922" y="9.906"/>
-<vertex x="10.922" y="18.796"/>
-<vertex x="11.43" y="19.304"/>
-<vertex x="13.716" y="19.304"/>
-<vertex x="14.478" y="20.066"/>
-<vertex x="14.478" y="28.194"/>
-<vertex x="20.066" y="33.782"/>
-<vertex x="20.066" y="35.052"/>
-<vertex x="20.32" y="35.306"/>
-<vertex x="20.32" y="49.53"/>
+<vertex x="11.43" y="10.414"/>
+<vertex x="11.43" y="17.018"/>
+<vertex x="15.494" y="21.082"/>
+<vertex x="15.494" y="28.448"/>
+<vertex x="20.574" y="33.528"/>
+<vertex x="20.574" y="49.276"/>
 <vertex x="19.558" y="50.292"/>
 <vertex x="16.51" y="50.292"/>
 <vertex x="15.748" y="49.53"/>
 <vertex x="15.748" y="43.942"/>
-<vertex x="16.764" y="42.926"/>
-<vertex x="16.764" y="45.974"/>
-<vertex x="16.256" y="46.482"/>
-<vertex x="16.256" y="49.022"/>
-<vertex x="17.018" y="49.784"/>
-<vertex x="18.796" y="49.784"/>
-<vertex x="19.812" y="48.768"/>
-<vertex x="19.812" y="34.036"/>
-<vertex x="14.224" y="28.448"/>
-<vertex x="14.224" y="20.32"/>
-<vertex x="13.462" y="19.558"/>
-<vertex x="10.922" y="19.558"/>
-<vertex x="10.414" y="19.05"/>
-<vertex x="10.414" y="10.16"/>
-<vertex x="4.572" y="4.318"/>
-<vertex x="3.302" y="4.318"/>
-<vertex x="2.286" y="5.334"/>
-<vertex x="2.286" y="6.604"/>
-<vertex x="6.858" y="11.176"/>
-<vertex x="6.858" y="13.97"/>
-<vertex x="4.826" y="16.002"/>
-<vertex x="3.302" y="16.002"/>
-<vertex x="1.778" y="17.526"/>
-<vertex x="1.778" y="26.67"/>
-<vertex x="1.524" y="26.924"/>
-<vertex x="1.524" y="35.814"/>
-<vertex x="2.286" y="36.576"/>
-<vertex x="5.08" y="36.576"/>
+<vertex x="16.002" y="43.688"/>
+<vertex x="16.002" y="49.276"/>
+<vertex x="16.764" y="50.038"/>
+<vertex x="19.05" y="50.038"/>
+<vertex x="20.32" y="48.768"/>
+<vertex x="20.32" y="33.782"/>
+<vertex x="15.24" y="28.702"/>
+<vertex x="15.24" y="21.336"/>
+<vertex x="10.922" y="17.018"/>
+<vertex x="10.922" y="10.16"/>
+<vertex x="4.826" y="4.064"/>
+<vertex x="2.54" y="4.064"/>
+<vertex x="1.016" y="5.588"/>
+<vertex x="1.016" y="36.068"/>
+<vertex x="1.778" y="36.83"/>
+<vertex x="5.334" y="36.83"/>
 <vertex x="6.096" y="37.592"/>
-<vertex x="6.096" y="37.846"/>
-<vertex x="6.35" y="38.1"/>
-<vertex x="6.35" y="42.418"/>
-<vertex x="1.778" y="46.99"/>
-<vertex x="1.778" y="54.864"/>
-<vertex x="2.794" y="55.88"/>
-<vertex x="4.826" y="55.88"/>
-<vertex x="5.842" y="54.864"/>
-<vertex x="5.842" y="48.514"/>
-<vertex x="13.462" y="40.894"/>
-<vertex x="14.732" y="40.894"/>
+<vertex x="6.096" y="42.418"/>
+<vertex x="0.254" y="48.26"/>
+<vertex x="0.254" y="55.118"/>
+<vertex x="1.524" y="56.388"/>
+<vertex x="5.334" y="56.388"/>
+<vertex x="6.35" y="55.372"/>
+<vertex x="6.35" y="49.149"/>
+<vertex x="14.351" y="41.148"/>
 <vertex x="14.478" y="41.148"/>
 <vertex x="14.478" y="41.656"/>
-<vertex x="7.874" y="48.26"/>
-<vertex x="7.874" y="56.134"/>
-<vertex x="0" y="56.134"/>
+<vertex x="6.604" y="49.53"/>
+<vertex x="6.604" y="56.642"/>
+<vertex x="0" y="56.642"/>
 <vertex x="0" y="48.006"/>
 <vertex x="5.842" y="42.164"/>
 <vertex x="5.842" y="37.846"/>
 <vertex x="5.08" y="37.084"/>
 <vertex x="1.778" y="37.084"/>
-<vertex x="1.016" y="36.322"/>
-<vertex x="1.016" y="17.526"/>
-<vertex x="3.048" y="15.494"/>
-<vertex x="4.572" y="15.494"/>
-<vertex x="6.35" y="13.716"/>
-<vertex x="6.35" y="12.7"/>
+<vertex x="0.762" y="36.068"/>
+<vertex x="0.762" y="7.112"/>
 <vertex x="0" y="6.35"/>
 </polygon>
 <polygon width="0.254" layer="42">
-<vertex x="2.286" y="43.434"/>
-<vertex x="6.604" y="43.434"/>
-<vertex x="8.636" y="41.402"/>
-<vertex x="8.636" y="40.894"/>
-<vertex x="8.89" y="40.64"/>
-<vertex x="8.89" y="14.986"/>
-<vertex x="9.906" y="13.97"/>
-<vertex x="18.542" y="13.97"/>
-<vertex x="19.812" y="12.7"/>
-<vertex x="19.812" y="11.176"/>
-<vertex x="19.05" y="10.414"/>
-<vertex x="8.636" y="10.414"/>
-<vertex x="5.588" y="13.462"/>
-<vertex x="5.588" y="38.862"/>
-<vertex x="4.318" y="40.132"/>
-<vertex x="3.048" y="40.132"/>
-<vertex x="2.032" y="41.148"/>
-<vertex x="2.032" y="42.672"/>
+<vertex x="1.524" y="43.942"/>
+<vertex x="7.874" y="43.942"/>
+<vertex x="9.398" y="42.418"/>
+<vertex x="9.398" y="15.494"/>
+<vertex x="10.16" y="14.732"/>
+<vertex x="18.796" y="14.732"/>
+<vertex x="20.066" y="13.462"/>
+<vertex x="20.066" y="10.414"/>
+<vertex x="19.304" y="9.652"/>
+<vertex x="7.62" y="9.652"/>
+<vertex x="5.334" y="11.938"/>
+<vertex x="5.334" y="38.354"/>
+<vertex x="4.064" y="39.624"/>
+<vertex x="2.54" y="39.624"/>
+<vertex x="1.524" y="40.64"/>
+<vertex x="1.524" y="43.18"/>
 <vertex x="0" y="44.704"/>
-<vertex x="0" y="39.624"/>
-<vertex x="4.318" y="39.624"/>
-<vertex x="5.334" y="38.608"/>
-<vertex x="5.334" y="12.954"/>
-<vertex x="8.382" y="9.906"/>
-<vertex x="19.304" y="9.906"/>
-<vertex x="20.32" y="10.922"/>
-<vertex x="20.32" y="12.7"/>
-<vertex x="18.542" y="14.478"/>
-<vertex x="9.144" y="14.478"/>
-<vertex x="9.144" y="43.02125"/>
+<vertex x="0" y="39.37"/>
+<vertex x="3.81" y="39.37"/>
+<vertex x="5.08" y="38.1"/>
+<vertex x="5.08" y="11.684"/>
+<vertex x="7.366" y="9.398"/>
+<vertex x="19.558" y="9.398"/>
+<vertex x="20.32" y="10.16"/>
+<vertex x="20.32" y="13.462"/>
+<vertex x="18.796" y="14.986"/>
+<vertex x="10.414" y="14.986"/>
+<vertex x="9.652" y="15.748"/>
+<vertex x="9.652" y="42.51325"/>
 <vertex x="7.96925" y="44.196"/>
-<vertex x="2.286" y="44.196"/>
+<vertex x="1.524" y="44.196"/>
 </polygon>
 <dimension x1="0" y1="0" x2="116.84" y2="0" x3="58.42" y3="-6.858" textsize="1.778" layer="20" unit="inch"/>
 <dimension x1="116.84" y1="0" x2="116.84" y2="69.85" x3="124.46" y3="34.925" textsize="1.778" layer="20" unit="inch"/>
@@ -5654,12 +5630,12 @@ design rules under a new name.</description>
 <contactref element="X1" pad="1"/>
 <polygon width="0.1524" layer="1" isolate="0.3048" thermals="no">
 <vertex x="2.54" y="25.654"/>
-<vertex x="4.572" y="25.654"/>
-<vertex x="6.096" y="24.13"/>
-<vertex x="6.096" y="17.78"/>
-<vertex x="4.572" y="16.256"/>
-<vertex x="3.556" y="16.256"/>
-<vertex x="2.032" y="17.78"/>
+<vertex x="5.08" y="25.654"/>
+<vertex x="5.842" y="24.892"/>
+<vertex x="5.842" y="16.764"/>
+<vertex x="5.334" y="16.256"/>
+<vertex x="2.794" y="16.256"/>
+<vertex x="2.032" y="17.018"/>
 <vertex x="2.032" y="25.146"/>
 </polygon>
 </signal>
@@ -5667,22 +5643,22 @@ design rules under a new name.</description>
 <contactref element="PB2_12/24" pad="3"/>
 <contactref element="PB1_BRAKE_ON" pad="5"/>
 <polygon width="0.1524" layer="16" isolate="0.3048" thermals="no">
-<vertex x="18.796" y="13.462"/>
-<vertex x="19.558" y="12.7"/>
-<vertex x="19.558" y="11.43"/>
-<vertex x="18.796" y="10.668"/>
-<vertex x="8.636" y="10.668"/>
+<vertex x="18.796" y="13.716"/>
+<vertex x="19.558" y="12.954"/>
+<vertex x="19.558" y="11.176"/>
+<vertex x="18.796" y="10.414"/>
+<vertex x="8.89" y="10.414"/>
 <vertex x="5.842" y="13.462"/>
 <vertex x="5.842" y="39.116"/>
-<vertex x="4.572" y="40.386"/>
-<vertex x="3.048" y="40.386"/>
-<vertex x="2.54" y="40.894"/>
-<vertex x="2.54" y="42.672"/>
-<vertex x="3.048" y="43.18"/>
-<vertex x="6.35" y="43.18"/>
-<vertex x="8.382" y="41.148"/>
-<vertex x="8.382" y="14.986"/>
-<vertex x="9.906" y="13.462"/>
+<vertex x="4.826" y="40.132"/>
+<vertex x="3.048" y="40.132"/>
+<vertex x="2.286" y="40.894"/>
+<vertex x="2.286" y="42.672"/>
+<vertex x="3.048" y="43.434"/>
+<vertex x="5.588" y="43.434"/>
+<vertex x="8.636" y="40.386"/>
+<vertex x="8.636" y="14.732"/>
+<vertex x="9.652" y="13.716"/>
 </polygon>
 </signal>
 <signal name="24V" class="2" airwireshidden="yes">
@@ -5690,17 +5666,17 @@ design rules under a new name.</description>
 <contactref element="X1" pad="2"/>
 <polygon width="0.1524" layer="1" isolate="0.3048" thermals="no">
 <vertex x="6.096" y="29.21"/>
-<vertex x="2.54" y="29.21"/>
-<vertex x="1.778" y="28.448"/>
-<vertex x="1.778" y="27.178"/>
-<vertex x="2.54" y="26.416"/>
+<vertex x="2.286" y="29.21"/>
+<vertex x="1.778" y="28.702"/>
+<vertex x="1.778" y="26.924"/>
+<vertex x="2.286" y="26.416"/>
 <vertex x="5.334" y="26.416"/>
 <vertex x="7.112" y="24.638"/>
-<vertex x="7.112" y="10.922"/>
-<vertex x="2.54" y="6.35"/>
-<vertex x="2.54" y="5.588"/>
-<vertex x="3.556" y="4.572"/>
-<vertex x="4.572" y="4.572"/>
+<vertex x="7.112" y="11.176"/>
+<vertex x="2.286" y="6.35"/>
+<vertex x="2.286" y="5.842"/>
+<vertex x="3.81" y="4.318"/>
+<vertex x="4.318" y="4.318"/>
 <vertex x="10.16" y="10.16"/>
 <vertex x="10.16" y="25.146"/>
 </polygon>
@@ -5710,10 +5686,10 @@ design rules under a new name.</description>
 <contactref element="PB1_BRAKE_ON" pad="4"/>
 <contactref element="X1" pad="4"/>
 <polygon width="0.1524" layer="1" isolate="0.3048" thermals="no">
-<vertex x="2.54" y="33.528"/>
-<vertex x="11.684" y="33.528"/>
-<vertex x="13.97" y="35.814"/>
-<vertex x="13.97" y="40.132"/>
+<vertex x="2.286" y="33.528"/>
+<vertex x="12.446" y="33.528"/>
+<vertex x="14.478" y="35.56"/>
+<vertex x="14.478" y="39.624"/>
 <vertex x="5.588" y="48.514"/>
 <vertex x="5.588" y="54.864"/>
 <vertex x="4.826" y="55.626"/>
@@ -5723,9 +5699,9 @@ design rules under a new name.</description>
 <vertex x="6.604" y="42.672"/>
 <vertex x="6.604" y="37.592"/>
 <vertex x="5.334" y="36.322"/>
-<vertex x="2.54" y="36.322"/>
-<vertex x="1.778" y="35.56"/>
-<vertex x="1.778" y="34.29"/>
+<vertex x="2.286" y="36.322"/>
+<vertex x="1.778" y="35.814"/>
+<vertex x="1.778" y="34.036"/>
 </polygon>
 </signal>
 <signal name="SOLENOID_OUT" class="2" airwireshidden="yes">
@@ -5733,7 +5709,7 @@ design rules under a new name.</description>
 <contactref element="D1" pad="C"/>
 <contactref element="X1" pad="3"/>
 <polygon width="0.1524" layer="1" isolate="0.3048" thermals="no">
-<vertex x="2.794" y="29.972"/>
+<vertex x="2.286" y="29.972"/>
 <vertex x="6.35" y="29.972"/>
 <vertex x="10.922" y="25.4"/>
 <vertex x="10.922" y="20.574"/>
@@ -5741,8 +5717,8 @@ design rules under a new name.</description>
 <vertex x="13.208" y="19.812"/>
 <vertex x="13.97" y="20.574"/>
 <vertex x="13.97" y="28.448"/>
-<vertex x="19.558" y="34.036"/>
-<vertex x="19.558" y="48.768"/>
+<vertex x="19.812" y="34.29"/>
+<vertex x="19.812" y="48.514"/>
 <vertex x="18.796" y="49.53"/>
 <vertex x="17.272" y="49.53"/>
 <vertex x="16.51" y="48.768"/>
@@ -5750,9 +5726,9 @@ design rules under a new name.</description>
 <vertex x="17.272" y="45.974"/>
 <vertex x="17.272" y="36.576"/>
 <vertex x="13.462" y="32.766"/>
-<vertex x="2.794" y="32.766"/>
-<vertex x="2.032" y="32.004"/>
-<vertex x="2.032" y="30.734"/>
+<vertex x="2.286" y="32.766"/>
+<vertex x="1.778" y="32.258"/>
+<vertex x="1.778" y="30.48"/>
 </polygon>
 </signal>
 <signal name="TX3">
