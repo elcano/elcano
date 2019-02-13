@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!DOCTYPE eagle SYSTEM "eagle.dtd">
-<eagle version="9.2.2">
+<eagle version="9.3.0">
 <drawing>
 <settings>
 <setting alwaysvectorfont="no"/>
@@ -1945,13 +1945,13 @@ SOIC, 0.3 inch width</description>
 </device>
 <device name="DIL08" package="IC-PACKAGE_DIL08">
 <connects>
-<connect gate="MCP2551" pin="CANH" pad="6"/>
-<connect gate="MCP2551" pin="CANL" pad="7"/>
-<connect gate="MCP2551" pin="RS" pad="5"/>
+<connect gate="MCP2551" pin="CANH" pad="7"/>
+<connect gate="MCP2551" pin="CANL" pad="6"/>
+<connect gate="MCP2551" pin="RS" pad="8"/>
 <connect gate="MCP2551" pin="RXD" pad="4"/>
 <connect gate="MCP2551" pin="TXD" pad="1"/>
 <connect gate="MCP2551" pin="VDD" pad="3"/>
-<connect gate="MCP2551" pin="VREF" pad="8"/>
+<connect gate="MCP2551" pin="VREF" pad="5"/>
 <connect gate="MCP2551" pin="VSS" pad="2"/>
 </connects>
 <technologies>
