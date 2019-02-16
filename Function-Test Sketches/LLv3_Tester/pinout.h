@@ -1,6 +1,6 @@
 #define WATCHDOG D5
 #define BRAKE_PWM D2
-#define STEER_SERVO_PWM D7
+#define STEER_SERVO_PWM 6
 
 
 #define CAN_SS 49
