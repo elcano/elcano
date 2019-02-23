@@ -17419,18 +17419,6 @@ new: Attribute TP_SIGNAL_NAME&lt;br&gt;
 <label x="124.46" y="5.08" size="1.778" layer="95"/>
 </segment>
 </net>
-<net name="WATCHDOG" class="0">
-<segment>
-<wire x1="203.2" y1="101.6" x2="177.8" y2="101.6" width="0.1524" layer="91"/>
-<pinref part="X3" gate="-1" pin="15"/>
-<label x="180.34" y="101.6" size="1.778" layer="95"/>
-</segment>
-<segment>
-<pinref part="DIGITAL_0-7" gate="A" pin="6"/>
-<wire x1="27.94" y1="27.94" x2="53.34" y2="27.94" width="0.1524" layer="91"/>
-<label x="27.94" y="27.94" size="1.778" layer="95"/>
-</segment>
-</net>
 <net name="WHEELROTATION" class="0">
 <segment>
 <label x="109.22" y="96.52" size="1.778" layer="95"/>
@@ -17798,6 +17786,11 @@ new: Attribute TP_SIGNAL_NAME&lt;br&gt;
 <pinref part="DACB" gate="G$1" pin="TP"/>
 <wire x1="137.16" y1="10.16" x2="121.92" y2="10.16" width="0.1524" layer="91"/>
 <label x="124.46" y="10.16" size="1.778" layer="95"/>
+</segment>
+<segment>
+<wire x1="203.2" y1="101.6" x2="177.8" y2="101.6" width="0.1524" layer="91"/>
+<pinref part="X3" gate="-1" pin="15"/>
+<label x="180.34" y="101.6" size="1.778" layer="95"/>
 </segment>
 </net>
 </nets>
