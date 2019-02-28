@@ -1,0 +1,9 @@
+Header Pin, Function, Cat5e Color,  Weird white breakout-box color
+1,  GND,    orange-white,           blue
+2,  L_STR,  orange,                 orange
+3,  GND,    green-white,            black
+4,  R_STR,  blue,                   red
+5,  GND,    blue-white,             green
+6,  PWM,    green,                  yellow
+7,  5v,     brown-white,            brown
+8,  5v,     brown,                  white
