@@ -1,6 +1,8 @@
 #include "Settings.h"
-#include <Arduino.h>
 #include "Brakes.h"
+#ifndef TESTING
+#include <Arduino.h>
+#endif
 
 Brakes::Brakes(){
   pinMode( BrakeOnPin, OUTPUT);

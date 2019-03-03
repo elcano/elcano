@@ -1,7 +1,8 @@
 #include "Settings.h"
 #include "ThrottleController.h"
+#ifndef Testing
 #include <Arduino.h>
-
+#endif
 
 volatile uint32_t ThrottleController::tickTime_ms[2];
 
@@ -17,7 +18,6 @@ void ThrottleController::initialize(){
   speedPID.SetSampleTime(PID_CALCULATE_TIME);
   speedPID.SetMode(AUTOMATIC);
   pinMode(SelectAB, OUTPUT);
-  pinMode(SelectCD, OUTPUT);
   SPI.setDataMode(SPI_MODE0);
   SPI.setBitOrder(MSBFIRST);
   SPI.begin();
@@ -125,6 +125,34 @@ void ThrottleController::tick() {
 
 
 //Private functions
+
+
+/*
+Applies value to adress, producing analog voltage
+Address: 0,1,2,3 map to channel a,b,c,d respectivly
+Value: digital value converted to analog voltage
+output goes to mcp 4802 DAC chip via SPI
+no input from chip
+Formerly DAC_write
+***************************************************
+REGISTER 5-3: WRITE COMMAND REGISTER FOR MCP4802 (8-BIT DAC)
+		A/B — GA SHDN D7 D6 D5 D4 D3 D2 D1 D0 x x x x
+		bit 15 bit 0
+		bit 15 A/B: DACA or DACB Selection bit
+		1 = Write to DACB
+		0 = Write to DACA
+		bit 14 — Don’t Care
+		bit 13 GA: Output Gain Selection bit
+		1 = 1x (VOUT = VREF * D/4096)
+		0 = 2x (VOUT = 2 * VREF * D/4096), where internal VREF = 2.048V.
+		bit 12 SHDN: Output Shutdown Control bit
+		1 = Active mode operation. VOUT is available.
+		0 = Shutdown the selected DAC channel. Analog output is not available at the channel that was shut down.
+		VOUT pin is connected to 500 k (typical)
+		bit 11-0 D11:D0: DAC Input Data bits. Bit x is ignored.
+		With 4.95 V on Vcc, observed output for 255 is 4.08V.
+		This is as documented; with gain of 2, maximum output is 2 * Vref
+*/
 void ThrottleController::write(int32_t address, int32_t value) {
 
 	int16_t byte1 = ((value & 0xF0) >> 4) | 0x10; 

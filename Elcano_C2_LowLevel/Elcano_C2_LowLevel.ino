@@ -27,10 +27,13 @@ void setup() {
   Serial.begin(115200);
   while (CAN_OK != CAN.begin(CAN_500KBPS))
   {
-    Serial.println("CAN BUS Shield init fail");
+	  if (DEBUG) {
+		  Serial.println("CAN BUS Shield init fail");
+	  }
     delay(1000);
   }
-  Serial.println("CAN BUS init ok!");
+  if(DEBUG)
+		Serial.println("CAN BUS init ok!");
   /***********END OF Communication Section**********************************/
 }
 
@@ -61,18 +64,23 @@ void loop()
       unsigned int canId = CAN.getCanId();
 
       if (canId == Drive_CANID) { // the drive ID receive from high level
-        Serial.print("RECEIVE DRIVE CAN MESSAGE FROM HIGH LEVEL WITH ID: ");
-        Serial.println(canId, HEX);
-
+		  if (DEBUG) {
+			  Serial.print("RECEIVE DRIVE CAN MESSAGE FROM HIGH LEVEL WITH ID: ");
+			  Serial.println(canId, HEX);
+		  }
         int low_result = (unsigned int)(buf[3] << 24) | (buf[2] << 16) | (buf[1] << 8) | (buf[0]);
         desired_speed_cmPs = low_result;
-        Serial.print("Speed: ");
-        Serial.print(low_result, DEC);
+		if (DEBUG) {
+			Serial.print("Speed: ");
+			Serial.print(low_result, DEC);
+		}
 
         int high_result = (unsigned int)(buf[7] << 24) | (buf[6] << 16) | (buf[5] << 8) | (buf[4]);
         desired_angle = high_result;
+		if(DEBUG){
         Serial.print("  Angle: ");
         Serial.println(high_result, DEC);
+		}
       }
     }
   }
