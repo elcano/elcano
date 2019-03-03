@@ -1,9 +1,9 @@
 #pragma once
 #include "Settings.h"
-
+#ifndef TESTING
 #include <SPI.h>
 #include "PID_v1.h" 
-
+#endif
 
 class ThrottleController{
 private:

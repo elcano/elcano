@@ -1,6 +1,8 @@
 #include "Settings.h"
-#include <Arduino.h>
 #include "Vehicle.h"
+#ifndef TESTING
+#include <Arduino.h>
+#endif
 
 
 Vehicle::Vehicle(){

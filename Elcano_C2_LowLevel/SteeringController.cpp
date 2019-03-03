@@ -1,7 +1,9 @@
 #include "Settings.h"
 #include "SteeringController.h"
+#ifndef TESTING
 #include <Arduino.h>
-
+#include "PID_v1.h"
+#endif
 
 SteeringController::SteeringController():
 	steerPID(&steerAngleUS, &PIDSteeringOutput_us, &desiredTurn_us, proportional_steering, integral_steering, derivative_steering, DIRECT)
