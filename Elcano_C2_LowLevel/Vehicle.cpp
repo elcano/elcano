@@ -2,7 +2,11 @@
 #include "Vehicle.h"
 #ifndef TESTING
 #include <Arduino.h>
+#include <PinChangeInterrupt/src/PinChangeInterrupt.h>
 #endif
+
+volatile int32_t Vehicle::desired_speed_cmPs;
+volatile int32_t Vehicle::desired_angle;
 
 
 Vehicle::Vehicle(){
@@ -18,7 +22,11 @@ Vehicle::~Vehicle(){
 void Vehicle::initialize() {
 	throttle.initialize();
 	brake.initialize();
-	steer.initialize(computeAngleLeft());
+	steer.initialize();
+	desired_angle = 0;
+	desired_speed_cmPs = 0;
+	if (IRPT_CAN)
+		attachPCINT(digitalPinToPCINT(IRPT_CAN), recieveCan, RISING);
 }
 
 void Vehicle::eStop() {
@@ -27,54 +35,47 @@ void Vehicle::eStop() {
 	brake.Stop();
 	throttle.stop();
 }
-
-void Vehicle::stop(int32_t strength) {
-	throttle.stop(strength);
-}
-
-/*
-Side note: if the brakes are more emergency brakes
-should we be calling the brakes here?
-*/
-void Vehicle::move(int32_t dAngle, int32_t dSpeed) {
-//If we want to be going slower than we currently are by 10* current speed + 10  then stop
-	if (dSpeed < (throttle.getSpeedInput_mmPs() + 10))
+void Vehicle::update(int32_t tempDspeed, int32_t tempDangle) {
+	brake.Update();
+	int currentSpeed = throttle.update(tempDspeed);
+	int currentAngle = steer.update(tempDangle);
+	if (tempDspeed < (currentSpeed * 10))
 		brake.Stop();
-	else {
+	else
 		brake.Release();
-		throttle.setDesiredSpeed__mmPs(dSpeed);
-	}
-	steer.setDesiredTurn(dAngle);
 }
 
-/*
-This is part of our demo code that 
-does not use the pids
-*/
-void Vehicle::noPID(int32_t dAngle,int32_t dSpeed){
-  steer.engageSteering(dAngle);
-  brake.Release();
-  throttle.engageThrottle(dSpeed);
-}
 
 /*
 Checks if the brakes have been on too long
 Computes the speed and angle
 */
 void Vehicle::update() {
-	brake.Check();
-	throttle.updateSpeed();
-	steer.updateAngle(computeAngleLeft());
-	}
+	int32_t tempDspeed;
+	int32_t tempDangle;
+	noInterrupts();
+	tempDspeed = desired_speed_cmPs;
+	interrupts();
+	noInterrupts();
+	tempDangle = desired_angle;
+	interrupts();
+	brake.Update();
+	int currentSpeed = throttle.update(tempDspeed);
+	int currentAngle = steer.update(tempDangle);
+	if (tempDspeed < (currentSpeed*10))
+		brake.Stop();
+	else 
+		brake.Release();
 
-int32_t Vehicle::computeAngleLeft() {
-	int32_t val = analogRead(AngleSensorLeft);
-	val = map(val, MIN_Left_Sensor, MAX_Left_Sensor, MIN_TURN, MAX_TURN);
-	return val;
+	//send msg to can
 }
 
-int32_t Vehicle::computeAngleRight() {
-	int32_t val = analogRead(AngleSensorRight);
-	val = map(val, MIN_Right_Sensor, MAX_Right_Sensor, MIN_TURN, MAX_TURN);
-	return val;
+
+
+
+void Vehicle::recieveCan() {
+	noInterrupts();
+	//recieve message
+
+	interrupts();
 }

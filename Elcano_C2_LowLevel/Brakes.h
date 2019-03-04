@@ -43,11 +43,11 @@ class Brakes
 {
  public:
   Brakes();
-  void Stop();
+  static void Stop();
   void Release();
-  void Check();
+  void Update();
   void initialize();
  private:
-  enum brake_state {BR_OFF, BR_HI_VOLTS, BR_LO_VOLTS} state;
-  uint32_t clock_hi_ms;
+  static volatile enum brake_state {BR_OFF, BR_HI_VOLTS, BR_LO_VOLTS} state;
+  static volatile uint32_t clock_hi_ms;
  } ;

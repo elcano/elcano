@@ -11,13 +11,15 @@ class SteeringController{
 	double PIDSteeringOutput_us;
 	double desiredTurn_us;
 	int32_t currentSteeringUS =0;
-	void turnOn(int32_t input);
 	void SteeringPID(int32_t input);
+	int32_t computeAngleLeft();
+	int32_t computeAngleRight();
+	bool usePids;
+	void engageSteering(int32_t input);
 public:
 	SteeringController();
 	~SteeringController();
-	void initialize(int32_t input);
-	void engageSteering(int32_t input);
-	void updateAngle(int32_t input) { steerAngleUS = input; };
-	void setDesiredTurn(int32_t input) { SteeringPID(input); };
+	void initialize();
+	int32_t update(int32_t desiredAngle);
+	void changePIDuse(bool usePids) { usePids = usePids };
 };

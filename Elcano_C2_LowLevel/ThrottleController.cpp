@@ -2,13 +2,17 @@
 #include "ThrottleController.h"
 #ifndef Testing
 #include <Arduino.h>
+#include <PinChangeInterrupt/src/PinChangeInterrupt.h>
+
 #endif
 
 volatile uint32_t ThrottleController::tickTime_ms[2];
 
 ThrottleController::ThrottleController() :
   speedPID(&speedCyclometerInput_mmPs, &PIDThrottleOutput_pwm, &desiredSpeed_mmPs, proportional_throttle, integral_throttle, derivative_throttle, DIRECT)
-{}
+{
+	usePids = false;
+}
   
 ThrottleController::~ThrottleController(){
 }
@@ -25,8 +29,10 @@ void ThrottleController::initialize(){
   calcTime_ms[0] = 0;
   calcTime_ms[1] = 0;
   prevSpeed_mmPs = 0;
-  
-  attachInterrupt(digitalPinToInterrupt(IRPT_WHEEL), tick, RISING);//pin 3 on Mega
+ if (IRPT_WHEEL != 3)
+	attachPCINT(digitalPinToPCINT(IRPT_WHEEL), tick, RISING);
+ else
+	attachInterrupt(digitalPinToInterrupt(IRPT_WHEEL), tick, RISING);//pin 3 on Mega
 }
 
 /*
@@ -36,81 +42,6 @@ void ThrottleController::stop() {
 	engageThrottle(0);
 	currentThrottlePWM = 0;
 }
-
-/*
-decreases the pwm
-new signal = previous (1-strength)
-if strength > 1, we use 0
-*/
-void ThrottleController::stop(int32_t strength) {
-	if (strength >= 1)
-		stop();
-	else {
-		int32_t decelerateTo = currentThrottlePWM *(1 - (0.1*strength));
-		engageThrottle(decelerateTo);
-		currentThrottlePWM = decelerateTo;
-	}
-}
-
-/* !UPDATE THIS OBSERVED INFO! (LAST UPDATE: May 10, 2013, TCF)
-0.831 V at rest 52 counts
-1.20 V: nothing 75
-1.27 V: just starting 79
-1.40 V: slow, steady 87
-1.50 V: brisker 94
-3.63 V: max 227 counts
-255 counts = 4.08 V
-*/
-void ThrottleController::engageThrottle(int32_t input) {
-  if (input != 0){
-    input = map(input, 0, MAX_SPEED_mmPs, MIN_ACC_OUT, MAX_ACC_OUT);
-  }
-  
-	if (input != currentThrottlePWM) {
-		write(DAC_CHANNEL, input);
-		currentThrottlePWM = input;  // Remember most recent throttle PWM value.
-
-	}
-}
-
-/*
-*/
-void ThrottleController::updateSpeed() {
-	if (tickTime_ms[1] == 0)
-		speedCyclometerInput_mmPs = 0;
-	else if (calcTime_ms[0] == 0) {
-		speedCyclometerInput_mmPs = WHEEL_CIRCUM_MM * (1000.0 / (tickTime_ms[0] - tickTime_ms[1]));
-		prevSpeed_mmPs = speedCyclometerInput_mmPs;
-		calcTime_ms[1] = tickTime_ms[1];
-		calcTime_ms[0] = tickTime_ms[0];
-	}
-	else {
-		if (calcTime_ms[1] == tickTime_ms[1]) {
-			uint32_t timeDiff = millis() - calcTime_ms[0];
-			if (timeDiff > MAX_TICK_TIME_ms) {
-				speedCyclometerInput_mmPs = 0;
-				if (timeDiff > (2 * MAX_TICK_TIME_ms)) {
-					prevSpeed_mmPs = 0;
-					tickTime_ms[1] = 0;
-				}
-			}
-			else if (prevSpeed_mmPs > speedCyclometerInput_mmPs) {
-				speedCyclometerInput_mmPs = extrapolateSpeed();
-			}
-		}
-		else {
-			calcTime_ms[1] = calcTime_ms[0];
-			calcTime_ms[0] = tickTime_ms[0];
-			prevSpeed_mmPs = speedCyclometerInput_mmPs;
-			speedCyclometerInput_mmPs = WHEEL_CIRCUM_MM * (1000.0 / (tickTime_ms[0] - tickTime_ms[1]));
-		}
-	}
-}
-
-/*
-Uses previous two speeds to extrapolate the current speed
-Used to determine when we have stopped
-*/
 
 void ThrottleController::tick() {
 	uint32_t tick = millis();
@@ -122,10 +53,17 @@ void ThrottleController::tick() {
 	interrupts();
 }
 
+int32_t ThrottleController::update(int32_t dSpeed) {
+	computeSpeed();
+	if (usePids)
+		ThrottlePID(dSpeed);
+	else
+		engageThrottle(dSpeed);
+	speedCyclometerInput_mmPs;
+}
 
 
 //Private functions
-
 
 /*
 Applies value to adress, producing analog voltage
@@ -167,6 +105,8 @@ void ThrottleController::write(int32_t address, int32_t value) {
 	
 }
 
+
+
 void ThrottleController::ThrottlePID(int32_t desiredValue) {
 	if (desiredValue >= (speedCyclometerInput_mmPs + 10)) {
 		speedPID.Compute();
@@ -174,6 +114,29 @@ void ThrottleController::ThrottlePID(int32_t desiredValue) {
 		engageThrottle(PIDThrottleOutput_pwm);
 	}
 }
+
+/* !UPDATE THIS OBSERVED INFO! (LAST UPDATE: May 10, 2013, TCF)
+0.831 V at rest 52 counts
+1.20 V: nothing 75
+1.27 V: just starting 79
+1.40 V: slow, steady 87
+1.50 V: brisker 94
+3.63 V: max 227 counts
+255 counts = 4.08 V
+*/
+void ThrottleController::engageThrottle(int32_t input) {
+  if (input != 0){
+    input = map(input, 0, MAX_SPEED_mmPs, MIN_ACC_OUT, MAX_ACC_OUT);
+  }
+  
+	if (input != currentThrottlePWM) {
+		write(DAC_CHANNEL, input);
+		currentThrottlePWM = input;  // Remember most recent throttle PWM value.
+
+	}
+}
+
+
 
 int32_t ThrottleController::extrapolateSpeed() {
 	int32_t y;
@@ -189,3 +152,47 @@ int32_t ThrottleController::extrapolateSpeed() {
 		y = 0;
 	return y;
 }
+
+/*
+Uses previous two speeds to extrapolate the current speed
+Used to determine when we have stopped
+*/
+void ThrottleController::computeSpeed() {
+	uint32_t tempTick[2];
+	noInterrupts();
+	tempTick[0] = tickTime_ms[0];
+	tempTick[1] = tickTime_ms[1];
+	interrupts();
+	if (tempTick[1] == 0)
+		speedCyclometerInput_mmPs = 0;
+	else if (calcTime_ms[0] == 0) {
+		speedCyclometerInput_mmPs = WHEEL_CIRCUM_MM * (1000.0 / (tempTick[0] - tempTick[1]));
+		prevSpeed_mmPs = speedCyclometerInput_mmPs;
+		calcTime_ms[1] = tempTick[1];
+		calcTime_ms[0] = tempTick[0];
+	}
+	else {
+		if (calcTime_ms[1] == tempTick[1]) {
+			uint32_t timeDiff = millis() - calcTime_ms[0];
+			if (timeDiff > MAX_TICK_TIME_ms) {
+				speedCyclometerInput_mmPs = 0;
+				if (timeDiff > (2 * MAX_TICK_TIME_ms)) {
+					prevSpeed_mmPs = 0;
+					noInterrupts();
+					tickTime_ms[1] = 0;
+					interrupts();
+				}
+			}
+			else if (prevSpeed_mmPs > speedCyclometerInput_mmPs) {
+				speedCyclometerInput_mmPs = extrapolateSpeed();
+			}
+		}
+		else {
+			calcTime_ms[1] = calcTime_ms[0];
+			calcTime_ms[0] = tempTick[0];
+			prevSpeed_mmPs = speedCyclometerInput_mmPs;
+			speedCyclometerInput_mmPs = WHEEL_CIRCUM_MM * (1000.0 / (tempTick[0] - tempTick[1]));
+		}
+	}
+}
+

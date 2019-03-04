@@ -16,6 +16,9 @@ CAN_BUS_Shield by Seeed-Studio
 PID by Brett Beauregard
 	https://github.com/br3ttb/Arduino-PID-Library
 
+Pin Change Interrupt by Nico Hood
+	https://github.com/NicoHood/PinChangeInterrupt
+
 Builit-in 
 SPI library
 Servo library

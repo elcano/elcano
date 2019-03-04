@@ -9,18 +9,16 @@ private:
 	Brakes brake;
 	ThrottleController throttle;
 	SteeringController steer;
-	int32_t computeAngleLeft();
-	int32_t computeAngleRight();
+	static volatile int32_t desired_speed_cmPs;
+	static volatile int32_t desired_angle;
+	int32_t current_speed;
+	int32_t current_angle;
 public:
 	Vehicle();
 	~Vehicle();
 	void initialize();
-	void eStop();
-	void stop(int32_t strength);
-	void move(int32_t, int32_t);
 	void update();
-	int32_t getSpeed() { return throttle.getSpeedInput_mmPs(); };
-	
-	
-	void noPID(int32_t,int32_t);
+	void Vehicle::update(int32_t tempDspeed, int32_t tempDangle);
+	void eStop();
+	static void recieveCan();
 };

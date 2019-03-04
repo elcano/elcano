@@ -5,6 +5,7 @@ const int baud  = 115200;   // baudrate for debugging with a host PC over USB se
 /* Pin declarations */
 #define WATCHDOG            5   // keep-alive watchdog is routed to Power-on, and may be unused.
 #define IRPT_ESTOP          A9  // physical E-Stop port
+#define IRPT_CAN			A10 // Interrupt for can msg
 #define CAN_SS              49  // CANbus slave select
 
 #define DAC_SS              48  // DAC slave select
