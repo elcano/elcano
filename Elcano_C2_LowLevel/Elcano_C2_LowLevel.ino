@@ -1,3 +1,4 @@
+
 #include <SPI.h>
 #include "Settings.h"
 #include "Vehicle.h"
@@ -43,9 +44,7 @@ void loop()
   nextTime = nextTime + LOOP_TIME_MS;
   uint32_t timeStart_ms = millis();
 
-  //Checks if the brakes are on too long
-  //If enabled computes the current angle and speed
-  myTrike.update();
+  
 
 
   /***********START OF Communication Section********************************/
@@ -92,7 +91,7 @@ void loop()
     if (!auto_mode && desired_speed_cmPs < -10)
       myTrike.eStop();
     else
-      myTrike.move(desired_angle, desired_speed_cmPs);
+      myTrike.update(desired_angle, desired_speed_cmPs);
   }
   /***********END OF Communication Section**********************************/
 
