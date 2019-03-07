@@ -5,8 +5,7 @@
 #include <PinChangeInterrupt/src/PinChangeInterrupt.h>
 #endif
 
-volatile Brakes::brake_state Brakes::state;
-volatile uint32_t Brakes::clock_hi_ms;
+
 
 Brakes::Brakes(){
   pinMode( BrakeOnPin, OUTPUT);
@@ -18,8 +17,7 @@ Brakes::Brakes(){
 //Start with brakes off
 void Brakes::initialize(){
     Release();
-	if (IRPT_ESTOP)
-		attachPCINT(digitalPinToPCINT(IRPT_ESTOP), Stop, RISING);
+	
 }
 
   /*  Expected behavior:
