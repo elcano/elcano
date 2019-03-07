@@ -1,4 +1,5 @@
-#define WATCHDOG D5
+#define ODO_INT A8
+
 #define BRAKE_PWM D2
 #define STEER_SERVO_PWM 6
 
