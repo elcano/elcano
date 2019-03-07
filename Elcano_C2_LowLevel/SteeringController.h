@@ -14,12 +14,9 @@ class SteeringController{
 	void SteeringPID(int32_t input);
 	int32_t computeAngleLeft();
 	int32_t computeAngleRight();
-	bool usePids;
 	void engageSteering(int32_t input);
 public:
 	SteeringController();
 	~SteeringController();
-	void initialize();
 	int32_t update(int32_t desiredAngle);
-	void changePIDuse(bool usePids) { usePids = usePids; }
 };

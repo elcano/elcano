@@ -6,19 +6,19 @@
 
 class Vehicle{
 private:
-	Brakes brake;
-	ThrottleController throttle;
-	SteeringController steer;
+	static Brakes brake;
+	static ThrottleController throttle;
+	static SteeringController steer;
 	static volatile int32_t desired_speed_cmPs;
 	static volatile int32_t desired_angle;
-	int32_t current_speed;
-	int32_t current_angle;
+	int32_t currentSpeed;
+	int32_t currentAngle;
+	static void recieveCan();
+
 public:
 	Vehicle();
 	~Vehicle();
-	void initialize();
 	void update();
-	void update(int32_t tempDspeed, int32_t tempDangle);
-	void eStop();
-	void recieveCan();
+	static void eStop();
+	
 };

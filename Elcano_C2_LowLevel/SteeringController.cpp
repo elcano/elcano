@@ -8,15 +8,7 @@
 SteeringController::SteeringController():
 	steerPID(&steerAngleUS, &PIDSteeringOutput_us, &desiredTurn_us, proportional_steering, integral_steering, derivative_steering, DIRECT)
 {
-	usePids = false;
-}
-
-SteeringController::~SteeringController()
-{
-}
-
-void SteeringController::initialize(){
-  //Hacky fix for not burning servo circuit
+	//Hacky fix for not burning servo circuit
   pinMode(STEER_ON, OUTPUT);
   digitalWrite(STEER_ON, RELAYInversion ? HIGH : LOW);
 
@@ -39,11 +31,18 @@ void SteeringController::initialize(){
 	digitalWrite(STEER_ON, RELAYInversion ? LOW : HIGH);
 	if(DEBUG)
 		Serial.println("Steering On");
+	
+	
 }
+
+SteeringController::~SteeringController()
+{
+}
+
 
 int32_t SteeringController::update(int32_t desiredAngle) {
 	steerAngleUS = computeAngleLeft();
-	if (usePids)
+	if (USE_PIDS)
 		SteeringPID(desiredAngle);
 	else
 		engageSteering(desiredAngle);

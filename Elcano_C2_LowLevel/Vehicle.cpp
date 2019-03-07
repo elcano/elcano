@@ -11,32 +11,17 @@
 #define FEEDBACKLOW_CANID 0x0A
 volatile int32_t Vehicle::desired_speed_cmPs;
 volatile int32_t Vehicle::desired_angle;
-
+Brakes Vehicle::brake;
+ThrottleController Vehicle::throttle;
+SteeringController Vehicle::steer;
 MCP_CAN CAN(CAN_SS); // pin for CS on Mega
 
-void estop_ISR(){
-	
-}
 
 Vehicle::Vehicle(){
-    //attachPCINT(digitalPinToPCINT(IRPT_ESTOP), estop_ISR, RISING);
-    //attachPCINT(digitalPinToPCINT(IRPT_CAN), this->recieveCan, RISING);
-}
-
-
-Vehicle::~Vehicle(){
-}
-
-//Calls the initialization of all 3 objects
-void Vehicle::initialize() {
-	throttle.initialize();
-	brake.initialize();
-	steer.initialize();
-	desired_angle = 0;
+    desired_angle = 0;
 	desired_speed_cmPs = 0;
-	/***********START OF Communication Section********************************/
-  // CAN TEST START HERE
-  Serial.begin(115200);
+	
+	Serial.begin(115200);
   while (CAN_OK != CAN.begin(CAN_500KBPS))
   {
 	  if (DEBUG) {
@@ -46,32 +31,25 @@ void Vehicle::initialize() {
   }
   if(DEBUG)
 		Serial.println("CAN BUS init ok!");
-  /***********END OF Communication Section**********************************/
-	
-		
+
+	attachPCINT(digitalPinToPCINT(IRPT_ESTOP), eStop, RISING);
+    attachPCINT(digitalPinToPCINT(IRPT_CAN), recieveCan, RISING);
 }
+
+
+Vehicle::~Vehicle(){
+}
+
 
 void Vehicle::eStop() {
-	if (DEBUG)
-		Serial.println("Brake");
+	noInterrupts();
 	brake.Stop();
 	throttle.stop();
-}
-void Vehicle::update(int32_t tempDspeed, int32_t tempDangle) {
-	brake.Update();
-	int currentSpeed = throttle.update(tempDspeed);
-	int currentAngle = steer.update(tempDangle);
-	if (tempDspeed < (currentSpeed * 10))
-		brake.Stop();
-	else
-		brake.Release();
+	interrupts();
 }
 
 
-/*
-Checks if the brakes have been on too long
-Computes the speed and angle
-*/
+
 typedef union{
 		struct{
 			uint32_t sspeed;
@@ -79,17 +57,17 @@ typedef union{
 		};
 	}speedAngleMessage;
 
+
 void Vehicle::update() {
 	int32_t tempDspeed;
 	int32_t tempDangle;
 	noInterrupts();
-  recieveCan();
 	tempDspeed = desired_speed_cmPs;
 	tempDangle = desired_angle;
 	interrupts();
 	brake.Update();
-	int currentSpeed = throttle.update(tempDspeed);
-	int currentAngle = steer.update(tempDangle);
+	currentSpeed = throttle.update(tempDspeed);
+	currentAngle = steer.update(tempDangle);
 	if (tempDspeed < (currentSpeed*10))
 		brake.Stop();
 	else 

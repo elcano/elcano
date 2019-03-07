@@ -7,7 +7,7 @@
 
 class ThrottleController{
 private:
-	int32_t currentThrottlePWM;
+	volatile int32_t currentThrottlePWM;
 	double speedCyclometerInput_mmPs = 0;
 	double PIDThrottleOutput_pwm;
 	double desiredSpeed_mmPs = 0;
@@ -17,8 +17,6 @@ private:
 	static const uint32_t MIN_TICK_TIME_ms = (WHEEL_CIRCUM_MM * 1000) / MAX_SPEED_mmPs;
 	static const uint32_t MAX_TICK_TIME_ms = (WHEEL_CIRCUM_MM * 1000) / MIN_SPEED_mmPs;
 	
-	bool usePids;
-	
 	static volatile uint32_t tickTime_ms[2];
 	uint32_t calcTime_ms[2];
 	int32_t prevSpeed_mmPs;
@@ -27,14 +25,13 @@ private:
 	void ThrottlePID(int32_t desiredValue);
 	int32_t extrapolateSpeed();
 	void computeSpeed(); 
-	void engageThrottle(int32_t input);
+	void engageThrottle(int32_t input);	
+	static void tick();
 public:
 	
 	ThrottleController();
 	~ThrottleController();
-    void initialize();
 	void stop();
 	int32_t update(int32_t dSpeed);
-	void changePIDuse(bool usePids) { usePids = usePids; }
-	static void tick();
+
 };

@@ -46,7 +46,6 @@ class Brakes
   void Stop();
   void Release();
   void Update();
-  void initialize();
  private:
   volatile enum brake_state {BR_OFF, BR_HI_VOLTS, BR_LO_VOLTS} state;
   volatile uint32_t clock_hi_ms;

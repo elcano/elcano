@@ -9,13 +9,9 @@ Brakes::Brakes(){
   pinMode( BrakeVoltPin, OUTPUT);
   clock_hi_ms = millis();
   state = BR_OFF;
+  Release();
 }
 
-//Start with brakes off
-void Brakes::initialize(){
-    Release();
-	
-}
 
   /*  Expected behavior:
    * LEDs go off for relays 2 and 3;

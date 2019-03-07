@@ -3,6 +3,7 @@
 
 #define DEBUG false
 #define RELAYInversion true
+#define USE_PIDS false
 //Currently can be 3 or 1
 #define LLBversion 3
 
