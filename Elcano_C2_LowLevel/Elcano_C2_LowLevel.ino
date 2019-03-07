@@ -4,9 +4,7 @@
 #include "Vehicle.h"
 #include "mcp_can.h"
 
-Vehicle myTrike = Vehicle();
-//myTrike.move(angle, speed) uses PIDS
-//myTrike.noPID(angle,speed) does not use PIDS
+Vehicle myTrike;
 
 //Timing stuff
 #define LOOP_TIME_MS 100
@@ -15,14 +13,11 @@ uint32_t endTime;
 uint32_t delayTime;
 #define ULONG_MAX 0x7FFFFFFF
 
-#define Drive_CANID 0X05
-
 void setup() {
-  myTrike.initialize();
   if (DEBUG) {
     Serial.println("Setup complete");
   }
-  
+  myTrike = Vehicle();
 }
 
 void loop()

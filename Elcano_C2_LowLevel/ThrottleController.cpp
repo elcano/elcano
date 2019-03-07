@@ -11,35 +11,34 @@ volatile uint32_t ThrottleController::tickTime_ms[2];
 ThrottleController::ThrottleController() :
   speedPID(&speedCyclometerInput_mmPs, &PIDThrottleOutput_pwm, &desiredSpeed_mmPs, proportional_throttle, integral_throttle, derivative_throttle, DIRECT)
 {
-	usePids = false;
+
+	speedPID.SetOutputLimits(MIN_ACC_OUT, MAX_ACC_OUT);
+	speedPID.SetSampleTime(PID_CALCULATE_TIME);
+	speedPID.SetMode(AUTOMATIC);
+	pinMode(SelectAB, OUTPUT);
+	SPI.setDataMode(SPI_MODE0);
+	SPI.setBitOrder(MSBFIRST);
+	SPI.begin();
+
+	calcTime_ms[0] = 0;
+	calcTime_ms[1] = 0;
+	prevSpeed_mmPs = 0;
+	if (IRPT_WHEEL != 3)
+		attachPCINT(digitalPinToPCINT(IRPT_WHEEL), tick, RISING);
+	else
+		attachInterrupt(digitalPinToInterrupt(IRPT_WHEEL), tick, RISING);//pin 3 on Mega
+
 }
   
 ThrottleController::~ThrottleController(){
 }
 
-void ThrottleController::initialize(){
-  speedPID.SetOutputLimits(MIN_ACC_OUT, MAX_ACC_OUT);
-  speedPID.SetSampleTime(PID_CALCULATE_TIME);
-  speedPID.SetMode(AUTOMATIC);
-  pinMode(SelectAB, OUTPUT);
-  SPI.setDataMode(SPI_MODE0);
-  SPI.setBitOrder(MSBFIRST);
-  SPI.begin();
-
-  calcTime_ms[0] = 0;
-  calcTime_ms[1] = 0;
-  prevSpeed_mmPs = 0;
- if (IRPT_WHEEL != 3)
-	attachPCINT(digitalPinToPCINT(IRPT_WHEEL), tick, RISING);
- else
-	attachInterrupt(digitalPinToInterrupt(IRPT_WHEEL), tick, RISING);//pin 3 on Mega
-}
 
 /*
 sets the throttle signal to zero
 */
 void ThrottleController::stop() {
-	engageThrottle(0);
+	write(DAC_CHANNEL, 0);
 	currentThrottlePWM = 0;
 }
 
@@ -55,11 +54,11 @@ void ThrottleController::tick() {
 
 int32_t ThrottleController::update(int32_t dSpeed) {
 	computeSpeed();
-	if (usePids)
+	if (USE_PIDS)
 		ThrottlePID(dSpeed);
 	else
 		engageThrottle(dSpeed);
-	speedCyclometerInput_mmPs;
+	return speedCyclometerInput_mmPs;
 }
 
 
@@ -109,9 +108,11 @@ void ThrottleController::write(int32_t address, int32_t value) {
 
 void ThrottleController::ThrottlePID(int32_t desiredValue) {
 	if (desiredValue >= (speedCyclometerInput_mmPs + 10)) {
+		noInterrupts();
 		speedPID.Compute();
 		//currentThrottlePWM = (int32_t)PIDThrottleOutput_pwm;
 		engageThrottle(PIDThrottleOutput_pwm);
+		interrupts();
 	}
 }
 
@@ -130,8 +131,10 @@ void ThrottleController::engageThrottle(int32_t input) {
   }
   
 	if (input != currentThrottlePWM) {
+		noInterrupts();
 		write(DAC_CHANNEL, input);
 		currentThrottlePWM = input;  // Remember most recent throttle PWM value.
+		interrupts();
 
 	}
 }
