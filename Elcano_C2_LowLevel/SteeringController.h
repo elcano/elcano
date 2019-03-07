@@ -21,5 +21,5 @@ public:
 	~SteeringController();
 	void initialize();
 	int32_t update(int32_t desiredAngle);
-	void changePIDuse(bool usePids) { usePids = usePids };
+	void changePIDuse(bool usePids) { usePids = usePids; }
 };

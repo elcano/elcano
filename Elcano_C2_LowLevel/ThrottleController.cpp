@@ -2,7 +2,7 @@
 #include "ThrottleController.h"
 #ifndef Testing
 #include <Arduino.h>
-#include <PinChangeInterrupt/src/PinChangeInterrupt.h>
+#include <PinChangeInterrupt.h>
 
 #endif
 
@@ -74,12 +74,12 @@ no input from chip
 Formerly DAC_write
 ***************************************************
 REGISTER 5-3: WRITE COMMAND REGISTER FOR MCP4802 (8-BIT DAC)
-		A/B — GA SHDN D7 D6 D5 D4 D3 D2 D1 D0 x x x x
+		A/B ï¿½ GA SHDN D7 D6 D5 D4 D3 D2 D1 D0 x x x x
 		bit 15 bit 0
 		bit 15 A/B: DACA or DACB Selection bit
 		1 = Write to DACB
 		0 = Write to DACA
-		bit 14 — Don’t Care
+		bit 14 ï¿½ Donï¿½t Care
 		bit 13 GA: Output Gain Selection bit
 		1 = 1x (VOUT = VREF * D/4096)
 		0 = 2x (VOUT = 2 * VREF * D/4096), where internal VREF = 2.048V.
@@ -195,4 +195,3 @@ void ThrottleController::computeSpeed() {
 		}
 	}
 }
-

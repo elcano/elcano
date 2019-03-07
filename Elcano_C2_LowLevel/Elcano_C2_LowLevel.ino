@@ -3,7 +3,6 @@
 #include "Settings.h"
 #include "Vehicle.h"
 #include "mcp_can.h"
-MCP_CAN CAN(53); // pin for CS on Mega
 
 Vehicle myTrike = Vehicle();
 //myTrike.move(angle, speed) uses PIDS

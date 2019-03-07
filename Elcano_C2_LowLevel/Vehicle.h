@@ -20,5 +20,5 @@ public:
 	void update();
 	void Vehicle::update(int32_t tempDspeed, int32_t tempDangle);
 	void eStop();
-	static void recieveCan();
+	void recieveCan();
 };
