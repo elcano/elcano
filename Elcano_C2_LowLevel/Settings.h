@@ -79,7 +79,12 @@ Wheel Diameter, Turn Radius
 //derived settings
 const int32_t WHEEL_CIRCUM_MM = (WHEEL_DIAMETER_MM * PI);
 
+//needs to be measured, I just picked a number it makes no sense
 
+//should be measured from the midpoint between the front wheel axles and the rear axle
+#define VEHICLE_LENGTH_MM 5
+
+#define DISTANCE_BETWEEN_WHEELS_MM 3
 
 /*
 PID tunning for steering and throttle

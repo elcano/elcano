@@ -85,3 +85,32 @@ int32_t SteeringController::computeAngleRight() {
 	val = map(val, MIN_Right_Sensor, MAX_Right_Sensor, MIN_TURN, MAX_TURN);
 	return val;
 }
+
+
+
+/*
+This function is not connected to any part of the system
+	ideally we want to use the two sensors readings and come to 
+	a single 'trike turning angle' from the combination of the data
+Before this can work at all, we need to measure the vehicle length and distance between the front wheels
+	those values are stored in settings.h
+We also need to do some kind of mapping from the voltage to a milli degree, and have some understanding
+	of when the readings are meaningful and when they are out of range. 
+	Right now we are just mapping the values given from the tape on the sensors to the mechanically limited steering range
+	so that also needs to be adjusted
+*/
+int32_t computeTrikeAngle() {
+	//read angle
+	int32_t lAngle = analogRead(AngleSensorLeft);
+	//convert from voltage to milli degrees
+	//need to measure two data points from sensor to actual angle
+	lAngle = map(lAngle, MIN_Left_Sensor, MAX_Left_Sensor, MIN_TURN, MAX_TURN);
+	int32_t r_mm = VEHICLE_LENGTH_MM / tan(lAngle * PI / 180);
+	//How do we know which way the vehicle is turning? will one of these be reasonable and the other not?
+	int32_t complAngle_goingLeft = atan(VEHICLE_LENGTH_MM / (r_mm + DISTANCE_BETWEEN_WHEELS_MM / 2));
+	int32_t complAngle_goingRight = atan(VEHICLE_LENGTH_MM / (r_mm - DISTANCE_BETWEEN_WHEELS_MM / 2));
+	//then do same thing with right sensor
+	//how should we compare the two?
+	//to do check units
+		
+}
