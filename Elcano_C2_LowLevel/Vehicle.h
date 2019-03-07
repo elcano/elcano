@@ -18,7 +18,7 @@ public:
 	~Vehicle();
 	void initialize();
 	void update();
-	void Vehicle::update(int32_t tempDspeed, int32_t tempDangle);
+	void update(int32_t tempDspeed, int32_t tempDangle);
 	void eStop();
 	void recieveCan();
 };
