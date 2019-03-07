@@ -43,7 +43,7 @@ class Brakes
 {
  public:
   Brakes();
-  static void Stop();
+  void Stop();
   void Release();
   void Update();
   void initialize();

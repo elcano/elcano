@@ -35,6 +35,6 @@ public:
     void initialize();
 	void stop();
 	int32_t update(int32_t dSpeed);
-	void changePIDuse(bool usePids) { usePids = usePids };
+	void changePIDuse(bool usePids) { usePids = usePids; }
 	static void tick();
 };

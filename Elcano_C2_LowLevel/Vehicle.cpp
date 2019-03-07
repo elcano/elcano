@@ -1,8 +1,9 @@
 #include "Settings.h"
 #include "Vehicle.h"
+#include <mcp_can.h>
 #ifndef TESTING
 #include <Arduino.h>
-#include <PinChangeInterrupt/src/PinChangeInterrupt.h>
+#include <PinChangeInterrupt.h>
 #endif
 
 #define Drive_CANID 0X05
@@ -11,10 +12,15 @@
 volatile int32_t Vehicle::desired_speed_cmPs;
 volatile int32_t Vehicle::desired_angle;
 
+MCP_CAN CAN(CAN_SS); // pin for CS on Mega
+
+void estop_ISR(){
+	
+}
 
 Vehicle::Vehicle(){
-	
-	
+    //attachPCINT(digitalPinToPCINT(IRPT_ESTOP), estop_ISR, RISING);
+    //attachPCINT(digitalPinToPCINT(IRPT_CAN), this->recieveCan, RISING);
 }
 
 
@@ -41,10 +47,8 @@ void Vehicle::initialize() {
   if(DEBUG)
 		Serial.println("CAN BUS init ok!");
   /***********END OF Communication Section**********************************/
-	if (IRPT_ESTOP)
-		attachPCINT(digitalPinToPCINT(IRPT_ESTOP), eStop, RISING);
-	if (IRPT_CAN)
-		attachPCINT(digitalPinToPCINT(IRPT_CAN), recieveCan, RISING);
+	
+		
 }
 
 void Vehicle::eStop() {
@@ -74,13 +78,13 @@ typedef union{
 			uint32_t angle;
 		};
 	}speedAngleMessage;
+
 void Vehicle::update() {
 	int32_t tempDspeed;
 	int32_t tempDangle;
 	noInterrupts();
+  recieveCan();
 	tempDspeed = desired_speed_cmPs;
-	interrupts();
-	noInterrupts();
 	tempDangle = desired_angle;
 	interrupts();
 	brake.Update();
@@ -91,7 +95,7 @@ void Vehicle::update() {
 	else 
 		brake.Release();
 
-	if(currnetSpeed< 0)
+	if(currentSpeed< 0)
 		return;
 	else{
 		speedAngleMessage MSG;
@@ -111,8 +115,7 @@ void Vehicle::recieveCan() {
 	
 	//estop can message
 	
-    if (CAN_MSGAVAIL == CAN.checkReceive())
-    {
+    if (CAN_MSGAVAIL == CAN.checkReceive()){
       CAN.readMsgBuf(&len, buf);    // read data,  len: data length, buf: data buf
       unsigned int canId = CAN.getCanId();
 
@@ -140,4 +143,5 @@ void Vehicle::recieveCan() {
     }
 
 	interrupts();
+}
 }
