@@ -459,11 +459,12 @@ bool odo_test(){
   while(millis() - startTime < 10000){
     if(odoClick){
       uint8_t tempCount = odoCount;
+      odoCount = 0;
       odoClick = false;
 
       buzz(5);
       if(!HEADLESS){
-        Serial.print("Got");
+        Serial.print("Got ");
         Serial.println(tempCount);
       }
       
