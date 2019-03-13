@@ -66,3 +66,7 @@ libraries/TimerOne
 Icon?
 ehthumbs.db
 Thumbs.db
+*.b##
+*.s##
+*.b#1
+*.s#1
