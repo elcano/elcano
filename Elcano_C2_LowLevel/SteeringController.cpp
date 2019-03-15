@@ -23,7 +23,7 @@ SteeringController::SteeringController():
   //sets the current angle
   steerAngleUS = computeAngleLeft();
   //maps to turn signal
-  int input = map(input, MIN_Left_Sensor, MAX_Left_Sensor, MIN_TURN, MAX_TURN);
+  int input = map(steerAngleUS, MIN_Left_Sensor, MAX_Left_Sensor, MIN_TURN, MAX_TURN);
   //sends the current signal to the servo
   engageSteering(input);
 	
