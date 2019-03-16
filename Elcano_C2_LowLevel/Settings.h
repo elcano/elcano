@@ -1,8 +1,7 @@
 #pragma once
 
 
-#define DEBUG false
-#define RELAYInversion true
+#define DEBUG true
 #define USE_PIDS false
 //Currently can be 3 or 1
 #define LLBversion 3
@@ -56,17 +55,21 @@ const uint32_t MaxHi_ms = 800;
 Settings for the Steering 
 Minimum/Maximum and center turning signals
 */
-
+#define MIN_TURN_Mdegrees -24000
+#define MAX_TURN_Mdegrees 25000
+#define MIN_Right_Sensor 725
+#define MAX_Right_Sensor 785
+#define MIN_Left_Sensor 485
+#define MAX_Left_Sensor 313
+#define Left_Read_at_MIN_TURN  485
+#define Right_Read_at_MIN_TURN 725
+#define Left_Read_at_MAX_TURN 313
+#define Right_Read_at_MAX_TURN 785
+#define MIN_TURN_MS 1000
+#define MAX_TURN_MS 1850
 #define MIN_TURN 70
 #define MAX_TURN 130
 #define CENTER_TURN 94
-
-
-
-//Derived settings 
-#define WHEEL_MAX_RIGHT_US MAX_TURN
-#define WHEEL_STRAIGHT_US CENTER_TURN
-#define WHEEL_MAX_LEFT_US MIN_TURN
 
 
 
@@ -112,4 +115,3 @@ Min is all the way turned to the left
 #define MAX_Right_Sensor 785
 #define MIN_Left_Sensor 485
 #define MAX_Left_Sensor 313
-

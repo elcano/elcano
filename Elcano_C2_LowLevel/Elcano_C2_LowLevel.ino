@@ -4,7 +4,7 @@
 #include "Vehicle.h"
 #include "mcp_can.h"
 
-Vehicle myTrike;
+Vehicle *myTrike;
 
 //Timing stuff
 #define LOOP_TIME_MS 100
@@ -14,10 +14,11 @@ uint32_t delayTime;
 #define ULONG_MAX 0x7FFFFFFF
 
 void setup() {
+  Serial.begin(baud);
   if (DEBUG) {
     Serial.println("Setup complete");
   }
-  myTrike = Vehicle();
+  myTrike = new Vehicle();
 }
 
 void loop()
@@ -26,7 +27,7 @@ void loop()
   nextTime = nextTime + LOOP_TIME_MS;
   uint32_t timeStart_ms = millis();
 
-  myTrike.update();
+  myTrike->update();
 
   //Timing code
   endTime = millis();

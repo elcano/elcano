@@ -1,6 +1,6 @@
 #pragma once
 
-const int baud  = 115200;   // baudrate for debugging with a host PC over USB serial
+#define baud 115200   // baudrate for debugging with a host PC over USB serial
 
 /* Pin declarations */
 #define WATCHDOG            5   // keep-alive watchdog is routed to Power-on, and may be unused.
@@ -24,11 +24,10 @@ const int baud  = 115200;   // baudrate for debugging with a host PC over USB se
 // Brakes, have relays for both on/off as well as selecting 12/24v power.
 #define BrakeOnPin 			39
 #define BrakeVoltPin 		37
-#define RELAYInversion      true
+#define RELAYInversion      false
 
 //Wheel click interrupt (digitally high or low, referred to as an "odometer") and motor hall phases.
 #define IRPT_WHEEL 			A8
 #define IRPT_PHASE_A        A15
 #define IRPT_PHASE_B        A14
 #define IRPT_PHASE_C        A12
-

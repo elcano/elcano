@@ -12,20 +12,19 @@ SteeringController::SteeringController():
   pinMode(STEER_ON, OUTPUT);
   digitalWrite(STEER_ON, RELAYInversion ? HIGH : LOW);
 
-  steerPID.SetOutputLimits(MIN_TURN, MAX_TURN);
+  steerPID.SetOutputLimits(MIN_TURN_MS, MAX_TURN_MS);
   steerPID.SetSampleTime(PID_CALCULATE_TIME);
   steerPID.SetMode(AUTOMATIC);
 
   Steer_Servo.attach(STEER_OUT_PIN);
-
   //part 2 of hacky fix
   
   //sets the current angle
-  steerAngleUS = computeAngleLeft();
+  steerAngleUS = computeAngleRight();
   //maps to turn signal
-  int input = map(steerAngleUS, MIN_Left_Sensor, MAX_Left_Sensor, MIN_TURN, MAX_TURN);
+
   //sends the current signal to the servo
-  engageSteering(input);
+  engageSteering(steerAngleUS);
 	
 	//enable power
 	digitalWrite(STEER_ON, RELAYInversion ? LOW : HIGH);
@@ -41,12 +40,13 @@ SteeringController::~SteeringController()
 
 
 int32_t SteeringController::update(int32_t desiredAngle) {
-	steerAngleUS = computeAngleLeft();
+  desiredAngle=map(desiredAngle,MIN_TURN_Mdegrees,MAX_TURN_Mdegrees,MIN_TURN_MS,MAX_TURN_MS);
 	if (USE_PIDS)
 		SteeringPID(desiredAngle);
 	else
 		engageSteering(desiredAngle);
-	return steerAngleUS;
+  steerAngleUS = computeAngleRight();
+	return map(steerAngleUS, MIN_TURN_MS,MAX_TURN_MS,MIN_TURN_Mdegrees,MAX_TURN_Mdegrees);
 }
 
 //Private
@@ -60,29 +60,34 @@ void SteeringController::SteeringPID(int32_t input) {
 }
 
 void SteeringController::engageSteering(int32_t input) {
-	if (input > MAX_TURN)
-		input = MAX_TURN;
-	else if (input < MIN_TURN)
-		input = MIN_TURN;
+	if (input > MAX_TURN_MS)
+		input = MAX_TURN_MS;
+	else if (input < MIN_TURN_MS)
+		input = MIN_TURN_MS;
 	if (currentSteeringUS != input) {
 		if (DEBUG) {
 			Serial.print("Steering: ");
 			Serial.println(input);
 		}
-		Steer_Servo.write(input);
+		Steer_Servo.writeMicroseconds(input);
+    Serial.println("done");
 		currentSteeringUS = input;
 	}
 }
 
 int32_t SteeringController::computeAngleLeft() {
 	int32_t val = analogRead(AngleSensorLeft);
-	val = map(val, MIN_Left_Sensor, MAX_Left_Sensor, MIN_TURN, MAX_TURN);
+	val = map(val, Left_Read_at_MIN_TURN, Left_Read_at_MAX_TURN, MIN_TURN_MS, MAX_TURN_MS);
 	return val;
 }
 
 int32_t SteeringController::computeAngleRight() {
 	int32_t val = analogRead(AngleSensorRight);
-	val = map(val, MIN_Right_Sensor, MAX_Right_Sensor, MIN_TURN, MAX_TURN);
+	val = map(val, Right_Read_at_MIN_TURN, Right_Read_at_MAX_TURN, MIN_TURN_MS, MAX_TURN_MS);
+ //if(DEBUG){
+ //Serial.print("Right sensor: ");
+ //Serial.println(val);
+ //}
 	return val;
 }
 
