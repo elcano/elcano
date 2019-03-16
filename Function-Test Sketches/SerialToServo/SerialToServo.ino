@@ -4,7 +4,7 @@ Servo actuator;
 
 void setup() {
   Serial.begin(115200);
-  actuator.attach(8);
+  actuator.attach(7);
   while (!Serial);
   Serial.println("READY! Give Servo.h extension ('0-180')");
   Serial.println("45 = 1ms, 142 = 2ms, 94 = 1.5ms");

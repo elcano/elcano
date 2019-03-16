@@ -18,10 +18,9 @@ MCP_CAN CAN(CAN_SS); // pin for CS on Mega
 
 
 Vehicle::Vehicle(){
-    desired_angle = 0;
+  desired_angle = 0;
 	desired_speed_cmPs = 0;
 	
-	Serial.begin(115200);
   while (CAN_OK != CAN.begin(CAN_500KBPS))
   {
 	  if (DEBUG) {
@@ -32,8 +31,8 @@ Vehicle::Vehicle(){
   if(DEBUG)
 		Serial.println("CAN BUS init ok!");
 
-	attachPCINT(digitalPinToPCINT(IRPT_ESTOP), eStop, RISING);
-    attachPCINT(digitalPinToPCINT(IRPT_CAN), recieveCan, RISING);
+	 //attachPCINT(digitalPinToPCINT(IRPT_ESTOP), eStop, RISING);
+   //attachPCINT(digitalPinToPCINT(IRPT_CAN), recieveCan, RISING);
 }
 
 
@@ -59,6 +58,8 @@ typedef union{
 
 
 void Vehicle::update() {
+  recieveCan();
+  //Serial.println("Vehicle update");
 	int32_t tempDspeed;
 	int32_t tempDangle;
 	noInterrupts();

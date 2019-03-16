@@ -20,7 +20,7 @@ Brakes::Brakes(){
    */
 void Brakes::Release(){
 if (DEBUG)
-	Serial.println("release");
+	//Serial.println("release");
   digitalWrite(BrakeOnPin, RELAYInversion ? HIGH : LOW);
   digitalWrite(BrakeVoltPin, RELAYInversion ? HIGH : LOW);
   noInterrupts();
