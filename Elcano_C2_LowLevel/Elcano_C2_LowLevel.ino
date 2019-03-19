@@ -19,6 +19,7 @@ void setup() {
     Serial.println("Setup complete");
   }
   myTrike = new Vehicle();
+  //delay(5);
     //myTrike->test();
 }
 
