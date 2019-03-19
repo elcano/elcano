@@ -9,9 +9,9 @@ SteeringController::SteeringController():
 	steerPID(&steerAngleUS, &PIDSteeringOutput_us, &desiredTurn_us, proportional_steering, integral_steering, derivative_steering, DIRECT)
 {
 	//Hacky fix for not burning servo circuit
-  //pinMode(STEER_ON, OUTPUT);
+  pinMode(STEER_ON, OUTPUT);
   pinMode(STEER_OUT_PIN, OUTPUT);
-  //digitalWrite(STEER_ON, RELAYInversion ? HIGH : LOW);
+  digitalWrite(STEER_ON, RELAYInversion ? HIGH : LOW);
 
   steerPID.SetOutputLimits(MIN_TURN_MS, MAX_TURN_MS);
   steerPID.SetSampleTime(PID_CALCULATE_TIME);
@@ -24,13 +24,10 @@ SteeringController::SteeringController():
   steerAngleUS = computeAngleRight();
   //maps to turn signal
 
-  //sends the current signal to the servo
-  Steer_Servo.writeMicroseconds(1800);
-	delay(1000);
+
 	//enable power
 	//digitalWrite(STEER_ON, RELAYInversion ? LOW : HIGH);
-	if(DEBUG)
-		Serial.println("Steering On");
+
 	
 	
 }
@@ -47,16 +44,19 @@ int32_t SteeringController::update(int32_t desiredAngle) {
 		SteeringPID(desiredAngle);
 	else
 		engageSteering(desiredAngle);
-  steerAngleUS = computeAngleRight();
-	return map(steerAngleUS, MIN_TURN_MS,MAX_TURN_MS,MIN_TURN_Mdegrees,MAX_TURN_Mdegrees);
+   //delay(1);
+  //steerAngleUS = computeAngleRight();
+	//return map(steerAngleUS, MIN_TURN_MS,MAX_TURN_MS,MIN_TURN_Mdegrees,MAX_TURN_Mdegrees);
+  return desiredAngle;
 }
 
 //Private
 void SteeringController::SteeringPID(int32_t input) {
 	desiredTurn_us = input;
-	steerPID.Compute();
+	
 	if (PIDSteeringOutput_us != currentSteeringUS) {
 		Steer_Servo.writeMicroseconds(PIDSteeringOutput_us);
+    interrupts();
 		currentSteeringUS = PIDSteeringOutput_us;
 	}
 }
@@ -72,9 +72,12 @@ void SteeringController::engageSteering(int32_t input) {
 			Serial.println(input);
 		}
 	
+	
 		Steer_Servo.writeMicroseconds(input);
-		currentSteeringUS = input;
-	}
+    //delay(1);
+		interrupts();
+	currentSteeringUS = input;
+ }
 }
 
 int32_t SteeringController::computeAngleLeft() {

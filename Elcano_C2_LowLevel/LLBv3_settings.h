@@ -14,7 +14,7 @@
 //#define SelectCD	-- channels C and D are not defined for LLBv3, there is no second DAC.
 
 #define STEER_OUT_PIN		6
-//#define STEER_ON			8
+#define STEER_ON			8
 #define AngleSensorRight	A3
 #define AngleSensorLeft		A2
 // originally intended as a return ground, these analog pins are free and on the steering header.
