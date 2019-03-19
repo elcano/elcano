@@ -8,7 +8,7 @@ class Vehicle{
 private:
 	static Brakes brake;
 	static ThrottleController throttle;
-	static SteeringController steer;
+	SteeringController steer;
 	static volatile int32_t desired_speed_cmPs;
 	static volatile int32_t desired_angle;
 	int32_t currentSpeed;

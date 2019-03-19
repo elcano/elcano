@@ -1,7 +1,7 @@
 #pragma once
 
 
-#define DEBUG true
+#define DEBUG false
 #define USE_PIDS false
 //Currently can be 3 or 1
 #define LLBversion 3
@@ -67,9 +67,7 @@ Minimum/Maximum and center turning signals
 #define Right_Read_at_MAX_TURN 785
 #define MIN_TURN_MS 1000
 #define MAX_TURN_MS 1850
-#define MIN_TURN 70
-#define MAX_TURN 130
-#define CENTER_TURN 94
+
 
 
 
