@@ -13,7 +13,6 @@ volatile int32_t Vehicle::desired_speed_cmPs;
 volatile int32_t Vehicle::desired_angle;
 Brakes Vehicle::brake;
 ThrottleController Vehicle::throttle;
-SteeringController Vehicle::steer;
 MCP_CAN CAN(CAN_SS); // pin for CS on Mega
 
 
@@ -67,9 +66,15 @@ void Vehicle::update() {
 	tempDangle = desired_angle;
 	interrupts();
 	brake.Update();
-	//currentSpeed = throttle.update(tempDspeed);
+	int32_t tempcurrentSpeed = throttle.update(tempDspeed);
 	currentAngle = steer.update(tempDangle);
-
+  if(DEBUG){
+    if(tempcurrentSpeed != currentSpeed){
+    Serial.print("Actual Speed: ");
+ 
+    Serial.println(currentSpeed/10);
+    currentSpeed = tempcurrentSpeed;
+ }}
 
 	if(currentSpeed< 0)
 		return;
