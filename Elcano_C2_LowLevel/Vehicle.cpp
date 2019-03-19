@@ -67,12 +67,9 @@ void Vehicle::update() {
 	tempDangle = desired_angle;
 	interrupts();
 	brake.Update();
-	currentSpeed = throttle.update(tempDspeed);
+	//currentSpeed = throttle.update(tempDspeed);
 	currentAngle = steer.update(tempDangle);
-	if (tempDspeed < (currentSpeed*10))
-		brake.Stop();
-	else 
-		brake.Release();
+
 
 	if(currentSpeed< 0)
 		return;
@@ -106,17 +103,18 @@ void Vehicle::recieveCan() {
         int low_result = (unsigned int)(buf[3] << 24) | (buf[2] << 16) | (buf[1] << 8) | (buf[0]);
         desired_speed_cmPs = low_result;
 		if (DEBUG) {
-			Serial.print("Speed: ");
+			Serial.print("CAN Speed: ");
 			Serial.print(low_result, DEC);
 		}
 
         int high_result = (unsigned int)(buf[7] << 24) | (buf[6] << 16) | (buf[5] << 8) | (buf[4]);
-        desired_angle = high_result;
+        desired_angle= map(high_result,0,255,-90000,90000);
 		if(DEBUG){
-			Serial.print("  Angle: ");
-			Serial.println(high_result, DEC);
+			Serial.print("  CAN Angle: ");
+			Serial.println(desired_angle, DEC);
 		}
 		if(canId == EStop_CANID){
+    Serial.println("estop");
 			eStop();
       }
     }

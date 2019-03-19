@@ -87,4 +87,3 @@ class PID
 	bool inAuto, pOnE;
 };
 #endif
-
