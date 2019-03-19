@@ -19,6 +19,7 @@ void setup() {
     Serial.println("Setup complete");
   }
   myTrike = new Vehicle();
+    //myTrike->test();
 }
 
 void loop()
@@ -27,7 +28,7 @@ void loop()
   nextTime = nextTime + LOOP_TIME_MS;
   uint32_t timeStart_ms = millis();
 
-  myTrike->update();
+ myTrike->update();
 
   //Timing code
   endTime = millis();

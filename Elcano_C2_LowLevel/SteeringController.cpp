@@ -9,8 +9,9 @@ SteeringController::SteeringController():
 	steerPID(&steerAngleUS, &PIDSteeringOutput_us, &desiredTurn_us, proportional_steering, integral_steering, derivative_steering, DIRECT)
 {
 	//Hacky fix for not burning servo circuit
-  pinMode(STEER_ON, OUTPUT);
-  digitalWrite(STEER_ON, RELAYInversion ? HIGH : LOW);
+  //pinMode(STEER_ON, OUTPUT);
+  pinMode(STEER_OUT_PIN, OUTPUT);
+  //digitalWrite(STEER_ON, RELAYInversion ? HIGH : LOW);
 
   steerPID.SetOutputLimits(MIN_TURN_MS, MAX_TURN_MS);
   steerPID.SetSampleTime(PID_CALCULATE_TIME);
@@ -24,10 +25,10 @@ SteeringController::SteeringController():
   //maps to turn signal
 
   //sends the current signal to the servo
-  engageSteering(steerAngleUS);
-	
+  Steer_Servo.writeMicroseconds(1800);
+	delay(1000);
 	//enable power
-	digitalWrite(STEER_ON, RELAYInversion ? LOW : HIGH);
+	//digitalWrite(STEER_ON, RELAYInversion ? LOW : HIGH);
 	if(DEBUG)
 		Serial.println("Steering On");
 	
@@ -40,7 +41,8 @@ SteeringController::~SteeringController()
 
 
 int32_t SteeringController::update(int32_t desiredAngle) {
-  desiredAngle=map(desiredAngle,MIN_TURN_Mdegrees,MAX_TURN_Mdegrees,MIN_TURN_MS,MAX_TURN_MS);
+  desiredAngle=map(desiredAngle,MIN_TURN_Mdegrees,MAX_TURN_Mdegrees, MIN_TURN_MS,MAX_TURN_MS);
+
 	if (USE_PIDS)
 		SteeringPID(desiredAngle);
 	else
@@ -61,16 +63,16 @@ void SteeringController::SteeringPID(int32_t input) {
 
 void SteeringController::engageSteering(int32_t input) {
 	if (input > MAX_TURN_MS)
-		input = MAX_TURN_MS;
-	else if (input < MIN_TURN_MS)
-		input = MIN_TURN_MS;
+   input = MAX_TURN_MS;
+  else if (input < MIN_TURN_MS)
+    input = MIN_TURN_MS;
 	if (currentSteeringUS != input) {
 		if (DEBUG) {
-			Serial.print("Steering: ");
+			Serial.print("MAP Steering: ");
 			Serial.println(input);
 		}
+	
 		Steer_Servo.writeMicroseconds(input);
-    Serial.println("done");
 		currentSteeringUS = input;
 	}
 }
