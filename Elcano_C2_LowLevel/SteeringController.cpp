@@ -79,9 +79,9 @@ int32_t SteeringController::computeAngleLeft() {
 int32_t SteeringController::computeAngleRight() {
 	int32_t val = analogRead(AngleSensorRight);
 	val = map(val, Right_Read_at_MIN_TURN, Right_Read_at_MAX_TURN, MIN_TURN_MS, MAX_TURN_MS);
- //if(DEBUG){
- //Serial.print("Right sensor: ");
- //Serial.println(val);
- //}
+ if(DEBUG){
+ Serial.print("Right sensor: ");
+ Serial.println(val);
+ }
 	return val;
 }

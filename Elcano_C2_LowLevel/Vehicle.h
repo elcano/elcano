@@ -20,8 +20,5 @@ public:
 	~Vehicle();
 	void update();
 	static void eStop();
-  void test(){
-    throttle.test();
-    };
 	
 };

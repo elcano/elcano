@@ -33,6 +33,5 @@ public:
 	~ThrottleController();
 	void stop();
 	int32_t update(int32_t dSpeed);
- void test();
 
 };
