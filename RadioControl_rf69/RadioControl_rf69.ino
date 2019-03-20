@@ -149,27 +149,28 @@ void rxloop() {
 
 void printTx(bool newline) {
   // output formatted as CSV for ease of review/logging
-  SerialUSB.print(String((rxData.rssi / 2.0))
+  String packet = String(rxData.rssi / 2.0)
                   + ","
                   + String(txData.throttle)
                   + ","
                   + String(txData.turn)
-                  + ",");
+                  + ",";
 
   if (txData.ebrake) {
-    SerialUSB.print("E,");
+    packet += "E";
   }
-  else {
-    SerialUSB.print(",");
-  }
+  packet += ",";
 
   if (txData.autonomous) {
-    SerialUSB.print("A,");
+    packet += "A";
+  }
+  packet += ",";
+
+  if (newline) {
+    SerialUSB.println(packet);
   }
   else {
-    SerialUSB.print(",");
+    SerialUSB.print(packet);
   }
-  if (newline)
-    SerialUSB.print("\n");
 }
 
