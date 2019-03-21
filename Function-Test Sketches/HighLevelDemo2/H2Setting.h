@@ -54,6 +54,7 @@ long ThreeLongt = -122189971;
 long FourLat = 47760635;
 long OneLongt = -122190383;
 int approaching = 0;
+int old = -1;
 long offset = 80; // The distance from target coordinate
 
  

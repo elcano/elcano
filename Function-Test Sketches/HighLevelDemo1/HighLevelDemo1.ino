@@ -83,7 +83,7 @@ void test_high_level()
     sendMSG(Straight_speed, Straight_angle);
     delay(6000);
     sendMSG(Turn_speed, Right_turn_angle);
-    delay(1000);
+    delay(2000);
   }
 }
 
@@ -100,6 +100,8 @@ void setup()
 {
   Serial.begin(115200);
   CAN.begin(CAN_BPS_500K);
+  delay(3000);
+  sendMSG(0, Straight_angle); // let the wheel point to straight
   delay(3000);
 }
 
