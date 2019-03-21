@@ -12,18 +12,20 @@ void setup() {
   GPS.sendCommand(PGCMD_ANTENNA);
   mag.enableAutoRange(true); //Enable auto-gain
 
-  // initial compass module (TODO: the compass need to calibrate)
-  if (!mag.begin()) {
-    Serial.println("Ooops, no LSM303 detected ... Check your wiring!");
-  }
-  mag.begin();
-
-  // get initial heading
-  heading = getHeading();
-  if (debug) {
-    Serial.print("Initial heading: ");
-    Serial.println(heading);
-  }
+  // /* initial compass module (TODO: the compass need to calibrate) */
+  //  if (!mag.begin()) {
+  //    Serial.println("Ooops, no LSM303 detected ... Check your wiring!");
+  //  }
+  //  mag.begin();
+  
+  //  heading = getHeading(); // get initial heading
+  //  if (debug) {
+  //    Serial.print("Initial heading: ");
+  //    Serial.println(heading);
+  //  }
+  delay(3000);
+  sendMSG(0, Straight_angle); // let the wheel point to straight
+  delay(3000);
 }
 
 void loop() {
@@ -36,7 +38,10 @@ void loop() {
       if (debug) {
         Serial.println("From 1 -> 2");
       }
-      goStraight();
+      if (old != approaching){
+        goStraight();
+        old = approaching;
+      }
       if (approachTwo()) {
         turn();
       }
@@ -45,7 +50,10 @@ void loop() {
       if (debug) {
         Serial.println("From 2 -> 3");
       }
-      goStraight();
+      if (old != approaching){
+        goStraight();
+        old = approaching;
+      }
       if (approachThree()) {
         turn();
       }
@@ -55,7 +63,10 @@ void loop() {
       if (debug) {
         Serial.println("From 3 -> 4");
       }
-      goStraight();
+      if (old != approaching){
+        goStraight();
+        old = approaching;
+      }
       if (approachFour()) {
         turn();
       }
@@ -65,7 +76,10 @@ void loop() {
       if (debug) {
         Serial.println("From 4 -> 1");
       }
-      goStraight();
+      if (old != approaching){
+        goStraight();
+        old = approaching;
+      }
       if (approachOne) {
         turn();
       }

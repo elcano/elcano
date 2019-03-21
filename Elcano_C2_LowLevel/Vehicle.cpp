@@ -87,8 +87,6 @@ void Vehicle::update() {
 }
 
 
-
-
 void Vehicle::recieveCan() {
 	noInterrupts();
 	unsigned char len = 0;
