@@ -1,0 +1,4 @@
+This is the most updated High level System test with C6, C4 and C3 together. 
+Make sure to also include the High-level-libraries when running this code.
+
+Note: C4 is commented out because the A star algorithm still need further integration and testing. 
