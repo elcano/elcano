@@ -22,11 +22,12 @@ int mapAngle(int angle)
   return map(angle, -90, 90, 0, 255);
 }
 
-Adafruit_LSM303_Mag_Unified mag = Adafruit_LSM303_Mag_Unified(12345);
+
+Adafruit_LSM303_Mag_Unified mag = Adafruit_LSM303_Mag_Unified(12345); // this is necessary step to use compass
 int Straight_speed = mapSpeed(8);
 int Turn_speed = mapSpeed(5);
 int Straight_angle = 255/2;
-int Right_turn_angle = 255;
+int Right_turn_angle = 255; 
 int Left_turn_angle = 0;
 float Pi = 3.14159;
 
@@ -40,28 +41,28 @@ void receiveMSG()
   //filter the other messages rather than sensor readings
   CAN.watchFor(Sensor_CANID);
 
-  while (CAN.available() > 0)
+  while (CAN.available() > 0) // check if a CAN message coming
   {
-    CAN_FRAME incoming;
-    CAN.read(incoming);
+    CAN_FRAME incoming; // start CAN frame
+    CAN.read(incoming); // read CAN message
     Serial.print("Get data from ID: ");
-    Serial.println(incoming.id, HEX);
+    Serial.println(incoming.id, HEX); // print CAN ID
     Serial.print("Low: ");
-    Serial.print((int)incoming.data.low, DEC);
+    Serial.print((int)incoming.data.low, DEC);   // print CAN lower 8 bits 
     Serial.print("  High: ");
-    Serial.println((int)incoming.data.high, DEC);
+    Serial.println((int)incoming.data.high, DEC);// print CAN higher 8 bits
   }
 }
 
 /* send drive command CAN message with given speed and angle */
 void sendMSG(int command_speed, int command_angle)
 {
-  CAN_FRAME output;
+  CAN_FRAME output; // init CAN message
   output.id = Drive_CANID;
   output.length = MAX_CAN_FRAME;
   output.data.low = command_speed;
   output.data.high = command_angle;
-  CAN.sendFrame(output);
+  CAN.sendFrame(output); // send CAN message
 }
 
 /* send emergency stop CAN message */
@@ -91,15 +92,15 @@ void test_high_level()
 void terminate_process()
 {
   sendMSG(0, 0);
-//  delay(3000);
-//  sendEStop();
+  delay(3000);
+  sendEStop();
   while (true){}
 }
 
 void setup()
 {
   Serial.begin(115200);
-  CAN.begin(CAN_BPS_500K);
+  CAN.begin(CAN_BPS_500K); // being the CAN bus with specific buard rate
   delay(3000);
   sendMSG(0, Straight_angle); // let the wheel point to straight
   delay(3000);
@@ -107,7 +108,7 @@ void setup()
 
 void loop()
 {
-  //receiveMSG(); 
+  receiveMSG(); 
   test_high_level();
   terminate_process();
 }
