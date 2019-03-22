@@ -1,13 +1,14 @@
 #include <SPI.h>
 #include "mcp_can.h"
 
-MCP_CAN CAN(49); // 53 for mega, 49 for our new board
+MCP_CAN CAN(49); // chip selection pin for CAN. 53 for mega, 49 for our new low level board
 
-void setup()
+
+void setup() // intialization CAN bus and serial monitor
 {
   Serial.begin(115200);
 
-  while (CAN_OK != CAN.begin(CAN_500KBPS))
+  while (CAN_OK != CAN.begin(CAN_500KBPS)) // inital CAN bus with 500KBPS baud rate (CAN_500KBPS is the baud rate)
   {
     Serial.println("CAN BUS Shield init fail");
     delay(1000);
@@ -37,15 +38,20 @@ void sendMSG(int actual_speed, int actual_angle) {
     Serial.println("Speed can not be negative!!! Ignored");
   }
   else {
+	  
     speedAngleMessage MSG;
+	// lower four bytes CAN data 
     MSG.sspeed = actual_speed;
+	// higher four bytes CAN data 
     MSG.angle = actual_angle;
 
     speedAngleMessage MSG2;
     MSG2.sspeed = actual_speed * 2;
     MSG2.angle = actual_angle * 2;
+	
+	// send two CAN message from low level to high level for testing
     CAN.sendMsgBuf(0x0A, 0, 8, (uint8_t*)&MSG);
-    delay(1000);
+    delay(1000); // a proper delay here is necessay, CAN bus need a time to clear the buffer. delay could be 100 minimum
     CAN.sendMsgBuf(0x0B, 0, 8, (uint8_t*)&MSG2); 
     delay(1000);
     Serial.println("MEGA SEND CAN MESSAGE!!!");
@@ -53,8 +59,8 @@ void sendMSG(int actual_speed, int actual_angle) {
 }
 
 void receiveMSG() {
-  unsigned char len = 0;
-  unsigned char buf[8];
+  unsigned char len = 0; // CAN message length 
+  unsigned char buf[8];	 // 8 bytes buffer to store CAN message
 
   if (CAN_MSGAVAIL == CAN.checkReceive())
   {
@@ -65,10 +71,12 @@ void receiveMSG() {
       Serial.print("RECEIVE DRIVE CAN MESSAGE FROM HIGH LEVEL WITH ID: ");
       Serial.println(canId, HEX);
       
+	  // reads lower 4 bytes and reformatting to one integer value
       int low_result = (unsigned int)(buf[3]<<24)|(buf[2]<<16)|(buf[1]<<8)|(buf[0]);
       Serial.print("Speed: ");
       Serial.print(low_result, DEC);
-
+	   
+	  // reads higher 4 bytes and reformatting to one integer value
       int high_result = (unsigned int)(buf[7]<<24)|(buf[6]<<16)|(buf[5]<<8)|(buf[4]);
       Serial.print("  Angle: ");
       Serial.println(high_result, DEC);
@@ -97,5 +105,5 @@ void receiveMSG() {
 void loop()
 {
   receiveMSG();
-  //sendMSG(12345, -9);
+  sendMSG(12345, -9);
 }

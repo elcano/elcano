@@ -68,8 +68,10 @@ void AcquireGPS() {
     if (!GPS.parse(GPS.lastNMEA()))
       return;
     if (GPS.fix) {
-      latitude = GPS.latitudeDegrees * 1000000;
-      longitude = GPS.longitudeDegrees * 1000000;
+	  
+	  // The reason we *1000000 is arduino not able to show digits with double or float, so we change them to long  
+      latitude = GPS.latitudeDegrees * 1000000; // update current latitude 
+      longitude = GPS.longitudeDegrees * 1000000; // update current longtitude
       // 47.78823090 | -122.22163391
       if(debug){
         Serial.print(GPS.latitudeDegrees, 8);
@@ -88,12 +90,13 @@ float getHeading(void) {
   sensors_event_t event;
   mag.getEvent(&event);
   float heading = (atan2(event.magnetic.y, event.magnetic.x) * 180) / PI;
-  if (heading < 0)  {
+  if (heading < 0)  { // if reading is negative, make it to positive
     heading = 360 + heading;
   }
   return heading;
 }
 
+// *** below is CAN transmission, please check HighlevelDemo1 to see comments on CAN send and read
 /*---------------------------------------------------------------------------------------*/
 /* receive CAN message from low level
 /*---------------------------------------------------------------------------------------*/
@@ -163,31 +166,31 @@ void terminate_process()
 /*---------------------------------------------------------------------------------------*/
 /*  below test if we are approaching each corner
 /*---------------------------------------------------------------------------------------*/
-bool approachTwo(){
-  if (abs(TwoLat - latitude) <= offset){
+bool approachTwo(){ // from 1->2 (check the digram on the very top)
+  if (abs(TwoLat - latitude) <= offset){ // we are moving horizontally, so we only care about the latitude
     approaching++;
     return true;
   }
   return false;
 }
 
-bool approachThree(){
-  if (abs(ThreeLongt - longitude) <= offset){
+bool approachThree(){ // from 2->3 (check the digram on the very top)
+  if (abs(ThreeLongt - longitude) <= offset){ // we are moving vertitally, so we only care about the longtitude
     approaching++;
     return true;
   }
   return false;
 }
 
-bool approachFour(){
-  if (abs(FourLat - latitude) <= offset){
+bool approachFour(){ // from 3 -> 4
+  if (abs(FourLat - latitude) <= offset){ 
     approaching++;
     return true;
   }
   return false;
 }
 
-bool approachOne(){
+bool approachOne(){ // from 4 -> 1
   if (abs(OneLongt - longitude) <= offset){
     approaching++;
     return true;

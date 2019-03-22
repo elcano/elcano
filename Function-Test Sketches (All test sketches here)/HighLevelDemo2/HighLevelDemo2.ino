@@ -10,7 +10,7 @@ void setup() {
   GPS.sendCommand(PMTK_SET_NMEA_OUTPUT_RMCGGA);
   GPS.sendCommand(PMTK_SET_NMEA_UPDATE_1HZ);
   GPS.sendCommand(PGCMD_ANTENNA);
-  mag.enableAutoRange(true); //Enable auto-gain
+  mag.enableAutoRange(true); //Enable auto-gain for the compass
 
   // /* initial compass module (TODO: the compass need to calibrate) */
   //  if (!mag.begin()) {
@@ -27,25 +27,39 @@ void setup() {
   sendMSG(0, Straight_angle); // let the wheel point to straight
   delay(3000);
 }
-
+`
+/*  This is the geocoordinate of UWB playgroud                             
+ *   
+ *                               (lat diff 652)
+ *  3.(47.761253, -122.189872)--------------------------------4.(47.760601, -122.189434)
+ *      |                                                           |
+ *      | (long diff 659)                                           |  (long diff 757) 
+ *      |                                                           |
+ *  2.(47.761136, -122.190531)--------------------------------1.(47.760433, -122.190191)  * Start point
+ *                             (lat diff 703)
+ */
 void loop() {
   // get current location
   AcquireGPS();
 
   // doing differnet action based on which path we are on
   switch (approaching) {
+	  
     case 0:  // 1 -> 2
       if (debug) {
         Serial.println("From 1 -> 2");
       }
-      if (old != approaching){
+	  
+      if (old != approaching){ // send the command only if the current state changes
         goStraight();
         old = approaching;
       }
-      if (approachTwo()) {
-        turn();
+	  
+      if (approachTwo()) { // if we are approaching first point 
+        turn(); // turn 90 degree to the right so it can do square movement
       }
       break;
+	  
     case 1: // 2 -> 3
       if (debug) {
         Serial.println("From 2 -> 3");
