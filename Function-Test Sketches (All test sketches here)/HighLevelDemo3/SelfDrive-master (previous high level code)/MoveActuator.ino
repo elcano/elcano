@@ -1,64 +1,33 @@
-<<<<<<< HEAD
-/********************************************************************************
+/*
  Move Actuator: Reduced version of Elcano_C2_Base for testing actuators
  
- Elcano Control Module C2 Basic: Bare bones low level control of vehicle.
+ Elcano Contol Module C2 Basic: Bare bones low level control of vehicle.
  
  Outputs are
  1) Analog 0-4 V signal for traction motor speed
  2) Four relay signals for brakes.
  3) PWM signal for steering.
- ********************************************************************************/
+  */
 
 // Input/Output (IO) pin names for the MegaShieldDB printed circuit board (PCB)
- #include "IOPCB.h"
-// Contains trike definitions 
- #include "Settings.h"
-// When setting up the project, select
-//   Sketch  |  Import Library ... |  SPI
-// include the Serial Periferal Interface (SPI) library:
-#include <SPI.h>
-=======
-/*
-  Move Actuator: Reduced version of Elcano_C2_Base for testing actuators
-
-  Elcano Contol Module C2 Basic: Bare bones low level control of vehicle.
-
-  Outputs are
-  1) Analog 0-4 V signal for traction motor speed
-  2) Four relay signals for brakes.
-  3) PWM signal for steering.
+// #include <IOPCB.h>
+/*==========================================================================*/
+// @ToDo: Fix this fix. If there are variant systems, they should be selected
+// in Settings.h, and then IO.h can be included *after* that, and test the
+// selector, or use values defined in Settings.h.
+// Temporary fix 10/7/15:   IOPCB.h is here
+/*==========================================================================*/
+/* IO_PCB.h:  I/O pin assignments for Arduino Mega 2560 on MegaShieldDB
 */
 
-#include <SPI.h>
-#include <Servo.h>
+//#include <Settings.h>
 
-/*==========================================================================*/
-// @ToDo: Provide a means to select the model of trike rather than hard-coded values
-/*==========================================================================*/
-
-
-#define BRAKE_POWER 9
-#define BRAKE_VOLTAGE 10
->>>>>>> moveactuator updated to work with known values for Servo.h and the yellow trike
-
-/********************************************************************************
-@ToDo: Fix this fix. If there are variant systems, they should be selected
-in Settings.h, and then IO.h can be included *after* that, and test the
-selector, or use values defined in Settings.h.
-Temporary fix 10/7/15:   IOPCB.h is here
-Possibly fixed: 10/8/18
-IOCPB.h section has been commented out and code compiles with the include 
-Settings.h section has also been commented out and code compiles with the include 
-*********************************************************************************/
-
-/********************************************************************************
 // Values (0-255) represent digital values that are PWM signals used by analogWrite.
+
 // MIN and MAX ACC set the minimum signal to get the motor going, and maximum allowable acceleration for the motor
 #define MIN_ACC_OUT 50
 #define MAX_ACC_OUT 235
 
-<<<<<<< HEAD
 // RIGHT, STRAIGHT, and LEFT TURN_OUT set values to be sent to the steer actuator that changes the direction of the front wheels
 #define RIGHT_TURN_OUT 229
 #define LEFT_TURN_OUT 127
@@ -68,21 +37,6 @@ Settings.h section has also been commented out and code compiles with the includ
 #define RIGHT_TURN_MS 1000
 #define LEFT_TURN_MS 2000
 #define STRAIGHT_TURN_MS 1500
-=======
-/*
- * STEERING
- * RIGHT, STRAIGHT, and LEFT TURN_OUT set values to be sent to the steer actuator that changes the direction of the front wheels
- * 
- * 1000 uS maps to Servo.h using a value of 142
- * 2000 uS maps to Servo.h using a value of 45
- * 
- * The yellow trike has a mechanical range of (70-140) and a center at approximately 90
- */
-#define RIGHT_TURN_OUT 140
-#define LEFT_TURN_OUT 70
-#define STRAIGHT_TURN_OUT 94
-#define STEER_OUT_PIN 8 // Output to steer actuator on this digital pin
->>>>>>> moveactuator updated to work with known values for Servo.h and the yellow trike
 
 // Turn sensors are believed if they are in this range while wheels are straight
 // These numbers vary considerably, depending on which sensor angle is set to straight.
@@ -94,14 +48,11 @@ Settings.h section has also been commented out and code compiles with the includ
 // Trike specific pins/channels
 // Output to motor actuator
 #define DAC_CHANNEL 0
-<<<<<<< HEAD
 // Output to steer actuator
-#define STEER_OUT_PIN 7
+#define STEER_OUT_PIN 9
 // Output to brake actuator
-//#define BRAKE_OUT_PIN 6
+#define BRAKE_OUT_PIN 6
 // DISK_BRAKE is deprecated, use BRAKE_OUT_PIN
-=======
->>>>>>> moveactuator updated to work with known values for Servo.h and the yellow trike
 
 // Trike-specific physical parameters
 #define WHEEL_DIAMETER_MM 482
@@ -124,8 +75,6 @@ Settings.h section has also been commented out and code compiles with the includ
 #define THROTTLE_CHANNEL 0
 
 // ====== End Settings.h ======================
-********************************************************************************/
-
 
 // Define the tests to do.
 #define BRAKE_RAMP
@@ -138,7 +87,7 @@ Settings.h section has also been commented out and code compiles with the includ
 The Mega is designed to be used with a data-logging shield.
 The nonMega shield uses A4 and A5 for RTC and D10,11,12,and 13 for MOSI data logging.
 */
-/********************************************************************************
+
 // @ToDo: There are declarations here that are per-trike, and some that are common.
 // Parameters have been added to Settings.h for the per-trike values.
 // Should the common parameters also be defined in Settings.h?
@@ -147,9 +96,9 @@ The nonMega shield uses A4 and A5 for RTC and D10,11,12,and 13 for MOSI data log
 
 // D0-7 Connector -------------------------------
 // On the Mega, any of D0 to D13 can be PWM.
-// D0 is (Rx0) Read Serial Data. 
+/* D0 is (Rx0) Read Serial Data. */
 const int Rx0 = 0;      // external input
-// [out] Digital Signal 1: (Tx0). Transmit Serial Data.  
+/* [out] Digital Signal 1: (Tx0). Transmit Serial Data.  */
 const int Tx0 = 1;      // external output
 
 // This is the 5V supply produced by the E-bike controller.
@@ -179,18 +128,20 @@ This supply goes away when either the key switch is turned off or RC4 is pressed
 Lack of 5V from the motor controller is an emergency stop.
 Interrupts are on 2,3,18,19,20 and 21.
 */
-/********************************************************************************
 const int SelectCD     = 49;  // Select IC 3 DAC (channels C and D)
 const int ThrottleMISO = 50;
 const int ThrottleMOSI = 51;
 const int ThrottleSCK  = 52;
 const int SelectAB     = 53;  // Select IC 2 DAC (channels A and B)
 
-//==========================================================================
+/*==========================================================================*/
 // End of IOPCB.h
-//==========================================================================
-********************************************************************************/
+/*==========================================================================*/
 
+// When setting up the project, select
+//   Sketch  |  Import Library ... |  SPI
+// include the Serial Periferal Interface (SPI) library:
+#include <SPI.h>
 // The MegaShieldDB has a four channel Digital to Analog Converter (DAC).
 // Basic Arduino cannot write a true analog signal, but only PWM.
 // Many servos take PWM.
@@ -288,7 +239,6 @@ int ThrottleIncrement = 1;
    
 class Brakes
 {
-<<<<<<< HEAD
  public:
   Brakes();
   void Stop();
@@ -298,25 +248,11 @@ class Brakes
   enum brake_state {BR_OFF, BR_HI_VOLTS, BR_LO_VOLTS} state;
   unsigned long clock_hi_ms;
   const int LeftBrakeOnPin = 10;
-  const int RightBrakeOnPin = 4;
+  const int RightBrakeOnPin = 2;
   const int LeftBrakeVoltPin = 8;
   const int RightBrakeVoltPin = 7;
   const unsigned long MaxHi_ms = 800;
  } ;
-=======
-  public:
-    Brakes();
-    void Stop();
-    void Release();
-    void Check();
-  private:
-    enum brake_state {BR_OFF, BR_HI_VOLTS, BR_LO_VOLTS} state;
-    unsigned long clock_hi_ms;
-    const int brakePower = BRAKE_POWER; // LOW means on, HIGH means off
-    const int brakeOn = BRAKE_VOLTAGE; // LOW means 24v, HIGH means 12v
-    const unsigned long MaxHi_ms = 800;
-} ;
->>>>>>> moveactuator updated to work with known values for Servo.h and the yellow trike
 
 // For normal operation
 const long int loop_time_ms = 100;  // Limits time in the loop.
@@ -393,8 +329,7 @@ void loop()
   outputToSerial();
 
 // Put no new code after here.
-  unsigned long execution_ms = millis() - timeStart_ms;
-  delay_ms = MinTimeStep_msec - execution_ms;
+  delay_ms = millis() - (timeStart_ms + MinTimeStep_msec);
   if (delay_ms > 0) delay(delay_ms);
 }
 /*---------------------------------------------------------------------------------------*/
@@ -559,4 +494,3 @@ void Brakes::Check()
     state = BR_LO_VOLTS;
   }
 }
-
