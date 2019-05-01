@@ -16,7 +16,7 @@ uint32_t delayTime;
 void setup() {
   Serial.begin(baud);
   if (DEBUG) {
-    Serial.println("Setup complete");
+    Serial.println("main Setup complete");
   }
   myTrike = new Vehicle();
 }
@@ -43,4 +43,5 @@ void loop()
   }
   if (delayTime > 0UL)
     delay(delayTime);
+ delay(5000);  //JUST ADDED for testing
 }

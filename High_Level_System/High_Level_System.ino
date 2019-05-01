@@ -8,10 +8,17 @@
 #include <Adafruit_LSM303_U.h>
 #include <FusionData.h>
 #include <Adafruit_GPS.h>
+#include <due_can.h>
+//CAN ID protocols
+#define HiStatus_CANID 0x100
+#define LowStatus_CANID 0x200
+#define HiDrive_CANID 0x350
+#define Actual_CANID 0x500
+#define MAX_CAN_FRAME_DATA_LEN_16   16
 
 // Set GPSECHO to 'false' to turn off echoing the GPS data to the Serial console
 // Set to 'true' if you want to debug and listen to the raw GPS sentences.
-#define GPSECHO  true
+#define GPSECHO  false
 
 #define mySerial Serial3
 Adafruit_GPS GPS(&mySerial);
@@ -37,6 +44,7 @@ const long turn_speed = 835;
 const long MIN_TURNING_RADIUS = 1000;
 long speed_mmPs = DESIRED_SPEED_mmPs;
 const unsigned long LoopPeriod = 100;  // msec
+CAN_FRAME incoming;
 
 int next = 1; //index to path in a list
 //last is the the last index of the Path/goal
@@ -181,10 +189,13 @@ bool AcquireGPS(waypoint &gps_position) {
 
     if (GPS.fix) {
       Serial.println("GPS fix");
+      
       gps_position.latitude = GPS.latitudeDegrees;
+     // gps_position.latitude = 47.758949;
       Serial.print("Latitude: ");
       Serial.println(gps_position.latitude, 6);
       gps_position.longitude = GPS.longitudeDegrees;
+      //gps_position.longitude = -122.190746;
       Serial.print("Longitude: ");
       Serial.println(gps_position.longitude, 6);
       return true;
@@ -197,12 +208,26 @@ bool AcquireGPS(waypoint &gps_position) {
 //setup Elcano serial communication for recieving data from C2
 //Recieving actual_speed and an arbitary angle(for the moment)
 void C6_communication_with_C2() {
+  CAN.watchForRange(Actual_CANID, LowStatus_CANID);  //filter for low level communication
+  
+  while (CAN.available() > 0) { // check if CAN message available
+    CAN.read(incoming);
+    Serial.print("Get data from (low level) ID: ");
+    Serial.println(incoming.id, HEX);
+    Serial.print("Low: ");
+    Serial.print((int)incoming.data.low, DEC);  // speed is the lower four bytes  
+    Serial.print("  High: ");
+    Serial.println((int)incoming.data.high, DEC); // angle is the higher four bytes  
+    Serial.println("");
+  }
+  
+  
   //setting up receiving data for C6 elcano communication
-  ps.dt = &ReceiveData;
-  ps.input = &Serial2;
-  ps.output = &Serial2;
-  ps.capture = MsgType::drive;
-  ReceiveData.clear();
+ // ps.dt = &ReceiveData;
+  //ps.input = &Serial2;
+  //ps.output = &Serial2;
+  //ps.capture = MsgType::drive;
+ // ReceiveData.clear();
 }
 
 long getHeading(void) {
@@ -300,10 +325,23 @@ void loop_C6() {
     Serial.println("Failed to get got_GPS");
   }
   //Recieving data from C2 using Elcano_Serial
-  ParseStateError r = ps.update();
+  C6_communication_with_C2();
+  if((incoming.id, HEX) == Actual_CANID) {
+    Serial.print("Low: ");
+    Serial.print((int)incoming.data.low, DEC);  // read the lower four bytes  
+    Serial.print("  High: ");
+    Serial.println((int)incoming.data.high, DEC); // read the higher four bytes
+  }
+  extractSpeed = receiveData((int)incoming.data.low DEC);
+  if (extractSpeed != -1) { //invalid data from C2 if it's -1
+      //speed cannot be below 0
+      if  (extractSpeed >= 0) {
+        newPos.speed_mmPs = extractSpeed; //upadte acutal speed from C2
+      }
+  }
+  /*ParseStateError r = ps.update();
   Serial.print("C6Loop, ParseState Error: ");
   if (r == ParseStateError::success)  {
-    Serial.println("Start step2");
     extractSpeed = receiveData(ReceiveData.speed_mmPs);
 
     if (extractSpeed != -1) { //invalid data from C2 if it's -1
@@ -315,7 +353,7 @@ void loop_C6() {
     }
     Serial.println("Finished Step 2");
   }
-  Serial.println("Skipped Step 2");
+  Serial.println("Skipped Step 2"); */
   newPos.time_ms = millis();
   Serial.println("got millis");
   //get heading coordinates from the compass
@@ -1317,13 +1355,25 @@ void loop_C3() {
   //Send speed and angle to C2 to diplay the Led on the test stance
   //only send data to C2 if we get new data. Avoid sending the same data
   if (pre_desired_speed != speed_mmPs || pre_turn_angle != scaleDownAngle(turn_direction)) {
-    SendData.clear();
+    CAN_FRAME output; //initialize CAN frame to add CAN message
+    output.length = MAX_CAN_FRAME_DATA_LEN_16;
+    output.id = HiDrive_CANID; //give drive instructions
+    output.data.low = speed_mmPs; //lower 4 bytes is speed (should this be sendData(speed_mmPs)?
+    output.data.high = scaleDownAngle(turn_direction); //higher 4 bytes is angle
+
+    CAN.sendFrame(output); //send the Message
+    Serial.print("DUE sent msg: ");
+    Serial.println(output.id, HEX);
+    delay(1000); //a prper delay here is necessary, CAN bus need time to clear the buffer, 100minimum
+
+    //old serial transfer
+   /* SendData.clear();
     SendData.kind = MsgType::drive;
     //chheck this
     SendData.speed_mmPs = sendData(speed_mmPs);
     SendData.angle_mDeg = scaleDownAngle(turn_direction);
     SendData.write(&Serial2);
-
+  */
     pre_desired_speed = speed_mmPs;
     pre_turn_angle = scaleDownAngle(turn_direction);
   }
@@ -1346,6 +1396,10 @@ void setup() {
 }
 
 void loop() {
+  Serial.begin(115200);
+  if (CAN.begin(CAN_BPS_500K)) { // initalize CAN with 500kbps baud rate 
+    Serial.println("CAN init success");
+  }
   Serial.println("Starting C6 loop");
   loop_C6();
   //RE-compute path if too far off track (future development) for C4

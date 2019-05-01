@@ -28,6 +28,9 @@ ThrottleController::ThrottleController() :
 	else
 		attachInterrupt(digitalPinToInterrupt(IRPT_WHEEL), tick, RISING);//pin 3 on Mega
 
+  if(DEBUG)
+    Serial.println("Throttle Setup Complete");
+
 }
   
 ThrottleController::~ThrottleController(){
@@ -52,13 +55,20 @@ void ThrottleController::tick() {
 	interrupts();
 }
 
+//
 int32_t ThrottleController::update(int32_t dSpeed) {
 	
 	if (USE_PIDS)
 		ThrottlePID(dSpeed);
 	else
 		engageThrottle(dSpeed);
-		computeSpeed();
+
+  if(DEBUG){
+    Serial.print("PWM speed: ");
+    Serial.println(currentThrottlePWM);
+  }
+	computeSpeed();
+ Serial.println("mm Speed: " + String(speedCyclometerInput_mmPs));
 	return speedCyclometerInput_mmPs;
 }
 
@@ -125,17 +135,14 @@ void ThrottleController::engageThrottle(int32_t input) {
   if (input != 0){
     input = map(input, 0, MAX_SPEED_mmPs, MIN_ACC_OUT, MAX_ACC_OUT);
   }
-  
+  if(DEBUG)
+      Serial.println("MAPPED speed: " + String(input));
+      
 	if (input != currentThrottlePWM) {
-	  if(DEBUG){
-      Serial.print("MAP speed: ");
-     Serial.println(input);
-      }
 		noInterrupts();
 		write(DAC_CHANNEL, input);
 		currentThrottlePWM = input;  // Remember most recent throttle PWM value.
 		interrupts();
-
 	}
 }
 

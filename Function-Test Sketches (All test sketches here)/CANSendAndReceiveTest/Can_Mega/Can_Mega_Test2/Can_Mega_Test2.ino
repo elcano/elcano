@@ -113,9 +113,9 @@ void sendMSG() {
   // send two CAN message from low level to high level for testing
     CAN.sendMsgBuf(Actual_CANID, 0, 8, (uint8_t*)&MSG);
     delay(1000); // a proper delay here is necessay, CAN bus need a time to clear the buffer. delay could be 100 minimum
-    CAN.sendMsgBuf(Actual_CANID, 0, 8, (uint8_t*)&MSG2); 
-    delay(1000);
-    Serial.println("MEGA Messages SENT");
+    //CAN.sendMsgBuf(Actual_CANID, 0, 8, (uint8_t*)&MSG2); 
+    //delay(1000);
+    Serial.println("MEGA Messages SENT spd" + String(MSG.sspeed)+ ", ang: " + String(MSG.angle));
   }
 }
 void loop(){
