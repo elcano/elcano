@@ -10,6 +10,8 @@ Brakes::Brakes(){
   clock_hi_ms = millis();
   state = BR_OFF;
   Release();
+  if(DEBUG)
+    Serial.println("Brake Setup Complete");
 }
 
 

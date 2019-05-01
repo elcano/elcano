@@ -1,7 +1,7 @@
 #pragma once
 
 
-#define DEBUG false
+#define DEBUG true
 #define USE_PIDS false
 //Currently can be 3 or 1
 #define LLBversion 3
@@ -31,7 +31,7 @@ Minimum and maximum speed allowed
 
 // max speed 
 const int32_t KmPh_mmPs = 1000000/3600;
-const int32_t MAX_SPEED_mmPs = MAX_SPEED_KmPh*KmPh_mmPs;
+const int32_t MAX_SPEED_mmPs = MAX_SPEED_KmPh*KmPh_mmPs;  //at 20KMPH this is roughly 5,555
 
 // min speed -> slower is interpreted as stopped
 //set as 1% of the maximum speed -> 0.2 KmPh
