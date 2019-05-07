@@ -76,7 +76,7 @@ Vehicle Data
 Wheel Diameter, Turn Radius
 */
 
-#define WHEEL_DIAMETER_MM 500
+#define WHEEL_DIAMETER_MM 495.3
 //derived settings
 const int32_t WHEEL_CIRCUM_MM = (WHEEL_DIAMETER_MM * PI);
 

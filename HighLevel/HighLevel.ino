@@ -2,6 +2,7 @@
 #include <SPI.h>
 #include <SD.h>
 #include <IODue.h>
+#include <Can_Protocol.h>
 #include <ElcanoSerial.h>
 #include <Serial_Communication.h>
 #include <Wire.h>
@@ -9,11 +10,7 @@
 #include <FusionData.h>
 #include <Adafruit_GPS.h>
 #include <due_can.h>
-//CAN ID protocols
-#define HiStatus_CANID 0x100
-#define LowStatus_CANID 0x200
-#define HiDrive_CANID 0x350
-#define Actual_CANID 0x500
+
 #define MAX_CAN_FRAME_DATA_LEN_16   16
 
 // Set GPSECHO to 'false' to turn off echoing the GPS data to the Serial console
@@ -71,7 +68,7 @@ waypoint GPS_reading, estimated_position, oldPos, newPos, Start;
 Origin origin(47.758949, -122.190746);
 double gpsTest[] = {47.758951, -122.2, 47.9, -122, 51, -123, 50.5, -120};
 int gpsIndex = 0; 
-int speeds[] = {1240, 3189, 1, 5091, 2404, 3200};
+int speeds[] = {1000, 2000, 4000, 3000, 1000, 1000};
 int angg[] = {0, 100, 255, 10, 125, 230};
 int speedIndex = 0;
 //Origin origin; //set origin later in intial_position
@@ -170,7 +167,7 @@ bool AcquireGPS(waypoint &gps_position) {
   Serial.println("Acquire GPS");
   float latitude, longitude;
 
-  //HARD CODED FOR TESTING remove from here to return true statement
+  //HARD CODED FOR TESTING remove from here to the return true statement down below
   gps_position.latitude = gpsTest[gpsIndex];
   gpsIndex++; 
   Serial.print("Latitude: ");
@@ -188,16 +185,12 @@ bool AcquireGPS(waypoint &gps_position) {
   //read atleast 25 characters every loop speed up update time for GPS
   for (int i = 0; i < 25; i++) {
     c = GPS.read();
-     //test output 4-9-2019 --------- Mel
-    Serial.print(c);
-    Serial.print(", "); 
   }
-  Serial.println("");
   delay(1000);
   
   // if a sentence is received, we can check the checksum, parse it...
   if (GPS.newNMEAreceived()) {
-    Serial.println("newNMEArecieved");
+  //  Serial.println("newNMEArecieved");
     // a tricky thing here is if we print the NMEA sentence, or data
     // we end up not listening and catching other sentences!
     // so be very wary if using OUTPUT_ALLDATA and trytng to print out data
@@ -207,7 +200,6 @@ bool AcquireGPS(waypoint &gps_position) {
       return false;  // we can fail to parse a sentence in which case we should just wait for another
 
     if (GPS.fix) {
-      Serial.println("GPS fix");
       gps_position.latitude = GPS.latitudeDegrees;
       Serial.print("Latitude: ");
       Serial.println(gps_position.latitude, 6);
@@ -221,21 +213,31 @@ bool AcquireGPS(waypoint &gps_position) {
   return false;
 }
 
-//setup Elcano serial communication for recieving data from C2
+//setup CAN Bus communication for recieving data from C2
 //Recieving actual_speed and an arbitary angle(for the moment)
 void C6_communication_with_C2() {
  CAN.watchForRange(Actual_CANID, LowStatus_CANID);  //filter for low level communication
   
   while (CAN.available() > 0) { // check if CAN message available
     CAN.read(incoming);
-    Serial.print("Get data from (low level) ID: ");
-    Serial.println(incoming.id, HEX);
-    Serial.print("Low: ");
-    Serial.print((int)incoming.data.low, DEC);  // speed is the lower four bytes  
-    Serial.print("  High: ");
-    Serial.println((int)incoming.data.high, DEC); // angle is the higher four bytes  
-    Serial.println("");
+    Serial.println("Get data from (low level) ID: " + String(incoming.id, HEX));
+    Serial.println("Low: " + String((int)incoming.data.low, DEC));
+    Serial.println("High: " + String((int)incoming.data.high, DEC));
+
+    if(incoming.id == Actual_CANID) {
+    //extractSpeed = receiveData(incoming.data.low);
+      extractSpeed = incoming.data.low;
+      if  (extractSpeed >= 0) {
+        newPos.speed_mmPs = extractSpeed; //upadte acutal speed from C2
+      }
+      else
+        Serial.println("Got a negative speed from C2");
+    }
+  else 
+    Serial.println("Did not receive actual speed, angle from C2");
   }
+  
+  //Outdated Serial communication replaced by CAN
   /*//setting up receiving data for C6 elcano communication
   ps.dt = &ReceiveData;
   ps.input = &Serial2;
@@ -252,8 +254,7 @@ long getHeading(void) {
   //Calculate the current heading (angle of the vector y,x)
   //Normalize the heading
   float heading = (atan2(event.magnetic.y, event.magnetic.x) * 180) / PIf;
-  Serial.print("acquired heading: ");
-  Serial.println(heading);
+  Serial.println("acquired heading: " + String(heading));
   if (heading < 0)  {
     heading = 360 + heading;
   }
@@ -263,21 +264,15 @@ long getHeading(void) {
 
 //Get your first initial position form the GPS
 void initial_position() {
-  Serial.println("getting GPS");
   bool GPS_available = AcquireGPS(estimated_position);
-  Serial.print("GPS results ");
-  Serial.println(GPS_available);
-  
-  //Get initial starting position
-  
+
   //This makes an infinite loop when the GPS is not available, comment out or hard code for testing 4-8-19 Mel
   while (!GPS_available) {
     GPS_available = AcquireGPS(estimated_position); 
   }
   
-  Serial.println("Acquired GPS position");
+  //Serial.println("Acquired GPS position");
   estimated_position.time_ms = millis();
-  Serial.println("got millis in initial position");
   estimated_position.Compute_EandN_Vectors(getHeading()); //get position E and N vector
   //Assign Origin GPS position
   //Origin tmpOrg(estimated_position.latitude, estimated_position.longitude);
@@ -310,22 +305,17 @@ void setup_C6() {
   
   initial_position(); //getting your initial position from GPS comment out if no GPS available
   
-  Serial.println("passed initial_position");
-  delay(3000);
   //hard code for testing the exact start positon in the path
   //initializePosition();
   //Serial.println("passed hardcode GPS,  initializePosition()");
   //set default speed to 0 
   newPos.speed_mmPs = 0;
 
-   Serial.println("C6 to C2 call");
   //for recieving data from C2
   C6_communication_with_C2();
-  Serial.println("Finished C6 to C2");
 }
 
 void loop_C6() {
-  Serial.println("entered C6 loop");
   oldPos.time_ms = millis();
   delay(1);
   
@@ -341,23 +331,10 @@ void loop_C6() {
   
   /* Receiving data from C2 using CAN Bus */
   C6_communication_with_C2();
-  if(incoming.id == Actual_CANID) {
-    Serial.println("Low: " + String((int)incoming.data.low, DEC));
-    Serial.println(" High: " + String((int)incoming.data.high, DEC));
-    //extractSpeed = receiveData(incoming.data.low);
-    extractSpeed = incoming.data.low;
-    Serial.println("extractSpeed: " + String(extractSpeed));
-    if  (extractSpeed >= 0) {
-      newPos.speed_mmPs = extractSpeed; //upadte acutal speed from C2
-    }
-    else
-    Serial.println("Got a negative speed from C2");
-    }
-  else {
-    Serial.println("Did not receive actual speed, angle from C2");
-  }
+  
 
   /*
+   * OUT DATED SERIAL tranfer replaced by CAN
   //Recieving data from C2 using Elcano_Serial
   ParseStateError r = ps.update();
   Serial.print("C6Loop, ParseState Error: ");
@@ -374,17 +351,16 @@ void loop_C6() {
     } */
     
   newPos.time_ms = millis();
-  Serial.println("got millis");
   //get heading coordinates from the compass
   newPos.bearing_deg = getHeading();
-  Serial.print("loop6 newPos.bearing_deg = ");
-  Serial.println(newPos.bearing_deg);
+  Serial.println("loop6 newPos.bearing_deg = " + String(newPos.bearing_deg));
   delay(3000);
   if (got_GPS) { //got both GPS and DeadReckoning
     Serial.println("got gps and deadreckoning");
     //to get an esitimation position average between the GPS and Dead Rekoning
     //estimated_position is updated to the current position inside this method
     FindFuzzyCrossPointXY(GPS_reading, newPos, estimated_position);
+    Serial.println("-------------- estimated position: " + String(estimated_position.latitude) + ", " + String(estimated_position.longitude));
     
     //calculating the E and N vector by constantly updating everything you move 
     oldPos.vectors(&estimated_position);
@@ -409,7 +385,6 @@ void loop_C6() {
 
     //update old position to current 
     oldPos = estimated_position;
-    Serial.println("Finished C6 loop");
 }
 
 /*---------------------------------------------------------------------------------------*/
@@ -1380,7 +1355,7 @@ void loop_C3() {
     speedIndex = 0;
   else
     speedIndex++;
-  if (pre_desired_speed != speed_mmPs || pre_turn_angle != scaleDownAngle(turn_direction)) {
+  if (pre_desired_speed != speed_mmPs || pre_turn_angle != turn_direction) {
     Serial.println("Sending C3 to C2");
     CAN_FRAME output; //intialize can frame to carry message to C2
     output.length = MAX_CAN_FRAME_DATA_LEN_16;
