@@ -55,7 +55,12 @@ void ThrottleController::tick() {
 	interrupts();
 }
 
-//
+/**
+ * receives requested speed from Vehicle requested from High Level board
+ * attempts to adjust speed either through PIDS or standard engageThrottle() 
+ * based on the PIDs being on or off in Settings
+ * param dSpeed desired speed in mm/s
+ */
 int32_t ThrottleController::update(int32_t dSpeed) {
 	
 	if (USE_PIDS)
@@ -68,7 +73,7 @@ int32_t ThrottleController::update(int32_t dSpeed) {
     Serial.println(currentThrottlePWM);
   }
 	computeSpeed();
- Serial.println("mm Speed: " + String(speedCyclometerInput_mmPs));
+  Serial.println("mm Speed: " + String(speedCyclometerInput_mmPs));
 	return speedCyclometerInput_mmPs;
 }
 
@@ -122,7 +127,10 @@ void ThrottleController::ThrottlePID(int32_t desiredValue) {
 	}
 }
 
-/* !UPDATE THIS OBSERVED INFO! (LAST UPDATE: May 10, 2013, TCF)
+/** 
+ *  
+ *  @param input desired speed in mm/s
+ *  !UPDATE THIS OBSERVED INFO! (LAST UPDATE: May 10, 2013, TCF)
 0.831 V at rest 52 counts
 1.20 V: nothing 75
 1.27 V: just starting 79
@@ -133,6 +141,8 @@ void ThrottleController::ThrottlePID(int32_t desiredValue) {
 */
 void ThrottleController::engageThrottle(int32_t input) {
   if (input != 0){
+    //needs to be updated, currently this will change the voltage to a desired
+    //speed based on starting at 0, it doesn't take into account the current speed of trike
     input = map(input, 0, MAX_SPEED_mmPs, MIN_ACC_OUT, MAX_ACC_OUT);
   }
   if(DEBUG)
