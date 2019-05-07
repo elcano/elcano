@@ -1,3 +1,4 @@
+#include "Settings.h"
 #include <Common.h>
 #include <SPI.h>
 #include <SD.h>
@@ -14,7 +15,7 @@
 #define MAX_CAN_FRAME_DATA_LEN_16   16
 
 // Set GPSECHO to 'false' to turn off echoing the GPS data to the Serial console
-// Set to 'true' if you want to debug and listen to the raw GPS sentences.
+// Set to 'true' if you want to DEBUG and listen to the raw GPS sentences.
 #define GPSECHO  false
 
 #define mySerial Serial3
@@ -66,11 +67,14 @@ waypoint GPS_reading, estimated_position, oldPos, newPos, Start;
 
 //origin is set to the UWB map
 Origin origin(47.758949, -122.190746);
+
+//********* Hardcoded arrays of coordinates, speeds and turn angles for testing ***********
 double gpsTest[] = {47.758951, -122.2, 47.9, -122, 51, -123, 50.5, -120};
 int gpsIndex = 0; 
-int speeds[] = {1000, 2000, 4000, 3000, 1000, 1000};
-int angg[] = {0, 100, 255, 10, 125, 230};
+int speeds[] = {1000, 2000, 1500, 2500, 1000, 2000};
+int angg[] = {100, 125, 100, 180, 255, 175};
 int speedIndex = 0;
+int insaneCounter = 0;
 //Origin origin; //set origin later in intial_position
 
 SerialData ReceiveData, SendData;
@@ -164,17 +168,15 @@ void setup_GPS() {
   GPS.sendCommand(PGCMD_ANTENNA);
 }
 bool AcquireGPS(waypoint &gps_position) {
-  Serial.println("Acquire GPS");
+  if(DEBUG) Serial.println("Acquire GPS");
   float latitude, longitude;
 
   //HARD CODED FOR TESTING remove from here to the return true statement down below
   gps_position.latitude = gpsTest[gpsIndex];
   gpsIndex++; 
-  Serial.print("Latitude: ");
-  Serial.println(gps_position.latitude, 6);
+  if(DEBUG)  Serial.println("Latitude: " + String(gps_position.latitude, 6));
   gps_position.longitude = gpsTest[gpsIndex];
-  Serial.print("Longitude: ");
-  Serial.println(gps_position.longitude, 6);
+  if(DEBUG)  Serial.println("Longitude: " + String(gps_position.longitude, 6));
   if(gpsIndex == 7)
     gpsIndex = 0;
   else
@@ -186,7 +188,6 @@ bool AcquireGPS(waypoint &gps_position) {
   for (int i = 0; i < 25; i++) {
     c = GPS.read();
   }
-  delay(1000);
   
   // if a sentence is received, we can check the checksum, parse it...
   if (GPS.newNMEAreceived()) {
@@ -201,11 +202,9 @@ bool AcquireGPS(waypoint &gps_position) {
 
     if (GPS.fix) {
       gps_position.latitude = GPS.latitudeDegrees;
-      Serial.print("Latitude: ");
-      Serial.println(gps_position.latitude, 6);
+      if(DEBUG)  Serial.println("Latitude: " + String(gps_position.latitude, 6));
       gps_position.longitude = GPS.longitudeDegrees;
-      Serial.print("Longitude: ");
-      Serial.println(gps_position.longitude, 6);
+      if(DEBUG)  Serial.println("Longitude: " + String(gps_position.longitude, 6));
       return true;
     }
     return false;
@@ -220,9 +219,11 @@ void C6_communication_with_C2() {
   
   while (CAN.available() > 0) { // check if CAN message available
     CAN.read(incoming);
-    Serial.println("Get data from (low level) ID: " + String(incoming.id, HEX));
-    Serial.println("Low: " + String((int)incoming.data.low, DEC));
-    Serial.println("High: " + String((int)incoming.data.high, DEC));
+    if(DEBUG2)  {
+      Serial.println("Get data from (low level) ID: " + String(incoming.id, HEX));
+      Serial.println("Low: " + String((int)incoming.data.low, DEC));
+      Serial.println("High: " + String((int)incoming.data.high, DEC));
+    }
 
     if(incoming.id == Actual_CANID) {
     //extractSpeed = receiveData(incoming.data.low);
@@ -231,10 +232,10 @@ void C6_communication_with_C2() {
         newPos.speed_mmPs = extractSpeed; //upadte acutal speed from C2
       }
       else
-        Serial.println("Got a negative speed from C2");
+        if(DEBUG)  Serial.println("Got a negative speed from C2");
     }
   else 
-    Serial.println("Did not receive actual speed, angle from C2");
+    if(DEBUG)  Serial.println("Did not receive actual speed, angle from C2");
   }
   
   //Outdated Serial communication replaced by CAN
@@ -254,11 +255,10 @@ long getHeading(void) {
   //Calculate the current heading (angle of the vector y,x)
   //Normalize the heading
   float heading = (atan2(event.magnetic.y, event.magnetic.x) * 180) / PIf;
-  Serial.println("acquired heading: " + String(heading));
+  if(DEBUG)  Serial.println("acquired heading: " + String(heading));
   if (heading < 0)  {
     heading = 360 + heading;
   }
-  delay(3000);
   return heading;
 }
 
@@ -271,23 +271,23 @@ void initial_position() {
     GPS_available = AcquireGPS(estimated_position); 
   }
   
-  //Serial.println("Acquired GPS position");
+  //if(DEBUG)  Serial.println("Acquired GPS position");
   estimated_position.time_ms = millis();
   estimated_position.Compute_EandN_Vectors(getHeading()); //get position E and N vector
   //Assign Origin GPS position
   //Origin tmpOrg(estimated_position.latitude, estimated_position.longitude);
   //origin = tmpOrg; //assign origin to starting position
   
-  Serial.println("Computed Vectors in initial position");
+  if(DEBUG)  Serial.println("Computed Vectors in initial position");
   estimated_position.Compute_mm(origin);  //initialize north and east coordinates for position
-  Serial.print("Estimate E: ");
-  Serial.println(estimated_position.east_mm);
-  Serial.print("Estimate N: ");
-  Serial.println(estimated_position.north_mm);
-  
+  if(DEBUG) {
+    Serial.print("Estimate E: ");
+    Serial.println(estimated_position.east_mm);
+    Serial.print("Estimate N: ");
+    Serial.println(estimated_position.north_mm);
+  }
   //oldPos to keep track of previous position for DR
   oldPos = estimated_position;
-delay(3000);
 }
 
 void setup_C6() {
@@ -298,7 +298,7 @@ void setup_C6() {
   mag.enableAutoRange(true);
 
   if (!mag.begin()) {
-    Serial.println("no LSM303 detected ... Check your wiring!");
+    if(DEBUG)  Serial.println("no LSM303 detected ... Check your wiring!");
   }
   
   mag.begin();
@@ -307,7 +307,7 @@ void setup_C6() {
   
   //hard code for testing the exact start positon in the path
   //initializePosition();
-  //Serial.println("passed hardcode GPS,  initializePosition()");
+  //if(DEBUG)  Serial.println("passed hardcode GPS,  initializePosition()");
   //set default speed to 0 
   newPos.speed_mmPs = 0;
 
@@ -323,10 +323,10 @@ void loop_C6() {
   
   if (got_GPS) {
     GPS_reading.Compute_mm(origin); // get north and east coordinates from originl
-    Serial.println("Got and computed GPS");
+    if(DEBUG)  Serial.println("Got and computed GPS");
   }
   else {
-    Serial.println("Failed to get got_GPS");
+    if(DEBUG)  Serial.println("Failed to get got_GPS");
   }
   
   /* Receiving data from C2 using CAN Bus */
@@ -337,9 +337,9 @@ void loop_C6() {
    * OUT DATED SERIAL tranfer replaced by CAN
   //Recieving data from C2 using Elcano_Serial
   ParseStateError r = ps.update();
-  Serial.print("C6Loop, ParseState Error: ");
+  if(DEBUG)  Serial.print("C6Loop, ParseState Error: ");
   if (r == ParseStateError::success)  {
-    Serial.println("Start step2");
+    if(DEBUG)  Serial.println("Start step2");
     extractSpeed = receiveData(ReceiveData.speed_mmPs);
 
     if (extractSpeed != -1) { //invalid data from C2 if it's -1
@@ -353,21 +353,20 @@ void loop_C6() {
   newPos.time_ms = millis();
   //get heading coordinates from the compass
   newPos.bearing_deg = getHeading();
-  Serial.println("loop6 newPos.bearing_deg = " + String(newPos.bearing_deg));
-  delay(3000);
+  if(DEBUG)  Serial.println("loop6 newPos.bearing_deg = " + String(newPos.bearing_deg));
   if (got_GPS) { //got both GPS and DeadReckoning
-    Serial.println("got gps and deadreckoning");
+    if(DEBUG)  Serial.println("got gps and deadreckoning");
     //to get an esitimation position average between the GPS and Dead Rekoning
     //estimated_position is updated to the current position inside this method
     FindFuzzyCrossPointXY(GPS_reading, newPos, estimated_position);
-    Serial.println("-------------- estimated position: " + String(estimated_position.latitude) + ", " + String(estimated_position.longitude));
+    if(DEBUG)  Serial.println("-------------- estimated position: " + String(estimated_position.latitude) + ", " + String(estimated_position.longitude));
     
     //calculating the E and N vector by constantly updating everything you move 
     oldPos.vectors(&estimated_position);
-     Serial.println("finished gps deadreck");
+     if(DEBUG)  Serial.println("finished gps deadreck");
   }
   else { //Did not get a GPS reading and only DeadReckoning
-    Serial.println("Only got dead reckoning");
+    if(DEBUG)  Serial.println("Only got dead reckoning");
     // calculate position using Dead Reckoning
     ComputePositionWithDR(oldPos, newPos);
 
@@ -377,7 +376,7 @@ void loop_C6() {
     //update new current positon
     estimated_position.east_mm = newPos.east_mm;
     estimated_position.north_mm = newPos.north_mm;
-    Serial.println("finished just deadreck");
+    if(DEBUG)  Serial.println("finished just deadreck");
   }
     //update E and N vector of current position 
     estimated_position.Evector_x1000 = oldPos.Evector_x1000;
@@ -470,11 +469,12 @@ long distance(int cur_node, int *k,  long cur_east_mm, long cur_north_mm, int* p
     // compute road unit vectors from i to cur
     RoadDX_mm = Nodes[destination].east_mm - Nodes[cur_node].east_mm;
 
-    //      Serial.println("RoadX_mm " + String(RoadDX_mm));
-    //      Serial.println("Destination " + String(destination));
-    //      Serial.println("Nodes[destination].east_mm " + String(Nodes[destination].east_mm));
-    //      Serial.println("-Nodes[cur_loc].east_mm " + String(-Nodes[cur_node].east_mm));
-    //
+    //      if(DEBUG){
+    //        Serial.println("RoadX_mm " + String(RoadDX_mm));
+    //        Serial.println("Destination " + String(destination));
+    //        Serial.println("Nodes[destination].east_mm " + String(Nodes[destination].east_mm));
+    //        Serial.println("-Nodes[cur_loc].east_mm " + String(-Nodes[cur_node].east_mm));
+    //      }
     int Eunit_x1000 = RoadDX_mm  * 1000 / Nodes[cur_node].Distance[cur];
 
     RoadDY_mm =  Nodes[destination].north_mm - Nodes[cur_node].north_mm;
@@ -521,7 +521,7 @@ void FindClosestRoad(waypoint *start, waypoint *road) {  //populate road with be
 
   for (i = 0; i < 5/*map_points*/; i++) { // find closest road.
     dist = distance(i, &node_successor, start->east_mm, start->north_mm, &perCent); //next node to visit
-    Serial.println("Start : Latitude " + String(start->latitude) + "\t Longitude " + String(start->longitude) + "\t Dist "
+    if(DEBUG)  Serial.println("Start : Latitude " + String(start->latitude) + "\t Longitude " + String(start->longitude) + "\t Dist "
                    + String(dist));
 
     if (abs(dist) < abs(closest_mm))  {
@@ -559,8 +559,8 @@ void FindClosestRoad(waypoint *start, waypoint *road) {  //populate road with be
   road->speed_mmPs = DESIRED_SPEED_mmPs;
 
   //Test FindClosest Road:
-  Serial.println("Distance " + String(dist));
-  Serial.println("Road :  East_mm " + String(road->east_mm) + "\t North_mm " + String(road->north_mm));
+  if(DEBUG)  Serial.println("Distance " + String(dist));
+  if(DEBUG)  Serial.println("Road :  East_mm " + String(road->east_mm) + "\t North_mm " + String(road->north_mm));
 
 }
 
@@ -570,20 +570,20 @@ void test_closestRoad() {
   waypoint roadorigin;
   waypoint roadDestination;
 
-  Serial.println("First " );
+  if(DEBUG)  Serial.println("First " );
   FindClosestRoad(&mission[0], &roadorigin);
 
-  Serial.println();
+  if(DEBUG)  Serial.println();
 
-  Serial.println("Second ");
+  if(DEBUG)  Serial.println("Second ");
   FindClosestRoad(&mission[3], &roadDestination);
   for (int last = 0; last < 4; last++) {
-    Serial.println(" mission " + String(mission[last].east_mm ) + "\t roadorigin " + String(roadorigin.east_mm));
-    Serial.println(" mission " + String(mission[last].longitude ) + "\t roadorigin " + String(roadorigin.east_mm));
+    if(DEBUG)  Serial.println(" mission " + String(mission[last].east_mm ) + "\t roadorigin " + String(roadorigin.east_mm));
+    if(DEBUG)  Serial.println(" mission " + String(mission[last].longitude ) + "\t roadorigin " + String(roadorigin.east_mm));
   }
   for (int last = 0; last < 4; last++) {
-    Serial.println(" mission " + String(mission[last].east_mm ) + "\t roadorigin " + String(roadDestination.east_mm));
-    Serial.println(" mission " + String(mission[last].longitude ) + "\t roadorigin " + String(roadDestination.north_mm));
+    if(DEBUG)  Serial.println(" mission " + String(mission[last].east_mm ) + "\t roadorigin " + String(roadDestination.east_mm));
+    if(DEBUG)  Serial.println(" mission " + String(mission[last].longitude ) + "\t roadorigin " + String(roadDestination.north_mm));
   }
 }
 /*---------------------------------------------------------------------------------------*/
@@ -598,7 +598,7 @@ void test_closestRoad() {
 // for each node.
 
 int BuildPath (int j, waypoint* start, waypoint* destination) { // Construct path backward to start.
-  Serial.println("To break");
+  if(DEBUG)  Serial.println("To break");
   int last = 1;
   int route[map_points];
   int i, k, node;
@@ -640,8 +640,8 @@ void test_buildPath() {
 //Usa A star
 int FindPath(waypoint *start, waypoint *destination)  { //While OpenSet is not empty
 
-  Serial.println("Start East_mm " + String(start->east_mm) + "\t North " + String(start->north_mm));
-  Serial.println("Start East_mm " + String(destination->east_mm) + "\t North " + String(destination->north_mm));
+  if(DEBUG)  Serial.println("Start East_mm " + String(start->east_mm) + "\t North " + String(start->north_mm));
+  if(DEBUG)  Serial.println("Start East_mm " + String(destination->east_mm) + "\t North " + String(destination->north_mm));
   long ClosedCost[map_points];
   int  i, neighbor, k;
   long NewCost, NewStartCost, NewCostToGoal;
@@ -683,8 +683,8 @@ int FindPath(waypoint *start, waypoint *destination)  { //While OpenSet is not e
     if (BestID < 0) {
       return INVALID;
     }
-    Serial.println("BESTID " + String(BestID));
-    Serial.println("DestinationINdex " + String(destination->index));
+    if(DEBUG) Serial.println("BESTID " + String(BestID));
+    if(DEBUG)  Serial.println("DestinationINdex " + String(destination->index));
     Open[BestID].TotalCost = MAX_DISTANCE;  // Remove node from "stack".
     if (BestID == destination->index || BestID == destination->sigma_mm)  { // Done:: reached the goal!!
 
@@ -722,7 +722,7 @@ int FindPath(waypoint *start, waypoint *destination)  { //While OpenSet is not e
     ClosedCost[BestID] =  BestCost; // Push node onto Closed
   }
 
-  Serial.println("Destination East_mm " + String(destination->east_mm) + "\t North " + String(destination->north_mm));
+  if(DEBUG)  Serial.println("Destination East_mm " + String(destination->east_mm) + "\t North " + String(destination->north_mm));
 
   return 0;  // failure
 }
@@ -750,10 +750,10 @@ int PlanPath (waypoint *start, waypoint *destination) {
   int straight_dist = 190 * abs(start->east_mm  - destination->east_mm) +  abs(start->north_mm - destination->north_mm);
   if (w + x >= straight_dist) { // don't use roads; go direct
     last = 1;
-    Serial.println("In Straight");
+    if(DEBUG)  Serial.println("In Straight");
   }
   else {  // use A* with the road network
-    Serial.println("In Else");
+    if(DEBUG)  Serial.println("In Else");
     path[1] = roadorigin;
     path[1].index = 1;
     //why index = 7?
@@ -768,7 +768,7 @@ int PlanPath (waypoint *start, waypoint *destination) {
   path[last].index = last | END;
 
   //    Serial.println("Destination : East_mm = " + String(destination->east_mm) + "\t North_mm =  " + String(destination->north_mm));
-  Serial.println();
+  if(DEBUG)  Serial.println();
 
   return last;
 
@@ -889,41 +889,41 @@ boolean LoadMap(char* fileName) {
           break;
 
         default:  // unexpected condition; print error
-          Serial.print("Unexpected error happened while reading map description file.");
-          Serial.print("Please verify the file is in the correct format.");
-          Serial.println("Planner may not work correctly if this message appears.");
+          if(DEBUG)  Serial.print("Unexpected error happened while reading map description file.");
+          if(DEBUG)  Serial.print("Please verify the file is in the correct format.");
+          if(DEBUG)  Serial.println("Planner may not work correctly if this message appears.");
           break;
       }
 
       token = strtok(NULL, delimiter);
-      Serial.println(token);
+      if(DEBUG)  Serial.println(token);
     }
     map_points = row;
-    Serial.println("Test map");
-    Serial.println(map_points);
+    if(DEBUG)  Serial.println("Test map");
+    if(DEBUG)  Serial.println(map_points);
     //To test LoadMap:
     for (int i = 0; i < map_points; i++)  {
-      Serial.print("inside the loop: ");
-      Serial.println(i);
-      Serial.print(Nodes[i].east_mm);
-      Serial.print(",");
-      Serial.print(Nodes[i].north_mm);
-      Serial.print(",");
-      Serial.print(Nodes[i].destination[0]);
-      Serial.print(",");
-      Serial.print(Nodes[i].destination[1]);
-      Serial.print(",");
-      Serial.print(Nodes[i].destination[2]);
-      Serial.print(",");
-      Serial.print(Nodes[i].destination[3]);
-      Serial.print(",");
-      Serial.print(Nodes[i].Distance[0]);
-      Serial.print(",");
-      Serial.print(Nodes[i].Distance[1]);
-      Serial.print(",");
-      Serial.print(Nodes[i].Distance[2]);
-      Serial.print(",");
-      Serial.println(Nodes[i].Distance[3]);
+      if(DEBUG)  Serial.print("inside the loop: ");
+      if(DEBUG)  Serial.println(i);
+      if(DEBUG)  Serial.print(Nodes[i].east_mm);
+      if(DEBUG)  Serial.print(",");
+      if(DEBUG)  Serial.print(Nodes[i].north_mm);
+      if(DEBUG)  Serial.print(",");
+      if(DEBUG)  Serial.print(Nodes[i].destination[0]);
+      if(DEBUG)  Serial.print(",");
+      if(DEBUG)  Serial.print(Nodes[i].destination[1]);
+      if(DEBUG)  Serial.print(",");
+      if(DEBUG)  Serial.print(Nodes[i].destination[2]);
+      if(DEBUG)  Serial.print(",");
+      if(DEBUG)  Serial.print(Nodes[i].destination[3]);
+      if(DEBUG)  Serial.print(",");
+      if(DEBUG)  Serial.print(Nodes[i].Distance[0]);
+      if(DEBUG)  Serial.print(",");
+      if(DEBUG)  Serial.print(Nodes[i].Distance[1]);
+      if(DEBUG)  Serial.print(",");
+      if(DEBUG)  Serial.print(Nodes[i].Distance[2]);
+      if(DEBUG)  Serial.print(",");
+      if(DEBUG)  Serial.println(Nodes[i].Distance[3]);
     }
 
     // If file loaded, read data into Nodes[]
@@ -932,8 +932,8 @@ boolean LoadMap(char* fileName) {
   } else {
     // if the file didn't open, print an error:
     myFile.close();
-    Serial.println("error opening");
-    Serial.println(fileName);
+    if(DEBUG)  Serial.println("error opening");
+    if(DEBUG)  Serial.println(fileName);
     return false;
   }
   return true;
@@ -1001,31 +1001,37 @@ void SelectMap(waypoint currentLocation, char* fileName, char* nearestMap)
         case 0:  // latitude
           map_latitudes[row] = atof(token);
 
-          Serial.print("index: ");
-          Serial.println(row);
-          Serial.println(map_latitudes[row]);
+          if(DEBUG) {
+            Serial.print("index: ");
+            Serial.println(row);
+            Serial.println(map_latitudes[row]);
+          }
           col++;
           break;
 
         case 1:  // longitude
           map_longitudes[row] = atof(token);
           col++;
-          Serial.print("index: ");
-          Serial.println(row);
-          Serial.println(map_longitudes[row]);
+          if(DEBUG) {
+            Serial.print("index: ");
+            Serial.println(row);
+            Serial.println(map_longitudes[row]);
+          }
           break;
 
         case 2:  // filename
           map_file_names[row] = token;
           col++;
-          Serial.print("index: ");
-          Serial.println(row);
-          Serial.println(map_file_names[row]);
+          if (DEBUG) {
+            Serial.print("index: ");
+            Serial.println(row);
+            Serial.println(map_file_names[row]);
+          }
           row++;
           break;
 
         default:  // unexpected condition; print error
-          Serial.println("Unexpected error happened while reading map description file. Please verify the file is in the correct format. Planner may not work correctly if this message appears.");
+          if (DEBUG) Serial.println("Unexpected error happened while reading map description file. Please verify the file is in the correct format. Planner may not work correctly if this message appears.");
           break;
       }
       token = strtok(NULL, delimiter);
@@ -1051,7 +1057,7 @@ void SelectMap(waypoint currentLocation, char* fileName, char* nearestMap)
       }
     }
     else  {
-      Serial.println("error determining closest map.");
+      if(DEBUG)  Serial.println("error determining closest map.");
     }
     // Free the memory allocated for the buffer
     free(buffer);
@@ -1062,11 +1068,11 @@ void SelectMap(waypoint currentLocation, char* fileName, char* nearestMap)
 
     // close the file:
     myFile.close();
-    Serial.println("Map definitions loaded.");
+    if(DEBUG)  Serial.println("Map definitions loaded.");
   } else {
     // if the file didn't open, print an error:
     myFile.close();
-    Serial.println("error opening MAP_DEFS.txt");
+    if(DEBUG)  Serial.println("error opening MAP_DEFS.txt");
   }
 
 }
@@ -1339,7 +1345,7 @@ void setup_C3() {
 }
 
 void loop_C3() {
-  Serial.println("Entered the C3 loop");
+  if(DEBUG)  Serial.println("Entered the C3 loop");
   //Determining the state of the Trike
   find_state(turn_radius_mm, next);
 
@@ -1351,25 +1357,37 @@ void loop_C3() {
  
   speed_mmPs = speeds[speedIndex];
   turn_direction = angg[speedIndex];
-  if(speedIndex == 5)
+
+  if(insaneCounter < 4) {
+    insaneCounter++;
+  }
+  else {
+    if(speedIndex == 5)
+      speedIndex = 0;
+    else
+      speedIndex++;
+    insaneCounter = 0;  
+  }
+  
+  /*if(speedIndex == 5)
     speedIndex = 0;
   else
-    speedIndex++;
+    speedIndex++; */
+    
   if (pre_desired_speed != speed_mmPs || pre_turn_angle != turn_direction) {
-    Serial.println("Sending C3 to C2");
+    if(DEBUG)  Serial.println("Sending C3 to C2");
     CAN_FRAME output; //intialize can frame to carry message to C2
     output.length = MAX_CAN_FRAME_DATA_LEN_16;
     output.id = HiDrive_CANID; //Drive instructions from hilevel board
     //output.data.low = sendData(speed_mmPs);
     output.data.low = speed_mmPs;
     output.data.high = turn_direction;
-    
-    //Serial.println("###" + String(speed_mmPs) + ", becomes: " + String(output.data.low));
-    
-    Serial.println("**Sending: Speed: " + String(output.data.low) + " Angl: " + (output.data.high));
+        
+    if(DEBUG2)
+      Serial.println("**Sending: Speed: " + String(output.data.low) + " Angl: " + (output.data.high));
     
     CAN.sendFrame(output); //send the message
-    
+    delay(10);  // a proper delay here is necessay, CAN bus need a time to clear the buffer. delay could be 100 minimum
     /*SendData.clear();
     SendData.kind = MsgType::drive;
     //chheck this
@@ -1402,10 +1420,10 @@ void setup() {
 }
 
 void loop() {
-  Serial.println("Starting C6 loop");
+ if(DEBUG) Serial.println("Starting C6 loop");
   loop_C6();
   //RE-compute path if too far off track (future development) for C4
-  Serial.println("Starting C3 loop");
+  if(DEBUG) Serial.println("Starting C3 loop");
   loop_C3();
-  delay(6000);
+//  delay(5000);
 }

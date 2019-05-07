@@ -150,6 +150,7 @@ void ThrottleController::engageThrottle(int32_t input) {
       
 	if (input != currentThrottlePWM) {
 		noInterrupts();
+    Serial.println(">");
 		write(DAC_CHANNEL, input);
 		currentThrottlePWM = input;  // Remember most recent throttle PWM value.
 		interrupts();

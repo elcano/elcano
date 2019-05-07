@@ -50,13 +50,13 @@ typedef union{
  * from RC or high-level board to the throttle and steering controllers
  */
 void Vehicle::update() {
-  recieveCan();
+  recieveCan(); //check for new message
   if(DEBUG)
     Serial.println("Vehicle update");
 	int32_t tempDspeed;
 	int32_t tempDangle;
 	noInterrupts();
-	tempDspeed = desired_speed_mmPs;
+	tempDspeed = desired_speed_mmPs;  
 	tempDangle = desired_angle;
 	interrupts();
  if(DEBUG) {
@@ -67,8 +67,7 @@ void Vehicle::update() {
 	currentAngle = steer.update(tempDangle);
   if(DEBUG){
     if(tempcurrentSpeed != currentSpeed){
-    Serial.print("Actual Speed: " + String(currentSpeed));
-    Serial.print(",  Changing to: " + String(tempcurrentSpeed));
+    Serial.println("Actual Speed: " + String(currentSpeed) + ",  Changing to: " + String(tempcurrentSpeed));
     }
   }
   currentSpeed = tempcurrentSpeed;
@@ -78,9 +77,11 @@ void Vehicle::update() {
 		return;
 	else{ 
 		speedAngleMessage MSG;
-		MSG.sspeed = currentSpeed;
-		MSG.angle = currentAngle;
+		MSG.sspeed = currentSpeed;  
+		MSG.angle =  map(currentAngle,-90000,90000,0,255);
 		CAN.sendMsgBuf(Actual_CANID, 0,8, (uint8_t*)&MSG);
+    delay(100); // a proper delay here is necessay, CAN bus need a time to clear the buffer. delay could be 100 minimum
+    Serial.println(millis());
 	}
 }
 
@@ -105,16 +106,13 @@ void Vehicle::recieveCan() {  //need to ADD ALL the other CAN IDs possible (RC i
       int low_result = (unsigned int)(buf[3] << 24) | (buf[2] << 16) | (buf[1] << 8) | (buf[0]);
      
       desired_speed_mmPs = low_result;
-		  if (DEBUG) {
-			  Serial.println("CAN Speed Dec: " + String(low_result, DEC) + " Std: " + String(low_result));
-		  }
-      Serial.print("desired Speed in mms: ");
-      Serial.println(desired_speed_mmPs);
+		 
       int high_result = (unsigned int)(buf[7] << 24) | (buf[6] << 16) | (buf[5] << 8) | (buf[4]);
       desired_angle= map(high_result,0,255,-90000,90000);
 		  if(DEBUG){
-			  Serial.print("  CAN Angle: ");
-			  Serial.println(high_result, DEC);
+        Serial.print("CAN Speed: " + String(low_result, DEC));
+        Serial.print(",  CAN Angle: ");
+        Serial.println(high_result, DEC);
         Serial.println("mapped angle: " + String(desired_angle));
 		  }
     }

@@ -43,5 +43,5 @@ void loop()
   }
   if (delayTime > 0UL)
     delay(delayTime);
- delay(5000);  //JUST ADDED for testing
+    //delay(5000);
 }
