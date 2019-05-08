@@ -9,6 +9,11 @@
 
 volatile int32_t Vehicle::desired_speed_mmPs;
 volatile int32_t Vehicle::desired_angle;
+unsigned long lastCanSendTime = 0;
+const int CAN_BUFFER_FLSH = 100;
+unsigned long sends = 0;
+unsigned long rec = 0;
+
 Brakes Vehicle::brake;
 ThrottleController Vehicle::throttle;
 MCP_CAN CAN(CAN_SS); // pin for CS on Mega
@@ -51,8 +56,8 @@ typedef union{
  */
 void Vehicle::update() {
   recieveCan(); //check for new message
-  if(DEBUG)
-    Serial.println("Vehicle update");
+  //if(DEBUG)
+    //Serial.println("Vehicle update");
 	int32_t tempDspeed;
 	int32_t tempDangle;
 	noInterrupts();
@@ -62,9 +67,10 @@ void Vehicle::update() {
  if(DEBUG) {
     Serial.println("Desired Speed mms: " + String(tempDspeed) + ", CurrentSpeed: " + String(currentSpeed));
   }
-	brake.Update();
+	//brake.Update();  put back when done testing
 	int32_t tempcurrentSpeed = throttle.update(tempDspeed);
-	currentAngle = steer.update(tempDangle);
+	//currentAngle = steer.update(tempDangle);  put back and delete next line when done testing
+ currentAngle = tempDangle;
   if(DEBUG){
     if(tempcurrentSpeed != currentSpeed){
     Serial.println("Actual Speed: " + String(currentSpeed) + ",  Changing to: " + String(tempcurrentSpeed));
@@ -75,20 +81,31 @@ void Vehicle::update() {
 //If speed not zero, send current speed and angle to high-level for processing
 	if(currentSpeed< 0) //stopped
 		return;
-	else{ 
+   
+	//if(millis() - lastCanSendTime >= CAN_BUFFER_FLSH) { //ensure can buffer has time to clear before resending
 		speedAngleMessage MSG;
 		MSG.sspeed = currentSpeed;  
 		MSG.angle =  map(currentAngle,-90000,90000,0,255);
 		CAN.sendMsgBuf(Actual_CANID, 0,8, (uint8_t*)&MSG);
-    delay(100); // a proper delay here is necessay, CAN bus need a time to clear the buffer. delay could be 100 minimum
-    Serial.println(millis());
-	}
+    lastCanSendTime = millis(); //set last time message sent
+    
+    /*sends++;
+    if(sends > 1000) {
+      Serial.println("1k sends at " + String(millis()));
+      sends = 0;
+    } */
+    
+    //delay(100); // a proper delay here is necessay, CAN bus need a time to clear the buffer. delay could be 100 minimum
+    if(DEBUG)
+      Serial.println("Sending Message to DUE");
+	//}
 }
 
-/*
+
+/**********************************************************************************************************************
  * Checks for receipt of a message from CAN bus for new 
  * speed/angle/brake instructions from RC or high-level board
- */
+ **********************************************************************************************************************/
 void Vehicle::recieveCan() {  //need to ADD ALL the other CAN IDs possible (RC instructions etc. 4-23-19)
 	noInterrupts();
 	unsigned char len = 0;
@@ -102,7 +119,14 @@ void Vehicle::recieveCan() {  //need to ADD ALL the other CAN IDs possible (RC i
     if (canId == HiDrive_CANID) { // the drive ID receive from high level 
 		  if (DEBUG) 
 			  Serial.println("RECEIVE DRIVE CAN MESSAGE FROM HIGH LEVEL WITH ID: " + String(canId, HEX));
-		  
+
+     /* rec++;
+      if(rec > 1000) {
+        Serial.println("1k recs at " + String(millis()));
+        rec = 0;
+      } */
+
+      
       int low_result = (unsigned int)(buf[3] << 24) | (buf[2] << 16) | (buf[1] << 8) | (buf[0]);
      
       desired_speed_mmPs = low_result;

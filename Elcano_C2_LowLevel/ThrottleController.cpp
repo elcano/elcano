@@ -8,6 +8,7 @@
 
 volatile uint32_t ThrottleController::tickTime_ms[2];
 
+
 ThrottleController::ThrottleController() :
   speedPID(&speedCyclometerInput_mmPs, &PIDThrottleOutput_pwm, &desiredSpeed_mmPs, proportional_throttle, integral_throttle, derivative_throttle, DIRECT)
 {
@@ -67,13 +68,10 @@ int32_t ThrottleController::update(int32_t dSpeed) {
 		ThrottlePID(dSpeed);
 	else
 		engageThrottle(dSpeed);
-
-  if(DEBUG){
-    Serial.print("PWM speed: ");
-    Serial.println(currentThrottlePWM);
-  }
+	
 	computeSpeed();
-  Serial.println("mm Speed: " + String(speedCyclometerInput_mmPs));
+  if(DEBUG)
+    Serial.println("mm Speed: " + String(speedCyclometerInput_mmPs));
 	return speedCyclometerInput_mmPs;
 }
 
@@ -140,17 +138,18 @@ void ThrottleController::ThrottlePID(int32_t desiredValue) {
 255 counts = 4.08 V
 */
 void ThrottleController::engageThrottle(int32_t input) {
+  int32_t temp = input;
   if (input != 0){
     //needs to be updated, currently this will change the voltage to a desired
     //speed based on starting at 0, it doesn't take into account the current speed of trike
     input = map(input, 0, MAX_SPEED_mmPs, MIN_ACC_OUT, MAX_ACC_OUT);
   }
-  if(DEBUG)
-      Serial.println("MAPPED speed: " + String(input));
+  //if(DEBUG)
+     // Serial.println("MAPPED speed: " + String(input));
       
 	if (input != currentThrottlePWM) {
 		noInterrupts();
-    Serial.println(">");
+    Serial.println(temp);
 		write(DAC_CHANNEL, input);
 		currentThrottlePWM = input;  // Remember most recent throttle PWM value.
 		interrupts();

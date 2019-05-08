@@ -42,7 +42,12 @@ const long turn_speed = 835;
 const long MIN_TURNING_RADIUS = 1000;
 long speed_mmPs = DESIRED_SPEED_mmPs;
 const unsigned long LoopPeriod = 100;  // msec
+unsigned long lastCanSendTime = 0;
+const int CAN_BUFFER_FLSH = 100;
+unsigned long sends = 0;
+unsigned long rec = 0;
 CAN_FRAME incoming;
+
 
 int next = 1; //index to path in a list
 //last is the the last index of the Path/goal
@@ -71,8 +76,8 @@ Origin origin(47.758949, -122.190746);
 //********* Hardcoded arrays of coordinates, speeds and turn angles for testing ***********
 double gpsTest[] = {47.758951, -122.2, 47.9, -122, 51, -123, 50.5, -120};
 int gpsIndex = 0; 
-int speeds[] = {1000, 2000, 1500, 2500, 1000, 2000};
-int angg[] = {100, 125, 100, 180, 255, 175};
+int speeds[] = {2000, 2500, 1500, 2500, 1000, 2000};
+int angg[] = {100, 125, 100, 120, 110, 122};
 int speedIndex = 0;
 int insaneCounter = 0;
 //Origin origin; //set origin later in intial_position
@@ -167,6 +172,8 @@ void setup_GPS() {
   // Request updates on antenna status, comment out to keep quiet
   GPS.sendCommand(PGCMD_ANTENNA);
 }
+
+
 bool AcquireGPS(waypoint &gps_position) {
   if(DEBUG) Serial.println("Acquire GPS");
   float latitude, longitude;
@@ -212,6 +219,7 @@ bool AcquireGPS(waypoint &gps_position) {
   return false;
 }
 
+
 //setup CAN Bus communication for recieving data from C2
 //Recieving actual_speed and an arbitary angle(for the moment)
 void C6_communication_with_C2() {
@@ -219,6 +227,13 @@ void C6_communication_with_C2() {
   
   while (CAN.available() > 0) { // check if CAN message available
     CAN.read(incoming);
+
+ /*   rec++;
+    if(rec > 1000) {
+      Serial.println("1k recs at " + String(millis()));
+      rec = 0;
+    } */
+    
     if(DEBUG2)  {
       Serial.println("Get data from (low level) ID: " + String(incoming.id, HEX));
       Serial.println("Low: " + String((int)incoming.data.low, DEC));
@@ -237,15 +252,8 @@ void C6_communication_with_C2() {
   else 
     if(DEBUG)  Serial.println("Did not receive actual speed, angle from C2");
   }
-  
-  //Outdated Serial communication replaced by CAN
-  /*//setting up receiving data for C6 elcano communication
-  ps.dt = &ReceiveData;
-  ps.input = &Serial2;
-  ps.output = &Serial2;
-  ps.capture = MsgType::drive;
-  ReceiveData.clear(); */
 }
+
 
 long getHeading(void) {
   //Get a new sensor event from the magnetometer
@@ -271,7 +279,7 @@ void initial_position() {
     GPS_available = AcquireGPS(estimated_position); 
   }
   
-  //if(DEBUG)  Serial.println("Acquired GPS position");
+  if(DEBUG)  Serial.println("Acquired GPS position");
   estimated_position.time_ms = millis();
   estimated_position.Compute_EandN_Vectors(getHeading()); //get position E and N vector
   //Assign Origin GPS position
@@ -310,9 +318,6 @@ void setup_C6() {
   //if(DEBUG)  Serial.println("passed hardcode GPS,  initializePosition()");
   //set default speed to 0 
   newPos.speed_mmPs = 0;
-
-  //for recieving data from C2
-  C6_communication_with_C2();
 }
 
 void loop_C6() {
@@ -1358,7 +1363,7 @@ void loop_C3() {
   speed_mmPs = speeds[speedIndex];
   turn_direction = angg[speedIndex];
 
-  if(insaneCounter < 4) {
+  if(insaneCounter < 6000) {
     insaneCounter++;
   }
   else {
@@ -1367,13 +1372,14 @@ void loop_C3() {
     else
       speedIndex++;
     insaneCounter = 0;  
+    Serial.println("Speed: " + String(speeds[speedIndex]));
   }
-  
+ // Serial.println("insaneCounter = " + String(insaneCounter) + ", Index = " + String(speedIndex));
   /*if(speedIndex == 5)
     speedIndex = 0;
   else
     speedIndex++; */
-    
+    // && millis() - lastCanSendTime >= CAN_BUFFER_FLSH  insert to slow down can transmission
   if (pre_desired_speed != speed_mmPs || pre_turn_angle != turn_direction) {
     if(DEBUG)  Serial.println("Sending C3 to C2");
     CAN_FRAME output; //intialize can frame to carry message to C2
@@ -1387,7 +1393,16 @@ void loop_C3() {
       Serial.println("**Sending: Speed: " + String(output.data.low) + " Angl: " + (output.data.high));
     
     CAN.sendFrame(output); //send the message
-    delay(10);  // a proper delay here is necessay, CAN bus need a time to clear the buffer. delay could be 100 minimum
+
+   /* sends++;
+    if(sends > 1000) {
+      Serial.println("1k sends at " + String(millis()));
+      sends = 0;
+    } */
+    
+   // delay(10);  // a proper delay here is necessay, CAN bus need a time to clear the buffer. delay could be 100 minimum
+
+   lastCanSendTime = millis(); //set time of last CAN send so as to allower buffer time to clear
     /*SendData.clear();
     SendData.kind = MsgType::drive;
     //chheck this

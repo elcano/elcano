@@ -39,7 +39,7 @@ int32_t SteeringController::update(int32_t desiredAngle) {
 	}
    //delay(1);
   steerAngleUS = computeAngleRight();
-	return map(steerAngleUS, MIN_TURN_MS,MAX_TURN_MS,MIN_TURN_Mdegrees,MAX_TURN_Mdegrees);
+	return map(currentSteeringUS, MIN_TURN_MS,MAX_TURN_MS,MIN_TURN_Mdegrees,MAX_TURN_Mdegrees);
   //return desiredAngle;
 }
 

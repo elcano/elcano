@@ -43,5 +43,4 @@ void loop()
   }
   if (delayTime > 0UL)
     delay(delayTime);
-    //delay(5000);
 }
