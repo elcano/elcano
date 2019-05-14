@@ -20,5 +20,7 @@ public:
 	~Vehicle();
 	void update();
 	static void eStop();
+  void hard_Coded_Test(int32_t,int32_t);
+  void real_System(int32_t,int32_t);
 	
 };

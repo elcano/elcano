@@ -43,4 +43,5 @@ void loop()
   }
   if (delayTime > 0UL)
     delay(delayTime);
+    delay(3000);
 }
