@@ -7,7 +7,7 @@ using namespace elcano;
 #define DEBUG3 true //Navigation and Pilot debuggging, which direction told to travel
 
 #define MAX_CAN_FRAME_DATA_LEN_16 16
-
+#define MAX_WAYPOINTS 3
 #define TURN_RADIUS_MM 2000
 #define MIN_TURNING_RADIUS_MM 1000
 

@@ -17,7 +17,7 @@ bool passedInitial = false; //to hardcode GPS only first time
 
 long extractSpeed = 0; //alternative to checksum since it's not implemented ie check for bad incoming data through serial
 
-waypoint newPos, estimPos, GPS_reading;
+Waypoint newPos, estimPos, GPS_reading;
 
 
 
@@ -33,7 +33,7 @@ CAN_FRAME incoming;
  * constructor for C6_Navigator
  *  activates the GPS, Compass and finds initial positoin
  *****************************************************************************************************/
-C6_Navigator::C6_Navigator(waypoint &estimated_position, waypoint &oldPos) {
+C6_Navigator::C6_Navigator(Waypoint &estimated_position, Waypoint &oldPos) {
   //setting up the GPS rate
   estimPos = estimated_position; //assign global variable to local for editing
   setup_GPS();
@@ -86,7 +86,7 @@ void C6_Navigator::setup_GPS() {
 /********************************************************************************************************
  * 
  *******************************************************************************************************/
-bool C6_Navigator::AcquireGPS(waypoint &gps_position) {
+bool C6_Navigator::AcquireGPS(Waypoint &gps_position) {
   if(DEBUG) Serial.println("Acquire GPS");
   float latitude, longitude;
 
@@ -190,7 +190,7 @@ long C6_Navigator::getHeading() {
 /*******************************************************************************************************
  * 
  ******************************************************************************************************/
-void C6_Navigator::findPosition(bool got_GPS, waypoint &oldPos) {
+void C6_Navigator::findPosition(bool got_GPS, Waypoint &oldPos) {
   newPos.time_ms = millis(); //mark current time
   
   //get heading coordinates from the compass
@@ -234,7 +234,7 @@ void C6_Navigator::findPosition(bool got_GPS, waypoint &oldPos) {
 /*******************************************************************************************************
  * Get your first initial position form the GPS
  ******************************************************************************************************/
-void C6_Navigator::initial_position(waypoint &oldPos) {
+void C6_Navigator::initial_position(Waypoint &oldPos) {
   bool GPS_available = AcquireGPS(estimPos);
 
   //This makes an infinite loop when the GPS is not available, comment out or hard code for testing 4-8-19 Mel
@@ -266,7 +266,7 @@ void C6_Navigator::initial_position(waypoint &oldPos) {
  *  gets a new GPS signal, Deadreckoning data from the C2_Lowlevel
  *  and uses this data to estimate the current position of the trike
  *****************************************************************************************************/
-void C6_Navigator::update(waypoint &estimated_position, waypoint &oldPos) {
+void C6_Navigator::update(Waypoint &estimated_position, Waypoint &oldPos) {
   estimPos = estimated_position; //assign value at estimate_position reference to local var
   oldPos.time_ms = millis();
   delay(1);

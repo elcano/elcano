@@ -9,9 +9,9 @@ long pre_desired_speed;
 long pre_turn_angle;
 CAN_FRAME output; //CAN frame to carry message to C2
 
-//waypoint path[MAX_WAYPOINTS];  // course route to goal/mission
-waypoint path[3]; //3 is hardcoded
-waypoint estPos, path0, path1, path2;
+//Waypoint path[MAX_WAYPOINTS];  // course route to goal/mission
+Waypoint path[3]; //3 is hardcoded
+Waypoint estPos, path0, path1, path2;
 String wrdState[] = { "STOP", "STRAIGHT", "ENTER_TURN", 
     "LEAVE_TURN", "APPROACH_GOAL", "LEAVE_GOAL"}; //used for clearer debugging
 
@@ -333,9 +333,9 @@ void C3_Pilot::C3_communicate_C2() {
  * update()
  * Determines state of trike, uses this to get a disered speed and angle
  * and transmits this data to the C2_Lowlevel board
- * param: estimated position & oldPosition waypoints
+ * param: estimated position & oldPosition Waypoints
  *****************************************************************************************************/
-void C3_Pilot::update(waypoint &estimated_position, waypoint &oldPos) {
+void C3_Pilot::update(Waypoint &estimated_position, Waypoint &oldPos) {
   estPos = estimated_position; //copy estimated position
   if(first) initializePosition(oldPos);
   //Determining the state of the Trike
@@ -386,7 +386,7 @@ void C3_Pilot::update(waypoint &estimated_position, waypoint &oldPos) {
  * intializePosition()
  *   Hard code assigning estimated position to the first element in path
  *******************************************************************************************************/
-  void C3_Pilot::initializePosition(waypoint &oldPos) {
+  void C3_Pilot::initializePosition(Waypoint &oldPos) {
   estPos.east_mm = path[0].east_mm;
   estPos.north_mm = path[0].north_mm;
   estPos.Evector_x1000 = path[0].Evector_x1000;

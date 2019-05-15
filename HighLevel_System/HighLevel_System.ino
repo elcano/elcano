@@ -20,7 +20,7 @@
 C3_Pilot *myC3;
 C6_Navigator *myC6;
 
-waypoint estimated_position, oldPos, Start;
+Waypoint estimated_position, oldPos;
 
 /******************************************************************************************************
  * main setup method
@@ -46,10 +46,9 @@ void setup() {
  * main loop method
  *****************************************************************************************************/
 void loop() {
- if(DEBUG) Serial.println("Starting C6 loop");
   myC6->update(estimated_position, oldPos);
+  
   //RE-compute path if too far off track (future development) for C4
-  if(DEBUG) Serial.println("Starting C3 loop");
   myC3->update(estimated_position, oldPos);
   
   //delay(3000); //for testing only.. remove when deploying bike

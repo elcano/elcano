@@ -15,11 +15,11 @@ private :
 	void find_state(long turn_radius_mm, int n);
 	void hardCoded_Pilot_Test();
 	void C3_communicate_C2();
-  void initializePosition(waypoint &oldPos);
+  void initializePosition(Waypoint &oldPos);
   void populate_path();
 	
 public:
 	C3_Pilot();
 	~C3_Pilot();
-	void update(waypoint &ep, waypoint &op);
+	void update(Waypoint &ep, Waypoint &op);
 };

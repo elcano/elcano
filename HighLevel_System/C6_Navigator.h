@@ -7,14 +7,14 @@ private:
 	#define mySerial Serial3
 	#define GPSRATE 9600
 	void setup_GPS();
-	bool AcquireGPS(waypoint &gps_position);
+	bool AcquireGPS(Waypoint &gps_position);
 	void C6_communication_with_C2();
 	long getHeading();
-	void findPosition(bool got_GPS, waypoint &op);
-	void initial_position(waypoint &op);
+	void findPosition(bool got_GPS, Waypoint &op);
+	void initial_position(Waypoint &op);
 	
 public:
-	C6_Navigator(waypoint &ep, waypoint &op);
+	C6_Navigator(Waypoint &ep, Waypoint &op);
 	~C6_Navigator();
-	void update(waypoint &ep, waypoint &newPos);
+	void update(Waypoint &ep, Waypoint &newPos);
 };

@@ -1,4 +1,4 @@
-
+#include "C4_Planner.h"
 
 #define CONES 1
 //pre-defined goal/destination to get to
@@ -6,6 +6,9 @@ long goal_lat[CONES] = {47760934};
 long goal_lon[CONES] = { -122189963};
 //long goal_lat[CONES] = {  47621881,   47621825,   47623144,   47620616,   47621881};
 //long goal_lon[CONES] = {-122349894, -122352120, -122351987, -122351087, -122349894};
+
+Junction Nodes[MAX_WAYPOINTS]; //Storing the loaded map
+
 /*  mph   mm/s
      3    1341f
      5    2235
@@ -27,8 +30,8 @@ struct AStar
   long TotalCost;
 } Open[MAX_WAYPOINTS];
 
-// Fill the distances of the junctions in the MAP
-void ConstructNetwork(junction *Map, int MapPoints) {
+// Fill the distances of the Junctions in the MAP
+void C4_Planner::ConstructNetwork(Junction *Map, int MapPoints) {
   double deltaX, deltaY;
   int destination;
   for (int i = 0; i < MapPoints; i++) {
@@ -47,7 +50,7 @@ void ConstructNetwork(junction *Map, int MapPoints) {
 }
 /*---------------------------------------------------------------------------------------*/
 // Set up mission structure from cone latitude and longitude list.
-void GetGoals(junction *nodes , int Goals)  {
+void C4_Planner::GetGoals(Junction *nodes , int Goals)  {
   double deltaX, deltaY, Distance;
   for (int i = 0; i < CONES; i++) {
     mission[i].latitude = goal_lat[i];
@@ -65,7 +68,7 @@ void GetGoals(junction *nodes , int Goals)  {
     else  {
       deltaX = mission[i].east_mm - mission[i - 1].east_mm;
       deltaY = mission[i].north_mm - mission[i - 1].north_mm;
-      Distance = sqrt(deltaX * deltaX + deltaY * deltaY);
+     // Distance = sqrt(deltaX * deltaX + deltaY * deltaY);
       mission[i - 1].Evector_x1000 = (deltaX * 1000.) / Distance;
       mission[i - 1].Nvector_x1000 = (deltaY * 1000.) / Distance;
     }
@@ -85,7 +88,7 @@ void GetGoals(junction *nodes , int Goals)  {
 // Compare this routine to distance() in C3 Pilot
 //k =  index into Nodes[]
 //east_mm : current
-long distance(int cur_node, int *k,  long cur_east_mm, long cur_north_mm, int* perCent) {
+long C4_Planner::distance(int cur_node, int *k,  long cur_east_mm, long cur_north_mm, int* perCent) {
   float deltaX, deltaY, dist_mm;
   int cur , destination;
   long Eunit_x1000, Nunit_x1000;
@@ -129,7 +132,7 @@ long distance(int cur_node, int *k,  long cur_east_mm, long cur_north_mm, int* p
     //
     //      // sign of return value gives which side of road it is on.
     //      Road_distance = (-deltaY * Eunit_x1000 + deltaX * Nunit_x1000) / 1000;
-    Road_distance = sqrt( (RoadDX_mm * RoadDX_mm) + (RoadDY_mm * RoadDY_mm));
+   // Road_distance = sqrt( (RoadDX_mm * RoadDX_mm) + (RoadDY_mm * RoadDY_mm));
     //Why do percentage computation like this?
     pc = (deltaX * Eunit_x1000 + deltaY * Nunit_x1000) / (Nodes[cur_node].Distance[cur] * 10);
 
@@ -147,7 +150,7 @@ long distance(int cur_node, int *k,  long cur_east_mm, long cur_north_mm, int* p
 }
 /*---------------------------------------------------------------------------------------*/
 //Figuring out a path to get the road network
-void FindClosestRoad(waypoint *start, waypoint *road) {  //populate road with best road from start
+void C4_Planner::FindClosestRoad(waypoint *start, waypoint *road) {  //populate road with best road from start
   long closest_mm = MAX_DISTANCE;
   long dist;
   int close_index;
@@ -201,7 +204,7 @@ void FindClosestRoad(waypoint *start, waypoint *road) {  //populate road with be
 }
 
 //Test ClosestRoad:
-void test_closestRoad() {
+void C4_Planner::test_closestRoad() {
 
   waypoint roadorigin;
   waypoint roadDestination;
@@ -225,7 +228,7 @@ void test_closestRoad() {
 /*---------------------------------------------------------------------------------------*/
 // start and destination are on the road network given in Nodes.
 // start is in Path[1].
-// Place other junction waypoints into Path.
+// Place other Junction waypoints into Path.
 // Returned value is next index into Path.
 // start->index identifies the closest node.
 // sigma_mm holds the index to the other node.
@@ -233,7 +236,7 @@ void test_closestRoad() {
 // Since we have a small number of nodes, we instead reserve a slot on Open and Closed
 // for each node.
 
-int BuildPath (int j, waypoint* start, waypoint* destination) { // Construct path backward to start.
+int C4_Planner::BuildPath (int j, waypoint* start, waypoint* destination) { // Construct path backward to start.
   if(DEBUG)  Serial.println("To break");
   int last = 1;
   int route[map_points];
@@ -269,12 +272,12 @@ int BuildPath (int j, waypoint* start, waypoint* destination) { // Construct pat
 }
 /*---------------------------------------------------------------------------------------*/
 
-void test_buildPath() {
+void C4_Planner::test_buildPath() {
 
   //  BuildPath(0, Path, destination);
 }
 //Usa A star
-int FindPath(waypoint *start, waypoint *destination)  { //While OpenSet is not empty
+int C4_Planner::FindPath(waypoint *start, waypoint *destination)  { //While OpenSet is not empty
 
   if(DEBUG)  Serial.println("Start East_mm " + String(start->east_mm) + "\t North " + String(start->north_mm));
   if(DEBUG)  Serial.println("Start East_mm " + String(destination->east_mm) + "\t North " + String(destination->north_mm));
@@ -368,7 +371,7 @@ int FindPath(waypoint *start, waypoint *destination)  { //While OpenSet is not e
 // PathPlan makes an intermediate level path that uses as many roads as possible.
 //start = currentlocation: destination = heading to;
 //Find the cloeset road and call Findpath to do the A star
-int PlanPath (waypoint *start, waypoint *destination) {
+int C4_Planner::PlanPath (waypoint *start, waypoint *destination) {
 
   //Serial.println("Start : East_mm = " + String(start->east_mm) + "\t North_mm =  " + String(start->north_mm));
   waypoint roadorigin, roadDestination;
@@ -580,9 +583,9 @@ boolean LoadMap(char* fileName) {
 // Determines which map to load.
 // Takes in the current location as a waypoint and a string with the name of the file that
 //   contains the origins and file names of the maps.
-// Determines which origin is closest to the waypoint and returns it as a junction.
+// Determines which origin is closest to the waypoint and returns it as a Junction.
 // Assumes the file is in the correct format according to the description above.
-void SelectMap(waypoint currentLocation, char* fileName, char* nearestMap)
+void C4_Planner::SelectMap(waypoint currentLocation, char* fileName, char* nearestMap)
 {
   // open the file. note that only one file can be open at a time,
   // so you have to close this one before opening another.
@@ -717,7 +720,7 @@ void SelectMap(waypoint currentLocation, char* fileName, char* nearestMap)
    All the Methods for C4 starts here
 */
 /*---------------------------------------------------------------------------------------*/
-void initialize_C4() {
+void C4_Planner::initialize_C4() {
   //Store the initial GPS latitude and longtitude to select the correct map
   Start.latitude = estimated_position.latitude;
   Start.longitude = estimated_position.longitude;
@@ -735,7 +738,7 @@ void initialize_C4() {
 
   //Serial.println(nearestMap);
 
-  //populate nearest map in junction Nodes structure
+  //populate nearest map in Junction Nodes structure
   LoadMap(nearestMap);
 
   //takes in the Nodes that contains all of the map
@@ -745,7 +748,7 @@ void initialize_C4() {
 }
 
 //Test mission::a list of waypoints to cover
-void test_mission() {
+void C4_Planner::test_mission() {
 
   for (int i = 0; i < map_points; i++)  {
     Serial.println("mission " + String(i) + " = " + String(mission[i].latitude) + "\t north_mm " + String(mission[i].north_mm));
@@ -753,20 +756,20 @@ void test_mission() {
 }
 
 ///MOCK_MAP.TXTT
-void test_path() {
+void C4_Planner::test_path() {
 
   for (int i = 0; i < 4; i++) {
    // Serial.println("Path " + String(path[i].east_mm));
   }
 }
-void test_distance()  {
+void C4_Planner::test_distance()  {
   int percent ;
   int destination;
   int dist = distance(0, &destination , 0 , 0, &percent);
 
   Serial.println("dist " + String(dist));
 }
-void setup_C4() {
+C4_Planner::C4_Planner::() {
   initialize_C4(); //Start selecting/load map and start planning path
 
   //set the Start to the first Node
