@@ -74,8 +74,8 @@ void Vehicle::update() {
   //**********************************************************************
   //CHOOSE between the 2 below based on test or actually running the system
   
-  //hard_Coded_Test(tempDspeed, tempDangle); //test only, no vehicle results
-  real_System(tempDspeed, tempDangle); //real system when using bike, not test
+  hard_Coded_Test(tempDspeed, tempDangle); //test only, no vehicle results
+  //real_System(tempDspeed, tempDangle); //real system when using bike, not test
   
   //*********************************************************************************
   

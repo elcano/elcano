@@ -90,14 +90,29 @@ bool C3_Pilot::test_past_destination(int n) {
  *  return : true -> if approached intersection to entering turn, false -> otherwise
  *****************************************************************************************************/
 bool C3_Pilot::test_approach_intersection(long turn_radius_mm, int n) {
+  Serial.println("Entering");
+  Serial.print(abs(path[n - 1].east_mm - path[n].east_mm));
+  Serial.print(" > ");
+  Serial.print(abs(path[n - 1].north_mm - path[n].north_mm));
+  Serial.print(" = " );
+  Serial.println(abs(path[n - 1].east_mm - path[n].east_mm) > abs(path[n - 1].north_mm - path[n].north_mm));
   //if the distance from E to W is greater than  N to S
   if (abs(path[n - 1].east_mm - path[n].east_mm) > abs(path[n - 1].north_mm - path[n].north_mm)) {
+    Serial.println("Further from E:W than N:S");
+    Serial.print("New path further east than old? ");
+    Serial.println(path[n].east_mm > path[n - 1].east_mm);
+    Serial.print("Estimated path East: " + String(estPos.east_mm));
+    Serial.println("   New path East: " + String(path[n].east_mm) + "  Turn Rad: " + String(turn_radius_mm));
+    Serial.print("Estimate east larger than difference those 2?? ");
+    Serial.println(estPos.east_mm >= path[n].east_mm - turn_radius_mm);
+    Serial.println("-_-_-__---__-_--_--_-_-___-_---____---_____--____--_-___");
     //if destination is further east than current location AND current location is further East than destination - turn radius
     if (path[n].east_mm > path[n - 1].east_mm && estPos.east_mm >= path[n].east_mm - turn_radius_mm) {
       return true;
     }  //if dest is further west than current AND current location is further west than destination + turn radius 
     else if (path[n - 1].east_mm > path[n].east_mm &&
                estPos.east_mm <= path[n].east_mm + turn_radius_mm) {
+        Serial.println("1B");        
         return true;
     }
   } else { //Bigger difference between current and destination N/S than E/W
@@ -108,9 +123,28 @@ bool C3_Pilot::test_approach_intersection(long turn_radius_mm, int n) {
       // destination is south AND Destination + turn radius is greater than current location
     } else if (path[n - 1].north_mm > path[n].north_mm &&
                estPos.north_mm <= path[n].north_mm + turn_radius_mm) {
+      Serial.println("2B");                
       return true;
     }
   }
+  Serial.println("FAILED: ");
+   Serial.println(path[n].east_mm);
+      Serial.println(" > " );
+      Serial.println(path[n - 1].east_mm);
+      Serial.println(estPos.east_mm);
+      Serial.println(" >= " );
+      Serial.println(path[n].east_mm - turn_radius_mm);
+
+      
+  Serial.println(path[n].north_mm);
+      Serial.println(" > " );
+      Serial.println(path[n - 1].north_mm);
+      Serial.println(estPos.north_mm);
+      Serial.println(" >= " );
+      Serial.println(path[n].north_mm - turn_radius_mm);
+      
+  Serial.println("path n: east " + String(path[n].east_mm) + " north " + String(path[n].north_mm));
+  Serial.println("path n-1: east " + String(path[n-1].east_mm) + " north " + String(path[n-1].north_mm));
   return false;
 }
 
@@ -187,6 +221,7 @@ int C3_Pilot::get_turn_direction_angle(int n) {
  *  param : n = next -> index of the intersection you're approaching
  *****************************************************************************************************/
 void C3_Pilot::find_state(long turn_radius_mm, int n) {
+  Serial.println("entering state");
   switch (state) {
     case STRAIGHT:
       q++;
@@ -357,5 +392,7 @@ void C3_Pilot::update(Waypoint &estimated_position, Waypoint &oldPos) {
   estPos.Evector_x1000 = path[0].Evector_x1000;
   estPos.Nvector_x1000 = path[0].Nvector_x1000;
   oldPos = estPos;
+  Serial.println("INITIAL!!!!!!!!!!!!!!!!!!!!");
+  Serial.println("North: " + String(estPos.north_mm) + ", East: " + String(estPos.east_mm));
   first = false; //one time through this routine
 } 
