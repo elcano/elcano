@@ -1,6 +1,6 @@
 #include "C6_Navigator.h"
 //#include "Settings.h"
-#include <Adafruit_GPS.h>
+
 #include <Adafruit_LSM303_U.h>
 
 //index of hardcoded gps coordinates for testing

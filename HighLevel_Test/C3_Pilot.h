@@ -1,8 +1,8 @@
 #pragma once
-
 #include "Settings.h"
+
 class C3_Pilot {
-private :
+private:
 	#define DESIRED_SPEED2 1200
 	enum States { STOP, STRAIGHT, ENTER_TURN, LEAVE_TURN, APPROACH_GOAL, LEAVE_GOAL};
 	States state;

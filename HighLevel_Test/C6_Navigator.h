@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Settings.h"
+#include <Adafruit_GPS.h>
 
 class C6_Navigator {
 private:

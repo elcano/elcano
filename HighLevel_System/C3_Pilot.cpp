@@ -17,12 +17,6 @@ int next = 1; //index to pathz in a list
 int last_index_of_pathz = 2; //hardcode path of the last index/dest to 3 [cur,loc1,goal]
 int q = 0; //for testing to vary speed in C3 find_state
 bool first = true;
-//******************** hard coded alternating speeds for testing ******************
-int speeds[] = {2000, 2500, 1500, 2500, 1000, 2000};
-int angg[] = {100, 125, 100, 120, 110, 122};
-int speedIndex = 0;
-int insaneCounter = 0;
-//*********************************************************************************
 
 /******************************************************************************************************
  * constructor
@@ -228,40 +222,6 @@ void C3_Pilot::find_state(long turn_radius_mm, int n) {
 }
 
 /******************************************************************************************************
- * hardCoded_Pilot_Test()
- *   Tests the code by cycling through a hard coded speed and angle array to send to lowlevel
- *   this can be used to observe the bike repsonding to different speeds and angles to 
- *   ensure proper CAN communication and response.
- *   Currently contains two tests, A & B. 
- *   Comment out one based on if using delays in your code for debugging
- *****************************************************************************************************/
-void C3_Pilot::hardCoded_Pilot_Test() {
-  speed_mmPs = speeds[speedIndex];
-  turn_direction = angg[speedIndex];
-
-//test section A. to be used if no delays are in place so speed and angle not changed constantly
- /* if(insaneCounter < 6000) {
-      insaneCounter++;
-  }
-  else {
-    if(speedIndex == 5)
-      speedIndex = 0;
-    else
-      speedIndex++;
-    insaneCounter = 0;  
-    Serial.println("Speed: " + String(speeds[speedIndex]));
-  }
- // Serial.println("insaneCounter = " + String(insaneCounter) + ", Index = " + String(speedIndex));
- */
-
- //test section B. to be used if delays are in place so angle will speed/angle will change occasionally
-  if(speedIndex == 5)
-    speedIndex = 0;
-  else
-    speedIndex++; 
-}
-
-/******************************************************************************************************
  * C3_communicate_C2()
  * Transmits the data over CAN BUS from C3_Pilot to C2_Lowlevel
  * Sends a speed in mm/s and a turn angle in degrees
@@ -276,12 +236,6 @@ void C3_Pilot::C3_communicate_C2() {
       Serial.println("**Sending: Speed: " + String(output.data.low) + " Angl: " + (output.data.high));
     
     CAN.sendFrame(output); //send the message
-    delay(1000);
-   /* sends++;
-    if(sends > 1000) {
-      Serial.println("1k sends at " + String(millis()));
-      sends = 0;
-    } */
 
     //keep track of previous data to compare next loop
     pre_desired_speed = speed_mmPs;
@@ -303,10 +257,8 @@ void C3_Pilot::update(Waypoint &estimated_position, Waypoint &oldPos) {
   //Determining the state of the Trike
   find_state(TURN_RADIUS_MM, next);
   if(DEBUG3) Serial.println("State is: " + String(wrdState[state]) + ", path # " + String(next));
-  //comment out and uncomment lines below when not in testing
-  //hardCoded_Pilot_Test();
-  
-  //Determining the turn direction for the trike "left, right or straight" comment out if using test line above
+
+  //Determining the turn direction for the trike "left, right or straight"
   turn_direction = get_turn_direction_angle(next);
   if(DEBUG3) Serial.println("setting turn angle to: " + String(turn_direction));
 

@@ -72,6 +72,14 @@ int32_t ThrottleController::update(int32_t dSpeed) {
 	computeSpeed();
   if(DEBUG)
     Serial.println("mm Speed: " + String(speedCyclometerInput_mmPs));
+
+  if(DEBUG){
+    Serial.print("PWM speed: ");
+    Serial.println(currentThrottlePWM);
+  }
+	computeSpeed();
+  if(DEBUG) 
+    Serial.println("mm Speed: " + String(speedCyclometerInput_mmPs));
 	return speedCyclometerInput_mmPs;
 }
 
@@ -144,6 +152,8 @@ void ThrottleController::engageThrottle(int32_t input) {
     //speed based on starting at 0, it doesn't take into account the current speed of trike
     input = map(input, 0, MAX_SPEED_mmPs, MIN_ACC_OUT, MAX_ACC_OUT);
   }
+  if(DEBUG)
+      Serial.println("MAPPED speed: " + String(input));
       
 	if (input != currentThrottlePWM) {
 		noInterrupts();
@@ -213,7 +223,3 @@ void ThrottleController::computeSpeed() {
 		}
 	}
 }
-
-
-
-  

@@ -1,20 +1,14 @@
 #include "C6_Navigator.h"
 //#include "Settings.h"
-#include <Adafruit_GPS.h>
-#include <Adafruit_LSM303_U.h>
-#include <due_can.h>
-#include <Can_Protocol.h>
 
-//origin is set to the UWB map
-//Origin origin(47.758949, -122.190746);
-//origin set to center of UWB soccer field
-Origin origin(47.760850, -122.190044);
+#include <Adafruit_LSM303_U.h>
 
 //index of hardcoded gps coordinates for testing
 double gpsTest[] = {47.760850, -122.190044, 47.9, -122, 51, -123, 50.5, -120};
 int gpsIndex = 0; //helper with array above
 bool passedInitial = false; //to hardcode GPS only first time
 
+Origin originSt(ORIGIN_LAT, ORIGIN_LONG);
 long extractSpeed = 0; //alternative to checksum since it's not implemented ie check for bad incoming data through serial
 
 Waypoint newPos, estimPos, GPS_reading;
@@ -247,10 +241,10 @@ void C6_Navigator::initial_position(Waypoint &oldPos) {
   estimPos.Compute_EandN_Vectors(getHeading()); //get position E and N vector
   //Assign Origin GPS position
   //Origin tmpOrg(estimPos.latitude, estimPos.longitude);
-  //origin = tmpOrg; //assign origin to starting position
+  //originSt = tmpOrg; //assign originSt to starting position
   
   if(DEBUG)  Serial.println("Computed Vectors in initial position");
-  estimPos.Compute_mm(origin);  //initialize north and east coordinates for position
+  estimPos.Compute_mm(originSt);  //initialize north and east coordinates for position
   if(DEBUG) {
     Serial.print("Estimate E: ");
     Serial.println(estimPos.east_mm);
@@ -276,7 +270,7 @@ void C6_Navigator::update(Waypoint &estimated_position, Waypoint &oldPos) {
   C6_communication_with_C2(); // Receiving speed data from C2 using CAN Bus
   
   if (got_GPS) {
-    GPS_reading.Compute_mm(origin); // get north and east coordinates from originl
+    GPS_reading.Compute_mm(originSt); // get north and east coordinates from originStl
     if(DEBUG)  Serial.println("Got and computed GPS");
   }
   else {

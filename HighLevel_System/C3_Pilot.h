@@ -13,7 +13,6 @@ private:
 	bool test_leave_intersection(long turning_radius_mm, int n);
 	int get_turn_direction_angle(int n);
 	void find_state(long turn_radius_mm, int n);
-	void hardCoded_Pilot_Test();
 	void C3_communicate_C2();
   void initializePosition(Waypoint &oldPos);
   void populate_path();

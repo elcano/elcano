@@ -9,16 +9,14 @@
 
 volatile int32_t Vehicle::desired_speed_mmPs;
 volatile int32_t Vehicle::desired_angle;
-unsigned long lastCanSendTime = 0;
-const int CAN_BUFFER_FLSH = 100;
-unsigned long sends = 0;
-unsigned long rec = 0;
 
 Brakes Vehicle::brake;
 ThrottleController Vehicle::throttle;
 MCP_CAN CAN(CAN_SS); // pin for CS on Mega
 
-//Constructor
+/****************************************************************************
+ * Constructor
+ ****************************************************************************/
 Vehicle::Vehicle(){
   desired_angle = 0;
 	desired_speed_mmPs = 0;
@@ -37,11 +35,16 @@ Vehicle::Vehicle(){
    //attachPCINT(digitalPinToPCINT(IRPT_CAN), recieveCan, RISING);
 }
 
-//Destructor
+/*****************************************************************************
+ * Destructor
+ ****************************************************************************/
 Vehicle::~Vehicle(){
 }
 
-//Struct for sending current speed and angle to high-level board through CAN
+
+/*****************************************************************************
+ * Struct for sending current speed and angle to high-level board through CAN
+ ****************************************************************************/
 typedef union{
 		struct{
 			uint32_t sspeed;
@@ -71,13 +74,13 @@ void Vehicle::update() {
               "| DesrdAngl " + String(desA) + ", CrntAngl " + String(crnA));
   }
 
-  //**********************************************************************
-  //CHOOSE between the 2 below based on test or actually running the system
+//*******************************************************************************************
+//CHOOSE between the 2 below based on test or actually running the system
   
-  hard_Coded_Test(tempDspeed, tempDangle); //test only, no vehicle results
-  //real_System(tempDspeed, tempDangle); //real system when using bike, not test
+  //hard_Coded_Test(tempDspeed, tempDangle); //test only, no vehicle results
+  real_System(tempDspeed, tempDangle); //real system when using bike, not test
   
-  //*********************************************************************************
+//*******************************************************************************************
   
  
   //If speed not less than zero, send current speed and angle to high-level for processing
@@ -90,12 +93,7 @@ void Vehicle::update() {
     MSG.angle =  map(currentAngle,-90000,90000,-90,90);
     CAN.sendMsgBuf(Actual_CANID, 0,8, (uint8_t*)&MSG);
     delay(1000);
-    
-    /*sends++;
-    if(sends > 1000) {
-      Serial.println("1k sends at " + String(millis()));
-      sends = 0;
-    } */
+  
     if(DEBUG)
       Serial.println("Sending Message to DUE");
 }
@@ -124,15 +122,15 @@ void Vehicle::hard_Coded_Test(int32_t tempDspeed, int32_t tempDangle) {
   currentAngle = tempDangle;  
 }
 
- 
-/**********************************************************************************************************************
+/*************************************************************************************
  * Checks for receipt of a message from CAN bus for new 
  * speed/angle/brake instructions from RC or high-level board
- **********************************************************************************************************************/
+ ************************************************************************************/
 void Vehicle::recieveCan() {  //need to ADD ALL the other CAN IDs possible (RC instructions etc. 4-23-19)
 	noInterrupts();
 	unsigned char len = 0;
   unsigned char buf[8];
+
   if (CAN_MSGAVAIL == CAN.checkReceive()){  //found new instructions
     CAN.readMsgBuf(&len, buf);    // read data,  len: data length, buf: data buf
     unsigned int canId = CAN.getCanId();
@@ -140,13 +138,6 @@ void Vehicle::recieveCan() {  //need to ADD ALL the other CAN IDs possible (RC i
 		  if (DEBUG) 
 			  Serial.println("RECEIVED CAN MESSAGE FROM HIGH LEVEL WITH ID: " + String(canId, HEX));
 
-     /* rec++;
-      if(rec > 1000) {
-        Serial.println("1k recs at " + String(millis()));
-        rec = 0;
-      } */
-
-      
       int low_result = (unsigned int)(buf[3] << 24) | (buf[2] << 16) | (buf[1] << 8) | (buf[0]);
      
       desired_speed_mmPs = low_result;
@@ -160,8 +151,7 @@ void Vehicle::recieveCan() {  //need to ADD ALL the other CAN IDs possible (RC i
         Serial.println(high_result, DEC);
         Serial.println("mapped angle: " + String(desired_angle));
 		  }
-    }
-		
+    }		
 		else if(canId == HiStatus_CANID){ //High-level Status change (just e-stop for now 4/23/19)
       desired_speed_mmPs = 0;
 			eStop();
@@ -172,7 +162,7 @@ void Vehicle::recieveCan() {  //need to ADD ALL the other CAN IDs possible (RC i
 
 //Estop method for high or RC calls
 void Vehicle::eStop() {
-  if(DEBUG)
+  if(DEBUG) 
     Serial.println("E-Stop!");
   noInterrupts();
   brake.Stop();
