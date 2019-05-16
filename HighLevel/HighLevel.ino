@@ -60,14 +60,14 @@ long extractSpeed = 0; //alternative to checksum since it's not implemented ie c
 long turn_radius_mm = 2000;
 extern int map_points =  5;//16;
 
-junction Nodes[MAX_WAYPOINTS]; //Storing the loaded map
+Junction Nodes[MAX_WAYPOINTS]; //Storing the loaded map
 
-//waypoint path[MAX_WAYPOINTS];  // course route to goal/mission
-waypoint path[3]; //3 is hardcoded
-waypoint path0, path1, path2, path3;
+//Waypoint path[MAX_WAYPOINTS];  // course route to goal/mission
+Waypoint path[3]; //3 is hardcoded
+Waypoint path0, path1, path2, path3;
 
-waypoint mission[CONES]; //aka MDF //The target Nodes to hit
-waypoint GPS_reading, estimated_position, oldPos, newPos, Start;
+Waypoint mission[CONES]; //aka MDF //The target Nodes to hit
+Waypoint GPS_reading, estimated_position, oldPos, newPos, Start;
 
 //origin is set to the UWB map
 //Origin origin(47.758949, -122.190746);
@@ -188,7 +188,7 @@ void setup_GPS() {
 /********************************************************************************************************
  * 
  *******************************************************************************************************/
-bool AcquireGPS(waypoint &gps_position) {
+bool AcquireGPS(Waypoint &gps_position) {
   if(DEBUG) Serial.println("Acquire GPS");
   float latitude, longitude;
 
@@ -419,8 +419,8 @@ void loop_C6() {
    All the Methods for C4 starts here
 */
 /*---------------------------------------------------------------------------------------*/
-// Fill the distances of the junctions in the MAP
-void ConstructNetwork(junction *Map, int MapPoints) {
+// Fill the distances of the Junctions in the MAP
+void ConstructNetwork(Junction *Map, int MapPoints) {
   double deltaX, deltaY;
   int destination;
   for (int i = 0; i < MapPoints; i++) {
@@ -439,7 +439,7 @@ void ConstructNetwork(junction *Map, int MapPoints) {
 }
 /*---------------------------------------------------------------------------------------*/
 // Set up mission structure from cone latitude and longitude list.
-void GetGoals(junction *nodes , int Goals)  {
+void GetGoals(Junction *nodes , int Goals)  {
   double deltaX, deltaY, Distance;
   for (int i = 0; i < CONES; i++) {
     mission[i].latitude = goal_lat[i];
@@ -539,7 +539,7 @@ long distance(int cur_node, int *k,  long cur_east_mm, long cur_north_mm, int* p
 }
 /*---------------------------------------------------------------------------------------*/
 //Figuring out a path to get the road network
-void FindClosestRoad(waypoint *start, waypoint *road) {  //populate road with best road from start
+void FindClosestRoad(Waypoint *start, Waypoint *road) {  //populate road with best road from start
   long closest_mm = MAX_DISTANCE;
   long dist;
   int close_index;
@@ -595,8 +595,8 @@ void FindClosestRoad(waypoint *start, waypoint *road) {  //populate road with be
 //Test ClosestRoad:
 void test_closestRoad() {
 
-  waypoint roadorigin;
-  waypoint roadDestination;
+  Waypoint roadorigin;
+  Waypoint roadDestination;
 
   if(DEBUG)  Serial.println("First " );
   FindClosestRoad(&mission[0], &roadorigin);
@@ -617,7 +617,7 @@ void test_closestRoad() {
 /*---------------------------------------------------------------------------------------*/
 // start and destination are on the road network given in Nodes.
 // start is in Path[1].
-// Place other junction waypoints into Path.
+// Place other Junction Waypoints into Path.
 // Returned value is next index into Path.
 // start->index identifies the closest node.
 // sigma_mm holds the index to the other node.
@@ -625,7 +625,7 @@ void test_closestRoad() {
 // Since we have a small number of nodes, we instead reserve a slot on Open and Closed
 // for each node.
 
-int BuildPath (int j, waypoint* start, waypoint* destination) { // Construct path backward to start.
+int BuildPath (int j, Waypoint* start, Waypoint* destination) { // Construct path backward to start.
   if(DEBUG)  Serial.println("To break");
   int last = 1;
   int route[map_points];
@@ -666,7 +666,7 @@ void test_buildPath() {
   //  BuildPath(0, Path, destination);
 }
 //Usa A star
-int FindPath(waypoint *start, waypoint *destination)  { //While OpenSet is not empty
+int FindPath(Waypoint *start, Waypoint *destination)  { //While OpenSet is not empty
 
   if(DEBUG)  Serial.println("Start East_mm " + String(start->east_mm) + "\t North " + String(start->north_mm));
   if(DEBUG)  Serial.println("Start East_mm " + String(destination->east_mm) + "\t North " + String(destination->north_mm));
@@ -760,10 +760,10 @@ int FindPath(waypoint *start, waypoint *destination)  { //While OpenSet is not e
 // PathPlan makes an intermediate level path that uses as many roads as possible.
 //start = currentlocation: destination = heading to;
 //Find the cloeset road and call Findpath to do the A star
-int PlanPath (waypoint *start, waypoint *destination) {
+int PlanPath (Waypoint *start, Waypoint *destination) {
 
   //Serial.println("Start : East_mm = " + String(start->east_mm) + "\t North_mm =  " + String(start->north_mm));
-  waypoint roadorigin, roadDestination;
+  Waypoint roadorigin, roadDestination;
 
   int last = 0;
   path[0] = start;
@@ -970,11 +970,11 @@ boolean LoadMap(char* fileName) {
 /*---------------------------------------------------------------------------------------*/
 // SelectMap:  Return the file name of the closest origin
 // Determines which map to load.
-// Takes in the current location as a waypoint and a string with the name of the file that
+// Takes in the current location as a Waypoint and a string with the name of the file that
 //   contains the origins and file names of the maps.
-// Determines which origin is closest to the waypoint and returns it as a junction.
+// Determines which origin is closest to the Waypoint and returns it as a Junction.
 // Assumes the file is in the correct format according to the description above.
-void SelectMap(waypoint currentLocation, char* fileName, char* nearestMap)
+void SelectMap(Waypoint currentLocation, char* fileName, char* nearestMap)
 {
   // open the file. note that only one file can be open at a time,
   // so you have to close this one before opening another.
@@ -1127,7 +1127,7 @@ void initialize_C4() {
 
   //Serial.println(nearestMap);
 
-  //populate nearest map in junction Nodes structure
+  //populate nearest map in Junction Nodes structure
   LoadMap(nearestMap);
 
   //takes in the Nodes that contains all of the map
@@ -1136,7 +1136,7 @@ void initialize_C4() {
   GetGoals(Nodes, CONES);
 }
 
-//Test mission::a list of waypoints to cover
+//Test mission::a list of Waypoints to cover
 void test_mission() {
 
   for (int i = 0; i < map_points; i++)  {

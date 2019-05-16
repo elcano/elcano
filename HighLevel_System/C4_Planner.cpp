@@ -1,6 +1,10 @@
 #include "C4_Planner.h"
+#include <Adafruit_Sensor.h>
+#include <IODue.h>
+#include <SD.h>
 
 #define CONES 1
+#define currentlocation  -1 //currentLocation
 //pre-defined goal/destination to get to
 long goal_lat[CONES] = {47760934};
 long goal_lon[CONES] = { -122189963};
@@ -8,6 +12,17 @@ long goal_lon[CONES] = { -122189963};
 //long goal_lon[CONES] = {-122349894, -122352120, -122351987, -122351087, -122349894};
 
 Junction Nodes[MAX_WAYPOINTS]; //Storing the loaded map
+
+//waypoint path[MAX_WAYPOINTS];  // course route to goal/mission
+Waypoint path[3]; //3 is hardcoded
+Waypoint path0, path1, path2, path3;
+Waypoint mission[CONES];
+Waypoint Start;
+Origin origin(ORIGIN_LAT, ORIGIN_LONG);
+extern int map_points =  5;//16;
+
+//last is the the last index of the Path/goal
+int last_index_of_path = 2; //hardcode path of the last index/dest to 3 [cur,loc1,goal]
 
 /*  mph   mm/s
      3    1341f
@@ -29,6 +44,62 @@ struct AStar
   long CostToGoal;
   long TotalCost;
 } Open[MAX_WAYPOINTS];
+
+//*******************************************************************************************
+
+/**
+ *
+ */
+C4_Planner::C4_Planner(Waypoint &estiPos) {
+  initialize_C4(estiPos); //Start selecting/load map and start planning path
+
+  //set the Start to the first Node
+  Start.east_mm = Nodes[0].east_mm;
+  Start.north_mm = Nodes[0].north_mm;
+
+  Serial.println("Start planning path");
+  last_index_of_path = PlanPath (&Start, &mission[0]);
+
+}
+
+/**
+ * 
+ */
+void C4_Planner::initialize_C4(Waypoint &estiPos) {
+  //Store the initial GPS latitude and longtitude to select the correct map
+  Start.latitude = estiPos.latitude;
+  Start.longitude = estiPos.longitude;
+
+  Serial.println("Initializing SD card...");
+  pinMode(chipSelect, OUTPUT);
+
+  if (!SD.begin(chipSelect)) {
+    Serial3.println("initialization failed!");
+  }
+  Serial.println("initialization done.");
+  char nearestMap[13] = "";
+
+  SelectMap(Start, "MAP_DEFS.txt", nearestMap); //populates info from map_def to nearestMap;
+
+  //Serial.println(nearestMap);
+
+  //populate nearest map in Junction Nodes structure
+  LoadMap(nearestMap);
+
+  //takes in the Nodes that contains all of the map
+  ConstructNetwork(Nodes, map_points); //To fill out the rest of the nodes info
+
+  GetGoals(Nodes, CONES);
+}
+
+//Test mission::a list of Waypoints to cover
+void C4_Planner::test_mission() {
+
+  for (int i = 0; i < map_points; i++)  {
+    Serial.println("mission " + String(i) + " = " + String(mission[i].latitude) + "\t north_mm " + String(mission[i].north_mm));
+  }
+}
+
 
 // Fill the distances of the Junctions in the MAP
 void C4_Planner::ConstructNetwork(Junction *Map, int MapPoints) {
@@ -148,9 +219,10 @@ long C4_Planner::distance(int cur_node, int *k,  long cur_east_mm, long cur_nort
   }
   return closest_mm;
 }
-/*---------------------------------------------------------------------------------------*/
-//Figuring out a path to get the road network
-void C4_Planner::FindClosestRoad(waypoint *start, waypoint *road) {  //populate road with best road from start
+/****************************************************************************
+ * Figuring out a path to get the road network 
+ ***************************************************************************/
+void C4_Planner::findClosestRoad(Waypoint *start, Waypoint *road) {  //populate road with best road from start
   long closest_mm = MAX_DISTANCE;
   long dist;
   int close_index;
@@ -206,16 +278,16 @@ void C4_Planner::FindClosestRoad(waypoint *start, waypoint *road) {  //populate 
 //Test ClosestRoad:
 void C4_Planner::test_closestRoad() {
 
-  waypoint roadorigin;
-  waypoint roadDestination;
+  Waypoint roadorigin;
+  Waypoint roadDestination;
 
   if(DEBUG)  Serial.println("First " );
-  FindClosestRoad(&mission[0], &roadorigin);
+  findClosestRoad(&mission[0], &roadorigin);
 
   if(DEBUG)  Serial.println();
 
   if(DEBUG)  Serial.println("Second ");
-  FindClosestRoad(&mission[3], &roadDestination);
+  findClosestRoad(&mission[3], &roadDestination);
   for (int last = 0; last < 4; last++) {
     if(DEBUG)  Serial.println(" mission " + String(mission[last].east_mm ) + "\t roadorigin " + String(roadorigin.east_mm));
     if(DEBUG)  Serial.println(" mission " + String(mission[last].longitude ) + "\t roadorigin " + String(roadorigin.east_mm));
@@ -228,7 +300,7 @@ void C4_Planner::test_closestRoad() {
 /*---------------------------------------------------------------------------------------*/
 // start and destination are on the road network given in Nodes.
 // start is in Path[1].
-// Place other Junction waypoints into Path.
+// Place other Junction Waypoints into Path.
 // Returned value is next index into Path.
 // start->index identifies the closest node.
 // sigma_mm holds the index to the other node.
@@ -236,7 +308,7 @@ void C4_Planner::test_closestRoad() {
 // Since we have a small number of nodes, we instead reserve a slot on Open and Closed
 // for each node.
 
-int C4_Planner::BuildPath (int j, waypoint* start, waypoint* destination) { // Construct path backward to start.
+int C4_Planner::BuildPath (int j, Waypoint* start, Waypoint* destination) { // Construct path backward to start.
   if(DEBUG)  Serial.println("To break");
   int last = 1;
   int route[map_points];
@@ -277,7 +349,7 @@ void C4_Planner::test_buildPath() {
   //  BuildPath(0, Path, destination);
 }
 //Usa A star
-int C4_Planner::FindPath(waypoint *start, waypoint *destination)  { //While OpenSet is not empty
+int C4_Planner::FindPath(Waypoint *start, Waypoint *destination)  { //While OpenSet is not empty
 
   if(DEBUG)  Serial.println("Start East_mm " + String(start->east_mm) + "\t North " + String(start->north_mm));
   if(DEBUG)  Serial.println("Start East_mm " + String(destination->east_mm) + "\t North " + String(destination->north_mm));
@@ -371,17 +443,17 @@ int C4_Planner::FindPath(waypoint *start, waypoint *destination)  { //While Open
 // PathPlan makes an intermediate level path that uses as many roads as possible.
 //start = currentlocation: destination = heading to;
 //Find the cloeset road and call Findpath to do the A star
-int C4_Planner::PlanPath (waypoint *start, waypoint *destination) {
+int C4_Planner::PlanPath (Waypoint *start, Waypoint *destination) {
 
   //Serial.println("Start : East_mm = " + String(start->east_mm) + "\t North_mm =  " + String(start->north_mm));
-  waypoint roadorigin, roadDestination;
+  Waypoint roadorigin, roadDestination;
 
   int last = 0;
   path[0] = start;
   path[0].index = 0;
 
-  FindClosestRoad( start, &roadorigin );
-  FindClosestRoad( destination, &roadDestination );
+  findClosestRoad( start, &roadorigin );
+  findClosestRoad( destination, &roadDestination );
 
   int w = abs(start->east_mm  - roadorigin.east_mm) + abs(start->north_mm - roadorigin.north_mm);
   int x = abs(destination->east_mm  - roadDestination.east_mm)  + abs(destination->north_mm - roadDestination.north_mm);
@@ -418,7 +490,7 @@ int C4_Planner::PlanPath (waypoint *start, waypoint *destination) {
 // Takes in the name of the file to load and loads the appropriate map.
 // Returns true if the map was loaded.
 // Returns false if the load failed.
-boolean LoadMap(char* fileName) {
+boolean C4_Planner::LoadMap(char* fileName) {
   // open the file. note that only one file can be open at a time,
   // so you have to close this one before opening another.
   File myFile = SD.open(fileName, FILE_READ);
@@ -581,11 +653,11 @@ boolean LoadMap(char* fileName) {
 /*---------------------------------------------------------------------------------------*/
 // SelectMap:  Return the file name of the closest origin
 // Determines which map to load.
-// Takes in the current location as a waypoint and a string with the name of the file that
+// Takes in the current location as a Waypoint and a string with the name of the file that
 //   contains the origins and file names of the maps.
-// Determines which origin is closest to the waypoint and returns it as a Junction.
+// Determines which origin is closest to the Waypoint and returns it as a Junction.
 // Assumes the file is in the correct format according to the description above.
-void C4_Planner::SelectMap(waypoint currentLocation, char* fileName, char* nearestMap)
+void C4_Planner::SelectMap(Waypoint currentLocation, char* fileName, char* nearestMap)
 {
   // open the file. note that only one file can be open at a time,
   // so you have to close this one before opening another.
@@ -720,40 +792,7 @@ void C4_Planner::SelectMap(waypoint currentLocation, char* fileName, char* neare
    All the Methods for C4 starts here
 */
 /*---------------------------------------------------------------------------------------*/
-void C4_Planner::initialize_C4() {
-  //Store the initial GPS latitude and longtitude to select the correct map
-  Start.latitude = estimated_position.latitude;
-  Start.longitude = estimated_position.longitude;
 
-  Serial.println("Initializing SD card...");
-  pinMode(chipSelect, OUTPUT);
-
-  if (!SD.begin(chipSelect)) {
-    Serial3.println("initialization failed!");
-  }
-  Serial.println("initialization done.");
-  char nearestMap[13] = "";
-
-  SelectMap(Start, "MAP_DEFS.txt", nearestMap); //populates info from map_def to nearestMap;
-
-  //Serial.println(nearestMap);
-
-  //populate nearest map in Junction Nodes structure
-  LoadMap(nearestMap);
-
-  //takes in the Nodes that contains all of the map
-  ConstructNetwork(Nodes, map_points); //To fill out the rest of the nodes info
-
-  GetGoals(Nodes, CONES);
-}
-
-//Test mission::a list of waypoints to cover
-void C4_Planner::test_mission() {
-
-  for (int i = 0; i < map_points; i++)  {
-    Serial.println("mission " + String(i) + " = " + String(mission[i].latitude) + "\t north_mm " + String(mission[i].north_mm));
-  }
-}
 
 ///MOCK_MAP.TXTT
 void C4_Planner::test_path() {
@@ -768,15 +807,4 @@ void C4_Planner::test_distance()  {
   int dist = distance(0, &destination , 0 , 0, &percent);
 
   Serial.println("dist " + String(dist));
-}
-C4_Planner::C4_Planner::() {
-  initialize_C4(); //Start selecting/load map and start planning path
-
-  //set the Start to the first Node
-  Start.east_mm = Nodes[0].east_mm;
-  Start.north_mm = Nodes[0].north_mm;
-
-  Serial.println("Start planning path");
-  last_index_of_path = PlanPath (&Start, &mission[0]);
-
 }

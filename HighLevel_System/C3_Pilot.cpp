@@ -1,7 +1,4 @@
-//#include "Settings.h"
 #include "C3_Pilot.h"
-#include <due_can.h>
-#include <Can_Protocol.h>
 
 long speed_mmPs;
 long turn_direction;
@@ -9,15 +6,15 @@ long pre_desired_speed;
 long pre_turn_angle;
 CAN_FRAME output; //CAN frame to carry message to C2
 
-//Waypoint path[MAX_WAYPOINTS];  // course route to goal/mission
-Waypoint path[3]; //3 is hardcoded
-Waypoint estPos, path0, path1, path2;
+//Waypoint pathz[MAX_WAYPOINTS];  // course route to goal/mission
+Waypoint pathz[3]; //3 is hardcoded
+Waypoint estPos, pathz0, pathz1, pathz2;
 String wrdState[] = { "STOP", "STRAIGHT", "ENTER_TURN", 
     "LEAVE_TURN", "APPROACH_GOAL", "LEAVE_GOAL"}; //used for clearer debugging
 
-int next = 1; //index to path in a list
+int next = 1; //index to pathz in a list
 //last is the the last index of the Path/goal
-int last_index_of_path = 2; //hardcode path of the last index/dest to 3 [cur,loc1,goal]
+int last_index_of_pathz = 2; //hardcode path of the last index/dest to 3 [cur,loc1,goal]
 int q = 0; //for testing to vary speed in C3 find_state
 bool first = true;
 //******************** hard coded alternating speeds for testing ******************
@@ -66,16 +63,16 @@ long C3_Pilot::turning_radius_mm(long speed_mmPs) {
  *  return true = past the destination , false = Have not past the destination
  *****************************************************************************************************/
 bool C3_Pilot::test_past_destination(int n) {
-  if (abs(path[n - 1].east_mm - path[n].east_mm) > abs(path[n - 1].north_mm - path[n].north_mm)) {
-    if (path[n].east_mm > path[n - 1].east_mm && estPos.east_mm > path[n].east_mm) {
+  if (abs(pathz[n - 1].east_mm - pathz[n].east_mm) > abs(pathz[n - 1].north_mm - pathz[n].north_mm)) {
+    if (pathz[n].east_mm > pathz[n - 1].east_mm && estPos.east_mm > pathz[n].east_mm) {
       return true;
-    } else if (path[n - 1].east_mm > path[n].east_mm && estPos.east_mm < path[n].east_mm) {
+    } else if (pathz[n - 1].east_mm > pathz[n].east_mm && estPos.east_mm < pathz[n].east_mm) {
       return true;
     }
   } else {
-    if (path[n].north_mm > path[n - 1].north_mm && estPos.north_mm > path[n].north_mm) {
+    if (pathz[n].north_mm > pathz[n - 1].north_mm && estPos.north_mm > pathz[n].north_mm) {
       return true;
-    } else if (path[n - 1].north_mm > path[n].north_mm && estPos.north_mm < path[n].north_mm) {
+    } else if (pathz[n - 1].north_mm > pathz[n].north_mm && estPos.north_mm < pathz[n].north_mm) {
       return true;
     }
   }
@@ -91,23 +88,23 @@ bool C3_Pilot::test_past_destination(int n) {
  *****************************************************************************************************/
 bool C3_Pilot::test_approach_intersection(long turn_radius_mm, int n) {
   //if the distance from E to W is greater than  N to S
-  if (abs(path[n - 1].east_mm - path[n].east_mm) > abs(path[n - 1].north_mm - path[n].north_mm)) {
+  if (abs(pathz[n - 1].east_mm - pathz[n].east_mm) > abs(pathz[n - 1].north_mm - pathz[n].north_mm)) {
     //if destination is further east than current location AND current location is further East than destination - turn radius
-    if (path[n].east_mm > path[n - 1].east_mm && estPos.east_mm >= path[n].east_mm - turn_radius_mm) {
+    if (pathz[n].east_mm > pathz[n - 1].east_mm && estPos.east_mm >= pathz[n].east_mm - turn_radius_mm) {
       return true;
     }  //if dest is further west than current AND current location is further west than destination + turn radius 
-    else if (path[n - 1].east_mm > path[n].east_mm &&
-               estPos.east_mm <= path[n].east_mm + turn_radius_mm) {
+    else if (pathz[n - 1].east_mm > pathz[n].east_mm &&
+               estPos.east_mm <= pathz[n].east_mm + turn_radius_mm) {
         return true;
     }
   } else { //Bigger difference between current and destination N/S than E/W
      //if destination is North AND Destination - turn radius is less mm than current location
-    if (path[n].north_mm > path[n - 1].north_mm &&
-        estPos.north_mm >= path[n].north_mm - turn_radius_mm) {
+    if (pathz[n].north_mm > pathz[n - 1].north_mm &&
+        estPos.north_mm >= pathz[n].north_mm - turn_radius_mm) {
       return true;
       // destination is south AND Destination + turn radius is greater than current location
-    } else if (path[n - 1].north_mm > path[n].north_mm &&
-               estPos.north_mm <= path[n].north_mm + turn_radius_mm) {
+    } else if (pathz[n - 1].north_mm > pathz[n].north_mm &&
+               estPos.north_mm <= pathz[n].north_mm + turn_radius_mm) {
       return true;
     }
   }
@@ -123,27 +120,27 @@ bool C3_Pilot::test_approach_intersection(long turn_radius_mm, int n) {
  *****************************************************************************************************/
 bool C3_Pilot::test_leave_intersection(long turning_radius_mm, int n) {
     //more change in east
-    if (abs(path[n - 1].east_mm - path[n].east_mm) > abs(path[n - 1].north_mm - path[n].north_mm)) {
-        if (path[n].east_mm > path[n - 1].east_mm) {
-            if(abs((abs(path[n].north_mm) + turning_radius_mm) - (abs(estPos.north_mm) + turning_radius_mm)) >= turning_radius_mm/2){
+    if (abs(pathz[n - 1].east_mm - pathz[n].east_mm) > abs(pathz[n - 1].north_mm - pathz[n].north_mm)) {
+        if (pathz[n].east_mm > pathz[n - 1].east_mm) {
+            if(abs((abs(pathz[n].north_mm) + turning_radius_mm) - (abs(estPos.north_mm) + turning_radius_mm)) >= turning_radius_mm/2){
             return true;
             }
         }
-        else if(path[n - 1].east_mm > path[n].east_mm) {
-            if(abs((abs(path[n].north_mm) + turning_radius_mm) - (abs(estPos.north_mm) + turning_radius_mm)) >= turning_radius_mm/2) {
+        else if(pathz[n - 1].east_mm > pathz[n].east_mm) {
+            if(abs((abs(pathz[n].north_mm) + turning_radius_mm) - (abs(estPos.north_mm) + turning_radius_mm)) >= turning_radius_mm/2) {
             return true;
             }
         }
     }
     else {
         //more change in north
-        if(path[n].north_mm > path[n - 1].north_mm){
-            if(abs((abs(path[n].east_mm) + turning_radius_mm) - (abs(estPos.east_mm) + turning_radius_mm)) >= turning_radius_mm/2){
+        if(pathz[n].north_mm > pathz[n - 1].north_mm){
+            if(abs((abs(pathz[n].east_mm) + turning_radius_mm) - (abs(estPos.east_mm) + turning_radius_mm)) >= turning_radius_mm/2){
                 return true;
             }
         }
-        else if(path[n - 1].north_mm > path[n].north_mm){
-            if(abs((abs(path[n].east_mm) + turning_radius_mm) - (abs(estPos.east_mm) + turning_radius_mm)) >= turning_radius_mm/2) {
+        else if(pathz[n - 1].north_mm > pathz[n].north_mm){
+            if(abs((abs(pathz[n].east_mm) + turning_radius_mm) - (abs(estPos.east_mm) + turning_radius_mm)) >= turning_radius_mm/2) {
                 return true;
             }
         }
@@ -163,13 +160,13 @@ int C3_Pilot::get_turn_direction_angle(int n) {
 
   if (state == ENTER_TURN) {
     int turn_direction_angle = 0;
-    double turn_dir = (estPos.Evector_x1000 * path[n].Evector_x1000) + (estPos.Nvector_x1000 * path[n].Nvector_x1000);
+    double turn_dir = (estPos.Evector_x1000 * pathz[n].Evector_x1000) + (estPos.Nvector_x1000 * pathz[n].Nvector_x1000);
     double x_magnitude = sqrt((estPos.Evector_x1000 * estPos.Evector_x1000) + (estPos.Nvector_x1000 * estPos.Nvector_x1000));
-    double y_magnitude = sqrt ((path[n].Evector_x1000 * path[n].Evector_x1000) + (path[n].Nvector_x1000 * path[n].Nvector_x1000));
+    double y_magnitude = sqrt ((pathz[n].Evector_x1000 * pathz[n].Evector_x1000) + (pathz[n].Nvector_x1000 * pathz[n].Nvector_x1000));
     double dot_product = (turn_dir / (x_magnitude * y_magnitude));
     dot_product /= 1000000.0;
     turn_dir = acos(dot_product); // angle in radians
-    double cross = (estPos.Evector_x1000 * path[n].Nvector_x1000) - (estPos.Nvector_x1000 * path[n].Evector_x1000);
+    double cross = (estPos.Evector_x1000 * pathz[n].Nvector_x1000) - (estPos.Nvector_x1000 * pathz[n].Evector_x1000);
     turn_direction_angle = turn_dir * 180 / PIf; //angle is degrees
     if (cross > 0)
       turn_direction_angle = -turn_direction_angle;
@@ -195,8 +192,8 @@ void C3_Pilot::find_state(long turn_radius_mm, int n) {
       else 
         speed_mmPs = DESIRED_SPEED_mmPs;
       if (test_approach_intersection(turn_radius_mm, n)) {
-        //last index of path/goal
-        if (n == last_index_of_path) {
+        //last index of pathz/goal
+        if (n == last_index_of_pathz) {
           state = APPROACH_GOAL;
         }
         else {
@@ -329,21 +326,21 @@ void C3_Pilot::update(Waypoint &estimated_position, Waypoint &oldPos) {
  *******************************************************************************************************/
  void C3_Pilot::populate_path() {
 
-    path0.east_mm =  6925;
-    path0.north_mm = 5893;
+    pathz0.east_mm =  6925;
+    pathz0.north_mm = 5893;
 
-    path1.east_mm = 11735;
-    path1.north_mm = 5913;
+    pathz1.east_mm = 11735;
+    pathz1.north_mm = 5913;
 
-    path2.east_mm = 17416;
-    path2.north_mm = 18791;
+    pathz2.east_mm = 17416;
+    pathz2.north_mm = 18791;
 
-    path[0] = path0;
-    path[1] = path1;
-    path[2] = path2;
+    pathz[0] = pathz0;
+    pathz[1] = pathz1;
+    pathz[2] = pathz2;
 
     for (int i = 0; i < 3; i++) {
-        path[i].vectors(&path[i+1]);
+        pathz[i].vectors(&pathz[i+1]);
     }
 }
 
@@ -352,10 +349,10 @@ void C3_Pilot::update(Waypoint &estimated_position, Waypoint &oldPos) {
  *   Hard code assigning estimated position to the first element in path
  *******************************************************************************************************/
   void C3_Pilot::initializePosition(Waypoint &oldPos) {
-  estPos.east_mm = path[0].east_mm;
-  estPos.north_mm = path[0].north_mm;
-  estPos.Evector_x1000 = path[0].Evector_x1000;
-  estPos.Nvector_x1000 = path[0].Nvector_x1000;
+  estPos.east_mm = pathz[0].east_mm;
+  estPos.north_mm = pathz[0].north_mm;
+  estPos.Evector_x1000 = pathz[0].Evector_x1000;
+  estPos.Nvector_x1000 = pathz[0].Nvector_x1000;
   oldPos = estPos;
   first = false; //one time through this routine
 } 
