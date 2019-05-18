@@ -21,9 +21,8 @@ class Planner{
   //Waypoint path[MAX_WaypointS];  // course route to goal/mission
   elcano::Waypoint path[CONES]; //6 is hardcoded
   #define currentlocation  -1 //currentLocation
-  
-
-  //pre-defined goal/destination to get to UWB Soccer Field
+   
+//pre-defined goal/destination to get to UWB Soccer Field
   //1) 47.760907, -122.190527
   //2) 47.761150, -122.190190
   //3) 47.761023, -122.189800
@@ -33,8 +32,7 @@ class Planner{
 
   //hardcode cone locations multiplied by 1000000 used 6 decimal places in numbers
   long goal_lat[CONES] = {47760907, 47761150, 47761023, 47760812, 47760565, 47760681};
-  long goal_lon[CONES] = {-122190527, -122190190,-122189800, -122189531, -122189858, -122190255};
-  
+  long goal_lon[CONES] = {-122190527, -122190190,-122189800, -122189531, -122189858, -122190255}; 
   Waypoint Start;
 
   //last is the the last index of the Path/goal
@@ -44,21 +42,21 @@ class Planner{
   int map_points; //filled in when loads the map
 
   //methods
-  void SelectMap(Waypoint startLocation, char* fileName, char* nearestMap);
+  void SelectMap(Origin &orgin, Waypoint startLocation, char* fileName, char* nearestMap);
   bool LoadMap(char* fileName);
-  void initialize_Planner(elcano::Waypoint &estimated_pos);
+  void initialize_Planner(Origin &orign, elcano::Waypoint &estimated_pos);
   void ConstructNetwork(Junction *Map, int MapPoints);
-  void GetGoals(Junction *nodes, int Goals);
+  void GetGoals(Origin &ori, Junction *nodes, int Goals);
   long distance(int cur_node, int *k, long cur_east_mm, long cur_north_mm, int* perCent);
   void FindClosestRoad(Waypoint *start, Waypoint *road);
-  int BuildPath(int j, Waypoint *start, Waypoint *destination);
-  int FindPath(Waypoint *start, Waypoint *destination);
-  int PlanPath(Waypoint *start, Waypoint *destination);
+  int BuildPath(Origin &orgi, int j, Waypoint *start, Waypoint *destination);
+  int FindPath(Origin &borigin, Waypoint *start, Waypoint *destination);
+  int PlanPath(Origin &origin, Waypoint *start, Waypoint *destination);
 
   public:
-  Planner(elcano::Waypoint &estimated_pos);
+  Planner(Origin &org, elcano::Waypoint &estimated_pos);
   ~Planner(){}
-  elcano::Origin *origin;
+  //elcano::Origin *origin;
   
 };
 

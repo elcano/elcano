@@ -10,9 +10,7 @@ bool passedInitial = false; //to hardcode GPS only first time
 Origin originSt(ORIGIN_LAT, ORIGIN_LONG);
 long extractSpeed = 0; //alternative to checksum since it's not implemented ie check for bad incoming data through serial
 
-Waypoint newPos, estimPos, GPS_reading;
-
-
+Waypoint newPos, GPS_reading;
 
 Adafruit_GPS GPS(&mySerial);
 /* Assign a unique ID to this sensor at the same time */
@@ -28,7 +26,6 @@ CAN_FRAME incoming;
  *****************************************************************************************************/
 C6_Navigator::C6_Navigator(Waypoint &estimated_position, Waypoint &oldPos) {
   //setting up the GPS rate
-  estimPos = estimated_position; //assign global variable to local for editing
   setup_GPS();
 
   //Enable auto-gain
@@ -39,11 +36,10 @@ C6_Navigator::C6_Navigator(Waypoint &estimated_position, Waypoint &oldPos) {
   }
   mag.begin();
   
-  initial_position(oldPos); //getting your initial position from GPS comment out if no GPS available
+  initial_position(estimated_position,oldPos); //getting your initial position from GPS comment out if no GPS available
   passedInitial = true; // got first GPS fail the rest in hard code remove if testing
   //set starting speed to 0 
   newPos.speed_mmPs = 0;
-  estimated_position = estimPos; //transfer local data back to global variable
 }
 
 
@@ -73,9 +69,9 @@ void C6_Navigator::setup_GPS() {
  * 
  *******************************************************************************************************/
 bool C6_Navigator::AcquireGPS(Waypoint &gps_position) {
-  if(DEBUG) Serial.println("Acquire GPS");
+  /*if(DEBUG) Serial.println("Acquire GPS");
   float latitude, longitude;
-
+/*
   //HARD CODED FOR TESTING remove from here to the return true statement down below
   /*gps_position.latitude = gpsTest[gpsIndex];
   gpsIndex++; 
@@ -86,6 +82,7 @@ bool C6_Navigator::AcquireGPS(Waypoint &gps_position) {
     gpsIndex = 0;
   else
     gpsIndex++; */
+    /*
   gps_position.longitude = gpsTest[gpsIndex];
   gps_position.latitude = gpsTest[gpsIndex];
   return (!passedInitial); 
@@ -117,6 +114,50 @@ bool C6_Navigator::AcquireGPS(Waypoint &gps_position) {
     return false;
   }
   return false;
+  */
+  if (DEBUG) {Serial.println("Acquire GPS");}
+    float latitude, longitude;
+
+    char c;
+    //read atleast 25 characters every loop speed up update time for GPS
+    for (int i = 0; i < 25; i++) {
+      c = GPS.read();
+      //test output 4-9-2019 --------- Mel
+      if (DEBUG) {
+        Serial.print(c);
+        Serial.print(", ");
+      }
+    }
+    if (DEBUG) {Serial.println("");}
+    delay(1000);
+
+    // if a sentence is received, we can check the checksum, parse it...
+    if (GPS.newNMEAreceived()) {
+      if (DEBUG) {Serial.println("newNMEArecieved");}
+      // a tricky thing here is if we print the NMEA sentence, or data
+      // we end up not listening and catching other sentences!
+      // so be very wary if using OUTPUT_ALLDATA and trytng to print out data
+      //Serial.println(GPS.lastNMEA());   // this also sets the newNMEAreceived() flag to false
+
+      if (!GPS.parse(GPS.lastNMEA()))   // this also sets the newNMEAreceived() flag to false
+      return false;  // we can fail to parse a sentence in which case we should just wait for another
+
+      if (GPS.fix) {
+        if (DEBUG) {Serial.println("GPS fix");}
+        gps_position.latitude = GPS.latitudeDegrees;
+        gps_position.longitude = GPS.longitudeDegrees;
+        if (DEBUG) {
+          Serial.print("Latitude: ");
+          Serial.println(gps_position.latitude, 6);
+          Serial.print("Longitude: ");
+          Serial.println(gps_position.longitude, 6);
+        }
+        return true;
+      }
+      return false;
+    }
+    return false;
+  
 }
 
 
@@ -176,7 +217,7 @@ long C6_Navigator::getHeading() {
 /*******************************************************************************************************
  * 
  ******************************************************************************************************/
-void C6_Navigator::findPosition(bool got_GPS, Waypoint &oldPos) {
+void C6_Navigator::findPosition(Waypoint &estimPos, bool got_GPS, Waypoint &oldPos) {
   newPos.time_ms = millis(); //mark current time
   
   //get heading coordinates from the compass
@@ -220,7 +261,7 @@ void C6_Navigator::findPosition(bool got_GPS, Waypoint &oldPos) {
 /*******************************************************************************************************
  * Get your first initial position form the GPS
  ******************************************************************************************************/
-void C6_Navigator::initial_position(Waypoint &oldPos) {
+void C6_Navigator::initial_position(Waypoint &estimPos, Waypoint &oldPos) {
   
   bool GPS_available = AcquireGPS(estimPos);
 
@@ -254,7 +295,6 @@ void C6_Navigator::initial_position(Waypoint &oldPos) {
  *  and uses this data to estimate the current position of the trike
  *****************************************************************************************************/
 void C6_Navigator::update(Waypoint &estimated_position, Waypoint &oldPos) {
-  estimPos = estimated_position; //assign value at estimate_position reference to local var
   oldPos.time_ms = millis();
   delay(1);
   
@@ -269,7 +309,5 @@ void C6_Navigator::update(Waypoint &estimated_position, Waypoint &oldPos) {
   else {
     if(DEBUG)  Serial.println("Failed to get got_GPS");
   }
-
-  findPosition(got_GPS, oldPos); //determine location based on dead reckoning and GPS
-  estimated_position = estimPos; //return local variable data to estimated_position reference
+  findPosition(estimated_position, got_GPS, oldPos); //determine location based on dead reckoning and GPS
 }   

@@ -26,10 +26,10 @@ int insaneCounter = 0;
 /******************************************************************************************************
  * constructor
  *****************************************************************************************************/
-C3_Pilot::C3_Pilot(Waypoint &estimated_pos) {
+C3_Pilot::C3_Pilot(Origin &org, Waypoint &estimated_pos) {
   
   if(DEBUG) Serial.println("Starting Planning");
-  myPlanner = new Planner(estimated_pos);
+  myPlanner = new Planner(org, estimated_pos);
   
   //Trike state starts Straight
   if(DEBUG) Serial.println("Entered C3 setup");

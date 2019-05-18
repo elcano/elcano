@@ -6,18 +6,17 @@
 
 
 namespace elcano {
-Planner::Planner(elcano::Waypoint &estimated_pos){//default constructor
-    origin = new elcano::Origin(47.760854, -122.190033); //origin is set to the UWB_SOCCER map fo testing
-    //Origin origin; //set origin later in intial_position
+Planner::Planner(Origin &org, elcano::Waypoint &estimated_pos){//default constructor
+    //origin = new elcano::Origin(47.760854, -122.190033); //origin is set to the UWB_SOCCER map fo testing
     map_points = 0;
     
-    initialize_Planner(estimated_pos); //Start selecting/load map and start planning path
+    initialize_Planner(org, estimated_pos); //Start selecting/load map and start planning path
     
     Start.east_mm = Nodes[0].east_mm; //set the Start to the first Node 
     Start.north_mm = Nodes[0].north_mm;
 
     if (DEBUG) Serial.println("Start planning path");
-    last_index_of_path = PlanPath(&Start, &mission[0]);
+    last_index_of_path = PlanPath(org, &Start, &mission[0]);
   }
 	/*---------------------------------------------------------------------------------------*/
 // SelectMap:  Return the file name of the closest origin
@@ -26,7 +25,7 @@ Planner::Planner(elcano::Waypoint &estimated_pos){//default constructor
 //   contains the origins and file names of the maps.
 // Determines which origin is closest to the Waypoint and returns it as a Junction.
 // Assumes the file is in the correct format according to the description above.
-void Planner::SelectMap(Waypoint startLocation, char* fileName, char* nearestMap)
+void Planner::SelectMap(Origin &orgin, Waypoint startLocation, char* fileName, char* nearestMap)
 	{
 		// open the file. note that only one file can be open at a time,
 		// so you have to close this one before opening another.
@@ -127,17 +126,13 @@ void Planner::SelectMap(Waypoint startLocation, char* fileName, char* nearestMap
 				case 1:  // longitude
 					map_longitudes[row] = atof(token);
 					col++;
-					if (DEBUG) {
-						Serial.println(map_longitudes[row], 6);
-					}
+					if (DEBUG) {Serial.println(map_longitudes[row], 6);}
 					break;
 
 				case 2:  // filename
 					map_file_names[row] = token;
 					col++;
-					if (DEBUG) {
-						Serial.println(map_file_names[row]);
-					}
+					if (DEBUG) {Serial.println(map_file_names[row]);}
 					row++;
 					break;
 
@@ -160,10 +155,16 @@ void Planner::SelectMap(Waypoint startLocation, char* fileName, char* nearestMap
 				}
 			}
 			if (closestIndex >= 0) {
+         if(DEBUG)Serial.println("origin is now set to :" + String(orgin.latitude) + " " + String(orgin.longitude));
 				// Determine closest map to current location
 				// Update origin global variable
-				origin->latitude = map_latitudes[closestIndex];
-				origin->longitude = map_longitudes[closestIndex];
+        if(DEBUG)Serial.print("mapLatitude closest index = ");
+       if(DEBUG)Serial.println(map_latitudes[closestIndex], 6);
+				orgin.latitude = map_latitudes[closestIndex];
+				orgin.longitude = map_longitudes[closestIndex];
+       if(DEBUG)Serial.print("closest index = ");
+       if(DEBUG)Serial.println(closestIndex);
+       if(DEBUG)Serial.println("origin is now set to :" + String(orgin.latitude) + " " + String(orgin.longitude));
 
 				//make all file names 12 in length so this works 12 char plus \0
 				for (int i = 0; i < 12; i++)
@@ -173,6 +174,7 @@ void Planner::SelectMap(Waypoint startLocation, char* fileName, char* nearestMap
 				//null terminate the string as it is C
 				//map names should be 13 char and the 14th will by the \0
 				nearestMap[12] = '\0';
+        if(DEBUG)Serial.println("nearestmap = " + String(nearestMap));
 			}
 			else {
 				if (DEBUG) {
@@ -219,20 +221,14 @@ void Planner::SelectMap(Waypoint startLocation, char* fileName, char* nearestMap
 		File useFile = root;
 		while (!found) {
 			useFile = root.openNextFile();
-			if (DEBUG) {
-				Serial.println(String(useFile.name()));
-			}
+			if (DEBUG) {Serial.println(String(useFile.name()));}
 			if (!String(useFile.name()).equals(String(fileName))) {
 				useFile.close();
-				if (DEBUG) {
-					Serial.println("closed file: " + String(useFile.name()));
-				}
+				if (DEBUG) {Serial.println("closed file: " + String(useFile.name()));}
 			}
 			else {
 				found = true;
-				if (DEBUG) {
-					Serial.println("file's match: " + String(useFile.name()));
-				}
+				if (DEBUG) {Serial.println("file's match: " + String(useFile.name()));}
 			}
 		}
 		// if the file opened okay, read from it:
@@ -386,29 +382,26 @@ void Planner::SelectMap(Waypoint startLocation, char* fileName, char* nearestMap
 			// If file loaded, read data into Nodes[]
 			free(buffer);
 			useFile.close();
-			if (DEBUG) {
-				Serial.println("Closed the file: " + String(useFile.name()));
-			}
+			if (DEBUG) {Serial.println("Closed the file: " + String(useFile.name()));}
 		}
 		else {
 			// if the file didn't open, print an error:
 			useFile.close();
-			if (DEBUG) {
-				Serial.println("error opening: " + String(fileName));
-			}
+			if (DEBUG) {Serial.println("error opening: " + String(fileName));}
 			return false;
 		}
 		return true;
 	}
 
 	/*---------------------------------------------------------------------------------------*/
-	void Planner::initialize_Planner(elcano::Waypoint &estimated_pos) {
+	void Planner::initialize_Planner(Origin &orign, elcano::Waypoint &estimated_pos) {
 		//Store the initial GPS latitude and longtitude to select the correct map
 		Start.latitude = estimated_pos.latitude;
 		Start.longitude = estimated_pos.longitude;
 
-		Serial.println("Initializing SD card...");
-		//chipSelect = 35
+		if(DEBUG)Serial.println("Initializing SD card...");
+		//chipSelect = 35 located in IODUE.h library if change needed
+   if (DEBUG)Serial.println("chipSelect = " + String(chipSelect));
 		pinMode(chipSelect, OUTPUT);
 		if (!SD.begin(chipSelect)) {
 			Serial.println("initialization failed!");
@@ -419,7 +412,7 @@ void Planner::SelectMap(Waypoint startLocation, char* fileName, char* nearestMap
 		//13 to include null terminate - SD cannot have more than 12 char & \0 in filename caused error
 		char nearestMap[13] = "";
 
-		SelectMap(Start, "MAP_DEFS.TXT", nearestMap); //populates info from map_def to nearestMap;
+		SelectMap(orign, Start, "MAP_DEFS.TXT", nearestMap); //populates info from map_def to nearestMap;
 
 		Serial.println("Map selected was: " + String(nearestMap));
 
@@ -429,7 +422,7 @@ void Planner::SelectMap(Waypoint startLocation, char* fileName, char* nearestMap
 		//takes in the Nodes that contains all of the map
 		ConstructNetwork(Nodes, map_points); //To fill out the rest of the nodes info
 
-		GetGoals(Nodes, CONES);
+		GetGoals(orign,Nodes, CONES);
 	}
 
 	/*---------------------------------------------------------------------------------------*/
@@ -454,12 +447,12 @@ void Planner::SelectMap(Waypoint startLocation, char* fileName, char* nearestMap
 
 	/*---------------------------------------------------------------------------------------*/
 	// Set up mission structure from cone latitude and longitude list.
-	void Planner::GetGoals(Junction *nodes, int Goals) {
+	void Planner::GetGoals(Origin &ori, Junction *nodes, int Goals) {
 		double deltaX, deltaY, Distance;
 		for (int i = 0; i < CONES; i++) {
 			mission[i].latitude = goal_lat[i];
 			mission[i].longitude = goal_lon[i];
-			mission[i].Compute_mm(*origin);
+			mission[i].Compute_mm(ori);
 			mission[i].speed_mmPs = DESIRED_SPEED_mmPs;
 			mission[i].index = 1 | GOAL;
 			mission[i].sigma_mm = 1000;
@@ -618,7 +611,7 @@ void Planner::SelectMap(Waypoint startLocation, char* fileName, char* nearestMap
 // Since we have a small number of nodes, we instead reserve a slot on Open and Closed
 // for each node.
 
-	int Planner::BuildPath(int j, Waypoint* start, Waypoint* destination) { // Construct path backward to start.
+	int Planner::BuildPath(Origin &orgi, int j, Waypoint* start, Waypoint* destination) { // Construct path backward to start.
 		Serial.println("To break");
 		int last = 1;
 		int route[map_points];
@@ -643,7 +636,7 @@ void Planner::SelectMap(Waypoint startLocation, char* fileName, char* nearestMap
 			if (k > 0) path[k].sigma_mm = 10; // map should be good to a cm.
 			path[k].index = k;
 			path[k].speed_mmPs = DESIRED_SPEED_mmPs;
-			path[k].Compute_LatLon(*origin);  // this is never used
+			path[k].Compute_LatLon(orgi);  // this is never used
 		}
 		last++;
 		for (j = 0; j < last - 1; j++) {
@@ -656,7 +649,7 @@ void Planner::SelectMap(Waypoint startLocation, char* fileName, char* nearestMap
 
 	/*---------------------------------------------------------------------------------------*/
 	//Use Astar
-	int Planner::FindPath(Waypoint *start, Waypoint *destination) { //While OpenSet is not empty
+	int Planner::FindPath(Origin &borigin, Waypoint *start, Waypoint *destination) { //While OpenSet is not empty
 
 		Serial.println("Start East_mm " + String(start->east_mm) + "\t North " + String(start->north_mm));
 		Serial.println("Start East_mm " + String(destination->east_mm) + "\t North " + String(destination->north_mm));
@@ -706,7 +699,7 @@ void Planner::SelectMap(Waypoint startLocation, char* fileName, char* nearestMap
 			Open[BestID].TotalCost = MAX_DISTANCE;  // Remove node from "stack".
 			if (BestID == destination->index || BestID == destination->sigma_mm) { // Done:: reached the goal!!
 
-				return BuildPath(BestID, start, destination);   // Construct path backward to start.
+				return BuildPath(borigin, BestID, start, destination);   // Construct path backward to start.
 			}
 
 			i = BestID;  // get successor nodes from map
@@ -750,7 +743,7 @@ void Planner::SelectMap(Waypoint startLocation, char* fileName, char* nearestMap
 // PathPlan makes an intermediate level path that uses as many roads as possible.
 //start = currentlocation: destination = heading to;
 //Find the cloeset road and call Findpath to do the A star
-	int Planner::PlanPath(Waypoint *start, Waypoint *destination) {
+	int Planner::PlanPath(Origin &origin, Waypoint *start, Waypoint *destination) {
 
 		//Serial.println("Start : East_mm = " + String(start->east_mm) + "\t North_mm =  " + String(start->north_mm));
 		Waypoint roadorigin, roadDestination;
@@ -776,7 +769,7 @@ void Planner::SelectMap(Waypoint startLocation, char* fileName, char* nearestMap
 			path[1].index = 1;
 			//why index = 7?
 			destination->index = 7;
-			last = FindPath(&roadorigin, &roadDestination);
+			last = FindPath(origin, &roadorigin, &roadDestination);
 		}
 
 		path[last] = destination;

@@ -28,9 +28,7 @@ namespace elcano {
 
 	/*---------------------------------------------------------------------------------------*/
 	boolean GPS_HighLevel::AcquireGPS(Waypoint &gps_position) {
-		if (DEBUG) {
-			Serial.println("Acquire GPS");
-		}
+		if (DEBUG) {Serial.println("Acquire GPS");}
 		float latitude, longitude;
 
 		char c;
@@ -43,16 +41,12 @@ namespace elcano {
 				Serial.print(", ");
 			}
 		}
-		if (DEBUG) {
-			Serial.println("");
-		}
+		if (DEBUG) {Serial.println("");}
 		delay(1000);
 
 		// if a sentence is received, we can check the checksum, parse it...
 		if (GPS.newNMEAreceived()) {
-			if (DEBUG) {
-				Serial.println("newNMEArecieved");
-			}
+			if (DEBUG) {Serial.println("newNMEArecieved");}
 			// a tricky thing here is if we print the NMEA sentence, or data
 			// we end up not listening and catching other sentences!
 			// so be very wary if using OUTPUT_ALLDATA and trytng to print out data
@@ -62,9 +56,7 @@ namespace elcano {
 			return false;  // we can fail to parse a sentence in which case we should just wait for another
 
 			if (GPS.fix) {
-				if (DEBUG) {
-					Serial.println("GPS fix");
-				}
+				if (DEBUG) {Serial.println("GPS fix");}
 				gps_position.latitude = GPS.latitudeDegrees;
 				gps_position.longitude = GPS.longitudeDegrees;
 				if (DEBUG) {

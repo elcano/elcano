@@ -24,7 +24,7 @@ private:
   void populate_path();
 	
 public:
-	C3_Pilot(Waypoint &estimated_pos);
+	C3_Pilot(Origin & org, Waypoint &estimated_pos);
 	~C3_Pilot(){} //destructor
 	void update(Waypoint &ep, Waypoint &op);
 };
