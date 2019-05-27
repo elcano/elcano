@@ -82,8 +82,8 @@ class  Waypoint// best estimate of position and state
 	long Evector_x1000;   // 1000 * unit vector pointing east
   long Nvector_x1000;   // 1000 * unit vector pointing north
   long bearing_deg;  // degrees. 0 = North; 90 = East.
-    long speed_mmPs; // vehicle speed in mm per second.
-    int index;       // used for passing a sequence of Waypoints over serial line.
+  long speed_mmPs; // vehicle speed in mm per second.
+  int index;       // used for passing a sequence of Waypoints over serial line.
    
     void Compute_mm(Origin &origin);
     void Compute_LatLon(Origin &origin);

@@ -1,30 +1,15 @@
 #include "C6_Navigator.h"
 
-#include <Adafruit_LSM303_U.h>
-
-//index of hardcoded gps coordinates for testing
-double gpsTest[] = {47.760850, -122.190044, 47.9, -122, 51, -123, 50.5, -120};
-int gpsIndex = 0; //helper with array above
-bool passedInitial = false; //to hardcode GPS only first time
-
-Origin originSt(ORIGIN_LAT, ORIGIN_LONG);
-long extractSpeed = 0; //alternative to checksum since it's not implemented ie check for bad incoming data through serial
-
-Waypoint newPos, GPS_reading;
-
+#define mySerial Serial3
 Adafruit_GPS GPS(&mySerial);
-/* Assign a unique ID to this sensor at the same time */
-Adafruit_LSM303_Mag_Unified mag = Adafruit_LSM303_Mag_Unified(12345);
 
-bool got_GPS = false;
-CAN_FRAME incoming;
-
-
+namespace elcano {
 /******************************************************************************************************
  * constructor for C6_Navigator
  *  activates the GPS, Compass and finds initial positoin
  *****************************************************************************************************/
-C6_Navigator::C6_Navigator(Waypoint &estimated_position, Waypoint &oldPos) {
+C6_Navigator::C6_Navigator(Origin &org, Waypoint &estimated_position, Waypoint &oldPos) {
+  //originSt = new elcano::Origin(47.760850, -122.190044); //center of UW soccer field
   //setting up the GPS rate
   setup_GPS();
 
@@ -36,17 +21,18 @@ C6_Navigator::C6_Navigator(Waypoint &estimated_position, Waypoint &oldPos) {
   }
   mag.begin();
   
-  initial_position(estimated_position,oldPos); //getting your initial position from GPS comment out if no GPS available
+  initial_position(org, estimated_position,oldPos); //getting your initial position from GPS comment out if no GPS available
   passedInitial = true; // got first GPS fail the rest in hard code remove if testing
+ 
   //set starting speed to 0 
   newPos.speed_mmPs = 0;
 }
 
 
-
 void C6_Navigator::setup_GPS() {
   //Serial 3 (mySerial) is used for GPS
   mySerial.begin(GPSRATE);
+  // Serial3.begin(GPSRATE);
   GPS.begin(GPSRATE);
 
   // uncomment this line to turn on RMC (recommended minimum) and GGA (fix data) including altitude
@@ -261,7 +247,7 @@ void C6_Navigator::findPosition(Waypoint &estimPos, bool got_GPS, Waypoint &oldP
 /*******************************************************************************************************
  * Get your first initial position form the GPS
  ******************************************************************************************************/
-void C6_Navigator::initial_position(Waypoint &estimPos, Waypoint &oldPos) {
+void C6_Navigator::initial_position(Origin &ogn, Waypoint &estimPos, Waypoint &old_pos) {
   
   bool GPS_available = AcquireGPS(estimPos);
 
@@ -273,20 +259,13 @@ void C6_Navigator::initial_position(Waypoint &estimPos, Waypoint &oldPos) {
   if(DEBUG)  Serial.println("Acquired GPS position");
   estimPos.time_ms = millis();
   estimPos.Compute_EandN_Vectors(getHeading()); //get position E and N vector
-  //Assign Origin GPS position
-  //Origin tmpOrg(estimPos.latitude, estimPos.longitude);
-  //originSt = tmpOrg; //assign originSt to starting position
-  
+  //Assign Origin GPS position?? not map origin??
+  //ogn.
   if(DEBUG)  Serial.println("Computed Vectors in initial position");
-  estimPos.Compute_mm(originSt);  //initialize north and east coordinates for position
-  if(DEBUG) {
-    Serial.print("Estimate E: ");
-    Serial.println(estimPos.east_mm);
-    Serial.print("Estimate N: ");
-    Serial.println(estimPos.north_mm);
-  }
+
+  //moving to planner where compute estim_pos due to origin not being set yet. may need to move old_pos too
   //oldPos to keep track of previous position for DR
-  oldPos = estimPos;
+  old_pos = estimPos;
 }
 
 /******************************************************************************************************
@@ -294,16 +273,21 @@ void C6_Navigator::initial_position(Waypoint &estimPos, Waypoint &oldPos) {
  *  gets a new GPS signal, Deadreckoning data from the C2_Lowlevel
  *  and uses this data to estimate the current position of the trike
  *****************************************************************************************************/
-void C6_Navigator::update(Waypoint &estimated_position, Waypoint &oldPos) {
+void C6_Navigator::update(Origin &ogn, Waypoint &estimated_position, Waypoint &oldPos) {
   oldPos.time_ms = millis();
   delay(1);
   
   got_GPS = AcquireGPS(GPS_reading);  //try to get a new GPS position
+  int test = 0;
+  while(got_GPS == false && test < 5){
+    got_GPS = AcquireGPS(GPS_reading);
+    test++; 
+  }
   
   C6_communication_with_C2(); // Receiving speed data from C2 using CAN Bus
   
   if (got_GPS) {
-    GPS_reading.Compute_mm(originSt); // get north and east coordinates from originStl
+    GPS_reading.Compute_mm(ogn); // get north and east coordinates from originStl
     if(DEBUG)  Serial.println("Got and computed GPS");
   }
   else {
@@ -311,3 +295,5 @@ void C6_Navigator::update(Waypoint &estimated_position, Waypoint &oldPos) {
   }
   findPosition(estimated_position, got_GPS, oldPos); //determine location based on dead reckoning and GPS
 }   
+
+} // namespace elcano

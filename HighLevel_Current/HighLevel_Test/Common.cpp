@@ -326,15 +326,15 @@ namespace elcano {
 		double diffWhole;
 		double dist;
 
+    diffWhole = latitude - origin.latitude;
+    dist = diffWhole * TO_RADIANS * EARTH_RADIUS_MM;
+    north_mm = dist;
+
 		diffWhole = (longitude - origin.longitude);
 		dist = (diffWhole * TO_RADIANS * EARTH_RADIUS_MM);
-	
 		east_mm = (dist * origin.cos_lat);
 
-		diffWhole = latitude - origin.latitude;
-		dist = diffWhole * TO_RADIANS * EARTH_RADIUS_MM;
-
-		north_mm = dist;
+		
 	}
 
 
