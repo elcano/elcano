@@ -13,8 +13,8 @@ private:
   int BuildPath (int j, Waypoint* start, Waypoint* destination);
   void test_buildPath();
   int PlanPath (Waypoint *start, Waypoint *destination);
-  void SelectMap(Waypoint currentLocation, char* fileName, char* nearestMap);
   void initialize_C4(Waypoint &estiPos);
+  void SelectMap(Waypoint currentLocation, char* fileName, char* nearestMap);
   void test_mission();
   void test_path();
   void test_distance();

@@ -92,7 +92,7 @@ void Vehicle::update() {
     MSG.sspeed = currentSpeed;  
     MSG.angle =  map(currentAngle,-90000,90000,-90,90);
     CAN.sendMsgBuf(Actual_CANID, 0,8, (uint8_t*)&MSG);
-    delay(1000);
+    //delay(1000);
   
     if(DEBUG)
       Serial.println("Sending Message to DUE");

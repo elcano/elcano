@@ -9,13 +9,13 @@ CAN_FRAME output; //CAN frame to carry message to C2
 //Waypoint pathz[MAX_WAYPOINTS];  // course route to goal/mission
 Waypoint pathz[3]; //3 is hardcoded
 Waypoint estPos, pathz0, pathz1, pathz2;
+
 String wrdState[] = { "STOP", "STRAIGHT", "ENTER_TURN", 
     "LEAVE_TURN", "APPROACH_GOAL", "LEAVE_GOAL"}; //used for clearer debugging
 
 int next = 1; //index to pathz in a list
 //last is the the last index of the Path/goal
 int last_index_of_pathz = 2; //hardcode path of the last index/dest to 3 [cur,loc1,goal]
-int q = 0; //for testing to vary speed in C3 find_state
 bool first = true;
 
 /******************************************************************************************************
@@ -180,9 +180,6 @@ int C3_Pilot::get_turn_direction_angle(int n) {
 void C3_Pilot::find_state(long turn_radius_mm, int n) {
   switch (state) {
     case STRAIGHT:
-      q++;
-      if(q % 3 == 0)
-        speed_mmPs = DESIRED_SPEED2;
       else 
         speed_mmPs = DESIRED_SPEED_mmPs;
       if (test_approach_intersection(turn_radius_mm, n)) {

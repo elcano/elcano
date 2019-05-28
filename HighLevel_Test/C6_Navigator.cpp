@@ -84,19 +84,17 @@ bool C6_Navigator::AcquireGPS(Waypoint &gps_position) {
   if(DEBUG) Serial.println("Acquire GPS");
   float latitude, longitude;
 
-  //HARD CODED FOR TESTING remove from here to the return true statement down below
-  /*gps_position.latitude = gpsTest[gpsIndex];
-  gpsIndex++; 
+  //HARD CODED FOR TESTING remove from here to the return !passedInitial statement down below
+  gps_position.latitude = gpsTest[gpsIndex++];
   if(DEBUG)  Serial.println("Latitude: " + String(gps_position.latitude, 6));
-  gps_position.longitude = gpsTest[gpsIndex];
+  gps_position.longitude = gpsTest[gpsIndex++];
   if(DEBUG)  Serial.println("Longitude: " + String(gps_position.longitude, 6));
-  if(gpsIndex == 7)
+  if(gpsIndex == 8)
     gpsIndex = 0;
   else
-    gpsIndex++; */
-  gps_position.longitude = gpsTest[gpsIndex];
-  gps_position.latitude = gpsTest[gpsIndex];
-  return (!passedInitial); 
+    gpsIndex++; 
+  //return (!passedInitial); 
+  return(true);
   
   char c;
   //read atleast 25 characters every loop speed up update time for GPS
@@ -173,7 +171,6 @@ long C6_Navigator::getHeading() {
   //Calculate the current heading (angle of the vector y,x)
   //Normalize the heading
   float heading = (atan2(event.magnetic.y, event.magnetic.x) * 180) / PIf;
-  if(DEBUG)  Serial.println("acquired heading: " + String(heading));
   if (heading < 0)  {
     heading = 360 + heading;
   }
@@ -231,7 +228,6 @@ void C6_Navigator::findPosition(bool got_GPS, Waypoint &oldPos) {
 void C6_Navigator::initial_position(Waypoint &oldPos) {
   bool GPS_available = AcquireGPS(estimPos);
 
-  //This makes an infinite loop when the GPS is not available, comment out or hard code for testing 4-8-19 Mel
   while (!GPS_available) {
     GPS_available = AcquireGPS(estimPos); 
   }
@@ -279,4 +275,5 @@ void C6_Navigator::update(Waypoint &estimated_position, Waypoint &oldPos) {
 
   findPosition(got_GPS, oldPos); //determine location based on dead reckoning and GPS
   estimated_position = estimPos; //return local variable data to estimated_position reference
+  if(DEBUG3) Serial.println("New location: " + String(estimated_position.north_mm) + "N, " + String(estimated_position.east_mm) + "E");
 }   

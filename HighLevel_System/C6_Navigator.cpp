@@ -93,10 +93,10 @@ bool C6_Navigator::AcquireGPS(Waypoint &gps_position) {
   if(gpsIndex == 7)
     gpsIndex = 0;
   else
-    gpsIndex++; */
+    gpsIndex++; 
   gps_position.longitude = gpsTest[gpsIndex];
   gps_position.latitude = gpsTest[gpsIndex];
-  return (!passedInitial); 
+  return (!passedInitial); */
   
   char c;
   //read atleast 25 characters every loop speed up update time for GPS
@@ -136,12 +136,6 @@ void C6_Navigator::C6_communication_with_C2() {
   
   while (CAN.available() > 0) { // check if CAN message available
     CAN.read(incoming);
-
- /*   rec++;
-    if(rec > 1000) {
-      Serial.println("1k recs at " + String(millis()));
-      rec = 0;
-    } */
     
     if(DEBUG2)  {
       Serial.println("Get data from (low level) ID: " + String(incoming.id, HEX));
@@ -239,9 +233,6 @@ void C6_Navigator::initial_position(Waypoint &oldPos) {
   if(DEBUG)  Serial.println("Acquired GPS position");
   estimPos.time_ms = millis();
   estimPos.Compute_EandN_Vectors(getHeading()); //get position E and N vector
-  //Assign Origin GPS position
-  //Origin tmpOrg(estimPos.latitude, estimPos.longitude);
-  //originSt = tmpOrg; //assign originSt to starting position
   
   if(DEBUG)  Serial.println("Computed Vectors in initial position");
   estimPos.Compute_mm(originSt);  //initialize north and east coordinates for position

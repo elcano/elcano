@@ -88,8 +88,20 @@ bool C3_Pilot::test_past_destination(int n) {
  *****************************************************************************************************/
 bool C3_Pilot::test_approach_intersection(long turn_radius_mm, int n) {
   //if the distance from E to W is greater than  N to S
+  if(DEBUG3) {
+    Serial.println( abs(pathz[n - 1].east_mm - pathz[n].east_mm));
+    Serial.println(abs(pathz[n - 1].north_mm - pathz[n].north_mm));
+  }
   if (abs(pathz[n - 1].east_mm - pathz[n].east_mm) > abs(pathz[n - 1].north_mm - pathz[n].north_mm)) {
     //if destination is further east than current location AND current location is further East than destination - turn radius
+    if(DEBUG3) {
+      Serial.println("PART A2");
+      Serial.println(pathz[n].east_mm);
+      Serial.println(String(" > ") + pathz[n - 1].east_mm);
+      Serial.println(String(estPos.east_mm) + String(" >= "));
+      Serial.println(pathz[n].east_mm - turn_radius_mm);
+    }
+    
     if (pathz[n].east_mm > pathz[n - 1].east_mm && estPos.east_mm >= pathz[n].east_mm - turn_radius_mm) {
       return true;
     }  //if dest is further west than current AND current location is further west than destination + turn radius 
@@ -276,7 +288,7 @@ void C3_Pilot::C3_communicate_C2() {
       Serial.println("**Sending: Speed: " + String(output.data.low) + " Angl: " + (output.data.high));
     
     CAN.sendFrame(output); //send the message
-    delay(1000);
+    //delay(1000);
    /* sends++;
     if(sends > 1000) {
       Serial.println("1k sends at " + String(millis()));
@@ -354,5 +366,16 @@ void C3_Pilot::update(Waypoint &estimated_position, Waypoint &oldPos) {
   estPos.Evector_x1000 = pathz[0].Evector_x1000;
   estPos.Nvector_x1000 = pathz[0].Nvector_x1000;
   oldPos = estPos;
+  test_move();
   first = false; //one time through this routine
 } 
+
+  void test_move() {
+    output.data.low = 2000;
+    output.data.high = 23;
+        
+    if(DEBUG2)
+      Serial.println("**Sending: Speed: " + String(output.data.low) + " Angl: " + (output.data.high));
+    
+    CAN.sendFrame(output); //send the message
+  }

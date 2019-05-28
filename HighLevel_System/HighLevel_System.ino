@@ -42,7 +42,7 @@ void setup() {
  if(DEBUG) Serial.println("Starting C6");
  myC6 = new C6_Navigator(estimated_position, oldPos);
  if(DEBUG) Serial.println("Starting C4");
- myC4 = new C4_Planner(estimated_position);
+ //myC4 = new C4_Planner(estimated_position);
  if(DEBUG) Serial.println("Starting C3");
  myC3 = new C3_Pilot();
 }
@@ -56,6 +56,5 @@ void loop() {
   //RE-compute path if too far off track (future development) for C4
   
   myC3->update(estimated_position, oldPos);
-  
-  //delay(3000); //for testing only.. remove when deploying bike
+
 }

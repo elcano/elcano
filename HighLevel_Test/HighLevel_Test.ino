@@ -36,13 +36,13 @@ void setup() {
   Serial.begin(9600);
   Serial2.begin(9600);
   if (CAN.begin(CAN_BPS_500K)) { // initalize CAN with 500kbps baud rate 
-    Serial.println("init success");
+    if(DEBUG) Serial.println("init success");
   }
 
  if(DEBUG) Serial.println("Starting C6");
  myC6 = new C6_Navigator(estimated_position, oldPos);
  if(DEBUG) Serial.println("Starting C4");
- myC4 = new C4_Planner(estimated_position);
+ //myC4 = new C4_Planner(estimated_position);
  if(DEBUG) Serial.println("Starting C3");
  myC3 = new C3_Pilot();
 }

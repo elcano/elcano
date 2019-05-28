@@ -179,7 +179,7 @@ long C4_Planner::distance(int cur_node, int *k,  long cur_east_mm, long cur_nort
     // compute road unit vectors from i to cur
     RoadDX_mm = Nodes[destination].east_mm - Nodes[cur_node].east_mm;
 
-    //      if(DEBUG){
+    //      if(DEBUG_C4){
     //        Serial.println("RoadX_mm " + String(RoadDX_mm));
     //        Serial.println("Destination " + String(destination));
     //        Serial.println("Nodes[destination].east_mm " + String(Nodes[destination].east_mm));
@@ -232,7 +232,7 @@ void C4_Planner::findClosestRoad(Waypoint *start, Waypoint *road) {  //populate 
 
   for (i = 0; i < 5/*map_points*/; i++) { // find closest road.
     dist = distance(i, &node_successor, start->east_mm, start->north_mm, &perCent); //next node to visit
-    if(DEBUG)  Serial.println("Start : Latitude " + String(start->latitude) + "\t Longitude " + String(start->longitude) + "\t Dist "
+    if(DEBUG_C4)  Serial.println("Start : Latitude " + String(start->latitude) + "\t Longitude " + String(start->longitude) + "\t Dist "
                    + String(dist));
 
     if (abs(dist) < abs(closest_mm))  {
@@ -270,8 +270,8 @@ void C4_Planner::findClosestRoad(Waypoint *start, Waypoint *road) {  //populate 
   road->speed_mmPs = DESIRED_SPEED_mmPs;
 
   //Test FindClosest Road:
-  if(DEBUG)  Serial.println("Distance " + String(dist));
-  if(DEBUG)  Serial.println("Road :  East_mm " + String(road->east_mm) + "\t North_mm " + String(road->north_mm));
+  if(DEBUG_C4)  Serial.println("Distance " + String(dist));
+  if(DEBUG_C4)  Serial.println("Road :  East_mm " + String(road->east_mm) + "\t North_mm " + String(road->north_mm));
 
 }
 
@@ -281,20 +281,20 @@ void C4_Planner::test_closestRoad() {
   Waypoint roadorigin;
   Waypoint roadDestination;
 
-  if(DEBUG)  Serial.println("First " );
+  if(DEBUG_C4)  Serial.println("First " );
   findClosestRoad(&mission[0], &roadorigin);
 
-  if(DEBUG)  Serial.println();
+  if(DEBUG_C4)  Serial.println();
 
-  if(DEBUG)  Serial.println("Second ");
+  if(DEBUG_C4)  Serial.println("Second ");
   findClosestRoad(&mission[3], &roadDestination);
   for (int last = 0; last < 4; last++) {
-    if(DEBUG)  Serial.println(" mission " + String(mission[last].east_mm ) + "\t roadorigin " + String(roadorigin.east_mm));
-    if(DEBUG)  Serial.println(" mission " + String(mission[last].longitude ) + "\t roadorigin " + String(roadorigin.east_mm));
+    if(DEBUG_C4)  Serial.println(" mission " + String(mission[last].east_mm ) + "\t roadorigin " + String(roadorigin.east_mm));
+    if(DEBUG_C4)  Serial.println(" mission " + String(mission[last].longitude ) + "\t roadorigin " + String(roadorigin.east_mm));
   }
   for (int last = 0; last < 4; last++) {
-    if(DEBUG)  Serial.println(" mission " + String(mission[last].east_mm ) + "\t roadorigin " + String(roadDestination.east_mm));
-    if(DEBUG)  Serial.println(" mission " + String(mission[last].longitude ) + "\t roadorigin " + String(roadDestination.north_mm));
+    if(DEBUG_C4)  Serial.println(" mission " + String(mission[last].east_mm ) + "\t roadorigin " + String(roadDestination.east_mm));
+    if(DEBUG_C4)  Serial.println(" mission " + String(mission[last].longitude ) + "\t roadorigin " + String(roadDestination.north_mm));
   }
 }
 /*---------------------------------------------------------------------------------------*/
@@ -309,7 +309,7 @@ void C4_Planner::test_closestRoad() {
 // for each node.
 
 int C4_Planner::BuildPath (int j, Waypoint* start, Waypoint* destination) { // Construct path backward to start.
-  if(DEBUG)  Serial.println("To break");
+  if(DEBUG_C4)  Serial.println("To break");
   int last = 1;
   int route[map_points];
   int i, k, node;
@@ -351,8 +351,8 @@ void C4_Planner::test_buildPath() {
 //Usa A star
 int C4_Planner::FindPath(Waypoint *start, Waypoint *destination)  { //While OpenSet is not empty
 
-  if(DEBUG)  Serial.println("Start East_mm " + String(start->east_mm) + "\t North " + String(start->north_mm));
-  if(DEBUG)  Serial.println("Start East_mm " + String(destination->east_mm) + "\t North " + String(destination->north_mm));
+  if(DEBUG_C4)  Serial.println("Start East_mm " + String(start->east_mm) + "\t North " + String(start->north_mm));
+  if(DEBUG_C4)  Serial.println("Start East_mm " + String(destination->east_mm) + "\t North " + String(destination->north_mm));
   long ClosedCost[map_points];
   int  i, neighbor, k;
   long NewCost, NewStartCost, NewCostToGoal;
@@ -394,8 +394,8 @@ int C4_Planner::FindPath(Waypoint *start, Waypoint *destination)  { //While Open
     if (BestID < 0) {
       return INVALID;
     }
-    if(DEBUG) Serial.println("BESTID " + String(BestID));
-    if(DEBUG)  Serial.println("DestinationINdex " + String(destination->index));
+    if(DEBUG_C4) Serial.println("BESTID " + String(BestID));
+    if(DEBUG_C4)  Serial.println("DestinationINdex " + String(destination->index));
     Open[BestID].TotalCost = MAX_DISTANCE;  // Remove node from "stack".
     if (BestID == destination->index || BestID == destination->sigma_mm)  { // Done:: reached the goal!!
 
@@ -433,7 +433,7 @@ int C4_Planner::FindPath(Waypoint *start, Waypoint *destination)  { //While Open
     ClosedCost[BestID] =  BestCost; // Push node onto Closed
   }
 
-  if(DEBUG)  Serial.println("Destination East_mm " + String(destination->east_mm) + "\t North " + String(destination->north_mm));
+  if(DEBUG_C4)  Serial.println("Destination East_mm " + String(destination->east_mm) + "\t North " + String(destination->north_mm));
 
   return 0;  // failure
 }
@@ -461,10 +461,10 @@ int C4_Planner::PlanPath (Waypoint *start, Waypoint *destination) {
   int straight_dist = 190 * abs(start->east_mm  - destination->east_mm) +  abs(start->north_mm - destination->north_mm);
   if (w + x >= straight_dist) { // don't use roads; go direct
     last = 1;
-    if(DEBUG)  Serial.println("In Straight");
+    if(DEBUG_C4)  Serial.println("In Straight");
   }
   else {  // use A* with the road network
-    if(DEBUG)  Serial.println("In Else");
+    if(DEBUG_C4)  Serial.println("In Else");
     path[1] = roadorigin;
     path[1].index = 1;
     //why index = 7?
@@ -479,7 +479,7 @@ int C4_Planner::PlanPath (Waypoint *start, Waypoint *destination) {
   path[last].index = last | END;
 
   //    Serial.println("Destination : East_mm = " + String(destination->east_mm) + "\t North_mm =  " + String(destination->north_mm));
-  if(DEBUG)  Serial.println();
+  if(DEBUG_C4)  Serial.println();
 
   return last;
 
@@ -600,41 +600,41 @@ boolean C4_Planner::LoadMap(char* fileName) {
           break;
 
         default:  // unexpected condition; print error
-          if(DEBUG)  Serial.print("Unexpected error happened while reading map description file.");
-          if(DEBUG)  Serial.print("Please verify the file is in the correct format.");
-          if(DEBUG)  Serial.println("Planner may not work correctly if this message appears.");
+          if(DEBUG_C4)  Serial.print("Unexpected error happened while reading map description file.");
+          if(DEBUG_C4)  Serial.print("Please verify the file is in the correct format.");
+          if(DEBUG_C4)  Serial.println("Planner may not work correctly if this message appears.");
           break;
       }
 
       token = strtok(NULL, delimiter);
-      if(DEBUG)  Serial.println(token);
+      if(DEBUG_C4)  Serial.println(token);
     }
     map_points = row;
-    if(DEBUG)  Serial.println("Test map");
-    if(DEBUG)  Serial.println(map_points);
+    if(DEBUG_C4)  Serial.println("Test map");
+    if(DEBUG_C4)  Serial.println(map_points);
     //To test LoadMap:
     for (int i = 0; i < map_points; i++)  {
-      if(DEBUG)  Serial.print("inside the loop: ");
-      if(DEBUG)  Serial.println(i);
-      if(DEBUG)  Serial.print(Nodes[i].east_mm);
-      if(DEBUG)  Serial.print(",");
-      if(DEBUG)  Serial.print(Nodes[i].north_mm);
-      if(DEBUG)  Serial.print(",");
-      if(DEBUG)  Serial.print(Nodes[i].destination[0]);
-      if(DEBUG)  Serial.print(",");
-      if(DEBUG)  Serial.print(Nodes[i].destination[1]);
-      if(DEBUG)  Serial.print(",");
-      if(DEBUG)  Serial.print(Nodes[i].destination[2]);
-      if(DEBUG)  Serial.print(",");
-      if(DEBUG)  Serial.print(Nodes[i].destination[3]);
-      if(DEBUG)  Serial.print(",");
-      if(DEBUG)  Serial.print(Nodes[i].Distance[0]);
-      if(DEBUG)  Serial.print(",");
-      if(DEBUG)  Serial.print(Nodes[i].Distance[1]);
-      if(DEBUG)  Serial.print(",");
-      if(DEBUG)  Serial.print(Nodes[i].Distance[2]);
-      if(DEBUG)  Serial.print(",");
-      if(DEBUG)  Serial.println(Nodes[i].Distance[3]);
+      if(DEBUG_C4)  Serial.print("inside the loop: ");
+      if(DEBUG_C4)  Serial.println(i);
+      if(DEBUG_C4)  Serial.print(Nodes[i].east_mm);
+      if(DEBUG_C4)  Serial.print(",");
+      if(DEBUG_C4)  Serial.print(Nodes[i].north_mm);
+      if(DEBUG_C4)  Serial.print(",");
+      if(DEBUG_C4)  Serial.print(Nodes[i].destination[0]);
+      if(DEBUG_C4)  Serial.print(",");
+      if(DEBUG_C4)  Serial.print(Nodes[i].destination[1]);
+      if(DEBUG_C4)  Serial.print(",");
+      if(DEBUG_C4)  Serial.print(Nodes[i].destination[2]);
+      if(DEBUG_C4)  Serial.print(",");
+      if(DEBUG_C4)  Serial.print(Nodes[i].destination[3]);
+      if(DEBUG_C4)  Serial.print(",");
+      if(DEBUG_C4)  Serial.print(Nodes[i].Distance[0]);
+      if(DEBUG_C4)  Serial.print(",");
+      if(DEBUG_C4)  Serial.print(Nodes[i].Distance[1]);
+      if(DEBUG_C4)  Serial.print(",");
+      if(DEBUG_C4)  Serial.print(Nodes[i].Distance[2]);
+      if(DEBUG_C4)  Serial.print(",");
+      if(DEBUG_C4)  Serial.println(Nodes[i].Distance[3]);
     }
 
     // If file loaded, read data into Nodes[]
@@ -643,8 +643,8 @@ boolean C4_Planner::LoadMap(char* fileName) {
   } else {
     // if the file didn't open, print an error:
     myFile.close();
-    if(DEBUG)  Serial.println("error opening");
-    if(DEBUG)  Serial.println(fileName);
+    if(DEBUG_C4)  Serial.println("error opening");
+    if(DEBUG_C4)  Serial.println(fileName);
     return false;
   }
   return true;
@@ -712,7 +712,7 @@ void C4_Planner::SelectMap(Waypoint currentLocation, char* fileName, char* neare
         case 0:  // latitude
           map_latitudes[row] = atof(token);
 
-          if(DEBUG) {
+          if(DEBUG_C4) {
             Serial.print("index: ");
             Serial.println(row);
             Serial.println(map_latitudes[row]);
@@ -723,7 +723,7 @@ void C4_Planner::SelectMap(Waypoint currentLocation, char* fileName, char* neare
         case 1:  // longitude
           map_longitudes[row] = atof(token);
           col++;
-          if(DEBUG) {
+          if(DEBUG_C4) {
             Serial.print("index: ");
             Serial.println(row);
             Serial.println(map_longitudes[row]);
@@ -733,7 +733,7 @@ void C4_Planner::SelectMap(Waypoint currentLocation, char* fileName, char* neare
         case 2:  // filename
           map_file_names[row] = token;
           col++;
-          if (DEBUG) {
+          if (DEBUG_C4) {
             Serial.print("index: ");
             Serial.println(row);
             Serial.println(map_file_names[row]);
@@ -742,7 +742,7 @@ void C4_Planner::SelectMap(Waypoint currentLocation, char* fileName, char* neare
           break;
 
         default:  // unexpected condition; print error
-          if (DEBUG) Serial.println("Unexpected error happened while reading map description file. Please verify the file is in the correct format. Planner may not work correctly if this message appears.");
+          if (DEBUG_C4) Serial.println("Unexpected error happened while reading map description file. Please verify the file is in the correct format. Planner may not work correctly if this message appears.");
           break;
       }
       token = strtok(NULL, delimiter);
@@ -768,7 +768,7 @@ void C4_Planner::SelectMap(Waypoint currentLocation, char* fileName, char* neare
       }
     }
     else  {
-      if(DEBUG)  Serial.println("error determining closest map.");
+      if(DEBUG_C4)  Serial.println("error determining closest map.");
     }
     // Free the memory allocated for the buffer
     free(buffer);
@@ -779,11 +779,11 @@ void C4_Planner::SelectMap(Waypoint currentLocation, char* fileName, char* neare
 
     // close the file:
     myFile.close();
-    if(DEBUG)  Serial.println("Map definitions loaded.");
+    if(DEBUG_C4)  Serial.println("Map definitions loaded.");
   } else {
     // if the file didn't open, print an error:
     myFile.close();
-    if(DEBUG)  Serial.println("error opening MAP_DEFS.txt");
+    if(DEBUG_C4)  Serial.println("error opening MAP_DEFS.txt");
   }
 
 }
