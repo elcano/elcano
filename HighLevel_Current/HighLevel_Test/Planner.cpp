@@ -451,7 +451,7 @@ void Planner::SelectMap(Origin &orgin, Waypoint &startLocation, char* fileName, 
 	}
 
 	/*---------------------------------------------------------------------------------------*/
-	// Fill the distances of the Junctions in the MAP
+	// Fill the distances of the Junctions in the MAP //Uses Nodes array
 	void Planner::ConstructNetwork(Junction *Map) {
 		double deltaX, deltaY;
 		int destination;
@@ -471,20 +471,20 @@ void Planner::SelectMap(Origin &orgin, Waypoint &startLocation, char* fileName, 
 	}
 
 	/*---------------------------------------------------------------------------------------*/
-	// Set up mission structure from cone latitude and longitude list.
+	// Set up mission structure from goal_lat and goal_lat arrays (the goal cones to hit)
 	void Planner::GetGoals(Origin &ori, Junction *nodes) {
 		double deltaX, deltaY, Distance;
 		for (int i = 0; i < CONES; i++) {
 			mission[i].latitude = goal_lat[i];
 			mission[i].longitude = goal_lon[i];
 			mission[i].Compute_mm(ori);
-			mission[i].speed_mmPs = DESIRED_SPEED_mmPs;
+			mission[i].speed_mmPs = DESIRED_SPEED_mmPs; //defined in Settings_HighLevel.h
 			mission[i].index = 1 | GOAL;
 			mission[i].sigma_mm = 1000;
 			mission[i].time_ms = 0;
 
 			if (i == 0) { //If CONE == 1
-				mission[i].Evector_x1000 = 1000;
+				mission[i].Evector_x1000 = 1000;  //didn't write this..why is E 100 and N 0
 				mission[i].Nvector_x1000 = 0;
 			}
 			else {
@@ -522,45 +522,44 @@ void Planner::SelectMap(Origin &orgin, Waypoint &startLocation, char* fileName, 
 
 		perCent = 0;
 		k = 0;
-		closest_mm = MAX_DISTANCE;
-
-
+	
 		for (cur = 0; cur < 4; cur++) { // Don't make computations twice.
 			destination = Nodes[cur_node].destination[cur];
 			if (destination == 0 || destination < cur_node) continue;  //replace Destination with END
 			// compute road unit vectors from i to cur
 			RoadDX_mm = Nodes[destination].east_mm - Nodes[cur_node].east_mm;
 
-			//      Serial.println("RoadX_mm " + String(RoadDX_mm));
-			//      Serial.println("Destination " + String(destination));
-			//      Serial.println("Nodes[destination].east_mm " + String(Nodes[destination].east_mm));
-			//      Serial.println("-Nodes[cur_loc].east_mm " + String(-Nodes[cur_node].east_mm));
-			//
+			if(DEBUG)Serial.println("RoadX_mm " + String(RoadDX_mm));
+			if(DEBUG)Serial.println("Destination " + String(destination));
+			if(DEBUG)Serial.println("Nodes[destination].east_mm " + String(Nodes[destination].east_mm));
+			if(DEBUG)Serial.println("-Nodes[cur_loc].east_mm " + String(-Nodes[cur_node].east_mm));
+			
 			int Eunit_x1000 = RoadDX_mm * 1000 / Nodes[cur_node].Distance[cur];
 
 			RoadDY_mm = Nodes[destination].north_mm - Nodes[cur_node].north_mm;
-			//
-			//      Serial.println("RoadY_mm " + String(RoadDY_mm));
-			//      Serial.println("Nodes[destination].north_mm " + String(Nodes[destination].north_mm));
-			//      Serial.println("-Nodes[cur_loc].north_mm " + String(-Nodes[cur_node].north_mm));
-			//
+			
+			if(DEBUG)Serial.println("RoadY_mm " + String(RoadDY_mm));
+			if(DEBUG)Serial.println("Nodes[destination].north_mm " + String(Nodes[destination].north_mm));
+			if(DEBUG)Serial.println("-Nodes[cur_loc].north_mm " + String(-Nodes[cur_node].north_mm));
+			
 			int Nunit_x1000 = RoadDY_mm * 1000 / Nodes[cur_node].Distance[cur];
-			//
+			
 			//      // normal vector is (Nunit, -Eunit)
 			//      //Answers: What would be the change in X/Y from my current Node.
 			//      deltaX = cur_east_mm - Nodes[cur_node].east_mm;
 			//      deltaY = cur_north_mm - Nodes[cur_node].north_mm;
-			//
-			//
+			
+			
 			//      // sign of return value gives which side of road it is on.
 			//      Road_distance = (-deltaY * Eunit_x1000 + deltaX * Nunit_x1000) / 1000;
 			Road_distance = sqrt((RoadDX_mm * RoadDX_mm) + (RoadDY_mm * RoadDY_mm));
 			//Why do percentage computation like this?
 			pc = (deltaX * Eunit_x1000 + deltaY * Nunit_x1000) / (Nodes[cur_node].Distance[cur] * 10);
 
-			//     Serial.println("Closest_mm " + String(closest_mm) + "\t Road_distance " + String(Road_distance));
-			//     Serial.println("Road Distance " + String(Road_distance));
-			//     Serial.println("closest Distance " + String(closest_mm));
+		  if(DEBUG)Serial.println("Closest_mm " + String(closest_mm) + "\t Road_distance " + String(Road_distance));
+			if(DEBUG)Serial.println("Road Distance " + String(Road_distance));
+			if(DEBUG)Serial.println("closest Distance " + String(closest_mm));
+      
 			if (abs(Road_distance) < abs(closest_mm) && pc >= 0 && pc <= 100) {
 				closest_mm = Road_distance;
 				k = destination;
@@ -568,6 +567,8 @@ void Planner::SelectMap(Origin &orgin, Waypoint &startLocation, char* fileName, 
 
 			}
 		}
+    if(DEBUG)Serial.println("In distance method returning closest_mm: " + String(closest_mm));
+    if(DEBUG)Serial.println(" ");
 		return closest_mm;
 	}
 	/*---------------------------------------------------------------------------------------*/
@@ -582,8 +583,8 @@ void Planner::SelectMap(Origin &orgin, Waypoint &startLocation, char* fileName, 
 
 		for (i = 0; i < 5/*map_points*/; i++) { // find closest road.
 			dist = distance(i, node_successor, start.east_mm, start.north_mm, perCent); //next node to visit
-			Serial.println("Start : Latitude " + String(start.latitude) + "\t Longitude " + String(start.longitude) + "\t Dist "
-				+ String(dist));
+			//Serial.println("Start : Latitude " + String(start.latitude) + "\t Longitude " + String(start.longitude) + "\t Dist "
+			//	+ String(dist));
 
 			if (abs(dist) < abs(closest_mm)) {
 				close_index = node_successor;
@@ -620,8 +621,8 @@ void Planner::SelectMap(Origin &orgin, Waypoint &startLocation, char* fileName, 
 		road.speed_mmPs = DESIRED_SPEED_mmPs;
 
 		//Test FindClosest Road:
-		Serial.println("Distance " + String(dist));
-		Serial.println("Road :  East_mm " + String(road.east_mm) + "\t North_mm " + String(road.north_mm));
+		if(DEBUG)Serial.println("Distance " + String(dist));
+		if(DEBUG)Serial.println("Road :  East_mm " + String(road.east_mm) + "\t North_mm " + String(road.north_mm));
 
 	}
 
@@ -771,16 +772,18 @@ void Planner::SelectMap(Origin &orgin, Waypoint &startLocation, char* fileName, 
 	int Planner::PlanPath(Origin &origin, Waypoint &start, Waypoint &destination) {
 
 		//Serial.println("Start : East_mm = " + String(start->east_mm) + "\t North_mm =  " + String(start->north_mm));
-		Waypoint roadorigin, roadDestination;
+		Waypoint roadOrigin, roadDestination;
 
 		int last = 0;
 		path[0] = start;
 		path[0].index = 0;
 
-		FindClosestRoad(start, roadorigin);
+		FindClosestRoad(start, roadOrigin);
 		FindClosestRoad(destination, roadDestination);
-
-		int w = abs(start.east_mm - roadorigin.east_mm) + abs(start.north_mm - roadorigin.north_mm);
+    //if(DEBUG)Serial.println("In plan path - Selected road origin is: " + String(roadorigin.latitude));
+    //if(DEBUG)Serial.println("In plan path - Selected road destination is: " + String(roadDestination.latitude));
+    //if(DEBUG)Serial.println(" ");
+		int w = abs(start.east_mm - roadOrigin.east_mm) + abs(start.north_mm - roadOrigin.north_mm);
 		int x = abs(destination.east_mm - roadDestination.east_mm) + abs(destination.north_mm - roadDestination.north_mm);
 
 		int straight_dist = 190 * abs(start.east_mm - destination.east_mm) + abs(start.north_mm - destination.north_mm);
@@ -790,11 +793,11 @@ void Planner::SelectMap(Origin &orgin, Waypoint &startLocation, char* fileName, 
 		}
 		else {  // use A* with the road network
 			Serial.println("In Else");
-			path[1] = roadorigin;
+			path[1] = roadOrigin;
 			path[1].index = 1;
 			//why index = 7?
 			destination.index = 7;
-			last = FindPath(origin, roadorigin, roadDestination);
+			last = FindPath(origin, roadOrigin, roadDestination);
 		}
 
 		path[last] = destination;
@@ -803,8 +806,8 @@ void Planner::SelectMap(Origin &orgin, Waypoint &startLocation, char* fileName, 
 		path[last].Nvector_x1000 = path[last - 1].Nvector_x1000;
 		path[last].index = last | END;
 
-		//    Serial.println("Destination : East_mm = " + String(destination->east_mm) + "\t North_mm =  " + String(destination->north_mm));
-		Serial.println();
+		Serial.println("Destination : East_mm = " + String(destination.east_mm) + "\t North_mm =  " + String(destination.north_mm));
+		Serial.println(" ");
 
 		return last;
 

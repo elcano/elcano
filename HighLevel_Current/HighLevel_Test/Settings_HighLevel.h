@@ -26,7 +26,7 @@ namespace elcano{
 #define MIN_TURNING_RADIUS_MM 1000
 
 #define TURN_SPEED 1050
-#define DESIRED_SPEED_mmPs 1600
+#define DESIRED_SPEED_mmPs 1600 //used in getGoals to set speed to goals
  
 const long turn_speed = 835;
 
