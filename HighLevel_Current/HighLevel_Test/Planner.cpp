@@ -512,11 +512,11 @@ void Planner::SelectMap(Origin &orgin, Waypoint &startLocation, char* fileName, 
 //k =  index into Nodes[]
 //east_mm : current
 	long Planner::distance(int &cur_node, int &k, long &cur_east_mm, long &cur_north_mm, int &perCent) {
-		float deltaX, deltaY, dist_mm;
+		double deltaX, deltaY, dist_mm;
 		int cur, destination;
-		long Eunit_x1000, Nunit_x1000;
-		long closest_mm = MAX_DISTANCE;
-		long Road_distance, RoadDX_mm, RoadDY_mm;
+		double Eunit_x1000, Nunit_x1000;
+		double closest_mm = MAX_DISTANCE;
+		double Road_distance, RoadDX_mm, RoadDY_mm;
 
 		long pc; //per cent of completion from i to j.
 
@@ -525,25 +525,27 @@ void Planner::SelectMap(Origin &orgin, Waypoint &startLocation, char* fileName, 
 	
 		for (cur = 0; cur < 4; cur++) { // Don't make computations twice.
 			destination = Nodes[cur_node].destination[cur];
+     //if 0 or less already checked or is a dead end so don't check
 			if (destination == 0 || destination < cur_node) continue;  //replace Destination with END
+			
 			// compute road unit vectors from i to cur
 			RoadDX_mm = Nodes[destination].east_mm - Nodes[cur_node].east_mm;
-
-			if(DEBUG)Serial.println("RoadX_mm " + String(RoadDX_mm));
+			
 			if(DEBUG)Serial.println("Destination " + String(destination));
+      if(DEBUG)Serial.println("RoadDX_mm " + String(RoadDX_mm));
 			if(DEBUG)Serial.println("Nodes[destination].east_mm " + String(Nodes[destination].east_mm));
 			if(DEBUG)Serial.println("-Nodes[cur_loc].east_mm " + String(-Nodes[cur_node].east_mm));
 			
 			int Eunit_x1000 = RoadDX_mm * 1000 / Nodes[cur_node].Distance[cur];
-
+      if(DEBUG)Serial.println("Eunit_x1000: " + String(Eunit_x1000));
+      
 			RoadDY_mm = Nodes[destination].north_mm - Nodes[cur_node].north_mm;
-			
-			if(DEBUG)Serial.println("RoadY_mm " + String(RoadDY_mm));
+			if(DEBUG)Serial.println("RoadDY_mm " + String(RoadDY_mm));
 			if(DEBUG)Serial.println("Nodes[destination].north_mm " + String(Nodes[destination].north_mm));
 			if(DEBUG)Serial.println("-Nodes[cur_loc].north_mm " + String(-Nodes[cur_node].north_mm));
 			
 			int Nunit_x1000 = RoadDY_mm * 1000 / Nodes[cur_node].Distance[cur];
-			
+			if(DEBUG)Serial.println("Nunit_x1000: " + String(Nunit_x1000));
 			//      // normal vector is (Nunit, -Eunit)
 			//      //Answers: What would be the change in X/Y from my current Node.
 			//      deltaX = cur_east_mm - Nodes[cur_node].east_mm;
@@ -552,14 +554,15 @@ void Planner::SelectMap(Origin &orgin, Waypoint &startLocation, char* fileName, 
 			
 			//      // sign of return value gives which side of road it is on.
 			//      Road_distance = (-deltaY * Eunit_x1000 + deltaX * Nunit_x1000) / 1000;
+      if(DEBUG)Serial.println("DX x DX: " + String(RoadDX_mm * RoadDX_mm));
+      if(DEBUG)Serial.println("DY x DY: " + String(RoadDY_mm * RoadDY_mm));
+      if(DEBUG)Serial.println("Added together: " + String((RoadDX_mm * RoadDX_mm) + (RoadDY_mm * RoadDY_mm)));
 			Road_distance = sqrt((RoadDX_mm * RoadDX_mm) + (RoadDY_mm * RoadDY_mm));
 			//Why do percentage computation like this?
 			pc = (deltaX * Eunit_x1000 + deltaY * Nunit_x1000) / (Nodes[cur_node].Distance[cur] * 10);
 
 		  if(DEBUG)Serial.println("Closest_mm " + String(closest_mm) + "\t Road_distance " + String(Road_distance));
-			if(DEBUG)Serial.println("Road Distance " + String(Road_distance));
-			if(DEBUG)Serial.println("closest Distance " + String(closest_mm));
-      
+		      
 			if (abs(Road_distance) < abs(closest_mm) && pc >= 0 && pc <= 100) {
 				closest_mm = Road_distance;
 				k = destination;
@@ -569,7 +572,7 @@ void Planner::SelectMap(Origin &orgin, Waypoint &startLocation, char* fileName, 
 		}
     if(DEBUG)Serial.println("In distance method returning closest_mm: " + String(closest_mm));
     if(DEBUG)Serial.println(" ");
-		return closest_mm;
+		return long(closest_mm);
 	}
 	/*---------------------------------------------------------------------------------------*/
 	//Figuring out a path to get the road network
