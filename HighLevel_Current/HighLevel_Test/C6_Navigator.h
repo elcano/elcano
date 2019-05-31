@@ -1,5 +1,5 @@
 #pragma once
-#include "Settings_HighLevel.h"
+#include "common.h"
 #include <Adafruit_GPS.h>
 #include <Adafruit_Sensor.h>
 #include <Adafruit_LSM303_U.h>

@@ -59,6 +59,14 @@ void loop() {
   //RE-compute path if too far off track (future development) for C4
   
   myPilot->update(estimated_position, old_position);
+
+  //path has been set to first mission cone, once reach it use planner in pilot
+  //update myPlanner->mission_index++
+  //update myPlanner->Start to current Location
+  //make a new plan
+  //in pilot call myPlanner->last_index_of_path = myPlanner->PlanPath(origin(fix to origin name), myPlanner->Start, myPlanner->mission[mission_index]);
+  //go to next mission index until myPlanner->mission_index > CONES
+  //reached end so stop
   
-  //delay(3000); //for testing only.. remove when deploying bike
+  delay(3000); //for testing only.. remove when deploying bike
 }

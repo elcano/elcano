@@ -12,17 +12,60 @@ Planner::Planner(Origin &org, Waypoint &estimated_pos){//default constructor
     mission_index = 0; //index number of mission/cone currently attempting to reach
     last_index_of_path = CONES -1; //hardcode path of the last index/dest to 3 [cur,loc1,goal]
     //Store the initial GPS latitude and longtitude to select the correct map
-    Start.latitude = estimated_pos.latitude; //set to the initial position of the trike 
-    Start.longitude = estimated_pos.longitude;
+   // Start.latitude = estimated_pos.latitude; //set to the initial position of the trike 
+    //Start.longitude = estimated_pos.longitude;
+    Start = estimated_pos; //set to the initial position of the trike 
     //if(DEBUG)Serial.println();
     initialize_Planner(org, estimated_pos); //Start selecting/load map and start planning path
-    
-    Start.east_mm = Nodes[0].east_mm; //should start be firt place you wanna go or where you are right now?
-    Start.north_mm = Nodes[0].north_mm;
-
+      
     if (DEBUG) Serial.println("Start planning path");
-    last_index_of_path = PlanPath(org, Start, mission[mission_index]); //start with first cone
+    last_index_of_path = PlanPath(org, Start, mission[mission_index]); //start is current location - destination is first cone
   }
+  /*---------------------------------------------------------------------------------------*/
+  void Planner::initialize_Planner(Origin &orign, Waypoint &estimPos) {
+    
+    if(DEBUG)Serial.println("Initializing SD card...");
+    //chipSelect = 35 located in IODUE.h library if change needed
+   if (DEBUG)Serial.println("chipSelect = " + String(chipSelect));
+    pinMode(chipSelect, OUTPUT);
+    if (!SD.begin(chipSelect)) {
+      Serial.println("initialization failed!");
+    }
+    else {
+      Serial.println("initialization done.");
+    }
+    //13 to include null terminate - SD cannot have more than 12 char & \0 in filename caused error
+    char nearestMap[13] = "";
+
+    SelectMap(orign, Start, "MAP_DEFS.TXT", nearestMap); //populates info from map_def to nearestMap;
+    //moved this 7 lines from nav initialize since no origin set there yet
+    if(DEBUG)Serial.print("after map selection origin is now set to : ");
+    if(DEBUG)Serial.print(orign.latitude, 6);
+    if(DEBUG)Serial.print(", "); 
+    if(DEBUG)Serial.println(orign.longitude, 6);
+    if(DEBUG)Serial.print("current estimated_pos is: ");
+    if(DEBUG)Serial.print(estimPos.latitude, 6);
+    if(DEBUG)Serial.print(", "); 
+    if(DEBUG)Serial.println(estimPos.longitude, 6);
+    estimPos.Compute_mm(orign);  //initialize north and east coordinates for position
+    if(DEBUG) {
+      Serial.print("Estimate E: ");
+      Serial.println(estimPos.east_mm);
+      Serial.print("Estimate N: ");
+      Serial.println(estimPos.north_mm);
+    }
+    Serial.println("Map selected was: " + String(nearestMap));
+
+    //populate nearest map in Junction mapNodes structure
+    LoadMap(nearestMap);
+
+    //takes in the mapNodes that contains all of the map
+    ConstructNetwork(mapNodes); //To fill out the rest of the mapNodes info
+
+    GetGoals(orign, mapNodes);
+  }
+
+  /*---------------------------------------------------------------------------------------*/
 	/*---------------------------------------------------------------------------------------*/
 // SelectMap:  Return the file name of the closest origin
 // Determines which map to load.
@@ -149,15 +192,17 @@ void Planner::SelectMap(Origin &orgin, Waypoint &startLocation, char* fileName, 
 				}
 				token = strtok(NULL, delimiter);
 			}
+      int numMaps = row; //number of map origins loaded
 			int closestIndex = -1;
-			long closestDistance = MAX_DISTANCE;
+			double closestDistance = MAX_DISTANCE;
+ 
       if(DEBUG)Serial.print("startLocation = ");
       if(DEBUG)Serial.print(startLocation.latitude, 6);
       if(DEBUG)Serial.print(", ");
       if(DEBUG)Serial.println(startLocation.longitude, 6);
-			for (int i = 0; i < MAX_MAPS; i++) {
-				int dist = fabs((map_latitudes[i] - startLocation.latitude)) +
-					abs(map_longitudes[i] - startLocation.longitude);
+			for (int i = 0; i < numMaps; i++) {
+        double dist = startLocation.distance_points_mm(map_latitudes[i], map_longitudes[i]);
+        if(DEBUG)Serial.println("Distance for index " + String(i) + " is " + String(dist));
 				if (dist < closestDistance) {
 					closestIndex = i;
 					closestDistance = dist;
@@ -216,11 +261,10 @@ void Planner::SelectMap(Origin &orgin, Waypoint &startLocation, char* fileName, 
 				Serial.println("");
 			}
 		}
-
 	}
 	/*---------------------------------------------------------------------------------------*/
 	// nearestMap
-	// Loads the map nodes from a file.
+	// Loads the map mapNodes from a file.
 	// Takes in the name of the file to load and loads the appropriate map.
 	// Returns true if the map was loaded.
 	// Returns false if the load failed.
@@ -276,76 +320,76 @@ void Planner::SelectMap(Origin &orgin, Waypoint &startLocation, char* fileName, 
 			while (token != NULL) {
 				switch (col % 10) {
 				case 0:  // latitude
-					Nodes[row].east_mm = atol(token);
+					mapNodes[row].east_mm = atol(token);
 					col++;
 					break;
 
 				case 1:  // longitude
-					Nodes[row].north_mm = atol(token);
+					mapNodes[row].north_mm = atol(token);
 					col++;
 					break;
 
 				case 2:  // filename
 					if (token == "END") {
-						Nodes[row].destination[0] = END;
+						mapNodes[row].destination[0] = END;
 					}
 					else {
-						Nodes[row].destination[0] = atoi(token);
+						mapNodes[row].destination[0] = atoi(token);
 					}
 					col++;
 					break;
 
 				case 3:  // filename
 					if (token == "END") {
-						Nodes[row].destination[1] = END;
+						mapNodes[row].destination[1] = END;
 					}
 					else {
-						Nodes[row].destination[1] = atoi(token);
+						mapNodes[row].destination[1] = atoi(token);
 					}
 					col++;
 					break;
 
 				case 4:  // filename
 					if (token == "END") {
-						Nodes[row].destination[2] = END;
+						mapNodes[row].destination[2] = END;
 					}
 					else {
-						Nodes[row].destination[2] = atoi(token);
+						mapNodes[row].destination[2] = atoi(token);
 					}
 					col++;
 					break;
 
 				case 5:  // filename
 					if (token == "END") {
-						Nodes[row].destination[3] = END;
+						mapNodes[row].destination[3] = END;
 					}
 					else {
-						Nodes[row].destination[3] = atoi(token);
+						mapNodes[row].destination[3] = atoi(token);
 					}
 					col++;
 					break;
 					//The distance array is the cost for taking that road. Temp holders is 1 
 					//may be used later to help choose path. distance normally 1 if .5 may be half the speed if 2 may be twice the speed
 				case 6:  // filename
-					Nodes[row].Distance[0] = atol(token);
+					mapNodes[row].Distance[0] = atol(token);
 					col++;
 					break;
 
 				case 7:  // filename
-					Nodes[row].Distance[1] = atol(token);
+					mapNodes[row].Distance[1] = atol(token);
 					col++;
 					break;
 
 				case 8:  // filename
-					Nodes[row].Distance[2] = atol(token);
+					mapNodes[row].Distance[2] = atol(token);
 					col++;
 					break;
 
 				case 9:  // filename
-					Nodes[row].Distance[3] = atol(token);
+					mapNodes[row].Distance[3] = atol(token);
 
 					//this method below needs to be looked at in Common.cpp
-					//convertLatLonToMM(Nodes[row].east_mm, Nodes[row].north_mm);
+					//convertLatLonToMM(mapNodes[row].east_mm, mapNodes[row].north_mm);
 					col++;
 					row++;
 					break;
@@ -370,29 +414,29 @@ void Planner::SelectMap(Origin &orgin, Waypoint &startLocation, char* fileName, 
 			for (int i = 0; i < map_points; i++) {
 				if (DEBUG) {
 					Serial.println("inside the loop: " + String(i));
-					Serial.print(Nodes[i].east_mm);
+					Serial.print(mapNodes[i].east_mm);
 					Serial.print(",");
-					Serial.print(Nodes[i].north_mm);
+					Serial.print(mapNodes[i].north_mm);
 					Serial.print(",");
-					Serial.print(Nodes[i].destination[0]);
+					Serial.print(mapNodes[i].destination[0]);
 					Serial.print(",");
-					Serial.print(Nodes[i].destination[1]);
+					Serial.print(mapNodes[i].destination[1]);
 					Serial.print(",");
-					Serial.print(Nodes[i].destination[2]);
+					Serial.print(mapNodes[i].destination[2]);
 					Serial.print(",");
-					Serial.print(Nodes[i].destination[3]);
+					Serial.print(mapNodes[i].destination[3]);
 					Serial.print(",");
-					Serial.print(Nodes[i].Distance[0]);
+					Serial.print(mapNodes[i].Distance[0]);
 					Serial.print(",");
-					Serial.print(Nodes[i].Distance[1]);
+					Serial.print(mapNodes[i].Distance[1]);
 					Serial.print(",");
-					Serial.print(Nodes[i].Distance[2]);
+					Serial.print(mapNodes[i].Distance[2]);
 					Serial.print(",");
-					Serial.println(Nodes[i].Distance[3]);
+					Serial.println(mapNodes[i].Distance[3]);
 				}
 			}
 
-			// If file loaded, read data into Nodes[]
+			// If file loaded, read data into mapNodes[]
 			free(buffer);
 			useFile.close();
 			if (DEBUG) {Serial.println("Closed the file: " + String(useFile.name()));}
@@ -407,51 +451,7 @@ void Planner::SelectMap(Origin &orgin, Waypoint &startLocation, char* fileName, 
 	}
 
 	/*---------------------------------------------------------------------------------------*/
-	void Planner::initialize_Planner(Origin &orign, Waypoint &estimPos) {
-		
-		if(DEBUG)Serial.println("Initializing SD card...");
-		//chipSelect = 35 located in IODUE.h library if change needed
-   if (DEBUG)Serial.println("chipSelect = " + String(chipSelect));
-		pinMode(chipSelect, OUTPUT);
-		if (!SD.begin(chipSelect)) {
-			Serial.println("initialization failed!");
-		}
-		else {
-			Serial.println("initialization done.");
-		}
-		//13 to include null terminate - SD cannot have more than 12 char & \0 in filename caused error
-		char nearestMap[13] = "";
-
-		SelectMap(orign, Start, "MAP_DEFS.TXT", nearestMap); //populates info from map_def to nearestMap;
-    //moved this 7 lines from nav initialize since no origin set there yet
-    if(DEBUG)Serial.print("after map selection origin is now set to : ");
-    if(DEBUG)Serial.print(orign.latitude, 6);
-    if(DEBUG)Serial.print(", "); 
-    if(DEBUG)Serial.println(orign.longitude, 6);
-    if(DEBUG)Serial.print("current estimated_pos is: ");
-    if(DEBUG)Serial.print(estimPos.latitude, 6);
-    if(DEBUG)Serial.print(", "); 
-    if(DEBUG)Serial.println(estimPos.longitude, 6);
-    estimPos.Compute_mm(orign);  //initialize north and east coordinates for position
-    if(DEBUG) {
-      Serial.print("Estimate E: ");
-      Serial.println(estimPos.east_mm);
-      Serial.print("Estimate N: ");
-      Serial.println(estimPos.north_mm);
-    }
-		Serial.println("Map selected was: " + String(nearestMap));
-
-		//populate nearest map in Junction Nodes structure
-		LoadMap(nearestMap);
-
-		//takes in the Nodes that contains all of the map
-		ConstructNetwork(Nodes); //To fill out the rest of the nodes info
-
-		GetGoals(orign, Nodes);
-	}
-
-	/*---------------------------------------------------------------------------------------*/
-	// Fill the distances of the Junctions in the MAP //Uses Nodes array
+	// Fill the distances of the Junctions in the MAP //Uses mapNodes array
 	void Planner::ConstructNetwork(Junction *Map) {
 		double deltaX, deltaY;
 		int destination;
@@ -472,7 +472,11 @@ void Planner::SelectMap(Origin &orgin, Waypoint &startLocation, char* fileName, 
 
 	/*---------------------------------------------------------------------------------------*/
 	// Set up mission structure from goal_lat and goal_lat arrays (the goal cones to hit)
-	void Planner::GetGoals(Origin &ori, Junction *nodes) {
+	void Planner::GetGoals(Origin &ori, Junction *mapNodes) {
+   // if(DEBUG)Serial.print("Printing origin latitide ");
+   // if(DEBUG)Serial.print(ori.latitude, 6); 
+   // if(DEBUG)Serial.print(" and longitude "); 
+   // if(DEBUG)Serial.println(ori.longitude, 6);
 		double deltaX, deltaY, Distance;
 		for (int i = 0; i < CONES; i++) {
 			mission[i].latitude = goal_lat[i];
@@ -482,9 +486,14 @@ void Planner::SelectMap(Origin &orgin, Waypoint &startLocation, char* fileName, 
 			mission[i].index = 1 | GOAL;
 			mission[i].sigma_mm = 1000;
 			mission[i].time_ms = 0;
-
+  //    if(DEBUG)Serial.print("Printing mission[" + String(i) + "] latitide ");
+  //    if(DEBUG)Serial.print(mission[i].latitude, 6); 
+  //    if(DEBUG)Serial.print(" and longitude "); 
+  //    if(DEBUG)Serial.println(mission[i].longitude, 6);
+  //    if(DEBUG)Serial.println("Printing mission[" + String(i) + "] east_mm " + String(mission[i].east_mm) + " " + "north_mm " + String(mission[i].north_mm));
+      
 			if (i == 0) { //If CONE == 1
-				mission[i].Evector_x1000 = 1000;  //didn't write this..why is E 100 and N 0
+				mission[i].Evector_x1000 = 1000;  //didn't write this..why is E 1000 and N 0
 				mission[i].Nvector_x1000 = 0;
 			}
 			else {
@@ -503,13 +512,13 @@ void Planner::SelectMap(Origin &orgin, Waypoint &startLocation, char* fileName, 
 	}
 	/*---------------------------------------------------------------------------------------*/
 
-// Find the distance from (east_mm, north_mm) to a road segment Nodes[i].distance[j]
+// Find the distance from (east_mm, north_mm) to a road segment mapNodes[i].distance[j]
 // return distance in mm, and per cent of completion from i to j.
 // distance is negative if (east_mm, north_mm) lies to the left of the road
 // when road direction is from i to j
 
 // Compare this routine to distance() in C3 Pilot
-//k =  index into Nodes[]
+//k =  index into mapNodes[]
 //east_mm : current
 	long Planner::distance(int &cur_node, int &k, long &cur_east_mm, long &cur_north_mm, int &perCent) {
 		double deltaX, deltaY, dist_mm;
@@ -524,32 +533,32 @@ void Planner::SelectMap(Origin &orgin, Waypoint &startLocation, char* fileName, 
 		k = 0;
 	
 		for (cur = 0; cur < 4; cur++) { // Don't make computations twice.
-			destination = Nodes[cur_node].destination[cur];
+			destination = mapNodes[cur_node].destination[cur];
      //if 0 or less already checked or is a dead end so don't check
 			if (destination == 0 || destination < cur_node) continue;  //replace Destination with END
 			
 			// compute road unit vectors from i to cur
-			RoadDX_mm = Nodes[destination].east_mm - Nodes[cur_node].east_mm;
+			RoadDX_mm = mapNodes[destination].east_mm - mapNodes[cur_node].east_mm;
 			
 			if(DEBUG)Serial.println("Destination " + String(destination));
       if(DEBUG)Serial.println("RoadDX_mm " + String(RoadDX_mm));
-			if(DEBUG)Serial.println("Nodes[destination].east_mm " + String(Nodes[destination].east_mm));
-			if(DEBUG)Serial.println("-Nodes[cur_loc].east_mm " + String(-Nodes[cur_node].east_mm));
+			if(DEBUG)Serial.println("mapNodes[destination].east_mm " + String(mapNodes[destination].east_mm));
+			if(DEBUG)Serial.println("-mapNodes[cur_loc].east_mm " + String(-mapNodes[cur_node].east_mm));
 			
-			int Eunit_x1000 = RoadDX_mm * 1000 / Nodes[cur_node].Distance[cur];
+			int Eunit_x1000 = RoadDX_mm * 1000 / mapNodes[cur_node].Distance[cur];
       if(DEBUG)Serial.println("Eunit_x1000: " + String(Eunit_x1000));
       
-			RoadDY_mm = Nodes[destination].north_mm - Nodes[cur_node].north_mm;
+			RoadDY_mm = mapNodes[destination].north_mm - mapNodes[cur_node].north_mm;
 			if(DEBUG)Serial.println("RoadDY_mm " + String(RoadDY_mm));
-			if(DEBUG)Serial.println("Nodes[destination].north_mm " + String(Nodes[destination].north_mm));
-			if(DEBUG)Serial.println("-Nodes[cur_loc].north_mm " + String(-Nodes[cur_node].north_mm));
+			if(DEBUG)Serial.println("mapNodes[destination].north_mm " + String(mapNodes[destination].north_mm));
+			if(DEBUG)Serial.println("-mapNodes[cur_loc].north_mm " + String(-mapNodes[cur_node].north_mm));
 			
-			int Nunit_x1000 = RoadDY_mm * 1000 / Nodes[cur_node].Distance[cur];
+			int Nunit_x1000 = RoadDY_mm * 1000 / mapNodes[cur_node].Distance[cur];
 			if(DEBUG)Serial.println("Nunit_x1000: " + String(Nunit_x1000));
 			//      // normal vector is (Nunit, -Eunit)
 			//      //Answers: What would be the change in X/Y from my current Node.
-			//      deltaX = cur_east_mm - Nodes[cur_node].east_mm;
-			//      deltaY = cur_north_mm - Nodes[cur_node].north_mm;
+			//      deltaX = cur_east_mm - mapNodes[cur_node].east_mm;
+			//      deltaY = cur_north_mm - mapNodes[cur_node].north_mm;
 			
 			
 			//      // sign of return value gives which side of road it is on.
@@ -559,7 +568,7 @@ void Planner::SelectMap(Origin &orgin, Waypoint &startLocation, char* fileName, 
       if(DEBUG)Serial.println("Added together: " + String((RoadDX_mm * RoadDX_mm) + (RoadDY_mm * RoadDY_mm)));
 			Road_distance = sqrt((RoadDX_mm * RoadDX_mm) + (RoadDY_mm * RoadDY_mm));
 			//Why do percentage computation like this?
-			pc = (deltaX * Eunit_x1000 + deltaY * Nunit_x1000) / (Nodes[cur_node].Distance[cur] * 10);
+			pc = (deltaX * Eunit_x1000 + deltaY * Nunit_x1000) / (mapNodes[cur_node].Distance[cur] * 10);
 
 		  if(DEBUG)Serial.println("Closest_mm " + String(closest_mm) + "\t Road_distance " + String(Road_distance));
 		      
@@ -586,13 +595,13 @@ void Planner::SelectMap(Origin &orgin, Waypoint &startLocation, char* fileName, 
 
 		for (i = 0; i < 5/*map_points*/; i++) { // find closest road.
 			dist = distance(i, node_successor, start.east_mm, start.north_mm, perCent); //next node to visit
-			//Serial.println("Start : Latitude " + String(start.latitude) + "\t Longitude " + String(start.longitude) + "\t Dist "
-			//	+ String(dist));
+			Serial.println("Start : Latitude " + String(start.latitude) + "\t Longitude " + String(start.longitude) + "\t Dist "
+				+ String(dist));
 
 			if (abs(dist) < abs(closest_mm)) {
 				close_index = node_successor;
 				closest_mm = dist;
-				done = 1;// perCent; //Not really true amount of nodes done?
+				done = 1;// perCent; //Not really true amount of mapNodes done?
 				road.index = i;
 				road.sigma_mm = node_successor;
 			}
@@ -600,13 +609,13 @@ void Planner::SelectMap(Origin &orgin, Waypoint &startLocation, char* fileName, 
 		if (closest_mm < MAX_DISTANCE) {
 			i = road.index; //0
 			node_successor = close_index; //0
-			road.east_mm = Nodes[i].east_mm + done * (Nodes[node_successor].east_mm - Nodes[i].east_mm) / 100;
-			road.north_mm = Nodes[i].north_mm + done * (Nodes[node_successor].north_mm - Nodes[i].north_mm) / 100;
+			road.east_mm = mapNodes[i].east_mm + done * (mapNodes[node_successor].east_mm - mapNodes[i].east_mm) / 100;
+			road.north_mm = mapNodes[i].north_mm + done * (mapNodes[node_successor].north_mm - mapNodes[i].north_mm) / 100;
 		}
 		else {
 			for (i = 0; i < 5/*map_points*/; i++) { // find closest node
 			  //Serial.println("I got here");
-				dist = start.distance_mm(Nodes[i].east_mm, Nodes[i].north_mm);
+				dist = start.distance_mm(mapNodes[i].east_mm, mapNodes[i].north_mm);
 
 				if (dist < closest_mm) {
 					close_index = i;
@@ -614,8 +623,8 @@ void Planner::SelectMap(Origin &orgin, Waypoint &startLocation, char* fileName, 
 				}
 			}
 			road.index = road.sigma_mm = close_index;
-			road.east_mm = Nodes[close_index].east_mm;
-			road.north_mm = Nodes[close_index].north_mm;
+			road.east_mm = mapNodes[close_index].east_mm;
+			road.north_mm = mapNodes[close_index].north_mm;
 		}
 
 		road.Evector_x1000 = 1000;
@@ -630,14 +639,14 @@ void Planner::SelectMap(Origin &orgin, Waypoint &startLocation, char* fileName, 
 	}
 
 	/*---------------------------------------------------------------------------------------*/
-// start and destination are on the road network given in Nodes.
+// start and destination are on the road network given in mapNodes.
 // start is in Path[1].
 // Place other Junction Waypoints into Path.
 // Returned value is next index into Path.
 // start->index identifies the closest node.
 // sigma_mm holds the index to the other node.
 // A* is traditionally done with pushing and popping node from an Open and Closed list.
-// Since we have a small number of nodes, we instead reserve a slot on Open and Closed
+// Since we have a small number of mapNodes, we instead reserve a slot on Open and Closed
 // for each node.
 
 	int Planner::BuildPath(Origin &orgi, long &j, Waypoint &start, Waypoint &destination) { // Construct path backward to start.
@@ -657,8 +666,8 @@ void Planner::SelectMap(Origin &orgin, Waypoint &startLocation, char* fileName, 
 		path[last] = start;
 		for (; k < map_points; k++) {
 			node = route[k];
-			path[++last].east_mm = Nodes[node].east_mm;
-			path[last].north_mm = Nodes[node].north_mm;
+			path[++last].east_mm = mapNodes[node].east_mm;
+			path[last].north_mm = mapNodes[node].north_mm;
 		}
 		path[++last] = destination;
 		for (k = 0; k <= last; k++) {
@@ -689,21 +698,21 @@ void Planner::SelectMap(Origin &orgin, Waypoint &startLocation, char* fileName, 
 		long BestCost, BestID;
 		bool Processed = false;
 
-		for (i = 0; i < map_points; i++) { // mark all nodes as empty
+		for (i = 0; i < map_points; i++) { // mark all mapNodes as empty
 			Open[i].TotalCost = MAX_DISTANCE;
 			ClosedCost[i] = MAX_DISTANCE;
 		}
 
-		i = start.index; // get successor nodes of start
-		Open[i].CostFromStart = start.distance_mm(Nodes[i].east_mm, Nodes[i].north_mm);
-		Open[i].CostToGoal = destination.distance_mm(Nodes[i].east_mm, Nodes[i].north_mm);
+		i = start.index; // get successor mapNodes of start
+		Open[i].CostFromStart = start.distance_mm(mapNodes[i].east_mm, mapNodes[i].north_mm);
+		Open[i].CostToGoal = destination.distance_mm(mapNodes[i].east_mm, mapNodes[i].north_mm);
 
 		Open[i].TotalCost = Open[i].CostFromStart + Open[i].CostToGoal;
 		Open[i].ParentID = currentlocation;
 
 		i = start.sigma_mm;
-		Open[i].CostFromStart = start.distance_mm(Nodes[i].east_mm, Nodes[i].north_mm);
-		Open[i].CostToGoal = destination.distance_mm(Nodes[i].east_mm, Nodes[i].north_mm);
+		Open[i].CostFromStart = start.distance_mm(mapNodes[i].east_mm, mapNodes[i].north_mm);
+		Open[i].CostToGoal = destination.distance_mm(mapNodes[i].east_mm, mapNodes[i].north_mm);
 		Open[i].TotalCost = Open[i].CostFromStart + Open[i].CostToGoal;
 
 		Open[i].ParentID = currentlocation;
@@ -731,15 +740,15 @@ void Planner::SelectMap(Origin &orgin, Waypoint &startLocation, char* fileName, 
 				return BuildPath(borigin, BestID, start, destination);   // Construct path backward to start.
 			}
 
-			i = BestID;  // get successor nodes from map
+			i = BestID;  // get successor mapNodes from map
 
 			for (neighbor = 0; neighbor < 4; neighbor++) {
-				NewIndex = Nodes[i].destination[neighbor];
+				NewIndex = mapNodes[i].destination[neighbor];
 
 				if (NewIndex == END)continue; // No success in this slot
 
-				NewStartCost = Open[i].CostFromStart + Nodes[i].Distance[neighbor];
-				NewCostToGoal = destination.distance_mm(Nodes[NewIndex].east_mm, Nodes[NewIndex].north_mm);
+				NewStartCost = Open[i].CostFromStart + mapNodes[i].Distance[neighbor];
+				NewCostToGoal = destination.distance_mm(mapNodes[NewIndex].east_mm, mapNodes[NewIndex].north_mm);
 				NewCost = NewStartCost + NewCostToGoal;
 
 				if (NewCost >= ClosedCost[NewIndex]) // check if this node is already on Open or Closed.
@@ -756,7 +765,7 @@ void Planner::SelectMap(Origin &orgin, Waypoint &startLocation, char* fileName, 
 				Open[NewIndex].CostToGoal = NewCostToGoal;
 				Open[NewIndex].TotalCost = NewCost;
 				Open[NewIndex].ParentID = i;
-			}  // end of successor nodes
+			}  // end of successor mapNodes
 
 
 			ClosedCost[BestID] = BestCost; // Push node onto Closed

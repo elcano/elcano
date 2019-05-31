@@ -1,6 +1,6 @@
 #pragma once
 #include "Common.h"
-#include "Settings_HighLevel.h"
+
 
 namespace elcano {
 
@@ -22,12 +22,13 @@ class Planner{
   //5) 47.760565, -122.189858
   //6) 47.760681, -122.190255
 
-  //hardcode cone locations multiplied by 1000000 used 6 decimal places in numbers //put in order of travel
-  long goal_lat[CONES] = {47760907, 47761150, 47761023, 47760812, 47760565, 47760681};
-  long goal_lon[CONES] = {-122190527, -122190190,-122189800, -122189531, -122189858, -122190255}; 
+ 
+  //Cones 1-6 on soccer map
+  double goal_lat[CONES] = {47.760907, 47.761150, 47.761023, 47.760812, 47.760565, 47.760681};
+  double goal_lon[CONES] = {-122.190527, -122.190190,-122.189800, -122.189531, -122.189858, -122.190255}; 
 
   Waypoint mission[CONES]; //aka MDF //The target Nodes to hit
-  Junction Nodes[MAX_WAYPOINTS]; //Storing the loaded map use map_points to track size of Nodes when loaded
+  Junction mapNodes[MAX_WAYPOINTS]; //Storing the loaded map use map_points to track size of mapNodes when loaded
   int map_points; //filled in when loads the map
   int mission_index; //index of mission working on
   #define currentlocation  -1 //currentLocation
@@ -35,16 +36,18 @@ class Planner{
   Waypoint Start;
 
   //methods
+  void initialize_Planner(Origin &orign, Waypoint &estimPos);
   void SelectMap(Origin &orgin, Waypoint &startLocation, char* fileName, char* nearestMap);
   bool LoadMap(char* fileName);
-  void initialize_Planner(Origin &orign, Waypoint &estimPos);
   void ConstructNetwork(Junction *Map);
-  void GetGoals(Origin &ori, Junction *nodes);
+  void GetGoals(Origin &ori, Junction *mapNodes);
   long distance(int& cur_node, int &k, long &cur_east_mm, long &cur_north_mm, int &perCent);
   void FindClosestRoad(Waypoint &start, Waypoint &road);
-  int BuildPath(Origin &orgi, long &j, Waypoint &start, Waypoint &destination);
-  int FindPath(Origin &borigin, Waypoint &start, Waypoint &destination); //calls build
   int PlanPath(Origin &origin, Waypoint &start, Waypoint &destination); //calls find
+  int FindPath(Origin &borigin, Waypoint &start, Waypoint &destination); //calls build
+  int BuildPath(Origin &orgi, long &j, Waypoint &start, Waypoint &destination);
+  
+  
 
   public:
   Planner(Origin &org, Waypoint &estimated_pos);

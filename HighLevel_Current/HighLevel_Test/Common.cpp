@@ -556,157 +556,21 @@ namespace elcano {
 		return parseptr;
 	}
 
-//----------------------------------------------------------
-// Aquire a GPS GPRMC signal and fill in the Waypoint data.
-// return 1 if valid, zero if not.
-// wait up to max_wait milliseconds to get a valid signal.
-//origin to call compute_mm inside of GetLatLon
-	bool Waypoint::AcquireGPRMC(unsigned long max_wait_ms) {
-		uint8_t groundspeed, trackangle;
-		char status = 'V'; // V = data invalid
-		char *parseptr;              // a character pointer for parsing
-		// value of millis() for GPS data
-		unsigned long AcquisitionTime_ms;
-		char *pTime;
-		char *pDate;
-		unsigned long TimeOut = millis() + max_wait_ms;
-// $GPRMC,161229.487,A,3723.2475,N,12158.3416,W,0.13,309.62,120598,,*10
-		sigma_mm = 10000;
-//  Serial.println("looking");
-//  CosLatitude = cos(((double) LATITUDE_ORIGIN)/1000000. * TO_RADIANS);
-		while (status != 'A') // A = data valid
-		{
-			if (!readline(3)) {  // nothing to read; how long have we waited?
-				if (millis() > TimeOut) {
-					//Serial.println("Timed out");
-					return false;
-				}
-			}
-			//Serial.println("Read line");
-			Serial.println(buffer);
-			// check if $GPRMC (global positioning fixed data)
-			if (strncmp(buffer, "$GPRMC", 6) == 0) {
-				Serial.println("parse data");
-				Serial.println(buffer);
-				AcquisitionTime_ms = millis();
-				// hhmmss time data
-				pTime =
-				parseptr = buffer + 7;
-				parseptr = strchr(parseptr, ',') + 1;
-				status = parseptr[0];  // A = data valid; V = data not valid
-				if (status != 'A')
-					continue;
-				parseptr += 2;
-				// grab latitude & long data, take in origin to also compute east/north
-				parseptr = GetLatLon(parseptr);
-				// groundspeed
-				parseptr = strchr(parseptr, ',') + 1;
-//      Serial.println(parseptr);
-				groundspeed = parsedecimal(parseptr);
-				// track angle
-				parseptr = strchr(parseptr, ',') + 1;
-				trackangle = parsedecimal(parseptr);
-				// date
-				parseptr = strchr(parseptr, ',') + 1;
-				pDate = parseptr;
-				/*   Serial.print("\tGroundspeed: ");
-					 Serial.print(groundspeed, DEC); Serial.print(",");
-					 Serial.print("\tHeading: ");
-					 Serial.print(trackangle, DEC); Serial.print(",");
-					 Serial.print("\tDate: ");
-					 Serial.println(pDate); */
-				if (offset_ms == 0) {
-					SetTime(pTime, pDate);
-					offset_ms = AcquisitionTime_ms;
-				}
-				time_ms = AcquisitionTime_ms;
-			}
-
-		}
-		if (status == 'A')
-			return true;
-
-    return false;
-	}
-
-//----------------------------------------------------------
-// Aquire a GPS $GPGGA signal and fill in the Waypoint data.
-// return 1 if valid, zero if not.
-// wait up to max_wait milliseconds to get a valid signal.
-	bool Waypoint::AcquireGPGGA(unsigned long max_wait_ms) {
-		uint8_t satelites_used, hdop;
-		REAL HDOP, error_m, error_mm;
-		char FixIndicator = '0';
-		char *parseptr;              // a character pointer for parsing
-		// value of millis() for GPS data
-		unsigned long AcquisitionTime_ms;
-
-		char *pTime;
-		unsigned long TimeOut = millis() + max_wait_ms;
-		sigma_mm = 10000;
-		// $GPGGA,161229.487,3723.2475,N,12158.3416,W,1,07,1.0,9.0,M,,,,0000*18
-		while (FixIndicator == '0') {
-			// Readline reads the next line on the given channel
-			// returning true means it read a full line
-			// false means nothing to read
-			// Readline clears the buffer and will read a new line when called again
-			if (!readline(3)) {  // nothing to read; how long have we waited?
-				if (millis() > TimeOut)
-					//Serial.println("AcquireGPGGA timed out");
-					return false;
-				continue;
-			}
-			//Serial.println(buffer);
-			if (strncmp(buffer, "$GPGGA", 6) == 0) {
-				AcquisitionTime_ms = millis();
-				pTime =
-				parseptr = buffer + 7;
-				parseptr = strchr(parseptr, ',') + 1;
-
-				// grab latitude & long data
-				parseptr = GetLatLon(parseptr);
-				parseptr = strchr(parseptr, ',') + 1;
-				FixIndicator = parseptr[0];  // A = data valid; V = data not valid
-				if (FixIndicator == '0')
-					continue;
-				parseptr += 2;
-				// satelites used
-				parseptr = strchr(parseptr, ',') + 1;
-				satelites_used = parsedecimal(parseptr);
-				// HDOP
-				parseptr = strchr(parseptr, ',') + 1;
-				hdop = parsedecimal(parseptr);
-				hdop *= 10;
-				parseptr = strchr(parseptr, '.') + 1;
-				hdop += parsedecimal(parseptr);
-				// http://users.erols.com/dlwilson/gpshdop.htm uses the model
-				// error = sqrt( (3.04*HDOP)^2 + (3.57)^2)
-				// see http://en.wikipedia.org/wiki/Error_analysis_for_the_Global_Positioning_System
-				// get Horizontal Dillution of Precision (HDOP).
-				HDOP = (REAL) hdop / 10.;
-				error_m = sqrt((3.04 * HDOP) * (3.04 * HDOP) + 3.57 * 3.57);
-				error_mm = 1000 * error_m;
-				sigma_mm = error_mm;
-
-				if (offset_ms == 0) {
-					char ch[] = "1205xx";
-					SetTime(pTime, ch);
-					offset_ms = AcquisitionTime_ms;
-				}
-				time_ms = AcquisitionTime_ms;
-			}
-		}
-		if (FixIndicator == '0') {
-			Serial.println("FixIndicator is 0");
-			return false;
-		}
-		return true;
-	}
-
-
+  double Waypoint::distance_points_mm(double lat, double lon){
+    //Haversine distance formula
+    float R = 6373; //earth radius in kilometers
+    float latRad1 =  PI * lat / 180.0;
+    float latRad2 =  PI * latitude / 180.0;
+    float lonRad1 =  PI * lon / 180.0;
+    float lonRad2 =  PI * longitude / 180.0;
+    float dlat = latRad2 - latRad1;
+    float dlon = lonRad2 - lonRad1 ;
+    float comp = asin(sqrt(sin(dlat / 2) * sin(dlat / 2) + cos(latRad1) * cos(latRad2) * sin(dlon / 2) * sin(dlon / 2)));
+    return 2 * R * comp * 1000000;//in mm
+  }
 }// namespace elcano
 
-
+//no long in use
 //    bool convertLatLonToMM(long latitude, long longitude) {
 //        long scaledOriginLat = LATITUDE_ORIGIN * 1000000;
 //        long scaledOriginLon = LONGITUDE_ORIGIN * 1000000;
@@ -720,5 +584,152 @@ namespace elcano {
 //        double finalAns = EARTH_RADIUS_MM * ans;
 //        return true;
 //    }
+/*
+//----------------------------------------------------------
+// Aquire a GPS GPRMC signal and fill in the Waypoint data.
+// return 1 if valid, zero if not.
+// wait up to max_wait milliseconds to get a valid signal.
+//origin to call compute_mm inside of GetLatLon
+  bool Waypoint::AcquireGPRMC(unsigned long max_wait_ms) {
+    uint8_t groundspeed, trackangle;
+    char status = 'V'; // V = data invalid
+    char *parseptr;              // a character pointer for parsing
+    // value of millis() for GPS data
+    unsigned long AcquisitionTime_ms;
+    char *pTime;
+    char *pDate;
+    unsigned long TimeOut = millis() + max_wait_ms;
+// $GPRMC,161229.487,A,3723.2475,N,12158.3416,W,0.13,309.62,120598,,*10
+    sigma_mm = 10000;
+//  Serial.println("looking");
+//  CosLatitude = cos(((double) LATITUDE_ORIGIN)/1000000. * TO_RADIANS);
+    while (status != 'A') // A = data valid
+    {
+      if (!readline(3)) {  // nothing to read; how long have we waited?
+        if (millis() > TimeOut) {
+          //Serial.println("Timed out");
+          return false;
+        }
+      }
+      //Serial.println("Read line");
+      Serial.println(buffer);
+      // check if $GPRMC (global positioning fixed data)
+      if (strncmp(buffer, "$GPRMC", 6) == 0) {
+        Serial.println("parse data");
+        Serial.println(buffer);
+        AcquisitionTime_ms = millis();
+        // hhmmss time data
+        pTime =
+        parseptr = buffer + 7;
+        parseptr = strchr(parseptr, ',') + 1;
+        status = parseptr[0];  // A = data valid; V = data not valid
+        if (status != 'A')
+          continue;
+        parseptr += 2;
+        // grab latitude & long data, take in origin to also compute east/north
+        parseptr = GetLatLon(parseptr);
+        // groundspeed
+        parseptr = strchr(parseptr, ',') + 1;
+//      Serial.println(parseptr);
+        groundspeed = parsedecimal(parseptr);
+        // track angle
+        parseptr = strchr(parseptr, ',') + 1;
+        trackangle = parsedecimal(parseptr);
+        // date
+        parseptr = strchr(parseptr, ',') + 1;
+        pDate = parseptr;
+           Serial.print("\tGroundspeed: ");
+           Serial.print(groundspeed, DEC); Serial.print(",");
+           Serial.print("\tHeading: ");
+           Serial.print(trackangle, DEC); Serial.print(",");
+           Serial.print("\tDate: ");
+           Serial.println(pDate); 
+        if (offset_ms == 0) {
+          SetTime(pTime, pDate);
+          offset_ms = AcquisitionTime_ms;
+        }
+        time_ms = AcquisitionTime_ms;
+      }
 
+    }
+    if (status == 'A')
+      return true;
+
+    return false;
+  }
+
+//----------------------------------------------------------
+// Aquire a GPS $GPGGA signal and fill in the Waypoint data.
+// return 1 if valid, zero if not.
+// wait up to max_wait milliseconds to get a valid signal.
+  bool Waypoint::AcquireGPGGA(unsigned long max_wait_ms) {
+    uint8_t satelites_used, hdop;
+    REAL HDOP, error_m, error_mm;
+    char FixIndicator = '0';
+    char *parseptr;              // a character pointer for parsing
+    // value of millis() for GPS data
+    unsigned long AcquisitionTime_ms;
+
+    char *pTime;
+    unsigned long TimeOut = millis() + max_wait_ms;
+    sigma_mm = 10000;
+    // $GPGGA,161229.487,3723.2475,N,12158.3416,W,1,07,1.0,9.0,M,,,,0000*18
+    while (FixIndicator == '0') {
+      // Readline reads the next line on the given channel
+      // returning true means it read a full line
+      // false means nothing to read
+      // Readline clears the buffer and will read a new line when called again
+      if (!readline(3)) {  // nothing to read; how long have we waited?
+        if (millis() > TimeOut)
+          //Serial.println("AcquireGPGGA timed out");
+          return false;
+        continue;
+      }
+      //Serial.println(buffer);
+      if (strncmp(buffer, "$GPGGA", 6) == 0) {
+        AcquisitionTime_ms = millis();
+        pTime =
+        parseptr = buffer + 7;
+        parseptr = strchr(parseptr, ',') + 1;
+
+        // grab latitude & long data
+        parseptr = GetLatLon(parseptr);
+        parseptr = strchr(parseptr, ',') + 1;
+        FixIndicator = parseptr[0];  // A = data valid; V = data not valid
+        if (FixIndicator == '0')
+          continue;
+        parseptr += 2;
+        // satelites used
+        parseptr = strchr(parseptr, ',') + 1;
+        satelites_used = parsedecimal(parseptr);
+        // HDOP
+        parseptr = strchr(parseptr, ',') + 1;
+        hdop = parsedecimal(parseptr);
+        hdop *= 10;
+        parseptr = strchr(parseptr, '.') + 1;
+        hdop += parsedecimal(parseptr);
+        // http://users.erols.com/dlwilson/gpshdop.htm uses the model
+        // error = sqrt( (3.04*HDOP)^2 + (3.57)^2)
+        // see http://en.wikipedia.org/wiki/Error_analysis_for_the_Global_Positioning_System
+        // get Horizontal Dillution of Precision (HDOP).
+        HDOP = (REAL) hdop / 10.;
+        error_m = sqrt((3.04 * HDOP) * (3.04 * HDOP) + 3.57 * 3.57);
+        error_mm = 1000 * error_m;
+        sigma_mm = error_mm;
+
+        if (offset_ms == 0) {
+          char ch[] = "1205xx";
+          SetTime(pTime, ch);
+          offset_ms = AcquisitionTime_ms;
+        }
+        time_ms = AcquisitionTime_ms;
+      }
+    }
+    if (FixIndicator == '0') {
+      Serial.println("FixIndicator is 0");
+      return false;
+    }
+    return true;
+  }
+*/
 //#endif  // MEGA
