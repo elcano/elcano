@@ -1,0 +1,86 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<HTML>
+<HEAD>
+	<META HTTP-EQUIV="CONTENT-TYPE" CONTENT="text/html; charset=windows-1252">
+	<TITLE></TITLE>
+	<META NAME="GENERATOR" CONTENT="LibreOffice 3.4  (Win32)">
+	<META NAME="AUTHOR" CONTENT="Tyler Folsom">
+	<META NAME="CREATED" CONTENT="20110223;15545100">
+	<META NAME="CHANGED" CONTENT="20120226;18565302">
+	<META NAME="CHANGEDBY" CONTENT="Tyler Folsom">
+	<META NAME="CHANGEDBY" CONTENT="Tyler Folsom">
+	<META NAME="CHANGEDBY" CONTENT="Tyler Folsom">
+	<META NAME="CHANGEDBY" CONTENT="Tyler Folsom">
+	<STYLE TYPE="text/css">
+	<!--
+		P { margin-bottom: 0.08in }
+		H1 { margin-bottom: 0.08in }
+		H2 { margin-bottom: 0.08in }
+		H2.western { font-family: "Albany", sans-serif; font-size: 14pt; font-style: italic }
+		H2.cjk { font-family: "HG Mincho Light J"; font-size: 14pt; font-style: italic }
+		H2.ctl { font-family: "Arial Unicode MS"; font-size: 14pt; font-style: italic }
+		A:link { so-language: zxx }
+	-->
+	</STYLE>
+</HEAD>
+<BODY LANG="en-US" DIR="LTR">
+<H1>Elcano Manual Control 
+</H1>
+<P>Elcano is meant to run autonomously and there was originally
+minimal user input. 
+</P>
+<P>It has since been redesigned as a dual mode vehicle. Computer
+control of the motor, brakes and steering is now referred to as
+&ldquo;cruise control&rdquo; and can be set by the rider.  The rider
+can also control the vehicle by a joystick.  In addition to the
+wireless commands listed below, there are physical switches on the
+vehicle that do the same functions. The vehicle can run without
+anyone on-board.</P>
+<P>The following controls are available on a remote control unit.
+This unit may be connected to the vehicle by a USB port during the
+initialization phase. At other times, the control unit is in radio
+contact with the vehicle.</P>
+<H2 CLASS="western">Initialization</H2>
+<P>The user may enter a latitude and longitude for the start
+position. The initial bearing may also be entered. The robot is
+designed to operate in places where GPS or compass are unavailable.</P>
+<P>On start-up, the C4 Path Planner has access to several Route
+Network Definition Files (RNDF) and Mission Definition Files (MDF).
+The RNDF is a digital roadmap that gives the preferred routes
+connecting points. The MDF files contain a sequence of waypoints to
+be visited in the present mission. The user has the option of
+specifying the MDF and RNDF file.</P>
+<P>For testing purposes, the number of a behavior may be specified
+instead of an MDF.</P>
+<H2 CLASS="western">Go</H2>
+<P>Begin motion according to the selected program.</P>
+<H2 CLASS="western">Halt</H2>
+<P>The Halt switch instructs the C1 computer to pause the vehicle
+until the switch is released. The Halt switch also goes to the C4
+Path Planner and causes it to not instruct any more motion until the
+switch is released.</P>
+<P>The Halt switch is an interrupt to the C1 computer. When it is
+asserted, the vehicle will remove the throttle, apply recombinant
+braking and apply the disk brakes. When Halt is removed, the computer
+resumes its prior operation.</P>
+<H2 CLASS="western">Reset</H2>
+<P>The Reset button is wired to the reset pin on all
+micro-controllers, with the exception of the C1 motor controller. It
+thus causes all other micro-controllers to reinitialize themselves to
+the start state. Reset causes a Halt signal to be sent to the C1
+controller, which brings the vehicle to a stop. The C3 computer
+initialization pauses for enough time for the vehicle to stop. Only
+then does C3 send a Reset signal to the C1 computer.</P>
+<H2 CLASS="western">Emergency Stop</H2>
+<P>The E-stop must bring the vehicle to a complete stop without
+relying on any of the computers. Thus applying the E-stop breaks the
+circuit by which the traction battery powers the hub motor, motor
+controller, brake motor and steering motor. Without power to the
+actuators, the computer is unable to stop or control the vehicle.
+Thus recombinant braking is not possible when E-stop is pushed. When
+traction power is lost, there is no acceleration of the hub motor.
+Without power, the brakes are spring activated and are applied.</P>
+<P>The E-stop should only be applied when the Halt signal does not
+respond.</P>
+</BODY>
+</HTML>

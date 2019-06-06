@@ -1,0 +1,139 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<HTML>
+<HEAD>
+	<META HTTP-EQUIV="CONTENT-TYPE" CONTENT="text/html; charset=windows-1252">
+	<TITLE></TITLE>
+	<META NAME="GENERATOR" CONTENT="OpenOffice 4.1.3  (Win32)">
+	<META NAME="CREATED" CONTENT="0;0">
+	<META NAME="CHANGEDBY" CONTENT="Joe Breithaupt">
+	<META NAME="CHANGED" CONTENT="20161102;11122996">
+	<STYLE TYPE="text/css">
+	<!--
+		@page { margin: 0.79in }
+		P { margin-bottom: 0.08in }
+		PRE.western { font-family: "Times New Roman", serif }
+		PRE.cjk { font-family: "NSimSun", monospace }
+	-->
+	</STYLE>
+</HEAD>
+<BODY LANG="en-US" DIR="LTR">
+<PRE CLASS="western">Elcano Wiki, Modified and expanded</PRE>
+<OL TYPE=A>
+	<LI><PRE CLASS="western">Introduction</PRE>
+	<OL TYPE=I>
+		<LI><PRE CLASS="western">Project purpose, worldwide</PRE>
+		<OL TYPE=a>
+			<LI><PRE CLASS="western">reduce traffic accidents</PRE>
+			<LI><PRE CLASS="western">environmental impact</PRE>
+		</OL>
+		<LI><PRE CLASS="western">Project goals</PRE>
+		<OL TYPE=a>
+			<LI><PRE CLASS="western">autonomous vehicle</PRE>
+			<LI><PRE CLASS="western">open source software</PRE>
+			<LI><PRE CLASS="western">commercial, post-auto transit</PRE>
+		</OL>
+		<LI><PRE CLASS="western">Sebastian Elcano Bio</PRE>
+	</OL>
+	<LI><PRE CLASS="western">System Hardware (top level is conversational, link to technical)</PRE>
+	<OL TYPE=I>
+		<LI><PRE CLASS="western">Trike info</PRE>
+		<OL TYPE=a>
+			<LI><PRE CLASS="western">general vehicle features</PRE>
+		</OL>
+		<LI><PRE CLASS="western">Actuators</PRE>
+		<OL TYPE=a>
+			<LI><PRE CLASS="western">A1 &ndash; Hub motor</PRE>
+			<LI><PRE CLASS="western">A2 &ndash; Brake motor</PRE>
+			<LI><PRE CLASS="western">A3 &ndash; Steering motor</PRE>
+		</OL>
+		<LI><PRE CLASS="western">Sensors</PRE>
+		<OL TYPE=a>
+			<LI><PRE CLASS="western">S1 &ndash; Odometer</PRE>
+			<OL TYPE=i>
+				<LI><PRE CLASS="western">S1 documentation</PRE>
+				<LI><PRE CLASS="western">related code links</PRE>
+			</OL>
+			<LI><PRE CLASS="western">S2 &ndash; Wheel angle</PRE>
+			<OL TYPE=i>
+				<LI><PRE CLASS="western">documentation</PRE>
+				<LI><PRE CLASS="western">code</PRE>
+			</OL>
+			<LI><PRE CLASS="western">S3 &ndash; Compass</PRE>
+			<OL TYPE=i>
+				<LI><PRE CLASS="western">documentation</PRE>
+				<LI><PRE CLASS="western">code </PRE>
+			</OL>
+			<LI><PRE CLASS="western">S4 &ndash; Smart Camera</PRE>
+			<LI><PRE CLASS="western">S5 &ndash; target speeds, steering angle</PRE>
+			<LI><PRE CLASS="western">S7 &ndash; GPS</PRE>
+			<LI><PRE CLASS="western">S8 &ndash; Landmark recognition</PRE>
+			<LI><PRE CLASS="western">S9 &ndash; IMU </PRE>
+			<LI><PRE CLASS="western">S10 &ndash; brake feedback</PRE>
+			<LI><PRE CLASS="western">? &ndash; optical speed (mouse)</PRE>
+			<LI><PRE CLASS="western">S11 &ndash; sonar</PRE>
+		</OL>
+		<LI><PRE CLASS="western">Processors (micro-controllers)</PRE>
+		<OL TYPE=a>
+			<LI><P STYLE="margin-bottom: 0in"><FONT SIZE=2>C1 &ndash; Hub
+			motor controller</FONT></P>
+			<OL TYPE=i>
+				<LI><P STYLE="margin-bottom: 0in"><FONT SIZE=2>C1 documentation</FONT></P>
+				<LI><P STYLE="margin-bottom: 0in"><FONT SIZE=2>related code links</FONT></P>
+			</OL>
+			<LI><P STYLE="margin-bottom: 0in"><FONT SIZE=2>C2 &ndash; Dual
+			control: low level vehicle control, either from the driver or the
+			AI.</FONT></P>
+			<OL TYPE=i>
+				<LI><P STYLE="margin-bottom: 0in"><FONT SIZE=2>Documentation</FONT></P>
+				<LI><P STYLE="margin-bottom: 0in"><FONT SIZE=2>code</FONT></P>
+			</OL>
+			<LI><P STYLE="margin-bottom: 0in"><FONT SIZE=2>C3 &ndash; Pilot:
+			Finds path around obstacles and feeds next path settings to C2.</FONT></P>
+			<OL TYPE=i>
+				<LI><P STYLE="margin-bottom: 0in"><FONT SIZE=2>Documentation</FONT></P>
+				<LI><P STYLE="margin-bottom: 0in"><FONT SIZE=2>code</FONT></P>
+			</OL>
+			<LI><P STYLE="margin-bottom: 0in"><FONT SIZE=2>C4 &ndash; Path
+			Planner: Computes the best route from current location to
+			destination.</FONT></P>
+			<LI><P STYLE="margin-bottom: 0in"><FONT SIZE=2>C5 &ndash; Obstacle
+			detector</FONT></P>
+			<LI><P STYLE="margin-bottom: 0in"><FONT SIZE=2>C6 &ndash;
+			Navigator: Reads GPS, INU, Odometer, etc. to get best position
+			estimate.</FONT></P>
+			<LI><P STYLE="margin-bottom: 0in"><FONT SIZE=2>C7 &ndash; Vision:
+			Locates certain features of interest.</FONT></P>
+			<LI><P STYLE="margin-bottom: 0in"><FONT SIZE=2>C8 &ndash;
+			Simulator interface: Replaces sensor inputs with outputs of PC
+			simulator.</FONT></P>
+		</OL>
+		<LI><PRE CLASS="western">Media storage / Input files </PRE>
+		<LI><PRE CLASS="western">Wiring / connectors</PRE>
+		<LI><PRE CLASS="western">Radio and manual Controllers</PRE>
+		<LI><PRE CLASS="western">Enclosures, trays</PRE>
+	</OL>
+	<LI><PRE CLASS="western">System Software (top level is conversational, link to technical)</PRE>
+	<OL TYPE=I>
+		<LI><PRE CLASS="western">Main communication paths</PRE>
+		<OL TYPE=a>
+			<LI><PRE CLASS="western">main information flow</PRE>
+			<LI><PRE CLASS="western">interrupts, input</PRE>
+		</OL>
+		<LI><PRE CLASS="western">Serial Commands</PRE>
+		<LI><PRE CLASS="western">GPS</PRE>
+		<LI><PRE CLASS="western">Static Map</PRE>
+	</OL>
+	<LI><PRE CLASS="western">Getting Started</PRE>
+	<OL TYPE=I>
+		<LI><PRE CLASS="western">Bills/List of Materials </PRE>
+		<LI><PRE CLASS="western">Software development tools</PRE>
+		<LI><PRE CLASS="western">Slack, Kerika</PRE>
+		<LI><PRE CLASS="western">Videos</PRE>
+		<LI><PRE CLASS="western">Tutorials</PRE>
+	</OL>
+	<LI><PRE CLASS="western">News, Accolades, Testimonials</PRE>
+</OL>
+<PRE CLASS="western">
+</PRE>
+</BODY>
+</HTML>

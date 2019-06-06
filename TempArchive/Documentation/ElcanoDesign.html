@@ -1,0 +1,212 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<HTML>
+<HEAD>
+	<META HTTP-EQUIV="CONTENT-TYPE" CONTENT="text/html; charset=windows-1252">
+	<TITLE></TITLE>
+	<META NAME="GENERATOR" CONTENT="LibreOffice 3.4  (Win32)">
+	<META NAME="CREATED" CONTENT="0;0">
+	<META NAME="CHANGED" CONTENT="20120226;18455250">
+	<META NAME="CHANGEDBY" CONTENT="Tyler Folsom">
+	<META NAME="CHANGEDBY" CONTENT="Tyler Folsom">
+	<META NAME="CHANGEDBY" CONTENT="Tyler Folsom">
+	<STYLE TYPE="text/css">
+	<!--
+		H2.western { font-family: "Albany", sans-serif; font-size: 14pt; font-style: italic }
+		H2.cjk { font-family: "HG Mincho Light J"; font-size: 14pt; font-style: italic }
+		H2.ctl { font-family: "Arial Unicode MS"; font-size: 14pt; font-style: italic }
+		H3.western { font-family: "Albany", sans-serif }
+		H3.cjk { font-family: "HG Mincho Light J" }
+		H3.ctl { font-family: "Arial Unicode MS" }
+	-->
+	</STYLE>
+</HEAD>
+<BODY LANG="en-US" DIR="LTR">
+<H1>Elcano Design</H1>
+<H2 CLASS="western">Vehicles</H2>
+<P><FONT SIZE=2>An Elcano vehicle is a tadpole tricycle. The powered
+rear wheel does not need a differential. Ackerrman steering is used
+on the front wheels. All software should be usable with varying
+values for vehicle weight and geometry. The typical electrathon
+vehicle fits into the Elcano class. An Elcano vehicle must be
+electrically powered, but there is no restriction on battery
+chemistry, voltage or weight. If an Elcano vehicle carries a
+passenger, that person is not allowed to exercise any control other
+than activating the emergency stop. Note that current (2011) SRS
+Robo-Magellan (<A HREF="http://www.robothon.org/robothon/robo-magellan.php">http://www.robothon.org/robothon/robo-magellan.php</A>
+) rules restrict vehicle loaded weight to 50 pounds (23 kg) and
+require that the vehicle fit within a cube 4 feet (1.1 m) on an edge.</FONT></P>
+<P><FONT SIZE=2>There are separate power sources for traction motor
+power and electronics power. Applying the E-stop may remove traction
+motor power. Any system relying on a powered motor must go to a safe
+state when there is no power.</FONT></P>
+<P><FONT SIZE=2>Elcano #1 is located in Seattle, Washington, USA. The
+chassis is a Catrike Dash (<A HREF="http://www.catrike.com/catrike_dash.html">http://www.catrike.com/catrike_dash.html</A>)
+with mast, pedals, seat, chain, derailleur, etc removed. The rear
+wheel has been replaced by a Pedalgreen 16&rdquo; wheel with hub
+motor. (<A HREF="http://pedalgreen.net/">http://pedalgreen.net/</A> )
+We use Li-ion batteries. The vehicle meets Robo-Magellan size and
+weight limits.</FONT></P>
+<H2 CLASS="western">Computer Hardware</H2>
+<P><FONT SIZE=2>Computation is performed on micro-controllers
+organized in a modified subsumption architecture. Classic subsumption
+architecture is based on behaviors implemented on distributed
+micro-controllers, each of which reads information from a sensor and
+sends its reaction to an actuator. The preferred micro-controller is
+the Arduino (<A HREF="http://www.arduino.cc/">http://www.arduino.cc/</A>
+). Code is written in C or C++. All systems must be designed to fail
+in a safe state.</FONT></P>
+<H2 CLASS="western">System Architecture</H2>
+<H3 CLASS="western">Actuators</H3>
+<P><FONT SIZE=2><B>A1: Traction (Drive) Motor</B>. Controls motor on
+rear wheel.<BR>Input: Signal from motor controller (C1)</FONT></P>
+<P><FONT SIZE=2><B>A2: Brake Motor</B>. Brake Motor. Controls disk
+brakes on left and right front wheels. Brakes are mechanically linked
+to operate in tandem. Brakes are normally ON; an active signal is
+required to release them.<BR>Input: Signal from motor controller (C1)</FONT></P>
+<P><FONT SIZE=2><B>A3: Steering Motor</B>. Turns left or right. If no
+signal, wheels are locked to a straight ahead position.<BR>Input:
+Signal from motor controller (C1)</FONT></P>
+<H3 CLASS="western">Sensors</H3>
+<P>Most sensors go to the Navigator module (C6).<FONT FACE="SimSun"><SPAN LANG="zh-CN"><FONT FACE="SimSun"><FONT SIZE=2><SPAN LANG="en">&#12288;</SPAN></FONT></FONT></SPAN></FONT>Sensor
+output may be mediated by a dedicated controller before being sent to
+the Navigator. Some sensors (e.g. S5) are virtual.</P>
+<P>S1: Wheel Odometry. A magnetic pickup sends a signal for each
+revolution of the wheel. If finer resolution is required, there may
+be several magnets on the rim. Goes to C1, C6.</P>
+<P>S2: Angle of front wheels. Goes to C1.</P>
+<P>S3: Digital Compass.</P>
+<P>S4: Smart stereo camera. This purchased module contains cameras
+and a micro-controller. The sensor reduces the video stream to a few
+useful items, which include visual odometry, lane following and
+obstacle avoidance. The information is further interpreted by the
+Visual Data Management controller (C7).</P>
+<P>S5: Commanded and planned speeds and steering angles from Pilot
+(C3).</P>
+<P>S7: GPS. GPS is not accurate enough to be the primary position
+indicator. GPS will sometimes be unavailable. The navigation system
+must be designed to function for extended periods of GPS
+unavailability.</P>
+<P>S8: Landmark recognition. Certain landmarks may be provided to aid
+navigation. This function may be provided by the Smart Camera (S4) or
+may be a separate camera.</P>
+<P>S9: IMU Inertial Measurement (or Navigation) Unit.</P>
+<P>S10: Brake feedback. May measure the tension on the brake cable.</P>
+<P>S11: Proximity sensors</P>
+<H3 CLASS="western">Input Files</H3>
+<P>RNDF (Route Network Definition File). Format is defined on . This
+is a digital map of all roads in the area where the vehicle will be
+operating. The camera will locate road edges or lane markers and the
+vehicle will follow them. Thus location can be determined primarily
+from odometry.</P>
+<P>MDF (Mission Definition File). These are latitudes and longitudes
+that the vehicle is required to visit.</P>
+<P>Initial position. Specifies the starting location and orientation.
+Velocity is zero. If this is a file, it is read by C4 (Path Planner)
+and passed to C6 (Navigator). If it is user input, it is read by C6
+(Navigator).</P>
+<H3 CLASS="western">Controller Modules</H3>
+<P>Each module conceptually runs on its own micro-controller.
+Implementation may combine one or more modules on the same
+micro-controller. There is no operating system, file system or disks.
+Modules may communicate with a host computer for software download.</P>
+<P>C1: Motor and Steering Controller.<BR>Outputs: to C2 (computer
+Drive, computer Brake, computer Steering; S6 (Commanded steering) and
+S5 (Commanded speeds).<BR>Input: Gamebot command from C3 (Pilot).</P>
+<P>C2: Controls<BR>Inputs: from C1: computer Drive, Brake and
+Steer<BR>from Joystick: driver Drive, Brake ans Steer; switches tell
+whether of not to use cruise control.</P>
+<P>Outputs: to A1 (Drive motor), A2 (Brake motor), A3 (Steering
+motor),</P>
+<P>C3: Pilot.<BR>Output: to C1, C6: Gamebot commands.<BR>Input from
+C6: Current position, orientation, speed and acceleration.<BR>Input
+from C4 via C6: Desired route as Bezier or Hermite cubic curve
+segments.<BR>Input from C4 via C6: Desired speed profile.<BR><BR><BR>
+</P>
+<P>C4: Path Planner. Since this module reads files from a memory
+stick, it may use a local operating system.<BR>Output to C6: Desired
+route and speed curves and whether it exits a road or changes
+lane.<BR>Input: RNDF, MDF and initial position files from memory
+stick.<BR>Input from C5: Speed and position of obstacles.<BR>Input
+from C6: Position, orientation, velocity and acceleration.</P>
+<P>C5: Obstacle Detection.<BR>Input from C7: Speeds and locations of
+obstacles.<BR>Input from S11: Ranges to obstacles.<BR>Output to C4:
+Position and speeds of obstacles.<BR><BR>C6: Navigator. Fuses all
+position estimates with dead reckoning.<BR>Output to C3, C4:
+Location, orientation, velocity and acceleration.<BR>Inputs from S1,
+S2, S3, C5 (visual odometry), S5, S6, S7 and S8.</P>
+<P>C7: Visual Data Management. Passes visual odometry and lane
+following information from S4.<BR>Input: text information extracted
+from camera via sensor module S4.<BR>Output to C6: Deviation from
+lane following.<BR>Output to C6: Visual Odometry.<BR>Output to C5:
+Speeds and locations of obstacles.<BR><BR><BR>
+</P>
+<H3 CLASS="western">Behaviors</H3>
+<P>B1: Move. Travel at a commanded speed as long as a signal is
+present. When the signal is not present, apply regenerative braking.
+Speed should include reverse.<BR>Executes on C1 to control A1 with
+feedback from S1.</P>
+<P>B2: Brake. Use brake to stop when forward signal is not present.
+Use brake to slow when desired speed has decreased.<BR>Executes on C1
+to control A2 with feedback from S1 and S10.</P>
+<P>B3: Steer. Turn front wheels as commanded by signal. No signal
+means straight ahead.<BR>Executes on C1 to control A3 with feedback
+from S2.</P>
+<P>B4: Speed Profile. Move to follow a trapezoid specifying when to
+accelerate and decelerate.<BR>Executes on C3 with output to C1.<BR><BR>B5:
+Route curve. Follow a cubic curved path, synchronizing with the speed
+profile.<BR>Executes on C3 with output to C2.</P>
+<P>B6: File reading. Read and parse files giving initial position,
+MDF and RNDF.<BR>Executes on C4.</P>
+<P>B7: Bee line. Given current position, velocity, orientation and
+target position with desired orientation and velocity at terminus,
+produce a cubic curved path and speed profile and follow it.<BR>Executes
+on C4 with output to C3. 
+</P>
+<P>B8: Extract camera data. Break out Visual Odometry (S4A), Lane
+Following (S4B), Obstacle Avoidance (S4C) and Waypoint Recognition
+(S4D). <BR>Executes on C7 with input from S4.</P>
+<P>B9: Waypoint approach. See a waypoint and steer toward it if it is
+the target. Recognize when waypoint is reached. Reverse if needed and
+set goal as next waypoint.<BR>Executes on C4 with input from S4A and
+output to C3.</P>
+<P>B10: Location. Compute position, speed and acceleration. Numbers
+are fuzzy quantities that include an error margin.<BR>Executes on C6
+with output to C4.<BR>B10A: Straight line dead reckoning. From the
+last known position, velocity and elapsed time, compute present
+position. Uses S5 (commanded speed).<BR>B10B: Curved dead reckoning.
+Incorporate turning information from S5 (commanded course).<BR>B10C:
+Orientation. Add S3 (digital compass).<BR>B10D: Map reading. Add
+intended position on RNDF.<BR>B10E: Excursions. Correct the position
+to account for course deviations to avoid obstacles.<BR>B10F: GPS.
+Use S7.<BR>B10G: Landmarks. Narrow position error spreads by
+recognizing fixed points with S8.</P>
+<P>B11: Lane following. Keep in the lane or road unless if a change
+has been commanded.<BR>Executes on C7 and C6 with input from S4B and
+output to C3.<BR><BR>B12: Obstacle avoidance. Compute a speed and
+course to move around obstacles.<BR>Executes on C5 with input from
+S4C and output to C4.</P>
+<P>B13: Follow plan. Devise a path on the road to next
+waypoint.<BR>Executes on C4 with input from C5, C6, MDF, and RNDF.</P>
+<H2 CLASS="western">Simulator</H2>
+<P>USARSIM (<A HREF="http://sourceforge.net/projects/usarsim/">http://sourceforge.net/projects/usarsim/</A>
+) using ARDA map. A RNDF and MDF for ARDA are available. The
+simulator is open source other than requiring the Unreal Tournament
+game.</P>
+<P>The simulated control system includes C3, C4, C5, C6, C7 and S4.
+The S4 camera may be pointed at the graphic simulation. The gamebot
+output from C3 is compatible with the simulator. Simulated input
+replaces S1, S2, S3, S5, S7, S8, S9, S10 and S11.</P>
+<P>Control modules may be executed on their micro-controllers.
+Alternately, all or part of the control code may be executed on a
+PC.<BR><BR><BR>
+</P>
+<P><BR><BR>
+</P>
+<P><BR><BR>
+</P>
+<P><BR><BR>
+</P>
+<P><FONT FACE="SimSun"><FONT SIZE=2><SPAN LANG="en">&#12288;</SPAN></FONT></FONT></P>
+<P><FONT FACE="SimSun"><FONT SIZE=2><SPAN LANG="en">&#12288;</SPAN></FONT></FONT></P>
+</BODY>
+</HTML>
