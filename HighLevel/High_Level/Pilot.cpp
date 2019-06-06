@@ -1,17 +1,17 @@
-#include "C3_Pilot.h"
+#include "Pilot.h"
 
 
 namespace elcano {
 /******************************************************************************************************
  * constructor
  *****************************************************************************************************/
-C3_Pilot::C3_Pilot(Origin &org, Waypoint &estimated_pos, Waypoint &old_position) {
+Pilot::Pilot(Origin &org, Waypoint &estimated_pos, Waypoint &old_position) {
   
   if(DEBUG) Serial.println("Starting Planning");
   myPlanner = new Planner(org, estimated_pos);
   
   //Trike state starts Straight
-  if(DEBUG) Serial.println("Entered C3 setup");
+  if(DEBUG) Serial.println("Entered Pilot setup");
   state = STRAIGHT;
   //the path is set to approach the first intersection at index 1
   next = 1;
@@ -22,7 +22,9 @@ C3_Pilot::C3_Pilot(Origin &org, Waypoint &estimated_pos, Waypoint &old_position)
   output.length = MAX_CAN_FRAME_DATA_LEN_16;
   output.id = HiDrive_CANID; //Drive instructions from hilevel board
   
-  //populate_path(); //hard code path setup
+  for(int i = 0; i < myPlanner->last_index_of_path; i++){
+    Serial.println("Path [" + String(i) + "] East is " + String(myPlanner->path[i].east_mm));
+  }
 }
 /******************************************************************************************************
  * tuning_radius_mm(long) 
@@ -32,7 +34,7 @@ C3_Pilot::C3_Pilot(Origin &org, Waypoint &estimated_pos, Waypoint &old_position)
  *  param :
  *  return :
  *****************************************************************************************************/
-long C3_Pilot::turning_radius_mm(long speed_mmPs) {
+long Pilot::turning_radius_mm(long speed_mmPs) {
   return  MIN_TURNING_RADIUS_MM; 
 }
 
@@ -44,7 +46,7 @@ long C3_Pilot::turning_radius_mm(long speed_mmPs) {
  *   param : n = next -> index of the intersection you're approaching
  *  return true = past the destination , false = Have not past the destination
  *****************************************************************************************************/
-bool C3_Pilot::test_past_destination(int n, Waypoint &estPos) {
+bool Pilot::test_past_destination(int n, Waypoint &estPos) {
   if (abs(myPlanner->path[n - 1].east_mm - myPlanner->path[n].east_mm) > abs(myPlanner->path[n - 1].north_mm - myPlanner->path[n].north_mm)) {
     if (myPlanner->path[n].east_mm > myPlanner->path[n - 1].east_mm && estPos.east_mm > myPlanner->path[n].east_mm) {
       return true;
@@ -68,7 +70,7 @@ bool C3_Pilot::test_past_destination(int n, Waypoint &estPos) {
  *  param : n = next -> index of the intersection you're approaching
  *  return : true -> if approached intersection to entering turn, false -> otherwise
  *****************************************************************************************************/
-bool C3_Pilot::test_approach_intersection(long turn_radius_mm, int n, Waypoint &estPos) {
+bool Pilot::test_approach_intersection(long turn_radius_mm, int n, Waypoint &estPos) {
   //if the distance from E to W is greater than  N to S
   if (abs(myPlanner->path[n - 1].east_mm - myPlanner->path[n].east_mm) > abs(myPlanner->path[n - 1].north_mm - myPlanner->path[n].north_mm)) {
     //if destination is further east than current location AND current location is further East than destination - turn radius
@@ -100,7 +102,7 @@ bool C3_Pilot::test_approach_intersection(long turn_radius_mm, int n, Waypoint &
  *  param : n = next -> index of the intersection you're approaching
  *  return : true -> if approached intersection to leave turn, false -> otherwise
  *****************************************************************************************************/
-bool C3_Pilot::test_leave_intersection(long turning_radius_mm, int n, Waypoint &estPos) {
+bool Pilot::test_leave_intersection(long turning_radius_mm, int n, Waypoint &estPos) {
     //more change in east
     if (abs(myPlanner->path[n - 1].east_mm - myPlanner->path[n].east_mm) > abs(myPlanner->path[n - 1].north_mm - myPlanner->path[n].north_mm)) {
         if (myPlanner->path[n].east_mm > myPlanner->path[n - 1].east_mm) {
@@ -138,7 +140,7 @@ bool C3_Pilot::test_leave_intersection(long turning_radius_mm, int n, Waypoint &
  *  param : n = next -> index of the intersection you're approaching
  *  return : positive = right, negative = left, 0 = straight
  *****************************************************************************************************/
-int C3_Pilot::get_turn_direction_angle(int n, Waypoint &estPos) {
+int Pilot::get_turn_direction_angle(int n, Waypoint &estPos) {
 
   if (state == ENTER_TURN) {
     int turn_direction_angle = 0;
@@ -165,7 +167,7 @@ int C3_Pilot::get_turn_direction_angle(int n, Waypoint &estPos) {
  *  param : turning radius_mm
  *  param : n = next -> index of the intersection you're approaching
  *****************************************************************************************************/
-void C3_Pilot::find_state(long turn_radius_mm, int n, Waypoint & estimated_pos) {
+void Pilot::find_state(long turn_radius_mm, int n, Waypoint & estimated_pos) {
   switch (state) {
     case STRAIGHT:
       q++;
@@ -217,7 +219,7 @@ void C3_Pilot::find_state(long turn_radius_mm, int n, Waypoint & estimated_pos) 
  *   Currently contains two tests, A & B. 
  *   Comment out one based on if using delays in your code for debugging
  *****************************************************************************************************/
-void C3_Pilot::hardCoded_Pilot_Test() {
+void Pilot::hardCoded_Pilot_Test() {
   speed_mmPs = speeds[speedIndex];
   turn_direction = angg[speedIndex];
 
@@ -244,11 +246,11 @@ void C3_Pilot::hardCoded_Pilot_Test() {
 }
 
 /******************************************************************************************************
- * C3_communicate_C2()
- * Transmits the data over CAN BUS from C3_Pilot to C2_Lowlevel
+ * Pilot_communicate_LowLevel()
+ * Transmits the data over CAN BUS from Pilot to Lowlevel
  * Sends a speed in mm/s and a turn angle in degrees
  *****************************************************************************************************/
-void C3_Pilot::C3_communicate_C2() {
+void Pilot::Pilot_communicate_LowLevel() {
   //if (pre_desired_speed != speed_mmPs || pre_turn_angle != turn_direction) {  send every time, lowlevel only reacts when not close
     
     output.data.low = speed_mmPs;
@@ -270,16 +272,13 @@ void C3_Pilot::C3_communicate_C2() {
     pre_turn_angle = turn_direction;
 }
 
-
-
-
 /*****************************************************************************************************
  * update()
  * Determines state of trike, uses this to get a disered speed and angle
  * and transmits this data to the C2_Lowlevel board
  * param: estimated position & oldPosition Waypoints
  *****************************************************************************************************/
-void C3_Pilot::update(Waypoint &estimated_pos, Waypoint &old_pos) {
+void Pilot::update(Waypoint &estimated_pos, Waypoint &old_pos) {
   if(first) initializePosition(estimated_pos, old_pos);
   //Determining the state of the Trike
   find_state(TURN_RADIUS_MM, next, estimated_pos);
@@ -291,38 +290,38 @@ void C3_Pilot::update(Waypoint &estimated_pos, Waypoint &old_pos) {
   turn_direction = get_turn_direction_angle(next, estimated_pos);
   if(DEBUG3) Serial.println("setting turn angle to: " + String(turn_direction));
 
-  C3_communicate_C2(); //send data to lowlevel through CAN
+  Pilot_communicate_LowLevel(); //send data to lowlevel through CAN
 }
  
  /********************************************************************************************************
  * populate_path
  *   Hard coded path for testing
  *******************************************************************************************************/
- void C3_Pilot::populate_path() {
+ //void Pilot::populate_path() {
 
-    pathz0.east_mm =  6925;
-    pathz0.north_mm = 5893;
+ //   pathz0.east_mm =  6925;
+ //   pathz0.north_mm = 5893;
 
-    pathz1.east_mm = 11735;
-    pathz1.north_mm = 5913;
+ //   pathz1.east_mm = 11735;
+ //   pathz1.north_mm = 5913;
 
-    pathz2.east_mm = 17416;
-    pathz2.north_mm = 18791;
+ //   pathz2.east_mm = 17416;
+ //   pathz2.north_mm = 18791;
+//
+ //   pathz[0] = pathz0;
+ //   pathz[1] = pathz1;
+ //   pathz[2] = pathz2;
 
-    pathz[0] = pathz0;
-    pathz[1] = pathz1;
-    pathz[2] = pathz2;
-
-    for (int i = 0; i < 3; i++) {
-        pathz[i].vectors(&pathz[i+1]);
-    }
-}
+ //   for (int i = 0; i < 3; i++) {
+ //       pathz[i].vectors(&pathz[i+1]);
+ //   }
+//}
 
 /********************************************************************************************************
  * intializePosition()
  *   Hard code assigning estimated position to the first element in path
  *******************************************************************************************************/
-  void C3_Pilot::initializePosition(Waypoint &estPos, Waypoint &oldPos) {
+  void Pilot::initializePosition(Waypoint &estPos, Waypoint &oldPos) {
   estPos.east_mm = myPlanner->path[0].east_mm;
   estPos.north_mm = myPlanner->path[0].north_mm;
   estPos.Evector_x1000 = myPlanner->path[0].Evector_x1000;

@@ -5,7 +5,7 @@
 //using namespace elcano;
 namespace elcano {
 
-class C3_Pilot {
+class Pilot {
 private:
 	#define DESIRED_SPEED2 1200
 	enum States { STOP, STRAIGHT, ENTER_TURN, LEAVE_TURN, APPROACH_GOAL, LEAVE_GOAL};
@@ -20,8 +20,8 @@ private:
   CAN_FRAME output; //CAN frame to carry message to C2
 
   //Waypoint pathz[MAX_WAYPOINTS];  // course route to goal/mission //not sure why this was here
-  Waypoint pathz[3]; //3 is hardcoded //if testing hard coded
-  Waypoint pathz0, pathz1, pathz2;
+  //Waypoint pathz[3]; //3 is hardcoded //if testing hard coded
+  //Waypoint pathz0, pathz1, pathz2;
   String wrdState[6] = { "STOP", "STRAIGHT", "ENTER_TURN", 
     "LEAVE_TURN", "APPROACH_GOAL", "LEAVE_GOAL"}; //used for clearer debugging
 
@@ -43,13 +43,13 @@ private:
 	int get_turn_direction_angle(int n, Waypoint &estPos);
 	void find_state(long turn_radius_mm, int n, Waypoint & estimated_pos);
 	void hardCoded_Pilot_Test();
-	void C3_communicate_C2();
+	void Pilot_communicate_LowLevel();
   void initializePosition(Waypoint &estPos, Waypoint &oldPos);
   void populate_path();
 	
 public:
-	C3_Pilot(Origin &org, Waypoint &estimated_pos, Waypoint &old_pos);
-	~C3_Pilot(){} //destructor
+	Pilot(Origin &org, Waypoint &estimated_pos, Waypoint &old_pos);
+	~Pilot(){} //destructor
 	void update(Waypoint &estimated_pos, Waypoint &old_pos);
 };
 

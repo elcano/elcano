@@ -1,35 +1,62 @@
-#include "C6_Navigator.h"
+#include "Localization.h"
 
 #define mySerial Serial3
 Adafruit_GPS GPS(&mySerial);
+//Adafruit_L3GD20 gyro;
+#ifdef USE_I2C
+  // The default constructor uses I2C
+  Adafruit_L3GD20 gyro;
+#else
+  // To use SPI, you have to define the pins
+  #define GYRO_CS 4 // labeled CS
+  #define GYRO_DO 5 // labeled SA0
+  #define GYRO_DI 6  // labeled SDA
+  #define GYRO_CLK 7 // labeled SCL
+  Adafruit_L3GD20 gyro(GYRO_CS, GYRO_DO, GYRO_DI, GYRO_CLK);
+#endif
 
 namespace elcano {
 /******************************************************************************************************
- * constructor for C6_Navigator
+ * constructor for Localization
  *  activates the GPS, Compass and finds initial positoin
  *****************************************************************************************************/
-C6_Navigator::C6_Navigator(Origin &org, Waypoint &estimated_position, Waypoint &oldPos) {
+Localization::Localization(Origin &org, Waypoint &estimated_position, Waypoint &oldPos) {
   //originSt = new elcano::Origin(47.760850, -122.190044); //center of UW soccer field
   //setting up the GPS rate
   setup_GPS();
 
   //Enable auto-gain
   mag.enableAutoRange(true);
-
+  accel.enableAutoRange(true);
+  
+  if(!accel.begin())
+  {
+    /* There was a problem detecting the ADXL345 ... check your connections */
+    Serial.println("Ooops, no accelerometer detected ... Check your wiring!");
+  }
   if (!mag.begin()) {
-    if(DEBUG)  Serial.println("no LSM303 detected ... Check your wiring!");
+    if(DEBUG)  Serial.println("no magnetometer detected ... Check your wiring!");
   }
   mag.begin();
+  accel.begin();
   
   initial_position(org, estimated_position,oldPos); //getting your initial position from GPS comment out if no GPS available
   passedInitial = true; // got first GPS fail the rest in hard code remove if testing
  
   //set starting speed to 0 
   newPos.speed_mmPs = 0;
+  
+  // Try to initialise and warn if we couldn't detect the chip
+   if (!gyro.begin(gyro.L3DS20_RANGE_250DPS))
+  //if (!gyro.begin(gyro.L3DS20_RANGE_500DPS))
+  //if (!gyro.begin(gyro.L3DS20_RANGE_2000DPS))
+  {
+    Serial.println("Oops ... unable to initialize the gyro. Check your wiring!");
+  }
 }
 
 
-void C6_Navigator::setup_GPS() {
+void Localization::setup_GPS() {
   //Serial 3 (mySerial) is used for GPS
   mySerial.begin(GPSRATE);
   // Serial3.begin(GPSRATE);
@@ -54,7 +81,7 @@ void C6_Navigator::setup_GPS() {
 /********************************************************************************************************
  * 
  *******************************************************************************************************/
-bool C6_Navigator::AcquireGPS(Waypoint &gps_position) {
+bool Localization::AcquireGPS(Waypoint &gps_position) {
   /*if(DEBUG) Serial.println("Acquire GPS");
   float latitude, longitude;
 /*
@@ -150,7 +177,7 @@ bool C6_Navigator::AcquireGPS(Waypoint &gps_position) {
 /*******************************************************************************************************
  * Receive actual speed and actual turn angle from the C2_Lowlevel board via CAN BUS
  ******************************************************************************************************/
-void C6_Navigator::C6_communication_with_C2() {
+void Localization::Local_communication_with_LowLevel() {
  CAN.watchForRange(Actual_CANID, LowStatus_CANID);  //filter for low level communication
   
   while (CAN.available() > 0) { // check if CAN message available
@@ -184,7 +211,7 @@ void C6_Navigator::C6_communication_with_C2() {
 /*******************************************************************************************************
  * 
  ******************************************************************************************************/
-long C6_Navigator::getHeading() {
+long Localization::getHeading() {
   //Get a new sensor event from the magnetometer
   sensors_event_t event;
   mag.getEvent(&event);      
@@ -203,12 +230,87 @@ long C6_Navigator::getHeading() {
 /*******************************************************************************************************
  * 
  ******************************************************************************************************/
-void C6_Navigator::findPosition(Waypoint &estimPos, bool got_GPS, Waypoint &oldPos) {
+ double Localization::getGyroRoll(){
+  gyro.read();
+  Serial.println("Gyrolscope Roll X: " + String(gyro.data.x));
+  return gyro.data.x;
+ }
+ /*******************************************************************************************************
+ * 
+ ******************************************************************************************************/
+ double Localization::getGyroPitch(){
+  gyro.read();
+  Serial.println("Gyroscope Pitch Y: " + String(gyro.data.y)); 
+  return gyro.data.y;
+}
+ /*******************************************************************************************************
+ * 
+ ******************************************************************************************************/
+ double Localization::getGyroYaw(){
+  gyro.read();
+  Serial.println("Gyroscope Yaw Z: " + String(gyro.data.z)); 
+  return gyro.data.z;
+  }
+ /*******************************************************************************************************
+ * 
+ ******************************************************************************************************/
+ double Localization::getAccelX() {
+  //Get a new sensor event from the magnetometer
+  sensors_event_t event;
+  accel.getEvent(&event);      
+  
+  double accelerationX = event.acceleration.x;
+  /* Display the results (acceleration is measured in m/s^2) */
+  if(DEBUG3)Serial.println("Acceleration X: " + String(event.acceleration.x) + "  m/s^2 ");
+  
+  return accelerationX;
+}
+ /*******************************************************************************************************
+ * 
+ ******************************************************************************************************/
+ double Localization::getAccelY() {
+  //Get a new sensor event from the magnetometer
+  sensors_event_t event;
+  accel.getEvent(&event);      
+  
+  double accelerationY = event.acceleration.y;
+  /* Display the results (acceleration is measured in m/s^2) */
+  if(DEBUG3)Serial.println("Acceleration Y: " + String(event.acceleration.y) +  "  m/s^2 ");
+
+  return accelerationY;
+}
+/*******************************************************************************************************
+ * 
+ ******************************************************************************************************/
+ double Localization::getAccelZ() {
+  //Get a new sensor event from the magnetometer
+  sensors_event_t event;
+  accel.getEvent(&event);      
+  
+  double accelerationZ = event.acceleration.z;
+  /* Display the results (acceleration is measured in m/s^2) */
+  if(DEBUG3)Serial.println("Acceleration Z: " + String(event.acceleration.z) +  "  m/s^2 ");
+  
+  return accelerationZ;
+}
+
+ /*******************************************************************************************************
+ * 
+ ******************************************************************************************************/
+void Localization::findPosition(Waypoint &estimPos, bool got_GPS, Waypoint &oldPos) {
   newPos.time_ms = millis(); //mark current time
   
   //get heading coordinates from the compass
   newPos.bearing_deg = getHeading();
   if(DEBUG)  Serial.println("loop6 newPos.bearing_deg = " + String(newPos.bearing_deg));
+
+  //for use in Kalman filter - may want to move this somewhere else
+  double accelX = getAccelX();
+  double accelY = getAccelY();
+  double accelZ = getAccelZ();
+  double gyroRoll = getGyroRoll();
+  double gyroPitch = getGyroPitch();
+  double gyroYaw = getGyroYaw();
   
   if (got_GPS) { 
     if(DEBUG)  Serial.println("got gps and deadreckoning");
@@ -247,7 +349,7 @@ void C6_Navigator::findPosition(Waypoint &estimPos, bool got_GPS, Waypoint &oldP
 /*******************************************************************************************************
  * Get your first initial position form the GPS
  ******************************************************************************************************/
-void C6_Navigator::initial_position(Origin &ogn, Waypoint &estimPos, Waypoint &old_pos) {
+void Localization::initial_position(Origin &ogn, Waypoint &estimPos, Waypoint &old_pos) {
   
   bool GPS_available = AcquireGPS(estimPos);
 
@@ -269,11 +371,11 @@ void C6_Navigator::initial_position(Origin &ogn, Waypoint &estimPos, Waypoint &o
 }
 
 /******************************************************************************************************
- * update loop for C6_Navigator
+ * update loop for Localization
  *  gets a new GPS signal, Deadreckoning data from the C2_Lowlevel
  *  and uses this data to estimate the current position of the trike
  *****************************************************************************************************/
-void C6_Navigator::update(Origin &ogn, Waypoint &estimated_position, Waypoint &oldPos) {
+void Localization::update(Origin &ogn, Waypoint &estimated_position, Waypoint &oldPos) {
   oldPos.time_ms = millis();
   delay(1);
   
@@ -284,7 +386,7 @@ void C6_Navigator::update(Origin &ogn, Waypoint &estimated_position, Waypoint &o
     test++; 
   }
   
-  C6_communication_with_C2(); // Receiving speed data from C2 using CAN Bus
+  Local_communication_with_LowLevel(); // Receiving speed data from C2 using CAN Bus
   
   if (got_GPS) {
     GPS_reading.Compute_mm(ogn); // get north and east coordinates from originStl

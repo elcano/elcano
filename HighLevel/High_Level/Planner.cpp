@@ -10,6 +10,7 @@ Planner::Planner(Origin &org, Waypoint &estimated_pos){//default constructor
     
     map_points = 0; //will be filled in during map loading
     mission_index = 0; //index number of mission/cone currently attempting to reach
+   last_index_of_path = 0; 
     last_index_of_path = CONES -1; //hardcode path of the last index/dest to 3 [cur,loc1,goal]
     //Store the initial GPS latitude and longtitude to select the correct map
    // Start.latitude = estimated_pos.latitude; //set to the initial position of the trike 
@@ -733,7 +734,7 @@ void Planner::SelectMap(Origin &orgin, Waypoint &startLocation, char* fileName, 
 				return INVALID;
 			}
 			Serial.println("BESTID " + String(BestID));
-			Serial.println("DestinationINdex " + String(destination.index));
+			Serial.println("Destination Index " + String(destination.index));
 			Open[BestID].TotalCost = MAX_DISTANCE;  // Remove node from "stack".
 			if (BestID == destination.index || BestID == destination.sigma_mm) { // Done:: reached the goal!!
 

@@ -1,16 +1,14 @@
 #pragma once
-#include "common.h"
+#include "Common.h"
 #include <Adafruit_GPS.h>
 #include <Adafruit_Sensor.h>
 #include <Adafruit_LSM303_U.h>
-//#include <SoftwareSerial.h>
-//#include <Arduino.h>
+#include <Adafruit_L3GD20.h>
 
-//using namespace elcano;
 namespace elcano {
   
 
-class C6_Navigator {
+class Localization {
 private:  
  // Set GPSECHO to 'false' to turn off echoing the GPS data to the Serial console
 // Set to 'true' if you want to DEBUG and listen to the raw GPS sentences.
@@ -33,19 +31,28 @@ private:
   /* Assign a unique ID to this sensor at the same time */
   Adafruit_LSM303_Mag_Unified mag = Adafruit_LSM303_Mag_Unified(12345);
 
+  /* Assign a unique ID to this sensor at the same time */
+  Adafruit_LSM303_Accel_Unified accel = Adafruit_LSM303_Accel_Unified(54321);
+
   bool got_GPS = false;
   CAN_FRAME incoming;
 
 	
 	void setup_GPS();
 	bool AcquireGPS(Waypoint &gps_position);
-	void C6_communication_with_C2();
+	void Local_communication_with_LowLevel();
 	long getHeading();
+  double getAccelX();
+  double getAccelY();
+  double getAccelZ();
+  double getGyroRoll();
+  double getGyroPitch();
+  double getGyroYaw();
 	void findPosition(Waypoint &estimPos, bool got_GPS, Waypoint &op);
 	void initial_position(Origin &ogn, Waypoint &estimPos, Waypoint &old_pos);
 public:
-	C6_Navigator(Origin &org, Waypoint &estimated_pos, Waypoint &old_pos); 
-	~C6_Navigator(){} //destructor
+	Localization(Origin &org, Waypoint &estimated_pos, Waypoint &old_pos); 
+	~Localization(){} //destructor
   void update(Origin &ogn, Waypoint &ep, Waypoint &newPos);
 };
 } // namespace elcano

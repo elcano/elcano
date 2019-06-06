@@ -1,9 +1,9 @@
 //Outside libraries
 #include <IODue.h>
 //Elcano Libraries
-#include "Settings_HighLevel.h"
-#include "C3_Pilot.h"
-#include "C6_Navigator.h"
+#include "Globals.h"
+#include "Pilot.h"
+#include "Localization.h"
 
 using namespace elcano;
 
@@ -20,8 +20,8 @@ using namespace elcano;
 //    but waiting on C4 to be finished
 
 
-C6_Navigator *myNav;
-C3_Pilot *myPilot;
+Localization *myLocal;
+Pilot *myPilot;
 
 Origin origin; //origin on the selected map
 Waypoint estimated_position, old_position;
@@ -39,11 +39,11 @@ void setup() {
     Serial.println("init success");
   }
  if(DEBUG)Serial.println("estimated_position before process = " + String(estimated_position.latitude));
- if(DEBUG) Serial.println("Starting Navigation");
- myNav = new C6_Navigator(origin, estimated_position, old_position);
+ if(DEBUG) Serial.println("Starting Localization");
+ myLocal = new Localization(origin, estimated_position, old_position);
  if(DEBUG)Serial.println("estimated_position = " + String(estimated_position.latitude));
  if(DEBUG) Serial.println("Starting Pilot");
- myPilot = new C3_Pilot(origin, estimated_position, old_position);
+ myPilot = new Pilot(origin, estimated_position, old_position);
  if(DEBUG)Serial.print("origin after planner is now set to: ");
  if(DEBUG)Serial.print(origin.latitude, 6);
  if(DEBUG)Serial.print(" ");
@@ -54,7 +54,7 @@ void setup() {
  * main loop method
  *****************************************************************************************************/
 void loop() {
-  myNav->update(origin, estimated_position, old_position);
+  myLocal->update(origin, estimated_position, old_position);
    if(DEBUG)Serial.println("estimated_position.eastmm = " + String(estimated_position.east_mm));
   //RE-compute path if too far off track (future development) for C4
   

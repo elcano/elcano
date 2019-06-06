@@ -1,6 +1,6 @@
 // Common.h - header included for all Elcano modules
 #pragma once
-#include "Settings_HighLevel.h"
+#include "Globals.h"
 namespace common {bool checksum(char* msg);}
 
 namespace elcano{

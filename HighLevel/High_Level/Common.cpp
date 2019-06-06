@@ -2,6 +2,8 @@
 #include <Arduino.h>
 #include "Common.h"
 #include <math.h>
+
+//Globals from Common.cpp
 // global variables
 char buffer[BUFFSIZ];        // string buffer for the sentence
 char dataString[BUFFSIZ];
