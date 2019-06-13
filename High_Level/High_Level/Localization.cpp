@@ -41,8 +41,6 @@ Localization::Localization(Origin &org, Waypoint &estimated_position, Waypoint &
   accel.begin();
   
   initial_position(org, estimated_position,oldPos); //getting your initial position from GPS comment out if no GPS available
-  passedInitial = true; // got first GPS fail the rest in hard code remove if testing
- 
   //set starting speed to 0 
   newPos.speed_mmPs = 0;
   
@@ -89,23 +87,8 @@ void Localization::setup_GPS() {
  * return: true if gps is found
  *******************************************************************************************************/
 bool Localization::AcquireGPS(Waypoint &gps_position) {
-  /*if(DEBUG) Serial.println("Acquire GPS");
+  if(DEBUG) Serial.println("Acquire GPS");
   float latitude, longitude;
-/*
-  //HARD CODED FOR TESTING remove from here to the return true statement down below
-  /*gps_position.latitude = gpsTest[gpsIndex];
-  gpsIndex++; 
-  if(DEBUG)  Serial.println("Latitude: " + String(gps_position.latitude, 6));
-  gps_position.longitude = gpsTest[gpsIndex];
-  if(DEBUG)  Serial.println("Longitude: " + String(gps_position.longitude, 6));
-  if(gpsIndex == 7)
-    gpsIndex = 0;
-  else
-    gpsIndex++;
-    
-  gps_position.longitude = gpsTest[gpsIndex];
-  gps_position.latitude = gpsTest[gpsIndex];
-  return (!passedInitial); */
   
   char c;
   //read atleast 25 characters every loop speed up update time for GPS
@@ -147,12 +130,6 @@ void Localization::Local_communication_with_LowLevel() {
   
   while (CAN.available() > 0) { // check if CAN message available
     CAN.read(incoming);
-
- /*   rec++;
-    if(rec > 1000) {
-      Serial.println("1k recs at " + String(millis()));
-      rec = 0;
-    } */
     
     if(DEBUG2)  {
       Serial.println("Get data from (low level) ID: " + String(incoming.id, HEX));

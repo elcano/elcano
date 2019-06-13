@@ -4,11 +4,6 @@
 #include "Can_Protocol.h"
 using namespace elcano;
 
-#define DEBUG true  //general debugging entering methods, passing tests etc
-#define DEBUG2 true //CAN BUS debugging, checking sent and receieved data to/from CANBUS
-#define DEBUG3 true //Navigation and Pilot debuggging, which direction told to travel
-
-
 //origin is set to the UWB map
 //#define ORIGIN_LAT 47.758949 
 //#define ORIGIN_LONG -122.190746
@@ -25,4 +20,3 @@ using namespace elcano;
 
 #define TURN_SPEED 1050
 #define DESIRED_SPEED_mmPs 1600
-
