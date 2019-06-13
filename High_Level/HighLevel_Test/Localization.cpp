@@ -21,7 +21,8 @@ namespace elcano {
  *  activates the GPS, Compass, Gyroscope and finds initial positoin
  *****************************************************************************************************/
 Localization::Localization(Origin &org, Waypoint &estimated_position, Waypoint &oldPos) {
-  //originSt = new elcano::Origin(47.760850, -122.190044); //center of UW soccer field
+  //Origin originSt(47.760850, -122.190044); //center of UW soccer field
+  //org = originSt;
   //setting up the GPS rate
   setup_GPS();
 
@@ -94,18 +95,13 @@ bool Localization::AcquireGPS(Waypoint &gps_position) {
   float latitude, longitude;
 
   //HARD CODED FOR TESTING comment out from here to the return(!passedInitial) statement down below to use real GPS readings
-  gps_position.latitude = gpsTest[gpsIndex];
-  gpsIndex++; 
+  gps_position.latitude = gpsTest[gpsIndex++];
   if(DEBUG)  Serial.println("Latitude: " + String(gps_position.latitude, 6));
-  gps_position.longitude = gpsTest[gpsIndex];
+  gps_position.longitude = gpsTest[gpsIndex++];
   if(DEBUG)  Serial.println("Longitude: " + String(gps_position.longitude, 6));
-  if(gpsIndex == 7)
+  if(gpsIndex == 8)
     gpsIndex = 0;
-  else
-    gpsIndex++;
-    
-  gps_position.longitude = gpsTest[gpsIndex];
-  gps_position.latitude = gpsTest[gpsIndex];
+   
   return (!passedInitial); 
   
   char c;

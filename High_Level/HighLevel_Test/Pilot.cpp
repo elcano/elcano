@@ -12,7 +12,7 @@ Pilot::Pilot(Origin &org, Waypoint &estimated_pos, Waypoint &old_position) {
   
   //Trike state starts Straight
   if(DEBUG) Serial.println("Entered Pilot setup");
-  state = STRAIGHT;
+  state = STARTING;
   //the path is set to approach the first intersection at index 1
   next = 1;
   speed_mmPs = DESIRED_SPEED_mmPs;
@@ -172,6 +172,7 @@ int Pilot::get_turn_direction_angle(int n, Waypoint &estPos) {
  * param
  *****************************************************************************************************/
 bool Pilot::proper_heading(Waypoint &estimated_pos, int n) {
+  if(DEBUG4) Serial.println("Entering proper_heading()");
   long northDiff = abs(estimated_pos.north_mm - myPlanner->path[n].north_mm);
   if(estimated_pos.north_mm > myPlanner->path[n].north_mm) 
     northDiff = northDiff * -1; //heading south
@@ -195,22 +196,28 @@ bool Pilot::proper_heading(Waypoint &estimated_pos, int n) {
     if(estimated_pos.bearing_deg + 180 >= 360 || estimated_pos.bearing_deg >= properHeading) { //right turn
       //set turn angle right
       turn_direction = 90;
-      if(DEBUG4) Serial.println("Turning Right");
+      if(DEBUG4) Serial.println("Turning Right at angl: " + String(turn_direction));
       return false;
     }
+    turn_direction = -90;
+    if(DEBUG4) Serial.println("Turning Left at angl: " + String(turn_direction));
+    return false;
   }
   if(properHeading < estimated_pos.bearing_deg) {
     if(estimated_pos.bearing_deg + 180 >= 360 && estimated_pos.bearing_deg - 180 > properHeading) { //right turn
       //set turn angle right
       turn_direction = 90;
-      if(DEBUG4) Serial.println("Turning Right");
+      if(DEBUG4) Serial.println("Turning Right at angl: " + String(turn_direction));
       return false;
     }
+    turn_direction = -90;
+    if(DEBUG4) Serial.println("Turning Left at angl: " + String(turn_direction));
+    return false;
   }
   else {
     //set turn angle left
     turn_direction = -90;
-    if(DEBUG4) Serial.println("Turning Left");
+    if(DEBUG4) Serial.println("Turning Left at angl: " + String(turn_direction));
     return false;
   }
 }
@@ -308,12 +315,14 @@ void Pilot::hardCoded_Pilot_Test() {
  *****************************************************************************************************/
 void Pilot::Pilot_communicate_LowLevel() {
   //if (pre_desired_speed != speed_mmPs || pre_turn_angle != turn_direction) {  send every time, lowlevel only reacts when not close
-    
+
+    //TEMP CHECK ON WHY ANGLE ISNT WORKING AT -90
+    //int testerr = map(turn_direction, -90, 90, 0, 255);
     output.data.low = speed_mmPs;
     output.data.high = turn_direction;
         
-    if(DEBUG2)
-      Serial.println("**Sending: Speed: " + String(output.data.low) + " Angl: " + (output.data.high));
+    if(DEBUG4)
+      Serial.println("**Sending: Speed: " + String(output.data.low) + " Angl: " + String(output.data.high));
     
     CAN.sendFrame(output); //send the message
     //delay(1000); //usually only needed if using a Serial Print, comment out when running real test
@@ -338,8 +347,11 @@ void Pilot::update(Waypoint &estimated_pos, Waypoint &old_pos) {
   //hardCoded_Pilot_Test();
   
   //Determining the turn direction for the trike "left, right or straight" comment out if using test line above
-  turn_direction = get_turn_direction_angle(next, estimated_pos);
-  if(DEBUG3) Serial.println("setting turn angle to: " + String(turn_direction));
+  if(state != 0) { //may need update later, currently skipping turn angle if using STARTING state
+    Serial.println("State is " + String(state));
+    turn_direction = get_turn_direction_angle(next, estimated_pos);
+  }
+  if(DEBUG4) Serial.println("setting turn angle to: " + String(turn_direction));
 
   Pilot_communicate_LowLevel(); //send data to lowlevel through CAN
 }

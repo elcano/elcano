@@ -18,14 +18,14 @@ Waypoint estimated_position, old_position;
  * main setup method
  *****************************************************************************************************/
 void setup() {
-   if(DEBUG)Serial.println("origin is first set to :" + String(origin.latitude) + " " + String(origin.longitude));
- 
-   Serial.begin(9600);
+    Serial.begin(9600);
   //re-include if use serial again for raspberrypi or else
   //Serial2.begin(9600);
   if (CAN.begin(CAN_BPS_500K)) { // initalize CAN with 500kbps baud rate 
-    Serial.println("init success");
+    if(DEBUG) Serial.println("init success");
   }
+    if(DEBUG)Serial.println("origin is first set to :" + String(origin.latitude) + " " + String(origin.longitude));
+ 
  if(DEBUG)Serial.println("estimated_position before process = " + String(estimated_position.latitude));
  if(DEBUG) Serial.println("Starting Localization");
  myLocal = new Localization(origin, estimated_position, old_position);

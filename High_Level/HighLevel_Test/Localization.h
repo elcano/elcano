@@ -17,7 +17,7 @@ private:
 //  SoftwareSerial mySerial(15, 14); //rx tx
   #define GPSRATE 9600
   //index of hardcoded gps coordinates for testing
-  double gpsTest[8] = {47.760850, -122.190044, 47.9, -122, 51, -123, 50.5, -120};
+  double gpsTest[8] = {47.790850, -122.21, 47.9, -122, 51, -123, 50.5, -120};
   int gpsIndex = 0; //helper with array above
   bool passedInitial = false; //to hardcode GPS only first time
 

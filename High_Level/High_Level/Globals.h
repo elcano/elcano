@@ -5,10 +5,10 @@
 namespace elcano{
 
 //set to 'false' to stop debug Serial.print/ln printing
-#define DEBUG false  //general debugging entering methods, passing tests etc
-#define DEBUG2 false //CAN BUS debugging, checking sent and receieved data to/from CANBUS
-#define DEBUG3 false //Navigation and Pilot debuggging, which direction told to travel
-#define DEBUG4 false //for testing propper heading of first path in Pilot.cpp
+#define DEBUG true  //general debugging entering methods, passing tests etc
+#define DEBUG2 true //CAN BUS debugging, checking sent and receieved data to/from CANBUS
+#define DEBUG3 true //Navigation and Pilot debuggging, which direction told to travel
+#define DEBUG4 true //for testing propper heading of first path in Pilot.cpp
 
 
 #define CONES 6 //number of mission points. Update this for each use in new area

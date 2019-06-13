@@ -12,7 +12,7 @@ Pilot::Pilot(Origin &org, Waypoint &estimated_pos, Waypoint &old_position) {
   
   //Trike state starts Straight
   if(DEBUG) Serial.println("Entered Pilot setup");
-  state = STRAIGHT;
+  state = STARTING;
   //the path is set to approach the first intersection at index 1
   next = 1;
   speed_mmPs = DESIRED_SPEED_mmPs;
