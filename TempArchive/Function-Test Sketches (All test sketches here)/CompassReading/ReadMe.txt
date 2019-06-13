@@ -1,1 +1,0 @@
-CompassReading.ino is nothing than reading compass to let you how compass works

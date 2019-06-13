@@ -1,1 +1,0 @@
-GPSReading.ino is nothing than reading current geo coordinates to let you how GPS works

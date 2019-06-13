@@ -1,68 +1,63 @@
-#include "Localization.h"
+#include "C6_Navigator.h"
 
-#define mySerial Serial3
+#include <Adafruit_LSM303_U.h>
+
+//index of hardcoded gps coordinates for testing
+double gpsTest[] = {47.760850, -122.190044, 47.9, -122, 51, -123, 50.5, -120};
+int gpsIndex = 0; //helper with array above
+bool passedInitial = false; //to hardcode GPS only first time
+
+Origin originSt(ORIGIN_LAT, ORIGIN_LONG);
+long extractSpeed = 0; //alternative to checksum since it's not implemented ie check for bad incoming data through serial
+
+Waypoint newPos, estimPos, GPS_reading;
+
+
+
 Adafruit_GPS GPS(&mySerial);
-//Adafruit_L3GD20 gyro; GYRO still not working
-//#ifdef USE_I2C
-  // The default constructor uses I2C
-  Adafruit_L3GD20 gyro;
-//#else
-  // To use SPI, you have to define the pins
- // #define GYRO_CS 4 // labeled CS
- // #define GYRO_DO 5 // labeled SA0
- // #define GYRO_DI 6  // labeled SDA
- // #define GYRO_CLK 7 // labeled SCL
- // Adafruit_L3GD20 gyro(GYRO_CS, GYRO_DO, GYRO_DI, GYRO_CLK);
-//#endif
+/* Assign a unique ID to this sensor at the same time */
+Adafruit_LSM303_Mag_Unified mag = Adafruit_LSM303_Mag_Unified(12345);
 
-namespace elcano {
+bool got_GPS = false;
+CAN_FRAME incoming;
+
+
 /******************************************************************************************************
- * constructor for Localization
- *  activates the GPS, Compass, Gyroscope and finds initial positoin
+ * constructor for C6_Navigator
+ *  activates the GPS, Compass and finds initial positoin
  *****************************************************************************************************/
-Localization::Localization(Origin &org, Waypoint &estimated_position, Waypoint &oldPos) {
-  //originSt = new elcano::Origin(47.760850, -122.190044); //center of UW soccer field
+C6_Navigator::C6_Navigator(Waypoint &estimated_position, Waypoint &oldPos) {
   //setting up the GPS rate
+  estimPos = estimated_position; //assign global variable to local for editing
   setup_GPS();
 
   //Enable auto-gain
   mag.enableAutoRange(true);
-  accel.enableAutoRange(true);
-  
-  if(!accel.begin())
-  {
-    /* There was a problem detecting the ADXL345 ... check your connections */
-    if(DEBUG) Serial.println("Ooops, no accelerometer detected ... Check your wiring!");
-  }
+
   if (!mag.begin()) {
-    if(DEBUG)  Serial.println("no magnetometer detected ... Check your wiring!");
+    if(DEBUG)  Serial.println("no LSM303 detected ... Check your wiring!");
   }
   mag.begin();
-  accel.begin();
   
-  initial_position(org, estimated_position,oldPos); //getting your initial position from GPS comment out if no GPS available
+  initial_position(oldPos); //getting your initial position from GPS comment out if no GPS available
   passedInitial = true; // got first GPS fail the rest in hard code remove if testing
- 
   //set starting speed to 0 
   newPos.speed_mmPs = 0;
-  
-  // Try to initialise and warn if we couldn't detect the chip
-   if (!gyro.begin(gyro.L3DS20_RANGE_250DPS))
-  //if (!gyro.begin(gyro.L3DS20_RANGE_500DPS))
-  //if (!gyro.begin(gyro.L3DS20_RANGE_2000DPS))
-  {
-    if(DEBUG) Serial.println("Oops ... unable to initialize the gyro. Check your wiring!");
-  }
+  estimated_position = estimPos; //transfer local data back to global variable
 }
 
-/********************************************************************************************************
- * setup_GPS()
- * initializes the GPSRATE chooses option of GGA
- *******************************************************************************************************/
-void Localization::setup_GPS() {
+
+/*****************************************************************************************************
+* Destructor
+****************************************************************************************************/
+C6_Navigator::~C6_Navigator() {
+}
+
+
+
+void C6_Navigator::setup_GPS() {
   //Serial 3 (mySerial) is used for GPS
   mySerial.begin(GPSRATE);
-  // Serial3.begin(GPSRATE);
   GPS.begin(GPSRATE);
 
   // uncomment this line to turn on RMC (recommended minimum) and GGA (fix data) including altitude
@@ -82,16 +77,12 @@ void Localization::setup_GPS() {
 }
 
 /********************************************************************************************************
- * AcquireGPS()
- * Searches for a GPS signal, has an option for hardcoding the GPS
- * when being tested in the lab without changing signal in the beginning lines
- * param: gps_position to record gps position if found
- * return: true if gps is found
+ * 
  *******************************************************************************************************/
-bool Localization::AcquireGPS(Waypoint &gps_position) {
-  /*if(DEBUG) Serial.println("Acquire GPS");
+bool C6_Navigator::AcquireGPS(Waypoint &gps_position) {
+  if(DEBUG) Serial.println("Acquire GPS");
   float latitude, longitude;
-/*
+
   //HARD CODED FOR TESTING remove from here to the return true statement down below
   /*gps_position.latitude = gpsTest[gpsIndex];
   gpsIndex++; 
@@ -101,11 +92,10 @@ bool Localization::AcquireGPS(Waypoint &gps_position) {
   if(gpsIndex == 7)
     gpsIndex = 0;
   else
-    gpsIndex++;
-    
+    gpsIndex++; */
   gps_position.longitude = gpsTest[gpsIndex];
   gps_position.latitude = gpsTest[gpsIndex];
-  return (!passedInitial); */
+  return (!passedInitial); 
   
   char c;
   //read atleast 25 characters every loop speed up update time for GPS
@@ -138,11 +128,9 @@ bool Localization::AcquireGPS(Waypoint &gps_position) {
 
 
 /*******************************************************************************************************
- * Local_communication_with_LowLevel()
- * Receive actual speed and actual turn angle from the C2_Lowlevel 
- * board via CAN BUS message to help calculate where the trike's estimated position in
+ * Receive actual speed and actual turn angle from the C2_Lowlevel board via CAN BUS
  ******************************************************************************************************/
-void Localization::Local_communication_with_LowLevel() {
+void C6_Navigator::C6_communication_with_C2() {
  CAN.watchForRange(Actual_CANID, LowStatus_CANID);  //filter for low level communication
   
   while (CAN.available() > 0) { // check if CAN message available
@@ -174,10 +162,9 @@ void Localization::Local_communication_with_LowLevel() {
 }
 
 /*******************************************************************************************************
- * getHeading()
- * checks the compass to get the heading in degrees
+ * 
  ******************************************************************************************************/
-long Localization::getHeading() {
+long C6_Navigator::getHeading() {
   //Get a new sensor event from the magnetometer
   sensors_event_t event;
   mag.getEvent(&event);      
@@ -194,103 +181,14 @@ long Localization::getHeading() {
 }
 
 /*******************************************************************************************************
- * getGyroRoll()
- * uses gyroscope to get Gyroscope roll
+ * 
  ******************************************************************************************************/
- double Localization::getGyroRoll(){
-  gyro.read();
-  if(DEBUG) Serial.println("Gyroscope Roll X: " + String(gyro.data.x));
-  return gyro.data.x;
- }
- /*******************************************************************************************************
- * getGyroPitch()
- * uses gyroscope to get GyroPitch
- ******************************************************************************************************/
- double Localization::getGyroPitch(){
-  gyro.read();
-  if(DEBUG) Serial.println("Gyroscope Pitch Y: " + String(gyro.data.y)); 
-  return gyro.data.y;
-}
- /*******************************************************************************************************
- * getGyroYaw()
- * uses gyroscope to get GyroYaw
- ******************************************************************************************************/
- double Localization::getGyroYaw(){
-  gyro.read();
-  if(DEBUG) Serial.println("Gyroscope Yaw Z: " + String(gyro.data.z)); 
-  return gyro.data.z;
-  }
-  
- /*******************************************************************************************************
- * getAccelX()
- * uses acceleromenter to get Acceleration in X axis
- ******************************************************************************************************/
- double Localization::getAccelX() {
-  //Get a new sensor event from the magnetometer
-  sensors_event_t event;
-  accel.getEvent(&event);      
-  
-  double accelerationX = event.acceleration.x;
-  /* Display the results (acceleration is measured in m/s^2) */
-  if(DEBUG3)Serial.println("Acceleration X: " + String(event.acceleration.x) + "  m/s^2 ");
-  
-  return accelerationX;
-}
-
- /*******************************************************************************************************
- * getAccelY()
- * uses acceleromenter to get Acceleration in Y axis
- ******************************************************************************************************/
- double Localization::getAccelY() {
-  //Get a new sensor event from the magnetometer
-  sensors_event_t event;
-  accel.getEvent(&event);      
-  
-  double accelerationY = event.acceleration.y;
-  /* Display the results (acceleration is measured in m/s^2) */
-  if(DEBUG3)Serial.println("Acceleration Y: " + String(event.acceleration.y) +  "  m/s^2 ");
-
-  return accelerationY;
-}
-
-/*******************************************************************************************************
- * getAccelZ()
- * uses acceleromenter to get Acceleration in Z axis
- ******************************************************************************************************/
- double Localization::getAccelZ() {
-  //Get a new sensor event from the magnetometer
-  sensors_event_t event;
-  accel.getEvent(&event);      
-  
-  double accelerationZ = event.acceleration.z;
-  /* Display the results (acceleration is measured in m/s^2) */
-  if(DEBUG3)Serial.println("Acceleration Z: " + String(event.acceleration.z) +  "  m/s^2 ");
-  
-  return accelerationZ;
-}
-
- /*******************************************************************************************************
- * findPosition()
- * currently uses the estimated position dead reckoning and GPS if a new GPS
- * reading was acquired to calculate a new estimated position
- * later should use accelerometer with the Kalman filter for better results
- * sets the estimPos vectors values to the newly calculated position
- ******************************************************************************************************/
-void Localization::findPosition(Waypoint &estimPos, bool got_GPS, Waypoint &oldPos) {
+void C6_Navigator::findPosition(bool got_GPS, Waypoint &oldPos) {
   newPos.time_ms = millis(); //mark current time
   
   //get heading coordinates from the compass
   newPos.bearing_deg = getHeading();
-  estimPos.bearing_deg = newPos.bearing_deg; //used to find first path in Pilot.cpp
   if(DEBUG)  Serial.println("loop6 newPos.bearing_deg = " + String(newPos.bearing_deg));
-
-  //for use in Kalman filter - may want to move this somewhere else
-  double accelX = getAccelX();
-  double accelY = getAccelY();
-  double accelZ = getAccelZ();
-  double gyroRoll = getGyroRoll();
-  double gyroPitch = getGyroPitch();
-  double gyroYaw = getGyroYaw();
   
   if (got_GPS) { 
     if(DEBUG)  Serial.println("got gps and deadreckoning");
@@ -327,11 +225,9 @@ void Localization::findPosition(Waypoint &estimPos, bool got_GPS, Waypoint &oldP
 
 
 /*******************************************************************************************************
- * initial_position()
  * Get your first initial position form the GPS
  ******************************************************************************************************/
-void Localization::initial_position(Origin &ogn, Waypoint &estimPos, Waypoint &old_pos) {
-  
+void C6_Navigator::initial_position(Waypoint &oldPos) {
   bool GPS_available = AcquireGPS(estimPos);
 
   //This makes an infinite loop when the GPS is not available, comment out or hard code for testing 4-8-19 Mel
@@ -342,41 +238,44 @@ void Localization::initial_position(Origin &ogn, Waypoint &estimPos, Waypoint &o
   if(DEBUG)  Serial.println("Acquired GPS position");
   estimPos.time_ms = millis();
   estimPos.Compute_EandN_Vectors(getHeading()); //get position E and N vector
-  //Assign Origin GPS position?? not map origin??
-  //ogn.
+  //Assign Origin GPS position
+  //Origin tmpOrg(estimPos.latitude, estimPos.longitude);
+  //originSt = tmpOrg; //assign originSt to starting position
+  
   if(DEBUG)  Serial.println("Computed Vectors in initial position");
-
-  //moving to planner where compute estim_pos due to origin not being set yet. may need to move old_pos too
+  estimPos.Compute_mm(originSt);  //initialize north and east coordinates for position
+  if(DEBUG) {
+    Serial.print("Estimate E: ");
+    Serial.println(estimPos.east_mm);
+    Serial.print("Estimate N: ");
+    Serial.println(estimPos.north_mm);
+  }
   //oldPos to keep track of previous position for DR
-  old_pos = estimPos;
+  oldPos = estimPos;
 }
 
 /******************************************************************************************************
- * update loop for Localization
- *  gets a new GPS signal, Deadreckoning data from the Lowlevel
+ * update loop for C6_Navigator
+ *  gets a new GPS signal, Deadreckoning data from the C2_Lowlevel
  *  and uses this data to estimate the current position of the trike
  *****************************************************************************************************/
-void Localization::update(Origin &ogn, Waypoint &estimated_position, Waypoint &oldPos) {
+void C6_Navigator::update(Waypoint &estimated_position, Waypoint &oldPos) {
+  estimPos = estimated_position; //assign value at estimate_position reference to local var
   oldPos.time_ms = millis();
   delay(1);
   
   got_GPS = AcquireGPS(GPS_reading);  //try to get a new GPS position
-  int test = 0;
-  while(got_GPS == false && test < 5){
-    got_GPS = AcquireGPS(GPS_reading);
-    test++; 
-  }
   
-  Local_communication_with_LowLevel(); // Receiving speed data from C2 using CAN Bus
+  C6_communication_with_C2(); // Receiving speed data from C2 using CAN Bus
   
   if (got_GPS) {
-    GPS_reading.Compute_mm(ogn); // get north and east coordinates from originStl
+    GPS_reading.Compute_mm(originSt); // get north and east coordinates from originStl
     if(DEBUG)  Serial.println("Got and computed GPS");
   }
   else {
     if(DEBUG)  Serial.println("Failed to get got_GPS");
   }
-  findPosition(estimated_position, got_GPS, oldPos); //determine location based on dead reckoning and GPS
-}   
 
-} // namespace elcano
+  findPosition(got_GPS, oldPos); //determine location based on dead reckoning and GPS
+  estimated_position = estimPos; //return local variable data to estimated_position reference
+}   

@@ -7,18 +7,6 @@
 
 using namespace elcano;
 
-//#include <Adafruit_Sensor.h>
-//#include <SPI.h>
-//#include <SD.h>
-//#include <ElcanoSerial.h>
-//#include <Serial_Communication.h>
-//#include <Wire.h>
-//#include <FusionData.h>
-
-//******************* TO DO***************************************
-//    Communicate path from C4 to C3, passing the array of paths most likely
-//    but waiting on C4 to be finished
-
 
 Localization *myLocal;
 Pilot *myPilot;
@@ -67,6 +55,4 @@ void loop() {
   //in pilot call myPlanner->last_index_of_path = myPlanner->PlanPath(origin(fix to origin name), myPlanner->Start, myPlanner->mission[mission_index]);
   //go to next mission index until myPlanner->mission_index > CONES
   //reached end so stop
-  
-  delay(3000); //for testing only.. remove when deploying bike
 }

@@ -1,9 +1,0 @@
-Links to Addition Libaries NEEDED from Adafruit! 
-
-Adafruit_GPS -> https://github.com/adafruit/Adafruit_GPS
-Adafruit_Sensor -> https://github.com/adafruit/Adafruit_Sensor
-
-* I2C must modify "Wire" to "Wire1" in the cpp file use SCL1 and SDA1 (with pullup resistor) for Arduino Due  
-Adafruit_L3GD20 (Triple Axis Gyroscope) -> https://github.com/adafruit/Adafruit_L3GD20
-Adafruit_LSM303 (Accelerometer + Magnetometer) -> https://github.com/adafruit/Adafruit_LSM303DLHC
-

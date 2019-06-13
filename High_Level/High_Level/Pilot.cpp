@@ -23,7 +23,7 @@ Pilot::Pilot(Origin &org, Waypoint &estimated_pos, Waypoint &old_position) {
   output.id = HiDrive_CANID; //Drive instructions from hilevel board
   
   for(int i = 0; i < myPlanner->last_index_of_path; i++){
-    Serial.println("Path [" + String(i) + "] East is " + String(myPlanner->path[i].east_mm));
+    if(DEBUG3) Serial.println("Path [" + String(i) + "] East is " + String(myPlanner->path[i].east_mm));
   }
 }
 /******************************************************************************************************
@@ -161,6 +161,61 @@ int Pilot::get_turn_direction_angle(int n, Waypoint &estPos) {
 }
 
 /******************************************************************************************************
+ * proper_heading()
+ * Method is called on the STARTING state, it is used to find the proper
+ * direction the trike should be aiming via the compass heading
+ * it determines the arctangent from current position to the next position in the list
+ * once the heading is within 5 degrees of what is calculated it moves on to STRAIGHT state
+ * 5 degrees could be altered to make more precise later if needed
+ * returns true if the heading is in the required "close enough" range of the waypoint or cone it is heading
+ * for, otherwise returns false and keeps attempting to aim correctly at the cone
+ * param
+ *****************************************************************************************************/
+bool Pilot::proper_heading(Waypoint &estimated_pos, int n) {
+  long northDiff = abs(estimated_pos.north_mm - myPlanner->path[n].north_mm);
+  if(estimated_pos.north_mm > myPlanner->path[n].north_mm) 
+    northDiff = northDiff * -1; //heading south
+  
+  long eastDiff = abs(estimated_pos.east_mm - myPlanner->path[n].east_mm);
+  if(estimated_pos.east_mm > myPlanner->path[n].east_mm)
+    eastDiff = eastDiff * -1; //heading west
+  
+  
+  double properHeading = atan2(northDiff, eastDiff) * 180.0 / PI;
+  if(DEBUG4) Serial.println("Heading needed: " + String(properHeading) + ", Current Heading: " + String(estimated_pos.bearing_deg));
+
+  //TODO fix 360 bug
+  if(estimated_pos.bearing_deg >= (properHeading - 5) && estimated_pos.bearing_deg <= (properHeading + 5)) {
+    if(DEBUG4) Serial.println("Within 5 Degrees");
+    return true; //within 5 degree variance on heading, proceed to STRAIGHT state
+  }
+ 
+  //not within 5 degrees of proper heading, need to turn bike
+  if(properHeading > estimated_pos.bearing_deg) {
+    if(estimated_pos.bearing_deg + 180 >= 360 || estimated_pos.bearing_deg >= properHeading) { //right turn
+      //set turn angle right
+      turn_direction = 90;
+      if(DEBUG4) Serial.println("Turning Right");
+      return false;
+    }
+  }
+  if(properHeading < estimated_pos.bearing_deg) {
+    if(estimated_pos.bearing_deg + 180 >= 360 && estimated_pos.bearing_deg - 180 > properHeading) { //right turn
+      //set turn angle right
+      turn_direction = 90;
+      if(DEBUG4) Serial.println("Turning Right");
+      return false;
+    }
+  }
+  else {
+    //set turn angle left
+    turn_direction = -90;
+    if(DEBUG4) Serial.println("Turning Left");
+    return false;
+  }
+}
+
+/******************************************************************************************************
  * find_state(long, int)  
  *  The method find and set the state of the trike and
  *  also set the speed of the trike depending on the state it's in
@@ -169,12 +224,13 @@ int Pilot::get_turn_direction_angle(int n, Waypoint &estPos) {
  *****************************************************************************************************/
 void Pilot::find_state(long turn_radius_mm, int n, Waypoint & estimated_pos) {
   switch (state) {
+    case STARTING:
+      if(proper_heading(estimated_pos, n)) {
+        state = STRAIGHT;
+      }
+      break;
+      
     case STRAIGHT:
-      q++;
-      if(q % 3 == 0)
-        speed_mmPs = DESIRED_SPEED2;
-      else 
-        speed_mmPs = DESIRED_SPEED_mmPs;
       if (test_approach_intersection(turn_radius_mm, n, estimated_pos)) {
         //last index of myPlanner->path/goal
         if (n == myPlanner->last_index_of_path) {
@@ -260,12 +316,7 @@ void Pilot::Pilot_communicate_LowLevel() {
       Serial.println("**Sending: Speed: " + String(output.data.low) + " Angl: " + (output.data.high));
     
     CAN.sendFrame(output); //send the message
-    delay(1000);
-   /* sends++;
-    if(sends > 1000) {
-      Serial.println("1k sends at " + String(millis()));
-      sends = 0;
-    } */
+    //delay(1000); //usually only needed if using a Serial Print, comment out when running real test
 
     //keep track of previous data to compare next loop
     pre_desired_speed = speed_mmPs;

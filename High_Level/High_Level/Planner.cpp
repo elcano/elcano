@@ -30,10 +30,10 @@ Planner::Planner(Origin &org, Waypoint &estimated_pos){//default constructor
    if (DEBUG)Serial.println("chipSelect = " + String(chipSelect));
     pinMode(chipSelect, OUTPUT);
     if (!SD.begin(chipSelect)) {
-      Serial.println("initialization failed!");
+     if(DEBUG) Serial.println("initialization failed!");
     }
     else {
-      Serial.println("initialization done.");
+      if(DEBUG) Serial.println("initialization done.");
     }
     //13 to include null terminate - SD cannot have more than 12 char & \0 in filename caused error
     char nearestMap[13] = "";
@@ -55,7 +55,7 @@ Planner::Planner(Origin &org, Waypoint &estimated_pos){//default constructor
       Serial.print("Estimate N: ");
       Serial.println(estimPos.north_mm);
     }
-    Serial.println("Map selected was: " + String(nearestMap));
+    if(DEBUG) Serial.println("Map selected was: " + String(nearestMap));
 
     //populate nearest map in Junction mapNodes structure
     LoadMap(nearestMap);
@@ -596,8 +596,10 @@ void Planner::SelectMap(Origin &orgin, Waypoint &startLocation, char* fileName, 
 
 		for (i = 0; i < 5/*map_points*/; i++) { // find closest road.
 			dist = distance(i, node_successor, start.east_mm, start.north_mm, perCent); //next node to visit
-			Serial.println("Start : Latitude " + String(start.latitude) + "\t Longitude " + String(start.longitude) + "\t Dist "
-				+ String(dist));
+			if(DEBUG) {
+			  Serial.println("Start : Latitude " + String(start.latitude) + "\t Longitude " + String(start.longitude) 
+			  + "\t Dist " + String(dist));
+			}
 
 			if (abs(dist) < abs(closest_mm)) {
 				close_index = node_successor;
@@ -651,7 +653,7 @@ void Planner::SelectMap(Origin &orgin, Waypoint &startLocation, char* fileName, 
 // for each node.
 
 	int Planner::BuildPath(Origin &orgi, long &j, Waypoint &start, Waypoint &destination) { // Construct path backward to start.
-		Serial.println("To break");
+		if(DEBUG) Serial.println("To break");
 		int last = 1; //already did 0 in planPath
 		int route[map_points];
 		int i, k, node;
@@ -689,9 +691,10 @@ void Planner::SelectMap(Origin &orgin, Waypoint &startLocation, char* fileName, 
 	/*---------------------------------------------------------------------------------------*/
 	//Use Astar
 	int Planner::FindPath(Origin &borigin, Waypoint &start, Waypoint &destination) { //While OpenSet is not empty
-
-		Serial.println("Start East_mm " + String(start.east_mm) + "\t North " + String(start.north_mm));
-		Serial.println("Start East_mm " + String(destination.east_mm) + "\t North " + String(destination.north_mm));
+    if(DEBUG) {
+		  Serial.println("Start East_mm " + String(start.east_mm) + "\t North " + String(start.north_mm));
+		  Serial.println("Start East_mm " + String(destination.east_mm) + "\t North " + String(destination.north_mm));
+    }
 		long ClosedCost[map_points];
 		int  i, neighbor, k;
 		long NewCost, NewStartCost, NewCostToGoal;
@@ -733,8 +736,10 @@ void Planner::SelectMap(Origin &orgin, Waypoint &startLocation, char* fileName, 
 			if (BestID < 0) {
 				return INVALID;
 			}
+     if(DEBUG) {
 			Serial.println("BESTID " + String(BestID));
 			Serial.println("Destination Index " + String(destination.index));
+     }
 			Open[BestID].TotalCost = MAX_DISTANCE;  // Remove node from "stack".
 			if (BestID == destination.index || BestID == destination.sigma_mm) { // Done:: reached the goal!!
 
@@ -772,8 +777,10 @@ void Planner::SelectMap(Origin &orgin, Waypoint &startLocation, char* fileName, 
 			ClosedCost[BestID] = BestCost; // Push node onto Closed
 		}
 
-		Serial.println("Destination East_mm " + String(destination.east_mm) + "\t North " + String(destination.north_mm));
-
+		if(DEBUG) { 
+		  Serial.println("Destination East_mm " + String(destination.east_mm) + "\t North " 
+		  + String(destination.north_mm));
+	  }
 		return 0;  // failure
 	}
 
@@ -802,10 +809,10 @@ void Planner::SelectMap(Origin &orgin, Waypoint &startLocation, char* fileName, 
 		int straight_dist = 190 * abs(start.east_mm - destination.east_mm) + abs(start.north_mm - destination.north_mm);
 		if (w + x >= straight_dist) { // don't use roads; go direct
 			last = 1;
-			Serial.println("In Straight");
+			if(DEBUG) Serial.println("In Straight");
 		}
 		else {  // use A* with the road network
-			Serial.println("In Else");
+			if(DEBUG) Serial.println("In Else");
 			path[1] = roadOrigin;
 			path[1].index = 1;
 			//why index = 7?
@@ -819,8 +826,8 @@ void Planner::SelectMap(Origin &orgin, Waypoint &startLocation, char* fileName, 
 		path[last].Nvector_x1000 = path[last - 1].Nvector_x1000;
 		path[last].index = last | END;
 
-		Serial.println("Destination : East_mm = " + String(destination.east_mm) + "\t North_mm =  " + String(destination.north_mm));
-		Serial.println(" ");
+		if(DEBUG) Serial.println("Destination : East_mm = " + String(destination.east_mm) + "\t North_mm =  " + String(destination.north_mm));
+		if(DEBUG) Serial.println(" ");
 
 		return last;
 

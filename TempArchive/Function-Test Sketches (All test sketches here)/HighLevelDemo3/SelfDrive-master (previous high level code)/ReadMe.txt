@@ -1,1 +1,0 @@
-The selfDrive-master is high level code wrote by previous capstone team. The algo still working but they use Elcano serial instead of CAN bus.

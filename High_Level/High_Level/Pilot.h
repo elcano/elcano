@@ -8,7 +8,7 @@ namespace elcano {
 class Pilot {
 private:
 	#define DESIRED_SPEED2 1200
-	enum States { STOP, STRAIGHT, ENTER_TURN, LEAVE_TURN, APPROACH_GOAL, LEAVE_GOAL};
+	enum States { STARTING, STOP, STRAIGHT, ENTER_TURN, LEAVE_TURN, APPROACH_GOAL, LEAVE_GOAL};
 	States state;
   Planner *myPlanner;
   int next = 1; //index to pathz in a list
@@ -22,7 +22,7 @@ private:
   //Waypoint pathz[MAX_WAYPOINTS];  // course route to goal/mission //not sure why this was here
   //Waypoint pathz[3]; //3 is hardcoded //if testing hard coded
   //Waypoint pathz0, pathz1, pathz2;
-  String wrdState[6] = { "STOP", "STRAIGHT", "ENTER_TURN", 
+  String wrdState[7] = { "STARTING", "STOP", "STRAIGHT", "ENTER_TURN", 
     "LEAVE_TURN", "APPROACH_GOAL", "LEAVE_GOAL"}; //used for clearer debugging
 
   //last is the the last index of the Path/goal
@@ -46,6 +46,7 @@ private:
 	void Pilot_communicate_LowLevel();
   void initializePosition(Waypoint &estPos, Waypoint &oldPos);
   void populate_path();
+  bool proper_heading(Waypoint &estimated_pos, int n);
 	
 public:
 	Pilot(Origin &org, Waypoint &estimated_pos, Waypoint &old_pos);
