@@ -2,6 +2,8 @@ Welcome to the Elcano autonomous tricycle project!
 Please see:
 http://www.elcanoproject.org/
 
+This repository has been archived. The system consists of several different microprocessors. Elcano/Elcano has been broken into separate repositories for each processor.
+
 To get started, fork and clone the repository:
 https://github.com/elcano/elcano
 
